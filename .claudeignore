@@ -1,0 +1,50 @@
+# Dossiers ignorés par les scans Claude Code (réduit drastiquement les tokens)
+
+# Build artifacts Flutter
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+
+# iOS/Android natifs (si plus tard via Capacitor)
+ios/Pods/
+ios/.symlinks/
+android/.gradle/
+android/build/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Supabase local stack
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Logs et caches
+*.log
+.cache/
+coverage/
+.coverage/
+
+# Generated code (souvent volumineux et auto-générés)
+**/*.g.dart
+**/*.freezed.dart
+**/*.gr.dart
+**/*.config.dart
+**/*.mocks.dart
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+*.swp
+*~

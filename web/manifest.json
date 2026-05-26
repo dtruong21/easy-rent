@@ -1,0 +1,37 @@
+{
+    "name": "EasyRent — Gestion locative",
+    "short_name": "EasyRent",
+    "lang": "fr-FR",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#1E293B",
+    "theme_color": "#0F766E",
+    "description": "Outil de gestion locative pour propriétaires : quittances, loyers, charges, locataires, documents.",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "categories": ["productivity", "business", "finance"],
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
