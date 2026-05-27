@@ -62,7 +62,17 @@ Le propriétaire est souvent un particulier peu technophile. Le magic link suppr
 ## Legal / compliance notes
 - **RGPD** : consentement explicite obligatoire au signup (case à cocher non pré-cochée, lien vers politique de confidentialité). Voir `docs/LEGAL.md`.
 - **Données personnelles** : l'adresse email est une donnée personnelle — son traitement doit être mentionné dans la politique de confidentialité.
-- Pas de conservation de session au-delà de la session navigateur (pas de "se souvenir de moi" en V1 — conforme au principe de minimisation).
+- **Session** : la session est persistée par le comportement standard de `supabase_flutter` (l'utilisateur reste connecté après fermeture du navigateur). Pas de bascule UI "se souvenir de moi". Base légale RGPD à documenter dans la politique de confidentialité. _(Décision 2026-05-27 — révise la contrainte initiale de minimisation.)_
+
+## Décisions d'arbitrage (2026-05-27)
+- **Session** : persistance standard `supabase_flutter` conservée (cf. note légale ci-dessus).
+- **Politique de confidentialité** : page interne `/privacy` placeholder (texte provisoire) créée dans FEAT-001 ; à compléter ultérieurement.
+- **Redirect URL magic link** : dérivée de `Uri.base.origin` (auto dev/prod, pas de config par env).
+- **Rétention `landlords`** : soft-delete dès maintenant (`deleted_at`), pas de suppression physique.
+- **PK `landlords`** = `auth.users.id` (relation 1-1).
+- **Provisioning `landlords`** : trigger Postgres `SECURITY DEFINER` sur `auth.users`, insertion idempotente dans les schémas `dev` ET `public`. Aucune policy INSERT côté client.
+- **Boot sans config `Env`** : écran d'erreur propre (pas de crash).
+- **Magic link ouvert dans un autre navigateur (PKCE)** : message clair + bouton "renvoyer un lien" (acceptable MVP).
 
 ## Priority
 P0 (MVP)
