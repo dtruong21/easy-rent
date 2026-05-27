@@ -47,6 +47,12 @@ FEAT-001 (auth)
 - **Aucune Edge Function** (`supabase/functions/` vide) → bloque FEAT-008 (Resend). Choisir le domaine email vérifié avant.
 - **Pas de `seed.sql`** → données de dev locales manuelles pour l'instant.
 
+### 🚧 Setup infra déploiement (bloque toute livraison staging/prod)
+- **Aucun `firebase.json` / `.firebaserc`** → scaffolder la config Hosting (public = `build/web`, rewrites SPA).
+- **Secrets GitHub Actions absents** (repo + env `staging`) : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` (valeurs fournies par l'utilisateur).
+- **Environnement `production`** à créer (seul `staging` existe).
+- ⚠️ `deploy.yml` n'applique les migrations Supabase que depuis `main` → définir comment provisionner le schéma `dev` pour la QA staging de FEAT-001.
+
 ### Gates AVANT mise en PROD (issus de l'audit sécu FEAT-001)
 - 🔧 **Redirect Allow-List Supabase** : vérifier en Studio qu'aucun wildcard large n'est autorisé (sinon risque de capture de token magic link). Config, hors repo.
 - 🔧 **Compléter `/privacy`** : identité du responsable de traitement, DPO, base légale définitive de la persistance de session (placeholder actuellement).
