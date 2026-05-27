@@ -1,0 +1,33 @@
+name: Mark ticket as agent-done
+
+# Quand une PR créée par un agent merge, on tag l'issue liée "agent-done".
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  mark-done:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract linked issue numbers and mark them done
+        run: |
+          # Cherche "Closes #N", "Fixes #N", "Resolves #N" dans le body de la PR
+          BODY=$(cat <<'PRBODY'
+          ${{ github.event.pull_request.body }}
+          PRBODY
+          )
+          ISSUES=$(echo "$BODY" | grep -oEi '(closes|fixes|resolves) +#[0-9]+' | grep -oE '[0-9]+' | sort -u)
+          for ISSUE in $ISSUES; do
+            echo "→ Marking issue #$ISSUE as agent-done"
+            gh issue edit "$ISSUE" \
+              --add-label "agent-done" \
+              --remove-label "agent-processing" 2>/dev/null || true
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

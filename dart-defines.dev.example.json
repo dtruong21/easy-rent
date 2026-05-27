@@ -1,0 +1,5 @@
+{
+  "SUPABASE_URL": "https://<project-ref>.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_<your-publishable-key>",
+  "SUPABASE_SCHEMA": "dev"
+}

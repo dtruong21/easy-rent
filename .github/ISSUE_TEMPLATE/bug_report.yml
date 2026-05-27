@@ -1,0 +1,96 @@
+name: 🐛 Bug
+description: Signaler un bug. Sera pris en charge par un agent IA après 3h.
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ℹ️ Comment ça marche
+        - Cette issue passe en **incubation pendant 3h** (tu peux l'éditer, la fermer, ou ajouter le label `agent-skip` pour l'exclure)
+        - Au bout de 3h, un agent IA prend la plus ancienne issue éligible et lance le pipeline `/fix-bug`
+        - L'agent crée une PR liée à cette issue
+        - Tu reviewes la PR et merges
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Résumé en une phrase
+      placeholder: "Cliquer sur 'Envoyer quittance' affiche une erreur 500"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Comment reproduire
+      description: Étape par étape, comme si tu briefais quelqu'un qui ne connaît pas le projet
+      placeholder: |
+        1. Aller sur /receipts/123
+        2. Cliquer sur "Envoyer"
+        3. Observer l'erreur
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      placeholder: "L'email devrait être envoyé et le statut passer à 'envoyé'"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportement observé
+      placeholder: "Toast rouge : 'Erreur serveur (500)'. L'email n'est pas envoyé."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Sévérité
+      options:
+        - 🔴 Blocker (impossible d'utiliser une fonctionnalité critique)
+        - 🟠 Major (fonctionnalité dégradée, workaround possible)
+        - 🟡 Minor (gêne mais pas bloquant)
+        - 🟢 Trivial (typo, alignement, etc.)
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Zone concernée
+      options:
+        - auth
+        - biens (properties)
+        - locataires (tenants)
+        - baux (leases)
+        - paiements / quittances
+        - documents / storage
+        - PDF / email
+        - dashboard
+        - PWA / install
+        - autre / inconnu
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte additionnel
+      description: Logs, URL, navigateur, capture d'écran. Plus tu donnes, mieux l'agent travaille.
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: J'ai cherché les issues existantes, ce bug n'est pas déjà tracké
+          required: true
+        - label: Je comprends qu'un agent IA va travailler dessus après 3h (sauf si je ferme l'issue ou ajoute le label `agent-skip`)
+          required: true

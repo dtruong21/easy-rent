@@ -52,6 +52,24 @@ app.*.map.json
 *.key
 secrets.json
 
+# Dart-define values (contient les clés Supabase)
+dart-defines.json
+dart-defines.local.json
+dart-defines.*.local.json
+# Mais on garde le template :
+!dart-defines.example.json
+
+# Patterns supplémentaires de secrets (defense in depth)
+*-service-account.json
+*serviceAccount*.json
+*credentials*.json
+!**/dart-defines.example.json
+firebase-adminsdk-*.json
+
+# Logs CI/CD potentiellement sensibles
+*.ci.log
+deploy-*.log
+
 # Supabase local
 supabase/.branches/
 supabase/.temp/

@@ -9,6 +9,8 @@ You are the **Supabase Backend Developer** for EasyRent.
 
 ⚡ **Token economy** : Lis [`docs/state/SCHEMA.md`](../../docs/state/SCHEMA.md) et [`docs/state/FUNCTIONS.md`](../../docs/state/FUNCTIONS.md) AVANT de lire toutes les migrations. Après ton travail, invoque `state-keeper` (scope `schema` ou `functions`) pour rafraîchir l'état.
 
+🌐 **Multi-environnement** : EasyRent utilise **deux schémas Postgres** (`public` = PROD, `dev` = DEV) dans le même projet Supabase free tier. Voir [`docs/ENVIRONMENTS.md`](../../docs/ENVIRONMENTS.md). **TOUTE migration de table doit toucher les deux schémas.** Voir [`supabase/migrations/README.md`](../../supabase/migrations/README.md) pour le template obligatoire.
+
 ## Your scope
 
 - `supabase/migrations/*.sql` — versioned Postgres migrations
@@ -30,15 +32,33 @@ You are the **Supabase Backend Developer** for EasyRent.
 4. **Create the migration file** following naming `supabase/migrations/<YYYYMMDDHHMMSS>_<description>.sql`:
    - Always include UP migration
    - Include comments explaining the WHY
+   - **ALWAYS apply changes to BOTH `public` AND `dev` schemas** (free tier dual-schema strategy)
    - Always include indexes for foreign keys you'll filter on
-   - **ALWAYS enable RLS**: `ALTER TABLE foo ENABLE ROW LEVEL SECURITY;`
-   - **ALWAYS create explicit policies** for SELECT/INSERT/UPDATE/DELETE
-   - Default policy template:
+   - **ALWAYS enable RLS on both schemas**: `ALTER TABLE <schema>.foo ENABLE ROW LEVEL SECURITY;`
+   - **ALWAYS create explicit policies in both schemas** for SELECT/INSERT/UPDATE/DELETE
+   - Default migration template:
      ```sql
-     CREATE POLICY "landlord_owns_<table>"
-     ON <table> FOR ALL
-     USING (landlord_id = auth.uid())
-     WITH CHECK (landlord_id = auth.uid());
+     -- ==== PROD (public) ====
+     CREATE TABLE public.<table> (
+       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+       landlord_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+       -- ...
+       created_at timestamptz NOT NULL DEFAULT now(),
+       updated_at timestamptz NOT NULL DEFAULT now()
+     );
+     ALTER TABLE public.<table> ENABLE ROW LEVEL SECURITY;
+     CREATE POLICY "landlord_owns_<table>" ON public.<table>
+       FOR ALL USING (landlord_id = auth.uid()) WITH CHECK (landlord_id = auth.uid());
+     CREATE INDEX idx_public_<table>_landlord ON public.<table>(landlord_id);
+
+     -- ==== DEV (dev) — mirror exact ====
+     CREATE TABLE dev.<table> (LIKE public.<table> INCLUDING ALL);
+     ALTER TABLE dev.<table> ENABLE ROW LEVEL SECURITY;
+     CREATE POLICY "landlord_owns_<table>" ON dev.<table>
+       FOR ALL USING (landlord_id = auth.uid()) WITH CHECK (landlord_id = auth.uid());
+
+     -- ==== Vérification ====
+     SELECT dev.assert_rls_both_schemas('<table>');
      ```
 
 5. **For Edge Functions**:
@@ -60,12 +80,14 @@ You are the **Supabase Backend Developer** for EasyRent.
 ## Hard rules
 
 - **RLS is mandatory** on every table touching user data. No exceptions.
+- **DUAL SCHEMA** : every table-touching migration must apply to both `public` AND `dev`. After writing, call `SELECT * FROM dev.check_schema_parity();` mentally to verify there's no drift.
 - **Never use the service_role key** in client code or unprotected functions.
 - **Foreign keys must have indexes**.
 - **Use `auth.uid()` for ownership checks**, never trust client-provided user IDs.
 - **Timestamps**: every table has `created_at timestamptz default now()` and `updated_at timestamptz` (with trigger).
 - **Cascading deletes**: think carefully. Usually prefer soft-delete (`deleted_at`) for legal/audit reasons (5-year retention rule).
-- **Storage buckets**: private by default, paths prefixed by `auth.uid()`.
+- **Storage buckets**: private by default, paths prefixed by `{env}/{auth.uid()}/...` where env = `prod` or `dev`.
+- **Edge Functions** : accept un argument `schema` dans le body, et appellent `.schema(schema)` côté Deno. Validation : `schema` doit être dans `['public', 'dev']`.
 
 ## Output
 

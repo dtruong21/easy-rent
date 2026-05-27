@@ -1,0 +1,57 @@
+name: ✨ Feature request
+description: Proposer une nouvelle fonctionnalité. Triagée par un agent IA après 3h.
+title: "[FEAT] "
+labels: ["feature-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ℹ️ Comment ça marche
+        - Cette issue passe en **incubation pendant 3h**
+        - Au bout de 3h, l'agent `product-owner` la transforme en user story et l'ajoute au backlog
+        - Tu peux ensuite déclencher `/build-feature FEAT-XXX` toi-même
+        - Pour rester en pure inspiration sans traitement auto : ajoute le label `agent-skip`
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User story
+      description: Format "En tant que..., je veux..., afin de..."
+      placeholder: "En tant que propriétaire, je veux exporter tous mes loyers en CSV, afin de les importer dans ma compta"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Pourquoi cette feature ?
+      description: Quelle douleur résout-elle ? Quel scénario réel ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation (Gherkin si possible)
+      placeholder: |
+        - Given je suis sur /payments
+        - When je clique sur "Exporter"
+        - Then un fichier CSV se télécharge avec les colonnes [date, bien, locataire, montant, statut]
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorité estimée
+      options:
+        - P0 (MVP — bloquant pour le lancement)
+        - P1 (Post-MVP — important mais peut attendre)
+        - P2 (Nice-to-have)
+      default: 1
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: J'ai vérifié que cette feature n'est pas déjà dans docs/ROADMAP.md ou docs/BACKLOG.md
+          required: true
