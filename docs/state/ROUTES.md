@@ -1,6 +1,6 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-26
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-27
 
 ## Routes go_router
 
@@ -17,7 +17,7 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Navigation principale
 
-À implémenter dans le scope FEAT-002 (CRUD biens) : drawer ou bottom nav avec les sections principales (Dashboard, Biens, Locataires, Baux, Documents).
+À implémenter dans FEAT-002 (CRUD biens) : drawer ou bottom nav avec les sections principales (Dashboard, Biens, Locataires, Baux, Documents).
 
 ## Routes prévues (non implémentées)
 
@@ -31,3 +31,12 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 - `/receipts` — Quittances émises
 - `/documents` — Documents stockés
 - `/settings` — Paramètres compte propriétaire
+
+## Widgets de layout
+
+- **AppBar** : `title: "EasyRent"` (à enrichir avec menu/actions)
+- **Drawer/NavBar** : À créer (prochaine étape navigation)
+
+## Code generation
+
+- `flutter pub run build_runner build` génère les routeurs et modèles (freezed + json_serializable)

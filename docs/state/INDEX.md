@@ -4,20 +4,20 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-26T08:47:56Z
-- **Commit ref** : _(pas encore de commit — projet vient d'être bootstrappé)_
-- **Branche** : `main`
-- **Phase projet** : Bootstrap initial — projet Flutter Web créé, agents IA configurés, aucune feature implémentée
+- **Dernière mise à jour** : 2026-05-27T00:00:00Z
+- **Commit ref** : `4011843` (init project with claude and flutter)
+- **Branche** : `develop`
+- **Phase projet** : Bootstrap initial — projet Flutter Web créé, agents IA configurés, infrastructure multi-env en place sur Supabase, aucune feature métier implémentée
 
 ## Pointeurs
 
 | Aspect du projet | Fichier |
 |---|---|
-| Schéma Postgres (tables, colonnes, RLS) | [`SCHEMA.md`](SCHEMA.md) |
+| Schéma Postgres (tables, colonnes, RLS, fonctions) | [`SCHEMA.md`](SCHEMA.md) |
 | Routes Flutter et widgets principaux | [`ROUTES.md`](ROUTES.md) |
 | Features implémentées et statut | [`FEATURES.md`](FEATURES.md) |
-| Dépendances (pubspec, Deno imports) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
-| Edge Functions déployées | [`FUNCTIONS.md`](FUNCTIONS.md) |
+| Dépendances (pubspec, Deno imports, CLI tools) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
+| Edge Functions déployées et planifiées | [`FUNCTIONS.md`](FUNCTIONS.md) |
 
 ## Comment l'utiliser
 
@@ -35,3 +35,27 @@
 - Après chaque feature mergée → `state-keeper` met à jour automatiquement
 - Avant un sprint de features → `/refresh-state` pour reset propre
 - Si un agent détecte une incohérence → flag immédiat à l'utilisateur
+
+## Stack résumé
+
+| Couche | Tech |
+|---|---|
+| Frontend | Flutter Web 3.x + Dart 3.11+ |
+| State | Riverpod 2.6.0 |
+| Navigation | GoRouter 14.6.0 |
+| Backend | Supabase (Postgres + Auth + Storage) |
+| PDF | pdf + printing packages |
+| Build | build_runner + freezed + json_serializable |
+| Hosting | Firebase Hosting (TBD) |
+| CI/CD | GitHub Actions (TBD) |
+
+## Incohérences détectées
+
+Aucune incohérence majeure — projet bootstrap en bon état.
+
+### Observations non-critiques
+
+1. **supabase/functions/** : Répertoire n'existe pas → sera créé lors de FEAT-007 (send-receipt)
+2. **docs/backlog/** : Répertoire vide → sera rempli par `product-owner` lors de `/discover`
+3. **FEAT tables** : Aucune table métier créée → à créer progressivement par feature
+4. **Auth tables** : `auth.users` de Supabase non documenté ici (géré par Supabase natif)

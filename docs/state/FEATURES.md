@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-26
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-27
 
 ## Légende
 
@@ -10,7 +10,7 @@
 - 📋 **planned** : story écrite, pas commencé
 - 💡 **idea** : dans le backlog mais pas spec'd
 
-## Features
+## Features implémentées
 
 | ID | Nom | Statut | Notes |
 |---|---|---|---|
@@ -22,10 +22,13 @@
 - **Statut** : 🚧 squelette
 - **Fichiers** : `lib/main.dart`, `lib/core/`, `lib/features/auth/`, `lib/features/dashboard/`
 - **Routes** : `/`, `/login`
-- **Tables Supabase** : _(aucune — projet Supabase pas encore initialisé)_
-- **Note** : Les écrans LoginPage et DashboardPage sont des stubs avec texte "à implémenter".
+- **Tables Supabase** : _(aucune — infrastructure multi-env mise en place, aucune table métier)_
+- **Widgets** : 
+  - `LoginPage` : stub avec message "Écran de connexion à implémenter"
+  - `DashboardPage` : stub avec message "Dashboard à implémenter"
+- **État** : Bootstrap fonctionnel, prêt pour FEAT-001
 
-## Prochaines features prévues (cf. ROADMAP.md)
+## Prochaines features (cf. ROADMAP.md)
 
 | ID | Nom | Priorité | Effort |
 |---|---|---|---|
@@ -41,3 +44,8 @@
 | FEAT-010 | Polish PWA (offline shell, install prompt) | P0 | S |
 
 Les user stories détaillées seront créées par `product-owner` à la première exécution de `/discover`.
+
+## État du backlog
+
+- **Backlog directory** : `docs/backlog/` (empty — à remplir par product-owner lors de `/discover`)
+- **Assigné à** : `product-owner` (agent), `feature-scout` (agent)

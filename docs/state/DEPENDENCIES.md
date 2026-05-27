@@ -1,22 +1,22 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-26
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-27
 
 ## Flutter (pubspec.yaml)
 
 ### SDK
 - Dart : `^3.11.0`
-- Flutter : `3.41.2`
+- Flutter : latest stable
 
 ### Dépendances runtime
 
 | Package | Version | Usage |
 |---|---|---|
-| `supabase_flutter` | `^2.8.0` | Auth, DB, Storage |
+| `supabase_flutter` | `^2.12.4` | Auth, DB, Storage, Edge Functions |
 | `flutter_riverpod` | `^2.6.0` | State management |
-| `go_router` | `^14.6.0` | Navigation |
-| `freezed_annotation` | `^2.4.4` | Modèles immutables |
-| `json_annotation` | `^4.9.0` | Sérialisation JSON |
+| `go_router` | `^14.6.0` | Navigation et deep linking |
+| `freezed_annotation` | `^2.4.4` | Modèles immutables (code generation) |
+| `json_annotation` | `^4.9.0` | Sérialisation JSON (code generation) |
 | `pdf` | `^3.11.0` | Génération PDF quittances |
 | `printing` | `^5.13.0` | Affichage/téléchargement PDF |
 | `intl` | `^0.19.0` | Locale FR (dates, devise) |
@@ -29,22 +29,39 @@
 
 | Package | Version | Usage |
 |---|---|---|
-| `flutter_test` | sdk | Tests Flutter |
+| `flutter_test` | sdk | Unit tests Flutter |
 | `integration_test` | sdk | Tests E2E |
-| `flutter_lints` | `^6.0.0` | Linting |
-| `build_runner` | `^2.4.13` | Codegen |
-| `freezed` | `^2.5.7` | Codegen modèles |
-| `json_serializable` | `^6.9.0` | Codegen JSON |
+| `flutter_lints` | `^6.0.0` | Linting (analysis_options.yaml) |
+| `build_runner` | `^2.4.13` | Code generation tool |
+| `freezed` | `^2.5.7` | Codegen modèles immutables |
+| `json_serializable` | `^6.9.0` | Codegen JSON serialization |
+
+### Optional dev (commenté)
+
+- `riverpod_generator` : Codegen Riverpod (optionnel — non activé pour l'instant)
+- `custom_lint` : Support custom lints
+- `riverpod_lint` : Custom lints for Riverpod
 
 ## Edge Functions (Deno)
 
-_(aucune fonction créée — supabase/functions/ pas encore initialisé)_
+_(aucune fonction créée — `supabase/functions/` n'existe pas encore)_
+
+À créer lors de FEAT-007 (envoi quittance email).
 
 ## Outils CLI requis localement
 
-- `flutter` : 3.41.2 ✅ installé
-- `dart` : 3.11.0 ✅ inclus dans Flutter
-- `git` : 2.50.1 ✅ installé
-- `supabase` CLI : ❓ à vérifier
-- `firebase` CLI : ❓ à vérifier
-- `gh` : ❓ à vérifier
+- `flutter` : stable ✅ (pour `flutter pub`, `flutter run`)
+- `dart` : ✅ inclus dans Flutter (pour `dart analyze`, `dart format`)
+- `git` : ✅ (`git push`, `git rebase`)
+- `supabase` CLI : ❓ à vérifier (pour migrations locales)
+- `firebase` CLI : ❓ à vérifier (pour Firebase Hosting deploy)
+- `gh` : ❓ à vérifier (pour GitHub API / PR automation)
+
+## Architecture notes
+
+- **State management** : Riverpod (hooks-based, not provider-based) + code generation ready
+- **Navigation** : GoRouter with Riverpod integration
+- **Freezed** : Used for immutable models (TBD per feature)
+- **JSON serialization** : json_serializable (TBD per model)
+- **PDF** : pdf + printing packages for receipt generation
+- **Locale** : intl for FR formatting
