@@ -332,6 +332,220 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- TEST 11 : Trigger tr_01 — UPDATE direct de deleted_at refusé (public)
+-- FEAT-002 : trigger tr_01_prevent_protected_columns_change_landlords
+-- ============================================================================
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated"}',
+    true);
+  SET LOCAL ROLE authenticated;
+
+  BEGIN
+    UPDATE public.landlords SET deleted_at = now()
+      WHERE id = '00000000-0000-0000-0000-000000000001';
+    RESET ROLE;
+    RAISE EXCEPTION '[FAIL] TEST 11 public: UPDATE direct de deleted_at aurait dû être bloqué par trigger tr_01';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      -- SQLSTATE 42501 levé par prevent_protected_columns_change()
+      RESET ROLE;
+      RAISE NOTICE '[PASS] TEST 11 public: UPDATE direct de deleted_at sur landlords bloqué par trigger tr_01 (42501)';
+    WHEN OTHERS THEN
+      RESET ROLE;
+      RAISE EXCEPTION '[FAIL] TEST 11 public: erreur inattendue (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 12 : Trigger tr_01 — UPDATE direct de deleted_at refusé (dev)
+-- ============================================================================
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated"}',
+    true);
+  SET LOCAL ROLE authenticated;
+
+  BEGIN
+    UPDATE dev.landlords SET deleted_at = now()
+      WHERE id = '00000000-0000-0000-0000-000000000001';
+    RESET ROLE;
+    RAISE EXCEPTION '[FAIL] TEST 12 dev: UPDATE direct de deleted_at aurait dû être bloqué par trigger tr_01';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RESET ROLE;
+      RAISE NOTICE '[PASS] TEST 12 dev: UPDATE direct de deleted_at sur landlords bloqué par trigger tr_01 (42501)';
+    WHEN OTHERS THEN
+      RESET ROLE;
+      RAISE EXCEPTION '[FAIL] TEST 12 dev: erreur inattendue (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 13 : RPC soft_delete_landlord — fonctionne pour le propriétaire (public)
+-- Vérifie : ligne soft-deleted et invisible via SELECT normal.
+-- ============================================================================
+DO $$
+DECLARE row_count integer;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated"}',
+    true);
+  SET LOCAL ROLE authenticated;
+
+  -- Appel RPC : doit réussir sans exception
+  PERFORM public.soft_delete_landlord();
+
+  -- La ligne doit être invisible via SELECT normal (RLS filtre deleted_at IS NOT NULL)
+  SELECT COUNT(*) INTO row_count FROM public.landlords
+    WHERE id = '00000000-0000-0000-0000-000000000001';
+
+  RESET ROLE;
+
+  -- En superuser : vérifier que deleted_at est bien positionné (soft-delete, pas hard-delete)
+  IF (SELECT deleted_at FROM public.landlords
+        WHERE id = '00000000-0000-0000-0000-000000000001') IS NULL THEN
+    RAISE EXCEPTION '[FAIL] TEST 13 public: soft_delete_landlord devrait avoir positionné deleted_at';
+  END IF;
+
+  IF row_count <> 0 THEN
+    RAISE EXCEPTION '[FAIL] TEST 13 public: Landlord soft-deleted devrait être invisible via SELECT (got %)', row_count;
+  END IF;
+  RAISE NOTICE '[PASS] TEST 13 public: soft_delete_landlord fonctionne — ligne invisible mais existante en base';
+
+  -- Restaurer pour la suite des tests
+  PERFORM set_config('app.allow_deleted_at_change', '1', true);
+  UPDATE public.landlords SET deleted_at = NULL
+    WHERE id = '00000000-0000-0000-0000-000000000001';
+  PERFORM set_config('app.allow_deleted_at_change', '0', true);
+END $$;
+
+-- ============================================================================
+-- TEST 14 : RPC soft_delete_landlord — fonctionne pour le propriétaire (dev)
+-- ============================================================================
+DO $$
+DECLARE row_count integer;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated"}',
+    true);
+  SET LOCAL ROLE authenticated;
+
+  PERFORM dev.soft_delete_landlord();
+
+  SELECT COUNT(*) INTO row_count FROM dev.landlords
+    WHERE id = '00000000-0000-0000-0000-000000000001';
+
+  RESET ROLE;
+
+  IF (SELECT deleted_at FROM dev.landlords
+        WHERE id = '00000000-0000-0000-0000-000000000001') IS NULL THEN
+    RAISE EXCEPTION '[FAIL] TEST 14 dev: soft_delete_landlord devrait avoir positionné deleted_at';
+  END IF;
+
+  IF row_count <> 0 THEN
+    RAISE EXCEPTION '[FAIL] TEST 14 dev: Landlord soft-deleted devrait être invisible via SELECT (got %)', row_count;
+  END IF;
+  RAISE NOTICE '[PASS] TEST 14 dev: soft_delete_landlord fonctionne — ligne invisible mais existante en base';
+
+  PERFORM set_config('app.allow_deleted_at_change', '1', true);
+  UPDATE dev.landlords SET deleted_at = NULL
+    WHERE id = '00000000-0000-0000-0000-000000000001';
+  PERFORM set_config('app.allow_deleted_at_change', '0', true);
+END $$;
+
+-- ============================================================================
+-- TEST 15 : FK NO ACTION — DELETE d'un auth.user avec landlord existant échoue
+-- FEAT-002 change la FK landlords.id → auth.users(id) de CASCADE à NO ACTION.
+-- Ce test vérifie que la suppression d'un auth.user est bien bloquée par la FK
+-- tant qu'une ligne landlords non-deleted existe.
+-- ============================================================================
+DO $$
+BEGIN
+  BEGIN
+    -- Tenter de supprimer User B (qui a une ligne landlords active)
+    DELETE FROM auth.users WHERE id = '00000000-0000-0000-0000-000000000002';
+    -- Si on arrive ici, la FK CASCADE est toujours active → FEAT-002 n'a pas
+    -- correctement changé la contrainte. C'est un bug critique de migration.
+    RAISE EXCEPTION '[FAIL] TEST 15: DELETE d''un auth.user avec landlord existant aurait dû échouer (FK NO ACTION) — vérifier que la migration a bien remplacé ON DELETE CASCADE par ON DELETE NO ACTION';
+  EXCEPTION
+    WHEN foreign_key_violation THEN
+      -- SQLSTATE 23503 : la FK NO ACTION bloque le DELETE — attendu
+      RAISE NOTICE '[PASS] TEST 15: DELETE auth.user bloqué par FK NO ACTION (23503) — rétention 5 ans protégée';
+    WHEN OTHERS THEN
+      RAISE EXCEPTION '[FAIL] TEST 15: erreur inattendue (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 16 : handle_new_user — provisioning automatique après FEAT-002
+-- Vérifie que le trigger on_auth_user_created copie email dans landlords,
+-- que full_name est NULL (attendu — rempli plus tard par l'UI), et que
+-- les nouvelles colonnes FEAT-002 (phone, address) sont aussi NULL.
+-- ============================================================================
+DO $$
+DECLARE
+  test_user_id uuid := '00000000-0000-0000-0000-000000000099';
+  pub_count    integer;
+  dev_count    integer;
+  pub_email    text;
+  dev_email    text;
+  pub_fullname text;
+BEGIN
+  -- Insérer un nouvel auth.user — doit déclencher handle_new_user()
+  INSERT INTO auth.users (
+    id, instance_id, email, encrypted_password, email_confirmed_at,
+    created_at, updated_at, raw_app_meta_data, raw_user_meta_data, aud, role
+  ) VALUES (
+    test_user_id,
+    '00000000-0000-0000-0000-000000000000',
+    'trigger_test@test.example',
+    'hashed_placeholder',
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}',
+    '{}',
+    'authenticated',
+    'authenticated'
+  ) ON CONFLICT (id) DO NOTHING;
+
+  -- Vérifier provisioning dans public
+  SELECT COUNT(*), MAX(email), MAX(full_name)
+    INTO pub_count, pub_email, pub_fullname
+    FROM public.landlords WHERE id = test_user_id;
+
+  -- Vérifier provisioning dans dev
+  SELECT COUNT(*) INTO dev_count
+    FROM dev.landlords WHERE id = test_user_id;
+
+  -- Assertions
+  IF pub_count <> 1 THEN
+    RAISE EXCEPTION '[FAIL] TEST 16: handle_new_user n''a pas créé de ligne dans public.landlords (count=%). Trigger on_auth_user_created actif ?', pub_count;
+  END IF;
+
+  IF dev_count <> 1 THEN
+    RAISE EXCEPTION '[FAIL] TEST 16: handle_new_user n''a pas créé de ligne dans dev.landlords (count=%)', dev_count;
+  END IF;
+
+  IF pub_email <> 'trigger_test@test.example' THEN
+    RAISE EXCEPTION '[FAIL] TEST 16: email mal copié dans public.landlords (got "%")', pub_email;
+  END IF;
+
+  IF pub_fullname IS NOT NULL THEN
+    RAISE EXCEPTION '[FAIL] TEST 16: full_name devrait être NULL à la création (got "%")', pub_fullname;
+  END IF;
+
+  RAISE NOTICE '[PASS] TEST 16: handle_new_user provisionne landlords avec email copié et full_name NULL dans les deux schémas';
+
+  -- Cleanup (le ROLLBACK final s'en charge, mais on nettoie explicitement
+  -- pour éviter les conflits si le test tourne en COMMIT)
+  DELETE FROM public.landlords WHERE id = test_user_id;
+  DELETE FROM dev.landlords     WHERE id = test_user_id;
+  DELETE FROM auth.users        WHERE id = test_user_id;
+END $$;
+
+-- ============================================================================
 -- Teardown : supprimer les données de test
 -- ============================================================================
 DELETE FROM public.landlords
