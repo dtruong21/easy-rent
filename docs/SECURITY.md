@@ -91,6 +91,27 @@ La vraie sécurité repose sur :
 - **RLS** : activée sur toutes les tables (enforced par `supabase-dev` et `security-auditor`)
 - **JWT verification** : toutes les Edge Functions vérifient le JWT avant action privilégiée
 
+## ⚠️ Patterns sensibles à connaître
+
+### Flag de session GUC pour bypass contrôlé de trigger (`app.*`)
+
+Depuis FEAT-002, un flag de session custom `app.allow_deleted_at_change` est utilisé par les RPC `SECURITY DEFINER` `soft_delete_*` pour neutraliser temporairement le trigger `prevent_protected_columns_change` le temps d'un UPDATE légitime sur `deleted_at`.
+
+**Comment ça marche** :
+- Chaque RPC pose `set_config('app.allow_deleted_at_change', '1', true)` (true = scope local-transaction)
+- Le trigger lit ce flag via `current_setting('app.allow_deleted_at_change', true)` et autorise l'UPDATE si présent
+
+**Risque architectural** : Postgres autorise n'importe quel rôle (y compris `authenticated`) à poser un paramètre GUC custom (préfixe `app.*`) via `SET LOCAL` ou `set_config()`. Aujourd'hui ce risque est mitigé parce que PostgREST n'expose ni `pg_catalog.set_config` ni de fonction `public.*` qui ferait du passthrough. **Mais c'est un footgun** : si demain quelqu'un ajoute une RPC qui prend un paramètre user-controlled et le passe à `set_config()`, le bypass devient possible.
+
+**Règles à respecter strictement** :
+1. ❌ **JAMAIS** créer une fonction `public.*` (ou exposée à PostgREST) qui accepte un nom de variable ou une valeur GUC en paramètre user-contrôlé.
+2. ❌ **JAMAIS** appeler `set_config(p_var, p_val, ...)` où `p_var` ou `p_val` vient d'un argument de fonction publique.
+3. ✅ Si une RPC doit positionner un flag de session, **les deux arguments doivent être des littéraux hardcodés** dans le corps de la fonction (`set_config('app.x', '1', true)`).
+4. ✅ Les RPC qui posent des flags doivent être `SECURITY DEFINER` + `SET search_path = public` (ou `= dev`) + `REVOKE ALL FROM PUBLIC` + `GRANT EXECUTE TO authenticated`.
+5. ✅ Toute nouvelle RPC qui touche `set_config()` requiert une revue explicite par `security-auditor` avant merge.
+
+**Hardening prévu en P1** : remplacer le flag par un mécanisme intransférable (ex: `pg_trigger_depth() > 0` testé dans une fonction SECURITY DEFINER de niveau supérieur), afin de retirer toute surface d'attaque future. Tracké dans `docs/BACKLOG.md` (dette technique post-FEAT-002).
+
 ## ✅ Checklist avant chaque deploy
 
 - [ ] Aucun secret en clair dans le code (run `scripts/check-secrets.sh`)

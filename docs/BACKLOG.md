@@ -62,10 +62,14 @@ FEAT-001 (auth)
 - 🔧 **Seuils de rate-limit OTP** Supabase à vérifier en Studio.
 - 🔧 **Reproduire URL Configuration Supabase pour le canal `live`** quand on déploiera en prod (Site URL + Redirect Allow-List).
 
-### À traiter en FEAT-002 (tracké depuis FEAT-001)
-- **FK `landlords.id … ON DELETE CASCADE` vs rétention 5 ans** : remplacer par `ON DELETE RESTRICT`/`NO ACTION` + flux soft-delete applicatif **avant** d'introduire baux/quittances (sinon suppression de compte = effacement physique de données à conserver).
-- **Restriction colonne `deleted_at`** : la policy UPDATE actuelle laisse le propriétaire modifier `deleted_at` ; restreindre via trigger `BEFORE UPDATE` (OLD/NEW).
-- **RGPD self-service** (P1) : export des données + droit à l'effacement (Edge Function + exposition contrôlée de `deleted_at`).
+### Items résolus par FEAT-002
+- ✅ ~~FK `landlords.id … ON DELETE CASCADE`~~ → remplacé par `ON DELETE NO ACTION` (rétention 5 ans garantie). L'effacement RGPD passera par Edge Function dédiée (P1 ci-dessous).
+- ✅ ~~Restriction colonne `deleted_at`~~ → trigger `prevent_protected_columns_change` (BEFORE INSERT OR UPDATE) sur 4 tables × 2 schémas ; soft-delete passe par RPC `soft_delete_*` SECURITY DEFINER.
+
+### Dette tracée par FEAT-002 (P1)
+- **Hardening flag de session GUC** : `app.allow_deleted_at_change` est aujourd'hui safe (PostgREST n'expose pas `set_config`) mais reste un footgun architectural. Remplacer par un mécanisme intransférable (ex: `pg_trigger_depth()` test, ou wrapping en fonction SECURITY DEFINER de niveau supérieur). Cf section "⚠️ Patterns sensibles" dans `docs/SECURITY.md`.
+- **RGPD self-service** (P1) : export des données + droit à l'effacement (Edge Function qui anonymise plutôt qu'efface, conforme rétention 5 ans + RPC `soft_delete_*` cascade enfants).
+- **`soft_delete_landlord` ne cascade pas vers properties/tenants/leases** : aujourd'hui un landlord soft-deleted laisse ses enfants visibles (deleted_at=NULL). Conforme RGPD rétention, mais incohérent UX si restauration future. À documenter ou à ajuster en P1.
 
 ## Plus tard (P1, P2)
 
