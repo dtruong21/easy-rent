@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-28T00:00:00Z
-- **Commit ref** : `5a4bcac` (fix: disable service worker on staging builds)
+- **Dernière mise à jour** : 2026-05-28T12:00:00Z
+- **Commit ref** : `9db2741` (Merge pull request #2 from dtruong21/feature/data-model-rls)
 - **Branche** : `develop`
-- **Phase projet** : FEAT-001 (auth magic link) implémentée et mergée — staging validée bout-en-bout. FEAT-002–010 en backlog.
+- **Phase projet** : FEAT-001 (auth) + FEAT-002 (data model + RLS) implémentées et mergées. FEAT-003–010 en backlog.
 
 ## Pointeurs
 
@@ -52,18 +52,21 @@
 
 ## Incohérences détectées
 
-Aucune incohérence majeure — état cohérent avec code.
+Aucune incohérence — état entièrement cohérent avec code.
 
-### Observations
+### Changements majeurs FEAT-002
 
-1. **FEAT-001 status upgrade** : À mettre à jour dans `FEATURES.md` (était "📋 planned", maintenant "✅ done" + staging déployée)
-2. **Routes** : `/privacy` ajoutée (public, RGPD) — à documenter dans `ROUTES.md`
-3. **Nouvelle structure auth** : `lib/features/auth/` complète (domain/data/application/presentation) — document dans `FEATURES.md`
-4. **CI/CD update** : `deploy.yml` a maintenant `dart run build_runner build` step + `--pwa-strategy=none` sur staging
-5. **Firebase config** : `.firebaserc` et `firebase.json` ajoutés (projet `easy-rent-54cd4`)
+1. **4 nouvelles tables** : `properties`, `tenants`, `leases` (public + dev) — docs dans `SCHEMA.md` (24 policies, 8 triggers, 8 RPC)
+2. **FK change** : `landlords.id → auth.users(id)` : CASCADE → NO ACTION (rétention légale RGPD)
+3. **Soft-delete framework** : Pattern tr_00/tr_01/tr_02 pour ordre d'exécution alphabétique stable
+4. **RPC SECURITY DEFINER × 2 schémas** : 8 RPC soft-delete (4 tables × 2 schémas)
+5. **77 RLS tests** : `rls_landlords.sql`, `rls_properties.sql`, `rls_tenants.sql`, `rls_leases.sql`
+6. **Aucun changement Flutter** : FEAT-002 est purement backend
+7. **Status upgrades** : FEAT-001 ✅ done, FEAT-002 ✅ done (migration appliquée prod 2026-05-28 12:00 UTC)
 
-### Pas d'incohérences de code
+### État de la base de code
 
-- Code matches state — aucun drift détecté
-- Tests présents (unit + widget + RLS)
-- RLS validée cross-user en staging
+- Code matches state — aucun drift détecté post-FEAT-002
+- Tests RLS exhaustifs (cross-user, soft-delete, cross-FK)
+- RLS validée sur Postgres côté backend
+- Flutter unchanged — prêt pour FEAT-003+ (UI CRUD)
