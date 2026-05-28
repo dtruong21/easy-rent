@@ -6,6 +6,9 @@ import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
+import '../../features/properties/presentation/properties_list_page.dart';
+import '../../features/properties/presentation/property_detail_page.dart';
+import '../../features/properties/presentation/property_form_page.dart';
 import 'go_router_refresh_stream.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -43,6 +46,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/privacy',
         builder: (context, state) => const PrivacyPage(),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Routes biens immobiliers (FEAT-003)
+      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/properties',
+        builder: (context, state) => const PropertiesListPage(),
+      ),
+      GoRoute(
+        path: '/properties/new',
+        builder: (context, state) => const PropertyFormPage(),
+      ),
+      GoRoute(
+        path: '/properties/:id',
+        builder: (context, state) =>
+            PropertyDetailPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/properties/:id/edit',
+        builder: (context, state) =>
+            PropertyEditPage(id: state.pathParameters['id']!),
       ),
     ],
   );
