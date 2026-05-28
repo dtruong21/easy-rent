@@ -77,6 +77,21 @@ Le bien immobilier (`property`) est l'entité centrale autour de laquelle s'orga
 - **Soft-delete obligatoire** : ne jamais hard-delete une `property` liée à un bail — les quittances doivent rester traçables 5 ans. Voir `docs/LEGAL.md`.
 - Adresse du bien est une donnée nécessaire pour les quittances légales (loi 6 juillet 1989, art. 21) — le champ adresse est donc obligatoire.
 
+## Décisions d'arbitrage (2026-05-28)
+- **Bail actif avant archivage** : Option B — query légère sur `leases` (`SELECT COUNT(*) FROM leases WHERE property_id = ? AND status = 'active' AND deleted_at IS NULL`) avant d'appeler `soft_delete_property`. Dialog standard si 0, dialog renforcé si > 0 (mais archive autorisée après confirmation explicite).
+- **Filtre "Afficher archivés"** : reporté en P1. Liste V1 montre uniquement les biens actifs.
+- **Routes** : `/properties` (liste), `/properties/new` (création), `/properties/:id` (fiche lecture), `/properties/:id/edit` (édition) — séparation lecture/écriture explicite.
+- **Form widget** : `PropertyFormPage` unique paramétré par `Property? initial`, partagé entre création et édition.
+- **Modèle** : `freezed` + `json_serializable` avec `FieldRename.snake`, aligné `LoginFormState`.
+- **Enum `PropertyType`** : Dart enum fermé (`appartement`, `maison`, `studio`, `autre`) + extension `labelFr`/`sqlValue`/`fromSql`. Désync avec le CHECK SQL = erreur compilation.
+- **Surface** : `double?`, parsing FR (`,` → `.`) dans `surface_validator.dart`.
+- **Liste** : tout charger avec `.limit(200)` en garde-fou. Pagination → post-MVP.
+- **Archivage** : appel de la RPC `soft_delete_property(p_id)` via `Supabase.instance.client.rpc(...)` (l'UPDATE direct serait bloqué par le trigger `prevent_protected_columns_change`).
+- **Tri** : `created_at DESC` uniquement en V1.
+- **Champs** : strict aux 4 spécifiés story (`name`, `address`, `type`, `surface_m2`).
+- **Navigation** : `ListTile` "Mes biens" dans le body du `DashboardPage`. Pas de drawer pour le MVP.
+- **Gestion d'erreur** : état `error` dans `PropertyFormState` (inline) + SnackBar toast sur succès. Helper `_mapPostgrestError()` traduit les erreurs Supabase en messages utilisateur FR.
+
 ## Priority
 P0 (MVP)
 

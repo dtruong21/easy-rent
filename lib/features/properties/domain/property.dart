@@ -1,0 +1,38 @@
+// ignore_for_file: invalid_annotation_target
+
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import 'property_type.dart';
+
+part 'property.freezed.dart';
+part 'property.g.dart';
+
+// Helpers JSON pour PropertyType (utilisés par @JsonKey).
+PropertyType _typeFromJson(String value) => PropertyType.fromSql(value);
+String _typeToJson(PropertyType type) => type.sqlValue;
+
+/// Modèle immutable d'un bien immobilier.
+///
+/// Mappé directement sur la table `properties` (public + dev).
+/// Les colonnes `created_at`, `updated_at` et `deleted_at` sont gérées
+/// par les triggers Supabase — ne jamais les inclure dans un payload INSERT/UPDATE.
+///
+/// [landlordId] : FK vers `landlords.id`. Ne pas l'envoyer dans un INSERT
+/// depuis le client — la RLS (`properties_insert_own`) vérifie `= auth.uid()`.
+@freezed
+class Property with _$Property {
+  const factory Property({
+    required String id,
+    @JsonKey(name: 'landlord_id') required String landlordId,
+    required String name,
+    required String address,
+    @JsonKey(fromJson: _typeFromJson, toJson: _typeToJson)
+    required PropertyType type,
+    @JsonKey(name: 'surface_m2') double? surfaceM2,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'updated_at') required DateTime updatedAt,
+  }) = _Property;
+
+  factory Property.fromJson(Map<String, dynamic> json) =>
+      _$PropertyFromJson(json);
+}
