@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-27
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-28
 
 ## Tables
 
@@ -27,8 +27,9 @@
 | `landlord_selects_self` | public + dev | SELECT | `id = auth.uid() AND deleted_at IS NULL` |
 | `landlord_updates_self` | public + dev | UPDATE | USING: `id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `id = auth.uid()` |
 
-INSERT client : **interdit** (aucune policy INSERT → refusé par RLS)
-DELETE client : **interdit** (aucune policy DELETE → soft-delete uniquement via `deleted_at`)
+**Client constraints** :
+- INSERT : **interdit** (aucune policy INSERT → refusé par RLS. Trigger SECURITY DEFINER `handle_new_user` insère automatiquement)
+- DELETE : **interdit** (aucune policy DELETE → soft-delete uniquement via `deleted_at`)
 
 ## Storage buckets
 
@@ -38,27 +39,27 @@ _(aucun bucket configuré)_
 
 ### `dev.check_schema_parity()`
 - **Type** : Function helper (debug)
-- **Purpose** : Compare tables between `public` (PROD) and `dev` (DEV) schemas to detect drift
+- **Purpose** : Compare tables between `public` (PROD) et `dev` (DEV) schemas pour détecter la dérive
 - **Return** : `TABLE (public_table text, dev_table text, status text)`
 - **Source** : `supabase/migrations/00000000000000_init_dev_schema.sql:38-59`
 
 ### `dev.assert_rls_both_schemas(table_name text)`
 - **Type** : Function helper (security check)
-- **Purpose** : Assert RLS is enabled on both public and dev schemas for a given table
-- **Raises** : Exception if RLS not enabled
+- **Purpose** : Assert RLS is enabled on both `public` and `dev` schemas for a given table
+- **Raises** : Exception si RLS non activée
 - **Source** : `supabase/migrations/00000000000000_init_dev_schema.sql:64-82`
 
 ### `public.handle_new_user()`
-- **Type** : Trigger function, SECURITY DEFINER, search_path = public
+- **Type** : Trigger function, SECURITY DEFINER, `SET search_path = public`
 - **Purpose** : Auto-provisioning — insère une ligne dans `public.landlords` ET `dev.landlords` à chaque INSERT dans `auth.users`. Idempotent (`ON CONFLICT (id) DO NOTHING`).
 - **Trigger** : `on_auth_user_created` AFTER INSERT ON `auth.users` FOR EACH ROW
-- **Source** : `supabase/migrations/20260527081533_feat001_landlords_auth.sql`
+- **Source** : `supabase/migrations/20260527081533_feat001_landlords_auth.sql:87-118`
 
 ### `public.set_updated_at()`
 - **Type** : Trigger function
 - **Purpose** : Maintient `updated_at = now()` automatiquement à chaque UPDATE
 - **Triggers** : `set_landlords_updated_at` BEFORE UPDATE ON `public.landlords` et `dev.landlords`
-- **Source** : `supabase/migrations/20260527081533_feat001_landlords_auth.sql`
+- **Source** : `supabase/migrations/20260527081533_feat001_landlords_auth.sql:124-142`
 
 ## Schémas
 
@@ -76,6 +77,7 @@ _(aucun bucket configuré)_
 
 ## Notes
 
-- **Multi-environment strategy** : Same database hosts both `public` (PROD) and `dev` (DEV) schemas on Supabase free tier
+- **Multi-environment strategy** : Same database hosts both `public` (PROD) et `dev` (DEV) schemas on Supabase free tier
 - **Migration rule** : All future migrations MUST apply changes to BOTH schemas (see `docs/ENVIRONMENTS.md`)
 - **FEAT-002** étendra `landlords` via `ALTER TABLE` (ajout colonnes : adresse, raison sociale, SIRET, etc.)
+- **Applied to production** : Migration exécutée en réel sur le projet Supabase `tbgttutodbqffrvsvkoz` (2026-05-27 ~08:15 UTC)

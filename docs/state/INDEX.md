@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-27T00:00:00Z
-- **Commit ref** : `4011843` (init project with claude and flutter)
+- **Dernière mise à jour** : 2026-05-28T00:00:00Z
+- **Commit ref** : `5a4bcac` (fix: disable service worker on staging builds)
 - **Branche** : `develop`
-- **Phase projet** : Bootstrap initial — projet Flutter Web créé, agents IA configurés, infrastructure multi-env en place sur Supabase, aucune feature métier implémentée
+- **Phase projet** : FEAT-001 (auth magic link) implémentée et mergée — staging validée bout-en-bout. FEAT-002–010 en backlog.
 
 ## Pointeurs
 
@@ -42,20 +42,28 @@
 |---|---|
 | Frontend | Flutter Web 3.x + Dart 3.11+ |
 | State | Riverpod 2.6.0 |
-| Navigation | GoRouter 14.6.0 |
+| Navigation | GoRouter 14.6.0 + GoRouterRefreshStream (custom) |
+| Auth | Supabase Auth (magic link via PKCE) |
 | Backend | Supabase (Postgres + Auth + Storage) |
 | PDF | pdf + printing packages |
 | Build | build_runner + freezed + json_serializable |
-| Hosting | Firebase Hosting (TBD) |
-| CI/CD | GitHub Actions (TBD) |
+| Hosting | Firebase Hosting (staging ✅, prod TBD) |
+| CI/CD | GitHub Actions (ci.yml + deploy.yml avec build_runner step) |
 
 ## Incohérences détectées
 
-Aucune incohérence majeure — projet bootstrap en bon état.
+Aucune incohérence majeure — état cohérent avec code.
 
-### Observations non-critiques
+### Observations
 
-1. **supabase/functions/** : Répertoire n'existe pas → sera créé lors de FEAT-007 (send-receipt)
-2. **docs/backlog/** : Répertoire vide → sera rempli par `product-owner` lors de `/discover`
-3. **FEAT tables** : Aucune table métier créée → à créer progressivement par feature
-4. **Auth tables** : `auth.users` de Supabase non documenté ici (géré par Supabase natif)
+1. **FEAT-001 status upgrade** : À mettre à jour dans `FEATURES.md` (était "📋 planned", maintenant "✅ done" + staging déployée)
+2. **Routes** : `/privacy` ajoutée (public, RGPD) — à documenter dans `ROUTES.md`
+3. **Nouvelle structure auth** : `lib/features/auth/` complète (domain/data/application/presentation) — document dans `FEATURES.md`
+4. **CI/CD update** : `deploy.yml` a maintenant `dart run build_runner build` step + `--pwa-strategy=none` sur staging
+5. **Firebase config** : `.firebaserc` et `firebase.json` ajoutés (projet `easy-rent-54cd4`)
+
+### Pas d'incohérences de code
+
+- Code matches state — aucun drift détecté
+- Tests présents (unit + widget + RLS)
+- RLS validée cross-user en staging

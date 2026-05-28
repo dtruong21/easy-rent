@@ -82,6 +82,10 @@ firebase-debug.*.log
 
 # Claude Code — paramètres locaux uniquement (settings.json est partagé)
 .claude/settings.local.json
+# Skills/agents Claude — installés localement via setup-cowork, pas du code projet
+.agents/
+.claude/skills/
+skills-lock.json
 
 # Generated Dart code
 **/*.g.dart

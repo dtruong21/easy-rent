@@ -2,7 +2,7 @@
 
 Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-<slug>.md`.
 
-> Dernière mise à jour : 2026-05-27 (via `/discover`)
+> Dernière mise à jour : 2026-05-28 (post merge FEAT-001 + validation staging bout-en-bout)
 
 ## En cours
 
@@ -47,16 +47,20 @@ FEAT-001 (auth)
 - **Aucune Edge Function** (`supabase/functions/` vide) → bloque FEAT-008 (Resend). Choisir le domaine email vérifié avant.
 - **Pas de `seed.sql`** → données de dev locales manuelles pour l'instant.
 
-### 🚧 Setup infra déploiement (bloque toute livraison staging/prod)
-- **Aucun `firebase.json` / `.firebaserc`** → scaffolder la config Hosting (public = `build/web`, rewrites SPA).
-- **Secrets GitHub Actions absents** (repo + env `staging`) : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` (valeurs fournies par l'utilisateur).
-- **Environnement `production`** à créer (seul `staging` existe).
-- ⚠️ `deploy.yml` n'applique les migrations Supabase que depuis `main` → définir comment provisionner le schéma `dev` pour la QA staging de FEAT-001.
+### Setup infra déploiement — staging OK, prod à finir
+- ✅ ~~`firebase.json` / `.firebaserc`~~ → posés (`build/web` + rewrites SPA pour GoRouter).
+- ✅ ~~Secrets staging~~ : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` → posés sur env `staging`.
+- ✅ ~~Provisionnement schéma `dev` pour QA staging~~ → fait via Supabase CLI (`supabase db push`).
+- ✅ ~~Service worker piège-cache sur staging~~ → désactivé via `--pwa-strategy=none` dans `deploy.yml` quand env=staging.
+- 🔧 **Environnement GitHub `production` à créer** (seul `staging` existe).
+- 🔧 **Secrets prod manquants** : dupliquer `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `FIREBASE_SERVICE_ACCOUNT` / `FIREBASE_PROJECT_ID` sur env `production`. Plus ajouter `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` (utilisés par le job `apply-supabase-migrations` qui ne tourne que depuis `main`).
+- 🔧 **Stratégie d'apply migrations à automatiser** : actuellement migrations posées sur dev via CLI manuelle. À terme : soit étendre `deploy.yml` pour appliquer aussi depuis `develop`, soit garder l'approche "1 fois par release depuis `main`". À trancher pendant FEAT-002.
 
 ### Gates AVANT mise en PROD (issus de l'audit sécu FEAT-001)
-- 🔧 **Redirect Allow-List Supabase** : vérifier en Studio qu'aucun wildcard large n'est autorisé (sinon risque de capture de token magic link). Config, hors repo.
+- ✅ ~~Redirect Allow-List Supabase~~ → configurée (Site URL + 3 variantes de redirect URLs pour staging, à ajouter pour prod plus tard).
 - 🔧 **Compléter `/privacy`** : identité du responsable de traitement, DPO, base légale définitive de la persistance de session (placeholder actuellement).
 - 🔧 **Seuils de rate-limit OTP** Supabase à vérifier en Studio.
+- 🔧 **Reproduire URL Configuration Supabase pour le canal `live`** quand on déploiera en prod (Site URL + Redirect Allow-List).
 
 ### À traiter en FEAT-002 (tracké depuis FEAT-001)
 - **FK `landlords.id … ON DELETE CASCADE` vs rétention 5 ans** : remplacer par `ON DELETE RESTRICT`/`NO ACTION` + flux soft-delete applicatif **avant** d'introduire baux/quittances (sinon suppression de compte = effacement physique de données à conserver).

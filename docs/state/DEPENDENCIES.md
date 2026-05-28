@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-27
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-28
 
 ## Flutter (pubspec.yaml)
 
@@ -42,26 +42,47 @@
 - `custom_lint` : Support custom lints
 - `riverpod_lint` : Custom lints for Riverpod
 
+### Custom implementations
+
+- `GoRouterRefreshStream` : Custom class wrapper pour écouter `authRepository.authStateChanges` et déclencher GoRouter redirect logic
+
 ## Edge Functions (Deno)
 
-_(aucune fonction créée — `supabase/functions/` n'existe pas encore)_
+_(aucune fonction créée — `supabase/functions/` n'existe pas)_
 
 À créer lors de FEAT-007 (envoi quittance email).
 
+Structure prévue :
+- Deno runtime (TS)
+- `import_map.json` pour dépendances externes (Resend, Supabase client, etc.)
+
 ## Outils CLI requis localement
 
-- `flutter` : stable ✅ (pour `flutter pub`, `flutter run`)
-- `dart` : ✅ inclus dans Flutter (pour `dart analyze`, `dart format`)
-- `git` : ✅ (`git push`, `git rebase`)
-- `supabase` CLI : ❓ à vérifier (pour migrations locales)
-- `firebase` CLI : ❓ à vérifier (pour Firebase Hosting deploy)
-- `gh` : ❓ à vérifier (pour GitHub API / PR automation)
+| Outil | Version | Usage | Status |
+|---|---|---|---|
+| `flutter` | stable | `flutter pub`, `flutter run` | ✅ requis |
+| `dart` | ✅ inclus | `dart analyze`, `dart format` | ✅ requis |
+| `git` | any | VCS | ✅ requis |
+| `supabase` CLI | latest | Migrations locales, emulator | ⚠️ optionnel (fallback: web UI) |
+| `firebase` CLI | latest | Firebase Hosting deploy | ✅ requis (staging + prod) |
+| `gh` | latest | GitHub API, PR automation | ✅ requis (agent ticketing) |
+
+## Build configuration
+
+### pubspec.yaml flags
+
+- `generate: true` : Active Flutter code generation (`lib/generated_plugins.dart`, etc.)
+
+### CI/CD build steps (GitHub Actions)
+
+- `deploy.yml` : `dart run build_runner build` exécutée avant `flutter build web`
+- `ci.yml` : `flutter analyze`, `flutter test`, `flutter build web --release`
 
 ## Architecture notes
 
-- **State management** : Riverpod (hooks-based, not provider-based) + code generation ready
-- **Navigation** : GoRouter with Riverpod integration
-- **Freezed** : Used for immutable models (TBD per feature)
-- **JSON serialization** : json_serializable (TBD per model)
-- **PDF** : pdf + printing packages for receipt generation
-- **Locale** : intl for FR formatting
+- **State management** : Riverpod (provider-based, NOT hooks-based) + provider watchers
+- **Navigation** : GoRouter with Riverpod-based redirect logic (voir `GoRouterRefreshStream`)
+- **Freezed** : Used for immutable models (domain models, form state)
+- **JSON serialization** : json_serializable (not used in FEAT-001, planned for FEAT-002+)
+- **PDF** : pdf + printing packages for receipt generation (FEAT-006+)
+- **Locale** : intl for FR formatting (dates, devise, etc.)
