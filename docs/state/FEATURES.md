@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-28 (FEAT-002 mergée)
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-28 (FEAT-003 mergée)
 
 ## Légende
 
@@ -16,6 +16,7 @@
 |---|---|---|---|
 | FEAT-001 | Auth propriétaire (signup, login, magic link) | ✅ done | PR#1, merge 05d59ce, staging validée 2026-05-27 |
 | FEAT-002 | Modèle de données + RLS exhaustive (properties, tenants, leases) | ✅ done | PR#2, merge 9db2741, backend pur (aucun changement Flutter), 77 RLS tests |
+| FEAT-003 | CRUD UI propriétés (list, detail, form) | ✅ done | PR#3, merge f6b8d0d, 16 fichiers Dart, 4 routes GoRouter, 56 tests nouveaux |
 | (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | 🟢 ready | Squelette + infra multi-env |
 
 ## Détails
@@ -98,13 +99,52 @@
 
 ---
 
+### FEAT-003 : CRUD UI propriétés (list, detail, form)
+
+**Status** : ✅ DONE (mergé develop 2026-05-28, PR#3)
+
+**Source** : `docs/backlog/003-crud-properties.md`
+
+**Code structure** :
+- `lib/features/properties/domain/` : `property.dart` (freezed model + `@JsonKey(name: '...')` snake_case), `property_type.dart` (enum), `property_form_state.dart` (freezed form state)
+- `lib/features/properties/data/` : `property_repository.dart` (Supabase Postgrest wrapper, CRUD via RLS)
+- `lib/features/properties/application/` : `properties_list_provider.dart` (Riverpod async notifier), `property_detail_provider.dart`, `property_form_controller.dart`
+- `lib/features/properties/presentation/` : `properties_list_page.dart` (list view + "Ajouter bien" button), `property_detail_page.dart` (read + delete), `property_form_page.dart` (PropertyFormPage + PropertyEditPage), `widgets/` (property_card, property_form, archive_confirm_dialog)
+
+**Routes** (4 nouvelles) :
+- `/properties` : PropertiesListPage (liste avec soft-deleted filtering)
+- `/properties/new` : PropertyFormPage (mode CREATE)
+- `/properties/:id` : PropertyDetailPage (mode READ + DELETE button)
+- `/properties/:id/edit` : PropertyEditPage (mode UPDATE)
+
+**Helpers** (réutilisables FEAT-004+) :
+- `lib/core/utils/postgrest_error_mapper.dart` : Extrait du repository, mappe erreurs Postgrest → messages UI localisés
+- `lib/core/utils/surface_validator.dart` : Valide `surface_m2 > 0` et format numérique
+- `lib/core/utils/property_form_validators.dart` : Valide nom, adresse, type (énumération)
+
+**Modèle Property** :
+- Freezed + json_serializable, avec `@JsonKey(name: 'snake_case')` pour mappage API
+- Colonnes : id, landlord_id, name, address, type, surface_m2, created_at, updated_at, deleted_at
+- PropertyType : `'appartement'`, `'maison'`, `'studio'`, `'autre'` (fermé)
+
+**Tests** :
+- `test/unit/property_*` : Repository, form state, validators (30+ tests)
+- `test/widget/property_*` : List page, detail page, form widgets (20+ tests)
+- `test/integration/property_e2e_test.dart` : End-to-end list → create → detail → edit → delete (6 tests)
+
+**RLS passthrough** : Aucune logique d'ownership côté Flutter — complètement déléguée à Supabase RLS policies (`properties_select_own`, `properties_insert_own`, `properties_update_own`). Error handling via `postgrest_error_mapper` (403 → "Accès refusé", etc.)
+
+**Validation** : Staging testée (login → list properties → create/edit/delete form → soft-delete RPC via Supabase).
+
+---
+
 ### Bootstrap projet (non-feature)
 
 **Status** : 🟢 ready (infrastructure en place)
 
 **Fichiers** : `lib/main.dart`, `lib/core/`, `lib/features/`
 
-**Routes** : `/`, `/login`, `/privacy`
+**Routes** : `/`, `/login`, `/privacy` + 4 × properties (FEAT-003)
 
 **État** : Infrastructure multi-env stable, CI/CD fonctionnel
 
@@ -112,16 +152,15 @@
 
 ## Backlog (prochaines features)
 
-| ID | Nom | Priorité | Effort | Backlog |
-|---|---|---|---|---|
-| FEAT-003 | CRUD UI propriétés (list, detail, form) | P0 | M | `docs/backlog/003-crud-properties.md` |
-| FEAT-004 | CRUD UI locataires | P0 | M | `docs/backlog/004-crud-tenants.md` |
-| FEAT-005 | CRUD UI baux | P0 | M | `docs/backlog/005-crud-leases.md` |
-| FEAT-006 | Générer quittance PDF conforme loi 1989 | P0 | M | (à créer) |
-| FEAT-007 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | (à créer) |
-| FEAT-008 | Upload + stockage documents | P0 | M | (à créer) |
-| FEAT-009 | Dashboard récap (actif, loyers, charges) | P0 | S | (à créer) |
-| FEAT-010 | Polish PWA (offline shell, install prompt) | P0 | S | (à créer) |
+| ID | Nom | Priorité | Effort | Backlog | Notes |
+|---|---|---|---|---|---|
+| FEAT-004 | CRUD UI locataires | P0 | M | `docs/backlog/004-crud-tenants.md` | Peut réutiliser `postgrest_error_mapper` |
+| FEAT-005 | CRUD UI baux | P0 | M | `docs/backlog/005-crud-leases.md` | Peut réutiliser `postgrest_error_mapper` |
+| FEAT-006 | Générer quittance PDF conforme loi 1989 | P0 | M | (à créer) | Utilise `pdf` + `printing` packages |
+| FEAT-007 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | (à créer) | Crée `supabase/functions/send-receipt` (Deno) |
+| FEAT-008 | Upload + stockage documents | P0 | M | (à créer) | Supabase Storage (RLS files) |
+| FEAT-009 | Dashboard récap (actif, loyers, charges) | P0 | S | (à créer) | Agrégation, charts |
+| FEAT-010 | Polish PWA (offline shell, install prompt) | P0 | S | (à créer) | Service worker, manifest |
 
 **Location** : `docs/backlog/*.md` — user stories détaillées + acceptance criteria
 

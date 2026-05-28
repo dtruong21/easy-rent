@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-28 (FEAT-002, aucun changement)
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-28 (FEAT-003, aucun changement)
 
 ## Flutter (pubspec.yaml)
 

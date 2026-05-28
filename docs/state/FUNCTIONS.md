@@ -1,6 +1,6 @@
 # Edge Functions et RPC — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-28 (FEAT-002 mergée)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-28 (FEAT-003 mergée, aucun changement Edge Function ni RPC)
 
 ## Edge Functions (Deno / TypeScript)
 

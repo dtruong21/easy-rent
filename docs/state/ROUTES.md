@@ -1,14 +1,18 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-28 (FEAT-002, aucun changement)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-28 (FEAT-003 mergée)
 
 ## Routes go_router
 
 | Path | Widget | Feature | Auth requise | Statut |
 |---|---|---|---|---|
-| `/` | `DashboardPage` | dashboard | ✅ oui | 🚧 stub |
+| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 implémentée (layout stub + "Mes biens" link) |
 | `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | 🟢 implémentée (magic link PKCE) |
 | `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🚧 placeholder |
+| `/properties` | `PropertiesListPage` | properties | ✅ oui | 🟢 implémentée (FEAT-003) |
+| `/properties/new` | `PropertyFormPage` | properties | ✅ oui | 🟢 implémentée (CREATE form) |
+| `/properties/:id` | `PropertyDetailPage` | properties | ✅ oui | 🟢 implémentée (READ + DELETE button) |
+| `/properties/:id/edit` | `PropertyEditPage` | properties | ✅ oui | 🟢 implémentée (UPDATE form) |
 
 ## Logique de redirect
 
@@ -28,20 +32,20 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Navigation principale
 
-À implémenter dans FEAT-002 (CRUD biens) : drawer ou bottom nav avec les sections principales (Dashboard, Biens, Locataires, Baux, Documents).
+Dashboard modifié (FEAT-003) : ListTile "Mes biens" navigue vers `/properties`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-004+ pour tenants, baux, etc.).
 
 ## Routes prévues (non implémentées)
 
-- `/properties` — Liste des biens immobiliers
-- `/properties/:id` — Fiche bien
-- `/tenants` — Liste des locataires
+- `/tenants` — Liste des locataires (FEAT-004)
+- `/tenants/new` — Créer locataire
 - `/tenants/:id` — Fiche locataire
-- `/leases` — Liste des baux
+- `/tenants/:id/edit` — Modifier locataire
+- `/leases` — Liste des baux (FEAT-005)
 - `/leases/:id` — Fiche bail
-- `/payments` — Suivi paiements
-- `/receipts` — Quittances émises
-- `/documents` — Documents stockés
-- `/settings` — Paramètres compte propriétaire
+- `/payments` — Suivi paiements (FEAT-008+)
+- `/receipts` — Quittances émises (FEAT-006+)
+- `/documents` — Documents stockés (FEAT-008+)
+- `/settings` — Paramètres compte propriétaire (FEAT-009+)
 
 ## Widgets de layout
 

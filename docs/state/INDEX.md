@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-28T12:00:00Z
-- **Commit ref** : `9db2741` (Merge pull request #2 from dtruong21/feature/data-model-rls)
+- **Dernière mise à jour** : 2026-05-28T16:48:00Z
+- **Commit ref** : `f6b8d0d` (Merge pull request #3 from dtruong21/feature/crud-properties)
 - **Branche** : `develop`
-- **Phase projet** : FEAT-001 (auth) + FEAT-002 (data model + RLS) implémentées et mergées. FEAT-003–010 en backlog.
+- **Phase projet** : FEAT-001 (auth) + FEAT-002 (data model + RLS) + FEAT-003 (properties CRUD UI) implémentées et mergées. FEAT-004–010 en backlog.
 
 ## Pointeurs
 
@@ -50,7 +50,19 @@
 | Hosting | Firebase Hosting (staging ✅, prod TBD) |
 | CI/CD | GitHub Actions (ci.yml + deploy.yml avec build_runner step) |
 
-## Incohérences détectées
+## Changements majeurs FEAT-003
+
+1. **16 nouveaux fichiers Dart** : `lib/features/properties/` (data/domain/application/presentation + widgets)
+2. **4 nouvelles routes GoRouter** : `/properties`, `/properties/new`, `/properties/:id`, `/properties/:id/edit`
+3. **Dashboard modifié** : ListTile "Mes biens" ajouté pour naviger vers `/properties`
+4. **3 nouveaux helpers** : `postgrest_error_mapper.dart`, `surface_validator.dart`, `property_form_validators.dart` (réutilisables FEAT-004/005)
+5. **Modèle `Property`** : freezed + json_serializable, snake_case via `@JsonKey`
+6. **Enum `PropertyType`** : `'appartement'`, `'maison'`, `'studio'`, `'autre'` (fermé)
+7. **56 tests nouveaux** (2514 lignes totales vs ~1900 avant) : repositories, providers, form validators, RLS-passthrough tests
+8. **Aucune dépendance pubspec ajoutée** : Réutilise freezed + json_serializable de FEAT-001
+9. **Migration SQL** : Aucune (FEAT-003 est purement frontend, table `properties` existe déjà depuis FEAT-002)
+
+### Incohérences détectées
 
 Aucune incohérence — état entièrement cohérent avec code.
 
@@ -66,7 +78,7 @@ Aucune incohérence — état entièrement cohérent avec code.
 
 ### État de la base de code
 
-- Code matches state — aucun drift détecté post-FEAT-002
-- Tests RLS exhaustifs (cross-user, soft-delete, cross-FK)
-- RLS validée sur Postgres côté backend
-- Flutter unchanged — prêt pour FEAT-003+ (UI CRUD)
+- Code matches state — aucun drift détecté post-FEAT-003
+- 15 test files, 2514 lines totales (56+ tests créés en FEAT-003)
+- RLS validée sur Postgres côté backend (FEAT-002)
+- Flutter stable — 3 features complètes, prêt pour FEAT-004 (tenants CRUD)
