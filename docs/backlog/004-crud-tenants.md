@@ -85,6 +85,20 @@ Le locataire (`tenant`) est l'autre entité centrale d'un bail. Sa fiche contien
 - **Email locataire** : utilisé pour l'envoi des quittances (FEAT-007) — champ obligatoire.
 - **Conservation** : les données du locataire liées à un bail terminé doivent être conservées 5 ans minimum (prescription civile). Soft-delete obligatoire, jamais de hard-delete sur un locataire ayant eu un bail.
 
+## Décisions d'arbitrage (2026-05-28)
+- **Architecture** : calque strict sur FEAT-003 (data/domain/application/presentation), nouvelle feature folder `lib/features/tenants/`. Pas de re-conception, juste adaptation des modèles/UI.
+- **Modèle `Tenant`** : `freezed` + `json_serializable` avec `@JsonKey` snake_case (cohérent Property). 4 champs scalaires, aucun enum (vs `PropertyType`).
+- **Validation email** : réutilise `lib/core/utils/email_validator.dart` (existant depuis FEAT-001).
+- **Validation téléphone** : V1 = string libre acceptée, pas de regex. Hook `validatePhone` exposable plus tard.
+- **Tri liste** : `last_name ASC, first_name ASC` (côté serveur via `.order()`).
+- **Recherche/filtre** : reportée P1 (la story dit "optionnel V1" — tri alpha + Ctrl+F suffisent en V1).
+- **Format affichage nom** : `firstName lastName` partout dans l'UI. `Tenant.legalName` (`NOM Prénom`) sera ajouté en FEAT-007 uniquement pour les PDF de quittance.
+- **`ArchiveConfirmDialog`** : extraction dans `lib/core/widgets/archive_confirm_dialog.dart` avec signature paramétrée (texte custom). Met à jour l'import dans `lib/features/properties/presentation/property_detail_page.dart`.
+- **Section "baux liés" sur fiche** : query directe sur `leases` (SELECT id, property_id, start_date, end_date, status, rent_amount_cents WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY status, start_date DESC), affichage minimal via `Map<String, dynamic>`. Refactor avec modèle `Lease` typé en FEAT-005.
+- **Email duplicates** : V1 = pas de garde-fou client (`SELECT count` avant insert). Doublons silencieux acceptables au stade MVP.
+- **Pas de hard-delete** : conforme rétention 5 ans + RPC `soft_delete_tenant`.
+- **Helpers réutilisés** : `postgrest_error_mapper.dart` (FEAT-003), `email_validator.dart` (FEAT-001). Validateurs texte (firstName/lastName) inlinés dans un nouveau `tenant_form_validators.dart` (règle des trois — pas de mutualisation avant le 3e usage).
+
 ## Priority
 P0 (MVP)
 

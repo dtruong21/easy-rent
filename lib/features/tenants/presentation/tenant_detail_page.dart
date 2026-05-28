@@ -3,61 +3,62 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
-import '../application/properties_list_provider.dart';
-import '../application/property_detail_provider.dart';
-import '../data/property_repository.dart';
-import '../domain/property.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
+import '../application/tenant_detail_provider.dart';
+import '../application/tenants_list_provider.dart';
+import '../data/tenant_repository.dart';
+import '../domain/tenant.dart';
+import 'widgets/tenant_lease_summary.dart';
 
-final _log = Logger('PropertyDetailPage');
+final _log = Logger('TenantDetailPage');
 
-/// Fiche lecture d'un bien immobilier.
+/// Fiche lecture d'un locataire.
 ///
-/// Route : `/properties/:id`
+/// Route : `/tenants/:id`
 ///
 /// Affiche toutes les informations + boutons "Modifier" et "Archiver".
-/// Section "Baux actifs" : stub V1 (disponible après FEAT-005).
+/// Section "Baux liés" : query directe `leases` via `TenantRepository.listLeasesForTenant`.
 ///
 /// Critères Gherkin :
-/// - Cross-user : si RLS retourne 0 ligne → "Bien introuvable".
-/// - Archivage via RPC `soft_delete_property` (jamais UPDATE direct).
+/// - Cross-user : si RLS retourne 0 ligne → "Locataire introuvable".
+/// - Archivage via RPC `soft_delete_tenant` (jamais UPDATE direct).
 /// - Dialog standard ou renforcé selon présence de bail actif.
-class PropertyDetailPage extends ConsumerWidget {
-  const PropertyDetailPage({super.key, required this.id});
+class TenantDetailPage extends ConsumerWidget {
+  const TenantDetailPage({super.key, required this.id});
 
   final String id;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncProperty = ref.watch(propertyDetailProvider(id));
+    final asyncTenant = ref.watch(tenantDetailProvider(id));
 
-    return asyncProperty.when(
+    return asyncTenant.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => _NotFoundPage(id: id),
-      data: (property) => _PropertyDetailContent(property: property),
+      data: (tenant) => _TenantDetailContent(tenant: tenant),
     );
   }
 }
 
-/// Vue principale quand le bien est chargé.
-class _PropertyDetailContent extends ConsumerWidget {
-  const _PropertyDetailContent({required this.property});
+/// Vue principale quand le locataire est chargé.
+class _TenantDetailContent extends ConsumerWidget {
+  const _TenantDetailContent({required this.tenant});
 
-  final Property property;
+  final Tenant tenant;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(property.name),
-        leading: BackButton(onPressed: () => context.go('/properties')),
+        title: Text('${tenant.firstName} ${tenant.lastName}'),
+        leading: BackButton(onPressed: () => context.go('/tenants')),
         actions: [
           IconButton(
-            key: const Key('btn_edit_property'),
+            key: const Key('btn_edit_tenant'),
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Modifier',
-            onPressed: () => context.push('/properties/${property.id}/edit'),
+            onPressed: () => context.push('/tenants/${tenant.id}/edit'),
           ),
         ],
       ),
@@ -66,44 +67,23 @@ class _PropertyDetailContent extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _InfoCard(property: property),
+            _InfoCard(tenant: tenant),
             const SizedBox(height: 24),
 
-            // Section baux — stub V1
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Baux actifs',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Disponible après FEAT-005',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Section baux liés
+            _LeasesSection(tenantId: tenant.id),
             const SizedBox(height: 32),
 
             // Bouton Archiver
             OutlinedButton.icon(
-              key: const Key('btn_archive_property'),
+              key: const Key('btn_archive_tenant'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
                 side: BorderSide(color: Theme.of(context).colorScheme.error),
               ),
               icon: const Icon(Icons.archive_outlined),
-              label: const Text('Archiver ce bien'),
-              onPressed: () => _confirmArchive(context, ref, property),
+              label: const Text('Archiver ce locataire'),
+              onPressed: () => _confirmArchive(context, ref, tenant),
             ),
           ],
         ),
@@ -114,14 +94,14 @@ class _PropertyDetailContent extends ConsumerWidget {
   Future<void> _confirmArchive(
     BuildContext context,
     WidgetRef ref,
-    Property property,
+    Tenant tenant,
   ) async {
     // Compter les baux actifs avant d'afficher le dialog.
     int activeLeaseCount = 0;
     try {
       activeLeaseCount = await ref
-          .read(propertyRepositoryProvider)
-          .countActiveLeases(property.id);
+          .read(tenantRepositoryProvider)
+          .countActiveLeases(tenant.id);
     } catch (e, st) {
       _log.warning('countActiveLeases failed', e, st);
       // En cas d'erreur, on affiche le dialog standard (non bloquant).
@@ -129,21 +109,23 @@ class _PropertyDetailContent extends ConsumerWidget {
 
     if (!context.mounted) return;
 
+    final displayName = '${tenant.firstName} ${tenant.lastName}';
+
     await showDialog<void>(
       context: context,
       builder: (_) => ArchiveConfirmDialog(
-        title: 'Archiver ce bien ?',
-        entityLabel: property.name,
+        title: 'Archiver ce locataire ?',
+        entityLabel: displayName,
         standardMessage:
-            'Voulez-vous archiver "${property.name}" ? '
-            "Le bien n'apparaîtra plus dans votre liste. "
+            'Voulez-vous archiver "$displayName" ? '
+            "Le locataire n'apparaîtra plus dans votre liste. "
             'Les baux liés seront conservés.',
         activeLeaseMessage:
-            'Ce bien a un bail actif. Êtes-vous sûr de vouloir archiver '
-            '"${property.name}" ? Les baux actifs liés seront conservés '
-            "mais le bien n'apparaîtra plus dans votre liste.",
+            'Ce locataire a un bail actif. Êtes-vous sûr de vouloir archiver '
+            '"$displayName" ? Les baux actifs liés seront conservés '
+            "mais le locataire n'apparaîtra plus dans votre liste.",
         hasActiveLease: activeLeaseCount > 0,
-        onConfirm: () => _archive(context, ref, property),
+        onConfirm: () => _archive(context, ref, tenant),
       ),
     );
   }
@@ -151,29 +133,29 @@ class _PropertyDetailContent extends ConsumerWidget {
   Future<void> _archive(
     BuildContext context,
     WidgetRef ref,
-    Property property,
+    Tenant tenant,
   ) async {
     try {
-      await ref.read(propertyRepositoryProvider).archive(property.id);
+      await ref.read(tenantRepositoryProvider).archive(tenant.id);
       // Invalider la liste ET la fiche.
-      ref.invalidate(propertiesListProvider);
-      ref.invalidate(propertyDetailProvider(property.id));
+      ref.invalidate(tenantsListProvider);
+      ref.invalidate(tenantDetailProvider(tenant.id));
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Bien archivé'),
+          content: const Text('Locataire archivé'),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         ),
       );
-      context.go('/properties');
+      context.go('/tenants');
     } catch (e, st) {
       _log.severe('archive failed', e, st);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            "Impossible d'archiver ce bien. Veuillez réessayer.",
+            "Impossible d'archiver ce locataire. Veuillez réessayer.",
           ),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
@@ -182,11 +164,11 @@ class _PropertyDetailContent extends ConsumerWidget {
   }
 }
 
-/// Carte d'information du bien (lecture seule).
+/// Carte d'information du locataire (lecture seule).
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.property});
+  const _InfoCard({required this.tenant});
 
-  final Property property;
+  final Tenant tenant;
 
   @override
   Widget build(BuildContext context) {
@@ -197,42 +179,41 @@ class _InfoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _InfoRow(
-              icon: Icons.label_outline,
+              icon: Icons.badge_outlined,
+              label: 'Prénom',
+              value: tenant.firstName,
+            ),
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.badge_outlined,
               label: 'Nom',
-              value: property.name,
+              value: tenant.lastName,
             ),
             const Divider(height: 24),
             _InfoRow(
-              icon: Icons.location_on_outlined,
-              label: 'Adresse',
-              value: property.address,
+              icon: Icons.email_outlined,
+              label: 'Email',
+              value: tenant.email,
             ),
-            const Divider(height: 24),
-            _InfoRow(
-              icon: Icons.home_outlined,
-              label: 'Type',
-              value: property.type.labelFr,
-            ),
-            if (property.surfaceM2 != null) ...[
+            if (tenant.phone != null && tenant.phone!.isNotEmpty) ...[
               const Divider(height: 24),
               _InfoRow(
-                icon: Icons.square_foot,
-                label: 'Surface',
-                value:
-                    '${property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2)} m²',
+                icon: Icons.phone_outlined,
+                label: 'Téléphone',
+                value: tenant.phone!,
               ),
             ],
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today_outlined,
               label: 'Ajouté le',
-              value: _formatDate(property.createdAt),
+              value: _formatDate(tenant.createdAt),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.update,
               label: 'Modifié le',
-              value: _formatDate(property.updatedAt),
+              value: _formatDate(tenant.updatedAt),
             ),
           ],
         ),
@@ -287,7 +268,86 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Page "Bien introuvable" — affichée quand la RLS retourne 0 ligne.
+/// Section baux liés — charge depuis le repository et affiche [TenantLeaseSummary].
+class _LeasesSection extends ConsumerStatefulWidget {
+  const _LeasesSection({required this.tenantId});
+
+  final String tenantId;
+
+  @override
+  ConsumerState<_LeasesSection> createState() => _LeasesSectionState();
+}
+
+class _LeasesSectionState extends ConsumerState<_LeasesSection> {
+  List<Map<String, dynamic>>? _leases;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLeases();
+  }
+
+  Future<void> _fetchLeases() async {
+    try {
+      final leases = await ref
+          .read(tenantRepositoryProvider)
+          .listLeasesForTenant(widget.tenantId);
+      if (mounted) {
+        setState(() {
+          _leases = leases;
+          _loading = false;
+        });
+      }
+    } catch (e, st) {
+      _log.warning('listLeasesForTenant failed', e, st);
+      if (mounted) {
+        setState(() {
+          _error = 'Impossible de charger les baux.';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Baux liés', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Center(
+                child: SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (_error != null)
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              )
+            else
+              TenantLeaseSummary(leases: _leases ?? []),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Page "Locataire introuvable" — affichée quand la RLS retourne 0 ligne.
 class _NotFoundPage extends StatelessWidget {
   const _NotFoundPage({required this.id});
 
@@ -297,8 +357,8 @@ class _NotFoundPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fiche bien'),
-        leading: BackButton(onPressed: () => context.go('/properties')),
+        title: const Text('Fiche locataire'),
+        leading: BackButton(onPressed: () => context.go('/tenants')),
       ),
       body: Center(
         child: Padding(
@@ -313,13 +373,13 @@ class _NotFoundPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Bien introuvable',
+                'Locataire introuvable',
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Ce bien a peut-être été archivé ou ne vous appartient pas.',
+                'Ce locataire a peut-être été archivé ou ne vous appartient pas.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -327,7 +387,7 @@ class _NotFoundPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () => context.go('/properties'),
+                onPressed: () => context.go('/tenants'),
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Retour à la liste'),
               ),
