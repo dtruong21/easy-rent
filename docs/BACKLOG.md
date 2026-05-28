@@ -41,11 +41,27 @@ FEAT-001 (auth)
 
 ## Dette technique / risques identifiés (scout 2026-05-27)
 
-- ⚠️ **`test/` absent** → la CI `flutter test` échouera au premier PR. Créer un scaffold minimal (smoke test app + test `Env.isConfigured`).
+- ✅ ~~`test/` absent~~ → résolu : scaffold `test/unit` + `test/widget` + étape `build_runner` ajoutée à la CI.
+- ✅ ~~Pas de suite de tests RLS~~ → entamé : `supabase/tests/rls_landlords.sql` (à étendre par table au fil de FEAT-002+).
 - **Aucun bucket Storage** configuré → bloque FEAT-009. À provisionner avant.
 - **Aucune Edge Function** (`supabase/functions/` vide) → bloque FEAT-008 (Resend). Choisir le domaine email vérifié avant.
-- **Pas de suite de tests RLS** (`supabase/tests/rls_*.sql`) → à créer au fil de FEAT-002.
 - **Pas de `seed.sql`** → données de dev locales manuelles pour l'instant.
+
+### 🚧 Setup infra déploiement (bloque toute livraison staging/prod)
+- **Aucun `firebase.json` / `.firebaserc`** → scaffolder la config Hosting (public = `build/web`, rewrites SPA).
+- **Secrets GitHub Actions absents** (repo + env `staging`) : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` (valeurs fournies par l'utilisateur).
+- **Environnement `production`** à créer (seul `staging` existe).
+- ⚠️ `deploy.yml` n'applique les migrations Supabase que depuis `main` → définir comment provisionner le schéma `dev` pour la QA staging de FEAT-001.
+
+### Gates AVANT mise en PROD (issus de l'audit sécu FEAT-001)
+- 🔧 **Redirect Allow-List Supabase** : vérifier en Studio qu'aucun wildcard large n'est autorisé (sinon risque de capture de token magic link). Config, hors repo.
+- 🔧 **Compléter `/privacy`** : identité du responsable de traitement, DPO, base légale définitive de la persistance de session (placeholder actuellement).
+- 🔧 **Seuils de rate-limit OTP** Supabase à vérifier en Studio.
+
+### À traiter en FEAT-002 (tracké depuis FEAT-001)
+- **FK `landlords.id … ON DELETE CASCADE` vs rétention 5 ans** : remplacer par `ON DELETE RESTRICT`/`NO ACTION` + flux soft-delete applicatif **avant** d'introduire baux/quittances (sinon suppression de compte = effacement physique de données à conserver).
+- **Restriction colonne `deleted_at`** : la policy UPDATE actuelle laisse le propriétaire modifier `deleted_at` ; restreindre via trigger `BEFORE UPDATE` (OLD/NEW).
+- **RGPD self-service** (P1) : export des données + droit à l'effacement (Edge Function + exposition contrôlée de `deleted_at`).
 
 ## Plus tard (P1, P2)
 

@@ -22,15 +22,16 @@ class Db {
   static PostgrestFilterBuilder<dynamic> rpc(
     String fn, {
     Map<String, dynamic>? params,
-  }) =>
-      _client.schema(Env.supabaseSchema).rpc(fn, params: params);
+  }) => _client.schema(Env.supabaseSchema).rpc(fn, params: params);
 
   /// Storage avec préfixe d'env appliqué automatiquement.
   /// Exemple : `Db.storagePath('leases/foo.pdf')` → `prod/{uid}/leases/foo.pdf`.
   static String storagePath(String relativePath) {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
-      throw StateError('Utilisateur non authentifié — storagePath nécessite une session');
+      throw StateError(
+        'Utilisateur non authentifié — storagePath nécessite une session',
+      );
     }
     return '${Env.storageEnvPrefix}/$userId/$relativePath';
   }
@@ -40,12 +41,8 @@ class Db {
   static Future<FunctionResponse> invokeFunction(
     String name, {
     Map<String, dynamic>? body,
-  }) =>
-      _client.functions.invoke(
-        name,
-        body: {
-          ...?body,
-          'schema': Env.supabaseSchema,
-        },
-      );
+  }) => _client.functions.invoke(
+    name,
+    body: {...?body, 'schema': Env.supabaseSchema},
+  );
 }

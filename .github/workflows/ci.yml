@@ -25,6 +25,9 @@ jobs:
       - name: Install deps
         run: flutter pub get
 
+      - name: Generate code (freezed / json_serializable)
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
 
