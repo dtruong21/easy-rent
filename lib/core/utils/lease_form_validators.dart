@@ -16,6 +16,10 @@ class LeaseFormValidators {
   static final DateTime _kMinDate = DateTime(1900);
   static final DateTime _kMaxDate = DateTime(2100, 12, 31);
 
+  /// Plafond absolu d'un montant (loyer ou charges), en centimes.
+  /// 100 000 000 cts = 1 000 000,00 € — bien sous le plafond int32 de Postgres.
+  static const int _kMaxAmountCents = 100000000;
+
   /// Valide que [property] est bien sélectionné.
   static String? validateProperty(Property? property) {
     if (property == null) return 'Veuillez sélectionner un bien';
@@ -42,7 +46,7 @@ class LeaseFormValidators {
     if (cents <= 0) {
       return 'Le loyer doit être un montant positif';
     }
-    if (cents > 100000000) {
+    if (cents > _kMaxAmountCents) {
       return 'Montant trop élevé (maximum 1 000 000,00 €)';
     }
     return null;
@@ -60,7 +64,7 @@ class LeaseFormValidators {
       return 'Les charges ne peuvent pas être négatives';
     }
     // cents >= 0 déjà garanti par eurosToCents (retourne null si négatif)
-    if (cents > 100000000) {
+    if (cents > _kMaxAmountCents) {
       return 'Montant trop élevé (maximum 1 000 000,00 €)';
     }
     return null;
