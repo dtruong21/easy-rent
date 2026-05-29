@@ -80,6 +80,22 @@ void main() {
     test('"0.01" → null (centimes positifs)', () {
       expect(LeaseFormValidators.validateRentAmount('0.01'), isNull);
     });
+
+    // --- Plafond 100 000 000 centimes = 1 000 000,00 € (Fix 2) ---
+    // 999 999,99 € × 100 = 99 999 999 centimes ≤ cap → accepté
+    test('"999999.99" (99 999 999 cts, sous le plafond) → null', () {
+      expect(LeaseFormValidators.validateRentAmount('999999.99'), isNull);
+    });
+
+    // 1 000 000,00 € × 100 = 100 000 000 centimes == cap → accepté (> strict)
+    test('"1000000.00" (100 000 000 cts, exactement au plafond) → null', () {
+      expect(LeaseFormValidators.validateRentAmount('1000000.00'), isNull);
+    });
+
+    // 1 000 000,01 € × 100 = 100 000 001 centimes > cap → rejeté
+    test('"1000000.01" (100 000 001 cts, au-delà du plafond) → erreur', () {
+      expect(LeaseFormValidators.validateRentAmount('1000000.01'), isNotNull);
+    });
   });
 
   group('validateChargesAmount', () {
@@ -106,6 +122,18 @@ void main() {
     test('"abc" → erreur', () {
       expect(LeaseFormValidators.validateChargesAmount('abc'), isNotNull);
     });
+
+    // --- Plafond charges (Fix 2) ---
+    test('"999999.99" (99 999 999 cts, sous le plafond) → null', () {
+      expect(LeaseFormValidators.validateChargesAmount('999999.99'), isNull);
+    });
+
+    test('"1000000.01" (100 000 001 cts, au-delà du plafond) → erreur', () {
+      expect(
+        LeaseFormValidators.validateChargesAmount('1000000.01'),
+        isNotNull,
+      );
+    });
   });
 
   group('validateStartDate', () {
@@ -116,6 +144,39 @@ void main() {
     test('date fournie → null', () {
       expect(
         LeaseFormValidators.validateStartDate(DateTime(2024, 1, 1)),
+        isNull,
+      );
+    });
+
+    // --- Bornes absolues 1900-01-01 … 2100-12-31 (Fix 3) ---
+    test('2026-06-01 (dans la plage) → null', () {
+      expect(
+        LeaseFormValidators.validateStartDate(DateTime(2026, 6, 1)),
+        isNull,
+      );
+    });
+
+    test('1899-12-31 (avant 1900) → erreur', () {
+      expect(
+        LeaseFormValidators.validateStartDate(DateTime(1899, 12, 31)),
+        isNotNull,
+      );
+    });
+
+    test('2101-01-01 (après 2100) → erreur', () {
+      expect(
+        LeaseFormValidators.validateStartDate(DateTime(2101, 1, 1)),
+        isNotNull,
+      );
+    });
+
+    test('1900-01-01 (borne basse exacte) → null', () {
+      expect(LeaseFormValidators.validateStartDate(DateTime(1900)), isNull);
+    });
+
+    test('2100-12-31 (borne haute exacte) → null', () {
+      expect(
+        LeaseFormValidators.validateStartDate(DateTime(2100, 12, 31)),
         isNull,
       );
     });
@@ -157,6 +218,37 @@ void main() {
     test('endDate fournie mais startDate null → null (pas de cross-check)', () {
       expect(
         LeaseFormValidators.validateEndDate(DateTime(2024, 6), null),
+        isNull,
+      );
+    });
+
+    // --- Bornes absolues end date (Fix 3) ---
+    test('endDate 2101-01-01 (après 2100) → erreur', () {
+      expect(
+        LeaseFormValidators.validateEndDate(
+          DateTime(2101, 1, 1),
+          DateTime(2026, 1, 1),
+        ),
+        isNotNull,
+      );
+    });
+
+    test('endDate 1899-12-31 (avant 1900) → erreur', () {
+      expect(
+        LeaseFormValidators.validateEndDate(
+          DateTime(1899, 12, 31),
+          DateTime(2026, 1, 1),
+        ),
+        isNotNull,
+      );
+    });
+
+    test('endDate 2026-06-01 dans la plage et > startDate → null', () {
+      expect(
+        LeaseFormValidators.validateEndDate(
+          DateTime(2026, 6, 1),
+          DateTime(2026, 1, 1),
+        ),
         isNull,
       );
     });

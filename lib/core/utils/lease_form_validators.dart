@@ -9,6 +9,13 @@ import 'money_format.dart';
 class LeaseFormValidators {
   const LeaseFormValidators._();
 
+  /// Bornes absolues acceptées pour les dates de bail.
+  ///
+  /// Identiques aux contraintes Postgres `leases_date_range_check`
+  /// (migration FEAT-005). Toute date en dehors de cette plage est rejetée.
+  static final DateTime _kMinDate = DateTime(1900);
+  static final DateTime _kMaxDate = DateTime(2100, 12, 31);
+
   /// Valide que [property] est bien sélectionné.
   static String? validateProperty(Property? property) {
     if (property == null) return 'Veuillez sélectionner un bien';
@@ -35,6 +42,9 @@ class LeaseFormValidators {
     if (cents <= 0) {
       return 'Le loyer doit être un montant positif';
     }
+    if (cents > 100000000) {
+      return 'Montant trop élevé (maximum 1 000 000,00 €)';
+    }
     return null;
   }
 
@@ -50,22 +60,33 @@ class LeaseFormValidators {
       return 'Les charges ne peuvent pas être négatives';
     }
     // cents >= 0 déjà garanti par eurosToCents (retourne null si négatif)
+    if (cents > 100000000) {
+      return 'Montant trop élevé (maximum 1 000 000,00 €)';
+    }
     return null;
   }
 
   /// Valide la date de début.
   ///
-  /// Règle : champ requis.
+  /// Règle : champ requis. La date doit être dans la plage autorisée
+  /// [_kMinDate, _kMaxDate] (identique à la contrainte Postgres).
   static String? validateStartDate(DateTime? value) {
     if (value == null) return 'La date de début est obligatoire';
+    if (value.isBefore(_kMinDate) || value.isAfter(_kMaxDate)) {
+      return 'Date invalide (année hors limites)';
+    }
     return null;
   }
 
   /// Valide la date de fin (optionnelle).
   ///
-  /// Si renseignée, doit être strictement postérieure à [startDate].
+  /// Si renseignée, doit être strictement postérieure à [startDate] et dans
+  /// la plage autorisée [_kMinDate, _kMaxDate].
   static String? validateEndDate(DateTime? endDate, DateTime? startDate) {
     if (endDate == null) return null; // optionnelle — CDI si absente
+    if (endDate.isBefore(_kMinDate) || endDate.isAfter(_kMaxDate)) {
+      return 'Date invalide (année hors limites)';
+    }
     if (startDate == null) return null; // si start absente, pas de cross-check
     if (!endDate.isAfter(startDate)) {
       return 'La date de fin doit être postérieure à la date de début';
