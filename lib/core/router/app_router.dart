@@ -9,6 +9,9 @@ import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/properties/presentation/properties_list_page.dart';
 import '../../features/properties/presentation/property_detail_page.dart';
 import '../../features/properties/presentation/property_form_page.dart';
+import '../../features/leases/presentation/lease_detail_page.dart';
+import '../../features/leases/presentation/lease_form_page.dart';
+import '../../features/leases/presentation/leases_list_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
@@ -95,6 +98,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/tenants/:id/edit',
         builder: (context, state) =>
             TenantEditPage(id: state.pathParameters['id']!),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Routes baux (FEAT-005)
+      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/leases',
+        builder: (context, state) => const LeasesListPage(),
+      ),
+      GoRoute(
+        path: '/leases/new',
+        builder: (context, state) => const LeaseFormPage(),
+      ),
+      GoRoute(
+        path: '/leases/:id',
+        builder: (context, state) =>
+            LeaseDetailPage(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/leases/:id/edit',
+        builder: (context, state) =>
+            LeaseEditPage(id: state.pathParameters['id']!),
       ),
     ],
   );

@@ -55,12 +55,14 @@ class DashboardPage extends ConsumerWidget {
             onTap: () => context.go('/tenants'),
           ),
           const Divider(indent: 16, endIndent: 16),
+          // Section baux (FEAT-005)
           ListTile(
+            key: const Key('tile_leases'),
             leading: const Icon(Icons.description_outlined),
             title: const Text('Mes baux'),
-            subtitle: const Text('Disponible prochainement'),
+            subtitle: const Text('Gérer vos contrats de location'),
             trailing: const Icon(Icons.chevron_right),
-            enabled: false,
+            onTap: () => context.go('/leases'),
           ),
         ],
       ),
