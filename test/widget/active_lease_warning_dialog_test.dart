@@ -9,9 +9,8 @@ Widget _buildWithDialog({VoidCallback? onConfirm}) {
         body: ElevatedButton(
           onPressed: () => showDialog<void>(
             context: context,
-            builder: (_) => ActiveLeaseWarningDialog(
-              onConfirm: onConfirm ?? () {},
-            ),
+            builder: (_) =>
+                ActiveLeaseWarningDialog(onConfirm: onConfirm ?? () {}),
           ),
           child: const Text('Ouvrir dialog'),
         ),

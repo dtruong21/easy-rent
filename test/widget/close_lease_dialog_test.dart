@@ -9,9 +9,7 @@ Widget _buildWithDialog({void Function(DateTime)? onClose}) {
         body: ElevatedButton(
           onPressed: () => showDialog<void>(
             context: context,
-            builder: (_) => CloseLeaseDialog(
-              onClose: onClose ?? (_) {},
-            ),
+            builder: (_) => CloseLeaseDialog(onClose: onClose ?? (_) {}),
           ),
           child: const Text('Ouvrir dialog'),
         ),
@@ -74,9 +72,7 @@ void main() {
       expect(find.text('Clôturer ce bail'), findsNothing);
     });
 
-    testWidgets('tap "Clôturer" appelle onClose avec une date', (
-      tester,
-    ) async {
+    testWidgets('tap "Clôturer" appelle onClose avec une date', (tester) async {
       DateTime? received;
 
       await tester.pumpWidget(_buildWithDialog(onClose: (d) => received = d));
@@ -95,9 +91,7 @@ void main() {
         DateTime? received;
         final today = DateTime.now();
 
-        await tester.pumpWidget(
-          _buildWithDialog(onClose: (d) => received = d),
-        );
+        await tester.pumpWidget(_buildWithDialog(onClose: (d) => received = d));
         await tester.tap(find.text('Ouvrir dialog'));
         await tester.pumpAndSettle();
 
