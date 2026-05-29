@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/widgets/lease_status_badge.dart';
 
 /// Affiche les baux liés à un locataire sous forme de liste de cards.
 ///
 /// Données brutes : `List<Map<String, dynamic>>` issus de
 /// `TenantRepository.listLeasesForTenant()`.
-/// Sera refactoré en FEAT-005 pour utiliser le modèle `Lease` typé.
 ///
 /// Colonnes disponibles : id, property_id, start_date, end_date, status,
 /// rent_amount_cents.
+///
+/// Chaque entrée est cliquable et navigue vers `/leases/:id` (FEAT-005).
 class TenantLeaseSummary extends StatelessWidget {
   const TenantLeaseSummary({super.key, required this.leases});
 
@@ -41,6 +45,7 @@ class _LeaseItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final leaseId = lease['id'] as String? ?? '';
     final status = lease['status'] as String? ?? '';
     final startDate = lease['start_date'] as String? ?? '';
     final endDate = lease['end_date'] as String?;
@@ -48,38 +53,54 @@ class _LeaseItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _StatusBadge(status: status),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _formatPeriod(startDate, endDate),
-                  style: theme.textTheme.bodyMedium,
+      child: InkWell(
+        onTap: leaseId.isNotEmpty
+            ? () => context.push('/leases/$leaseId')
+            : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LeaseStatusBadge(status: status),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatPeriod(startDate, endDate),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${(rentCents / 100).toStringAsFixed(2).replaceAll('.', ',')} €/mois HC',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    if (leaseId.isNotEmpty)
+                      Text(
+                        'Voir le bail',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${(rentCents / 100).toStringAsFixed(2).replaceAll('.', ',')} €/mois',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+              ),
+              if (leaseId.isNotEmpty)
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: theme.colorScheme.primary,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Voir le bail (disponible après FEAT-005)',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -97,35 +118,5 @@ class _LeaseItem extends StatelessWidget {
     final parts = isoDate.split('-');
     if (parts.length < 3) return isoDate;
     return '${parts[2]}/${parts[1]}/${parts[0]}';
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final (label, color) = switch (status) {
-      'active' => ('Actif', theme.colorScheme.primary),
-      'terminated' => ('Terminé', theme.colorScheme.outline),
-      'archived' => ('Archivé', theme.colorScheme.outline),
-      _ => (status, theme.colorScheme.outline),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withAlpha(30),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(100)),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(color: color),
-      ),
-    );
   }
 }
