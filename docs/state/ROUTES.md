@@ -1,18 +1,22 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-28 (FEAT-003 mergée)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-29 (FEAT-004 mergée)
 
 ## Routes go_router
 
 | Path | Widget | Feature | Auth requise | Statut |
 |---|---|---|---|---|
-| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 implémentée (layout stub + "Mes biens" link) |
+| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 implémentée (layout + links "Mes biens", "Mes locataires") |
 | `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | 🟢 implémentée (magic link PKCE) |
 | `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🚧 placeholder |
 | `/properties` | `PropertiesListPage` | properties | ✅ oui | 🟢 implémentée (FEAT-003) |
 | `/properties/new` | `PropertyFormPage` | properties | ✅ oui | 🟢 implémentée (CREATE form) |
 | `/properties/:id` | `PropertyDetailPage` | properties | ✅ oui | 🟢 implémentée (READ + DELETE button) |
 | `/properties/:id/edit` | `PropertyEditPage` | properties | ✅ oui | 🟢 implémentée (UPDATE form) |
+| `/tenants` | `TenantsListPage` | tenants | ✅ oui | 🟢 implémentée (FEAT-004) |
+| `/tenants/new` | `TenantFormPage` | tenants | ✅ oui | 🟢 implémentée (CREATE form) |
+| `/tenants/:id` | `TenantDetailPage` | tenants | ✅ oui | 🟢 implémentée (READ + DELETE button + lease summary) |
+| `/tenants/:id/edit` | `TenantEditPage` | tenants | ✅ oui | 🟢 implémentée (UPDATE form) |
 
 ## Logique de redirect
 
@@ -32,16 +36,14 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Navigation principale
 
-Dashboard modifié (FEAT-003) : ListTile "Mes biens" navigue vers `/properties`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-004+ pour tenants, baux, etc.).
+Dashboard enrichi (FEAT-003/004) : ListTiles "Mes biens" et "Mes locataires" naviguent vers `/properties` et `/tenants`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-005+ pour baux, etc.).
 
 ## Routes prévues (non implémentées)
 
-- `/tenants` — Liste des locataires (FEAT-004)
-- `/tenants/new` — Créer locataire
-- `/tenants/:id` — Fiche locataire
-- `/tenants/:id/edit` — Modifier locataire
 - `/leases` — Liste des baux (FEAT-005)
+- `/leases/new` — Créer bail
 - `/leases/:id` — Fiche bail
+- `/leases/:id/edit` — Modifier bail
 - `/payments` — Suivi paiements (FEAT-008+)
 - `/receipts` — Quittances émises (FEAT-006+)
 - `/documents` — Documents stockés (FEAT-008+)

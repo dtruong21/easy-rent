@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-28T16:48:00Z
-- **Commit ref** : `f6b8d0d` (Merge pull request #3 from dtruong21/feature/crud-properties)
-- **Branche** : `develop`
-- **Phase projet** : FEAT-001 (auth) + FEAT-002 (data model + RLS) + FEAT-003 (properties CRUD UI) implémentées et mergées. FEAT-004–010 en backlog.
+- **Dernière mise à jour** : 2026-05-29T00:00:00Z
+- **Commit ref** : `911ca5c` (feat(tenants): CRUD locataires (FEAT-004))
+- **Branche** : `feature/crud-tenants`
+- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ implémentées. FEAT-005–010 en backlog.
 
 ## Pointeurs
 
@@ -50,35 +50,26 @@
 | Hosting | Firebase Hosting (staging ✅, prod TBD) |
 | CI/CD | GitHub Actions (ci.yml + deploy.yml avec build_runner step) |
 
-## Changements majeurs FEAT-003
+## Changements majeurs FEAT-004
 
-1. **16 nouveaux fichiers Dart** : `lib/features/properties/` (data/domain/application/presentation + widgets)
-2. **4 nouvelles routes GoRouter** : `/properties`, `/properties/new`, `/properties/:id`, `/properties/:id/edit`
-3. **Dashboard modifié** : ListTile "Mes biens" ajouté pour naviger vers `/properties`
-4. **3 nouveaux helpers** : `postgrest_error_mapper.dart`, `surface_validator.dart`, `property_form_validators.dart` (réutilisables FEAT-004/005)
-5. **Modèle `Property`** : freezed + json_serializable, snake_case via `@JsonKey`
-6. **Enum `PropertyType`** : `'appartement'`, `'maison'`, `'studio'`, `'autre'` (fermé)
-7. **56 tests nouveaux** (2514 lignes totales vs ~1900 avant) : repositories, providers, form validators, RLS-passthrough tests
-8. **Aucune dépendance pubspec ajoutée** : Réutilise freezed + json_serializable de FEAT-001
-9. **Migration SQL** : Aucune (FEAT-003 est purement frontend, table `properties` existe déjà depuis FEAT-002)
+1. **15 nouveaux fichiers Dart** : `lib/features/tenants/` (data/domain/application/presentation + widgets)
+2. **4 nouvelles routes GoRouter** : `/tenants`, `/tenants/new`, `/tenants/:id`, `/tenants/:id/edit`
+3. **Dashboard modifié** : ListTile "Mes locataires" ajouté pour naviger vers `/tenants`
+4. **1 nouveau helper** : `lib/core/utils/tenant_form_validators.dart` (réutilisable FEAT-005)
+5. **1 widget réutilisable** : `lib/core/widgets/archive_confirm_dialog.dart` (déplacé de properties → core)
+6. **Modèle `Tenant`** : freezed + json_serializable, snake_case via `@JsonKey`
+7. **Widget `TenantLeaseSummary`** : Affiche les baux actifs pour un locataire (prépare FEAT-005)
+8. **80+ tests nouveaux** : repositories, providers, form validators, widget tests
+9. **Aucune dépendance pubspec ajoutée** : Réutilise freezed + json_serializable
+10. **Aucune migration SQL** : FEAT-004 est purement frontend, table `tenants` existe déjà depuis FEAT-002
 
 ### Incohérences détectées
 
 Aucune incohérence — état entièrement cohérent avec code.
 
-### Changements majeurs FEAT-002
+## État de la base de code
 
-1. **4 nouvelles tables** : `properties`, `tenants`, `leases` (public + dev) — docs dans `SCHEMA.md` (24 policies, 8 triggers, 8 RPC)
-2. **FK change** : `landlords.id → auth.users(id)` : CASCADE → NO ACTION (rétention légale RGPD)
-3. **Soft-delete framework** : Pattern tr_00/tr_01/tr_02 pour ordre d'exécution alphabétique stable
-4. **RPC SECURITY DEFINER × 2 schémas** : 8 RPC soft-delete (4 tables × 2 schémas)
-5. **77 RLS tests** : `rls_landlords.sql`, `rls_properties.sql`, `rls_tenants.sql`, `rls_leases.sql`
-6. **Aucun changement Flutter** : FEAT-002 est purement backend
-7. **Status upgrades** : FEAT-001 ✅ done, FEAT-002 ✅ done (migration appliquée prod 2026-05-28 12:00 UTC)
-
-### État de la base de code
-
-- Code matches state — aucun drift détecté post-FEAT-003
-- 15 test files, 2514 lines totales (56+ tests créés en FEAT-003)
+- Code matches state — aucun drift détecté post-FEAT-004
+- ~3500 lignes de tests totales (80+ tests créés en FEAT-004)
 - RLS validée sur Postgres côté backend (FEAT-002)
-- Flutter stable — 3 features complètes, prêt pour FEAT-004 (tenants CRUD)
+- Flutter stable — 4 features complètes, prêt pour FEAT-005 (leases CRUD)

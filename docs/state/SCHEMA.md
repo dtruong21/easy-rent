@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-28 (FEAT-003 mergée, aucun changement SQL)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-29 (FEAT-004 mergée, aucun changement SQL — frontend only)
 
 ## Tables
 
