@@ -45,13 +45,14 @@ class DashboardPage extends ConsumerWidget {
             onTap: () => context.go('/properties'),
           ),
           const Divider(indent: 16, endIndent: 16),
-          // Futures sections (FEAT-004, FEAT-005…)
+          // Section locataires (FEAT-004)
           ListTile(
+            key: const Key('tile_tenants'),
             leading: const Icon(Icons.people_outline),
             title: const Text('Mes locataires'),
-            subtitle: const Text('Disponible prochainement'),
+            subtitle: const Text('Gérer votre annuaire de locataires'),
             trailing: const Icon(Icons.chevron_right),
-            enabled: false,
+            onTap: () => context.go('/tenants'),
           ),
           const Divider(indent: 16, endIndent: 16),
           ListTile(

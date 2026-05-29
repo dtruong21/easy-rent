@@ -1,0 +1,37 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
+
+import '../data/tenant_repository.dart';
+import '../domain/tenant.dart';
+
+final _log = Logger('TenantsListNotifier');
+
+/// Notifier qui charge et expose la liste des locataires du landlord courant.
+///
+/// Expose une méthode [refresh] pour recharger la liste après une action
+/// (création, modification, archivage).
+class TenantsListNotifier extends AsyncNotifier<List<Tenant>> {
+  @override
+  Future<List<Tenant>> build() async {
+    return _fetch();
+  }
+
+  Future<List<Tenant>> _fetch() async {
+    _log.info('fetch tenants list');
+    return ref.read(tenantRepositoryProvider).list();
+  }
+
+  /// Recharge la liste depuis Supabase.
+  ///
+  /// À appeler après une création, modification ou archivage réussis.
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_fetch);
+  }
+}
+
+/// Provider de la liste des locataires.
+final tenantsListProvider =
+    AsyncNotifierProvider<TenantsListNotifier, List<Tenant>>(
+      TenantsListNotifier.new,
+    );
