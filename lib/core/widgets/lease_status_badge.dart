@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../features/leases/domain/lease_status.dart';
+
 /// Badge coloré affichant le statut d'un bail.
 ///
 /// Extrait du widget privé `_StatusBadge` de `tenant_lease_summary.dart`
@@ -13,17 +15,24 @@ import 'package:flutter/material.dart';
 class LeaseStatusBadge extends StatelessWidget {
   const LeaseStatusBadge({super.key, required this.status});
 
-  /// Valeur SQL du statut : `'active'`, `'terminated'` ou `'archived'`.
-  final String status;
+  /// Construit un badge depuis la valeur SQL brute du statut.
+  ///
+  /// Utilisé par les consommateurs qui reçoivent `Map<String,dynamic>['status']`
+  /// (ex. [TenantLeaseSummary]). Les valeurs inconnues sont traitées comme
+  /// [LeaseStatus.archived] (comportement défensif de [LeaseStatus.fromSql]).
+  LeaseStatusBadge.fromSql(String sqlStatus, {super.key})
+    : status = LeaseStatus.fromSql(sqlStatus);
+
+  /// Statut typé du bail.
+  final LeaseStatus status;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final (label, color) = switch (status) {
-      'active' => ('Actif', theme.colorScheme.primary),
-      'terminated' => ('Terminé', theme.colorScheme.outline),
-      'archived' => ('Archivé', theme.colorScheme.outline),
-      _ => (status, theme.colorScheme.outline),
+      LeaseStatus.active => ('Actif', theme.colorScheme.primary),
+      LeaseStatus.terminated => ('Terminé', theme.colorScheme.outline),
+      LeaseStatus.archived => ('Archivé', theme.colorScheme.outline),
     };
 
     return Container(

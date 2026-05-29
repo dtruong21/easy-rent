@@ -93,13 +93,10 @@ LeaseListItem _makeItem({
 Widget _buildPage(_FakeRepo repo) {
   final router = GoRouter(
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (_, __) => const LeasesListPage(),
-      ),
+      GoRoute(path: '/', builder: (context, _) => const LeasesListPage()),
       GoRoute(
         path: '/leases/new',
-        builder: (_, __) => const Scaffold(body: Text('nouveau bail')),
+        builder: (context, _) => const Scaffold(body: Text('nouveau bail')),
       ),
       GoRoute(
         path: '/leases/:id',
@@ -216,10 +213,10 @@ void main() {
     ) async {
       final router = GoRouter(
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const LeasesListPage()),
+          GoRoute(path: '/', builder: (context, _) => const LeasesListPage()),
           GoRoute(
             path: '/leases/new',
-            builder: (_, __) => const Scaffold(body: Text('new')),
+            builder: (context, _) => const Scaffold(body: Text('new')),
           ),
         ],
       );

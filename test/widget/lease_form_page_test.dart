@@ -5,11 +5,9 @@ import 'package:easyrent/features/leases/domain/lease_form_state.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/presentation/lease_form_page.dart';
-import 'package:easyrent/features/properties/application/properties_list_provider.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
-import 'package:easyrent/features/tenants/application/tenants_list_provider.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:flutter/material.dart';
@@ -213,27 +211,26 @@ Widget _buildForm({
   final fakePropertyRepo = _FakePropertyRepo(
     properties: properties ?? [_makeProperty()],
   );
-  final fakeTenantRepo = _FakeTenantRepo(
-    tenants: tenants ?? [_makeTenant()],
-  );
+  final fakeTenantRepo = _FakeTenantRepo(tenants: tenants ?? [_makeTenant()]);
 
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, __) => LeaseFormPage(initial: initial),
+        builder: (context, _) => LeaseFormPage(initial: initial),
       ),
       GoRoute(
         path: '/leases',
-        builder: (_, __) => const Scaffold(body: Text('liste baux')),
+        builder: (context, _) => const Scaffold(body: Text('liste baux')),
       ),
       GoRoute(
         path: '/properties/new',
-        builder: (_, __) => const Scaffold(body: Text('nouveau bien')),
+        builder: (context, _) => const Scaffold(body: Text('nouveau bien')),
       ),
       GoRoute(
         path: '/tenants/new',
-        builder: (_, __) => const Scaffold(body: Text('nouveau locataire')),
+        builder: (context, _) =>
+            const Scaffold(body: Text('nouveau locataire')),
       ),
     ],
   );
@@ -330,44 +327,33 @@ void main() {
         await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
         await tester.pumpAndSettle();
 
-        expect(
-          find.text('Veuillez sélectionner un locataire'),
-          findsOneWidget,
-        );
+        expect(find.text('Veuillez sélectionner un locataire'), findsOneWidget);
       },
     );
 
-    testWidgets(
-      'validation — erreur loyer si loyer vide à la soumission',
-      (tester) async {
-        await tester.pumpWidget(_buildForm());
-        await tester.pumpAndSettle();
+    testWidgets('validation — erreur loyer si loyer vide à la soumission', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text('Le loyer est obligatoire'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(find.text('Le loyer est obligatoire'), findsOneWidget);
+    });
 
-    testWidgets(
-      'validation — erreur date de début si date manquante',
-      (tester) async {
-        await tester.pumpWidget(_buildForm());
-        await tester.pumpAndSettle();
+    testWidgets('validation — erreur date de début si date manquante', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text('La date de début est obligatoire'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(find.text('La date de début est obligatoire'), findsOneWidget);
+    });
 
     // -----------------------------------------------------------------------
     // Validation — montants invalides
@@ -380,7 +366,10 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Le loyer doit être un montant positif'), findsOneWidget);
+      expect(
+        find.text('Le loyer doit être un montant positif'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('validation — charges négatives → erreur inline', (

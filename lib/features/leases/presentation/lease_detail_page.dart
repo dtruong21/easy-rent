@@ -35,7 +35,7 @@ class LeaseDetailPage extends ConsumerWidget {
     return asyncLease.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => _NotFoundPage(id: id),
+      error: (e, _) => const _NotFoundPage(),
       data: (lease) => _LeaseDetailContent(lease: lease),
     );
   }
@@ -95,7 +95,7 @@ class _LeaseDetailContent extends ConsumerWidget {
             const SizedBox(height: 16),
             _InfoCard(lease: lease),
             const SizedBox(height: 16),
-            _PaymentsPlaceholder(),
+            const _PaymentsPlaceholder(),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)
@@ -207,7 +207,7 @@ class _StatusCard extends StatelessWidget {
           children: [
             Text('Statut', style: theme.textTheme.titleMedium),
             const Spacer(),
-            LeaseStatusBadge(status: lease.status.sqlValue),
+            LeaseStatusBadge(status: lease.status),
           ],
         ),
       ),
@@ -378,6 +378,8 @@ class _InfoRow extends StatelessWidget {
 
 /// Section paiements — placeholder FEAT-006.
 class _PaymentsPlaceholder extends StatelessWidget {
+  const _PaymentsPlaceholder();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -405,9 +407,7 @@ class _PaymentsPlaceholder extends StatelessWidget {
 
 /// Page "Bail introuvable" — affichée quand la RLS retourne 0 ligne.
 class _NotFoundPage extends StatelessWidget {
-  const _NotFoundPage({required this.id});
-
-  final String id;
+  const _NotFoundPage();
 
   @override
   Widget build(BuildContext context) {

@@ -1,40 +1,65 @@
 import 'package:easyrent/core/widgets/lease_status_badge.dart';
+import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _buildBadge(String status) => MaterialApp(
+Widget _buildBadge(LeaseStatus status) => MaterialApp(
   home: Scaffold(body: LeaseStatusBadge(status: status)),
 );
 
+Widget _buildBadgeFromSql(String sqlStatus) =>
+    MaterialApp(home: Scaffold(body: LeaseStatusBadge.fromSql(sqlStatus)));
+
 void main() {
   group('LeaseStatusBadge', () {
-    testWidgets('statut "active" → label "Actif"', (tester) async {
-      await tester.pumpWidget(_buildBadge('active'));
+    testWidgets('statut active → label "Actif"', (tester) async {
+      await tester.pumpWidget(_buildBadge(LeaseStatus.active));
       expect(find.text('Actif'), findsOneWidget);
     });
 
-    testWidgets('statut "terminated" → label "Terminé"', (tester) async {
-      await tester.pumpWidget(_buildBadge('terminated'));
+    testWidgets('statut terminated → label "Terminé"', (tester) async {
+      await tester.pumpWidget(_buildBadge(LeaseStatus.terminated));
       expect(find.text('Terminé'), findsOneWidget);
     });
 
-    testWidgets('statut "archived" → label "Archivé"', (tester) async {
-      await tester.pumpWidget(_buildBadge('archived'));
+    testWidgets('statut archived → label "Archivé"', (tester) async {
+      await tester.pumpWidget(_buildBadge(LeaseStatus.archived));
       expect(find.text('Archivé'), findsOneWidget);
     });
 
-    testWidgets('statut inconnu → affiche le statut brut', (tester) async {
-      await tester.pumpWidget(_buildBadge('pending'));
-      expect(find.text('pending'), findsOneWidget);
+    testWidgets('fromSql("active") → label "Actif"', (tester) async {
+      await tester.pumpWidget(_buildBadgeFromSql('active'));
+      expect(find.text('Actif'), findsOneWidget);
     });
 
-    testWidgets('statut "active" → couleur primary (pas outline)', (
+    testWidgets('fromSql("terminated") → label "Terminé"', (tester) async {
+      await tester.pumpWidget(_buildBadgeFromSql('terminated'));
+      expect(find.text('Terminé'), findsOneWidget);
+    });
+
+    testWidgets('fromSql("archived") → label "Archivé"', (tester) async {
+      await tester.pumpWidget(_buildBadgeFromSql('archived'));
+      expect(find.text('Archivé'), findsOneWidget);
+    });
+
+    testWidgets(
+      'fromSql("pending") — valeur inconnue → fallback "Archivé" (comportement défensif)',
+      (tester) async {
+        await tester.pumpWidget(_buildBadgeFromSql('pending'));
+        // LeaseStatus.fromSql retourne archived pour les valeurs inconnues.
+        expect(find.text('Archivé'), findsOneWidget);
+      },
+    );
+
+    testWidgets('statut active → couleur primary (pas outline)', (
       tester,
     ) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue)),
-          home: Scaffold(body: LeaseStatusBadge(status: 'active')),
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          ),
+          home: Scaffold(body: LeaseStatusBadge(status: LeaseStatus.active)),
         ),
       );
       await tester.pumpAndSettle();
@@ -46,10 +71,10 @@ void main() {
       expect(find.text('Actif'), findsOneWidget);
     });
 
-    testWidgets('statut "terminated" → label différent de "Actif"', (
+    testWidgets('statut terminated → label différent de "Actif"', (
       tester,
     ) async {
-      await tester.pumpWidget(_buildBadge('terminated'));
+      await tester.pumpWidget(_buildBadge(LeaseStatus.terminated));
       expect(find.text('Actif'), findsNothing);
       expect(find.text('Terminé'), findsOneWidget);
     });

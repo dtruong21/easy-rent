@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/utils/money_format.dart';
 import '../../../../core/widgets/lease_status_badge.dart';
 
 /// Affiche les baux liés à un locataire sous forme de liste de cards.
@@ -63,7 +64,7 @@ class _LeaseItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              LeaseStatusBadge(status: status),
+              LeaseStatusBadge.fromSql(status),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -75,7 +76,7 @@ class _LeaseItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${(rentCents / 100).toStringAsFixed(2).replaceAll('.', ',')} €/mois HC',
+                      '${MoneyFormat.formatEurosFromCents(rentCents)}/mois HC',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

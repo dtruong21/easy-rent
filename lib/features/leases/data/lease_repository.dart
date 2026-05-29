@@ -168,18 +168,19 @@ class SupabaseLeaseRepository implements LeaseRepository {
     _log.info(
       'hasOtherActiveLeaseOnProperty($propertyId, exclude=$excludeLeaseId)',
     );
-    final rows = await Db.from('leases')
+    var query = Db.from('leases')
         .select('id')
         .eq('property_id', propertyId)
         .eq('status', 'active')
-        .filter('deleted_at', 'is', null)
-        .limit(10); // limit > 1 pour pouvoir filtrer côté Dart
+        .filter('deleted_at', 'is', null);
 
-    // Filtrer l'id exclu (mode édition — on ne veut pas se compter soi-même).
-    final others = rows.where(
-      (r) => excludeLeaseId == null || r['id'] != excludeLeaseId,
-    );
-    return others.isNotEmpty;
+    // Exclure le bail courant côté serveur (mode édition).
+    if (excludeLeaseId != null) {
+      query = query.neq('id', excludeLeaseId);
+    }
+
+    final rows = await query.limit(1);
+    return rows.isNotEmpty;
   }
 
   @override

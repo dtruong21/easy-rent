@@ -42,12 +42,6 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
   late final TextEditingController _rentCtrl;
   late final TextEditingController _chargesCtrl;
 
-  // État local du formulaire
-  String? _selectedPropertyId;
-  String? _selectedTenantId;
-  DateTime? _startDate;
-  DateTime? _endDate;
-
   @override
   void initState() {
     super.initState();
@@ -62,10 +56,6 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           ? MoneyFormat.centsToInput(lease.chargesAmountCents)
           : '',
     );
-    _selectedPropertyId = lease?.propertyId;
-    _selectedTenantId = lease?.tenantId;
-    _startDate = lease?.startDate;
-    _endDate = lease?.endDate;
   }
 
   @override
@@ -97,7 +87,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
 
     if (rentCents == null || chargesCents == null) return;
 
-    // Vérifier si un bail actif existe déjà sur ce bien
+    // Soft warning — TOCTOU race accepted (no DB constraint), see docs/plans/FEAT-005-crud-leases.md
     bool hasActiveLease = false;
     try {
       hasActiveLease = await ref
@@ -178,8 +168,14 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           );
           context.go('/leases');
         },
-        error: (_) {
+        error: (msg) {
           _log.warning('LeaseFormPage error state');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+            ),
+          );
         },
       );
     });
@@ -227,16 +223,15 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               tenants: tenants,
               rentController: _rentCtrl,
               chargesController: _chargesCtrl,
-              initialPropertyId: _selectedPropertyId,
-              initialTenantId: _selectedTenantId,
-              initialStartDate: _startDate,
-              initialEndDate: _endDate,
+              initialPropertyId: widget.initial?.propertyId,
+              initialTenantId: widget.initial?.tenantId,
+              initialStartDate: widget.initial?.startDate,
+              initialEndDate: widget.initial?.endDate,
               enabled: !isSubmitting,
-              onPropertyChanged: (p) =>
-                  setState(() => _selectedPropertyId = p?.id),
-              onTenantChanged: (t) => setState(() => _selectedTenantId = t?.id),
-              onStartDateChanged: (d) => setState(() => _startDate = d),
-              onEndDateChanged: (d) => setState(() => _endDate = d),
+              onPropertyChanged: (_) {},
+              onTenantChanged: (_) {},
+              onStartDateChanged: (_) {},
+              onEndDateChanged: (_) {},
             ),
             if (errorMessage != null) ...[
               const SizedBox(height: 16),

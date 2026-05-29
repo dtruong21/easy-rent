@@ -1,9 +1,5 @@
-import 'package:easyrent/features/leases/application/lease_detail_provider.dart';
-import 'package:easyrent/features/leases/application/lease_form_controller.dart';
-import 'package:easyrent/features/leases/application/leases_list_provider.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
-import 'package:easyrent/features/leases/domain/lease_form_state.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/presentation/lease_detail_page.dart';
@@ -85,11 +81,11 @@ Widget _buildDetailPage({required String leaseId, required _FakeRepo repo}) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, __) => LeaseDetailPage(id: leaseId),
+        builder: (context, _) => LeaseDetailPage(id: leaseId),
       ),
       GoRoute(
         path: '/leases',
-        builder: (_, __) => const Scaffold(body: Text('liste baux')),
+        builder: (context, _) => const Scaffold(body: Text('liste baux')),
       ),
       GoRoute(
         path: '/leases/:id/edit',
@@ -127,7 +123,10 @@ void main() {
     testWidgets('affiche le badge de statut "Actif"', (tester) async {
       final lease = _makeLease(status: LeaseStatus.active);
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -137,7 +136,10 @@ void main() {
     testWidgets('affiche le loyer HC formaté', (tester) async {
       final lease = _makeLease();
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -150,7 +152,10 @@ void main() {
     ) async {
       final lease = _makeLease();
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -160,7 +165,10 @@ void main() {
     testWidgets('affiche "(CDI)" si end_date est null', (tester) async {
       final lease = _makeLease(endDate: null);
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -172,7 +180,10 @@ void main() {
     ) async {
       final lease = _makeLease(endDate: DateTime(2025, 6, 30));
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -182,7 +193,10 @@ void main() {
     testWidgets('section paiements placeholder visible', (tester) async {
       final lease = _makeLease();
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -195,19 +209,23 @@ void main() {
     testWidgets('bouton "Modifier" (icône) présent', (tester) async {
       final lease = _makeLease();
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('btn_edit_lease')), findsOneWidget);
     });
 
-    testWidgets('tap "Modifier" navigue vers /leases/:id/edit', (
-      tester,
-    ) async {
+    testWidgets('tap "Modifier" navigue vers /leases/:id/edit', (tester) async {
       final lease = _makeLease(id: 'lease-xyz');
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -225,7 +243,10 @@ void main() {
     ) async {
       final lease = _makeLease(status: LeaseStatus.active);
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -240,7 +261,10 @@ void main() {
         endDate: DateTime(2024, 12, 31),
       );
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -253,7 +277,10 @@ void main() {
         endDate: DateTime(2024, 12, 31),
       );
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -266,7 +293,10 @@ void main() {
     testWidgets('bouton "Archiver ce bail" présent', (tester) async {
       final lease = _makeLease();
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -278,14 +308,15 @@ void main() {
     ) async {
       final lease = _makeLease();
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
       // Scroll to the button in case it's below the fold
-      await tester.ensureVisible(
-        find.byKey(const Key('btn_archive_lease')),
-      );
+      await tester.ensureVisible(find.byKey(const Key('btn_archive_lease')));
       await tester.pumpAndSettle();
 
       await tester.tap(
@@ -305,7 +336,10 @@ void main() {
     ) async {
       final lease = _makeLease(status: LeaseStatus.active);
       await tester.pumpWidget(
-        _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -339,46 +373,45 @@ void main() {
       expect(find.text('Bail introuvable'), findsOneWidget);
     });
 
-    testWidgets(
-      'cross-user — affiche bouton "Retour à la liste"',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildDetailPage(
-            leaseId: 'foreign-lease-id',
-            repo: const _FakeRepo(notFound: true),
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('cross-user — affiche bouton "Retour à la liste"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: 'foreign-lease-id',
+          repo: const _FakeRepo(notFound: true),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.textContaining('Retour'), findsOneWidget);
-      },
-    );
+      expect(find.textContaining('Retour'), findsOneWidget);
+    });
 
     // -----------------------------------------------------------------------
     // Liens property / tenant
     // -----------------------------------------------------------------------
-    testWidgets(
-      'tap lien "Bien" navigue vers /properties/:propertyId',
-      (tester) async {
-        final lease = _makeLease();
-        await tester.pumpWidget(
-          _buildDetailPage(leaseId: lease.id, repo: _FakeRepo(lease: lease)),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('tap lien "Bien" navigue vers /properties/:propertyId', (
+      tester,
+    ) async {
+      final lease = _makeLease();
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Le lien "Voir la fiche" sous "Bien" est le premier InkWell dans la card
-        final inkWells = tester.widgetList<InkWell>(find.byType(InkWell));
-        // Trouver l'InkWell de la row "Bien"
-        await tester.tap(
-          find.widgetWithText(InkWell, 'Voir la fiche').first,
-        );
-        await tester.pumpAndSettle();
+      // Le lien "Voir la fiche" sous "Bien" est le premier InkWell dans la card
+      final inkWells = tester.widgetList<InkWell>(find.byType(InkWell));
+      // Trouver l'InkWell de la row "Bien"
+      await tester.tap(find.widgetWithText(InkWell, 'Voir la fiche').first);
+      await tester.pumpAndSettle();
 
-        // Vérifier qu'on est sur la page property
-        expect(find.textContaining('property'), findsOneWidget);
-        // inkWells reference used above for the test
-        expect(inkWells, isNotNull);
-      },
-    );
+      // Vérifier qu'on est sur la page property
+      expect(find.textContaining('property'), findsOneWidget);
+      // inkWells reference used above for the test
+      expect(inkWells, isNotNull);
+    });
   });
 }

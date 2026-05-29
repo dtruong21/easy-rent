@@ -44,7 +44,7 @@ class LeaseCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  LeaseStatusBadge(status: lease.status.sqlValue),
+                  LeaseStatusBadge(status: lease.status),
                 ],
               ),
               const SizedBox(height: 4),

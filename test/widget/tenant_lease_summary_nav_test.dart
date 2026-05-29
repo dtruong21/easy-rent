@@ -17,9 +17,8 @@ Widget _buildWithRouter(List<Map<String, dynamic>> leases) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, __) => Scaffold(
-          body: TenantLeaseSummary(leases: leases),
-        ),
+        builder: (context, _) =>
+            Scaffold(body: TenantLeaseSummary(leases: leases)),
       ),
       GoRoute(
         path: '/leases/:id',
@@ -99,34 +98,33 @@ void main() {
       expect(find.text('Voir le bail'), findsNothing);
     });
 
-    testWidgets(
-      'plusieurs baux — chacun affiche un lien "Voir le bail"',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildWithRouter([
-            {
-              'id': 'lease-1',
-              'property_id': 'p1',
-              'start_date': '2024-01-01',
-              'end_date': null,
-              'status': 'active',
-              'rent_amount_cents': 80000,
-            },
-            {
-              'id': 'lease-2',
-              'property_id': 'p2',
-              'start_date': '2023-01-01',
-              'end_date': '2024-01-01',
-              'status': 'terminated',
-              'rent_amount_cents': 65000,
-            },
-          ]),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('plusieurs baux — chacun affiche un lien "Voir le bail"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildWithRouter([
+          {
+            'id': 'lease-1',
+            'property_id': 'p1',
+            'start_date': '2024-01-01',
+            'end_date': null,
+            'status': 'active',
+            'rent_amount_cents': 80000,
+          },
+          {
+            'id': 'lease-2',
+            'property_id': 'p2',
+            'start_date': '2023-01-01',
+            'end_date': '2024-01-01',
+            'status': 'terminated',
+            'rent_amount_cents': 65000,
+          },
+        ]),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('Voir le bail'), findsNWidgets(2));
-      },
-    );
+      expect(find.text('Voir le bail'), findsNWidgets(2));
+    });
 
     testWidgets('tap sur le 2e bail navigue vers son id', (tester) async {
       await tester.pumpWidget(
