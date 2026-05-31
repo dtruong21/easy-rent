@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/utils/payment_form_validators.dart';
 import '../../domain/payment_method.dart';
@@ -91,11 +92,6 @@ class PaymentFormWidgetState extends State<PaymentForm> {
     _notesController.dispose();
     super.dispose();
   }
-
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
 
   Future<void> _pickPeriodStart() async {
     final picked = await showDatePicker(
@@ -291,7 +287,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 ),
                 child: Text(
                   _periodStart != null
-                      ? _formatDate(_periodStart!)
+                      ? FrenchDate.format(_periodStart!)
                       : 'Sélectionner une date',
                   style: _periodStart == null
                       ? theme.textTheme.bodyMedium?.copyWith(
@@ -326,7 +322,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 ),
                 child: Text(
                   _periodEnd != null
-                      ? _formatDate(_periodEnd!)
+                      ? FrenchDate.format(_periodEnd!)
                       : 'Sélectionner une date',
                   style: _periodEnd == null
                       ? theme.textTheme.bodyMedium?.copyWith(
@@ -358,7 +354,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 ),
                 child: Text(
                   _paidAt != null
-                      ? _formatDate(_paidAt!)
+                      ? FrenchDate.format(_paidAt!)
                       : 'Sélectionner une date',
                   style: _paidAt == null
                       ? theme.textTheme.bodyMedium?.copyWith(

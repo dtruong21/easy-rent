@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/widgets/archive_confirm_dialog.dart';
 import '../../domain/payment.dart';
@@ -20,16 +21,11 @@ class PaymentListTile extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onArchive;
 
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final periodLabel =
-        '${_formatDate(payment.periodStart)} – ${_formatDate(payment.periodEnd)}';
+        '${FrenchDate.format(payment.periodStart)} – ${FrenchDate.format(payment.periodEnd)}';
     final amountLabel = MoneyFormat.formatEurosFromCents(
       payment.totalAmountCents,
     );

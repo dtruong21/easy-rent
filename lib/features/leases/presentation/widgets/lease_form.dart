@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/lease_form_validators.dart';
 import '../../../../features/properties/domain/property.dart';
 import '../../../../features/tenants/domain/tenant.dart';
@@ -88,11 +89,6 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     _endDate = widget.initialEndDate;
     _isOpenEnded = widget.initialEndDate == null;
   }
-
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
 
   Future<void> _pickStartDate() async {
     final picked = await showDatePicker(
@@ -302,7 +298,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
                 ),
                 child: Text(
                   _startDate != null
-                      ? _formatDate(_startDate!)
+                      ? FrenchDate.format(_startDate!)
                       : 'Sélectionner une date',
                   style: _startDate == null
                       ? theme.textTheme.bodyMedium?.copyWith(
@@ -356,7 +352,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
                     errorText: state.errorText,
                   ),
                   child: Text(
-                    _endDate != null ? _formatDate(_endDate!) : 'Optionnelle',
+                    _endDate != null
+                        ? FrenchDate.format(_endDate!)
+                        : 'Optionnelle',
                     style: _endDate == null
                         ? theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,

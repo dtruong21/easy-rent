@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../application/tenant_detail_provider.dart';
 import '../application/tenants_list_provider.dart';
@@ -207,25 +208,18 @@ class _InfoCard extends StatelessWidget {
             _InfoRow(
               icon: Icons.calendar_today_outlined,
               label: 'Ajouté le',
-              value: _formatDate(tenant.createdAt),
+              value: FrenchDate.format(tenant.createdAt),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.update,
               label: 'Modifié le',
-              value: _formatDate(tenant.updatedAt),
+              value: FrenchDate.format(tenant.updatedAt),
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    return '${local.day.toString().padLeft(2, '0')}/'
-        '${local.month.toString().padLeft(2, '0')}/'
-        '${local.year}';
   }
 }
 

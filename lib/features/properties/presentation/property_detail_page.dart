@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/utils/french_date.dart';
+import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../application/properties_list_provider.dart';
 import '../application/property_detail_provider.dart';
 import '../data/property_repository.dart';
 import '../domain/property.dart';
-import '../../../core/widgets/archive_confirm_dialog.dart';
 
 final _log = Logger('PropertyDetailPage');
 
@@ -226,25 +227,18 @@ class _InfoCard extends StatelessWidget {
             _InfoRow(
               icon: Icons.calendar_today_outlined,
               label: 'Ajouté le',
-              value: _formatDate(property.createdAt),
+              value: FrenchDate.format(property.createdAt),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.update,
               label: 'Modifié le',
-              value: _formatDate(property.updatedAt),
+              value: FrenchDate.format(property.updatedAt),
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    return '${local.day.toString().padLeft(2, '0')}/'
-        '${local.month.toString().padLeft(2, '0')}/'
-        '${local.year}';
   }
 }
 

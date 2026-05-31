@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/widgets/lease_status_badge.dart';
 
@@ -107,17 +108,10 @@ class _LeaseItem extends StatelessWidget {
   }
 
   String _formatPeriod(String startDate, String? endDate) {
-    final start = _formatDate(startDate);
+    final start = FrenchDate.formatIsoString(startDate);
     if (endDate == null || endDate.isEmpty) {
       return 'Du $start (CDI)';
     }
-    return 'Du $start au ${_formatDate(endDate)}';
-  }
-
-  String _formatDate(String isoDate) {
-    if (isoDate.isEmpty) return '';
-    final parts = isoDate.split('-');
-    if (parts.length < 3) return isoDate;
-    return '${parts[2]}/${parts[1]}/${parts[0]}';
+    return 'Du $start au ${FrenchDate.formatIsoString(endDate)}';
   }
 }
