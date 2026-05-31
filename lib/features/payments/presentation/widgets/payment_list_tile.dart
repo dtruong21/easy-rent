@@ -3,21 +3,26 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/widgets/archive_confirm_dialog.dart';
+import '../../../receipts/presentation/widgets/generate_receipt_button.dart';
 import '../../domain/payment.dart';
 
 /// Tile d'un paiement dans la liste de la fiche bail.
 ///
 /// Affiche : période, montant total, mode de paiement.
-/// Actions : bouton modifier (navigation) + bouton archiver (confirmation).
+/// Actions : bouton modifier + bouton archiver + bouton générer quittance.
 class PaymentListTile extends StatelessWidget {
   const PaymentListTile({
     super.key,
     required this.payment,
+    required this.leaseId,
     required this.onEdit,
     required this.onArchive,
   });
 
   final Payment payment;
+
+  /// Identifiant du bail parent — requis pour [GenerateReceiptButton].
+  final String leaseId;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
 
@@ -42,6 +47,7 @@ class PaymentListTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          GenerateReceiptButton(paymentId: payment.id, leaseId: leaseId),
           IconButton(
             key: Key('btn_edit_payment_${payment.id}'),
             icon: const Icon(Icons.edit_outlined),
