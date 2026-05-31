@@ -1,6 +1,6 @@
 # Edge Functions et RPC — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-29 (FEAT-004 mergée, aucun changement Edge Function ni RPC — frontend only)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée, RPC soft_delete_payment ajoutée)
 
 ## Edge Functions (Deno / TypeScript)
 
@@ -81,7 +81,17 @@ Soft-delete lease (ownership check). Retourne void.
 await supabase.rpc('soft_delete_lease', params: {'p_id': leaseId});
 ```
 
-#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()` — FEAT-002
+#### `public.soft_delete_payment(p_id uuid)` — FEAT-006
+
+Soft-delete payment (ownership check : `landlord_id = auth.uid()` AND deleted_at IS NULL). Retourne void.
+
+```dart
+await supabase.rpc('soft_delete_payment', params: {'p_id': paymentId});
+```
+
+**Error** : ERRCODE P0002 si paiement inexistant, appartenant à un autre user, ou déjà supprimé.
+
+#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()` — FEAT-002 + FEAT-006
 
 Mêmes signatures que les versions public, opèrent sur schéma `dev`. Utilisées uniquement en staging/dev.
 
@@ -111,6 +121,7 @@ Trigger BEFORE INSERT OR UPDATE réutilisable, appliquée à 4 tables × 2 sché
 - `tr_01_prevent_protected_columns_change_properties` (public + dev)
 - `tr_01_prevent_protected_columns_change_tenants` (public + dev)
 - `tr_01_prevent_protected_columns_change_leases` (public + dev)
+- `tr_01_prevent_protected_columns_change_payments` (public + dev) — FEAT-006
 
 #### `public.assert_lease_ownership_consistency()` — FEAT-002
 
@@ -133,6 +144,26 @@ Mirror de `public.assert_lease_ownership_consistency()`, opère sur schéma `dev
 
 **Trigger** : `tr_00_assert_lease_ownership` (dev)
 
+#### `public.assert_payment_lease_ownership()` — FEAT-006
+
+Trigger BEFORE INSERT OR UPDATE sur `public.payments`, SECURITY DEFINER, SET search_path = public.
+
+Valide 2 cas :
+1. `lease_id` existe dans `public.leases`
+2. `lease_id.landlord_id = NEW.landlord_id`
+
+**Trigger** : `tr_00_assert_payment_lease_ownership` (public)
+
+**Error** : ERRCODE 23514 (check_violation)
+
+Bypass RLS intentionnellement pour voir toutes les leases et valider la cohérence cross-FK.
+
+#### `dev.assert_payment_lease_ownership()` — FEAT-006
+
+Mirror de `public.assert_payment_lease_ownership()`, opère sur schéma `dev` (lit dev.leases).
+
+**Trigger** : `tr_00_assert_payment_lease_ownership` (dev)
+
 #### `public.handle_new_user()` — FEAT-001
 
 Trigger AFTER INSERT ON `auth.users`, SECURITY DEFINER, SET search_path = public.
@@ -150,6 +181,7 @@ Trigger BEFORE UPDATE, maintient `updated_at = now()`.
 - `tr_02_set_updated_at_properties` (public + dev)
 - `tr_02_set_updated_at_tenants` (public + dev)
 - `tr_02_set_updated_at_leases` (public + dev)
+- `tr_02_set_updated_at_payments` (public + dev) — FEAT-006
 
 ---
 
@@ -157,9 +189,13 @@ Trigger BEFORE UPDATE, maintient `updated_at = now()`.
 
 PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom de trigger. Ordre garanti :
 
-1. **`tr_00_assert_lease_ownership`** (leases uniquement) — Validation cross-FK
-2. **`tr_01_prevent_protected_columns_change_*`** (4 tables) — Bloque deleted_at, created_at ; force updated_at
-3. **`tr_02_set_updated_at_*`** (4 tables) — Met à jour updated_at
+1. **`tr_00_assert_*_ownership`** (leases + payments) — Validation cross-FK
+   - `tr_00_assert_lease_ownership` (leases)
+   - `tr_00_assert_payment_lease_ownership` (payments, FEAT-006)
+2. **`tr_01_prevent_protected_columns_change_*`** (5 tables) — Bloque deleted_at, created_at ; force updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006)
+3. **`tr_02_set_updated_at_*`** (5 tables) — Met à jour updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006)
 
 ---
 

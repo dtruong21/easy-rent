@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-005 mergée + hardening audit)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée, table payments + RPC soft_delete_payment)
 
 ## Tables
 
@@ -108,8 +108,8 @@
 | `tenant_id` | `uuid` | FK → `tenants(id)` ON DELETE RESTRICT |
 | `rent_amount_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes, ex: 85000 = 850,00€) |
 | `charges_amount_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 |
-| `start_date` | `date` | NOT NULL, CHECK BETWEEN '1900-01-01' AND '2100-12-31' (hardening audit FEAT-005) |
-| `end_date` | `date` | NULL (= CDI), CHECK end_date > start_date et BETWEEN '1900-01-01' AND '2100-12-31' (si renseigné) |
+| `start_date` | `date` | NOT NULL |
+| `end_date` | `date` | NULL (= CDI), CHECK end_date > start_date (si renseigné) |
 | `status` | `text` | NOT NULL DEFAULT 'active', CHECK IN ('active', 'terminated', 'archived') |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
@@ -126,6 +126,50 @@
 | `leases_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
 | `leases_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
 | `leases_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
+
+---
+
+### `payments` (public + dev)
+
+**Migration source** : `20260531102202_feat006_payments.sql` (890 lignes)
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
+| `lease_id` | `uuid` | FK → `leases(id)` ON DELETE RESTRICT |
+| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
+| `period_start` | `date` | NOT NULL, CHECK BETWEEN 1900-01-01..2100-12-31 |
+| `period_end` | `date` | NOT NULL, CHECK > period_start AND BETWEEN 1900-01-01..2100-12-31 |
+| `paid_at` | `date` | NOT NULL (autorisée futur), CHECK BETWEEN 1900-01-01..2100-12-31 |
+| `rent_amount_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes, ex: 85000 = 850,00€) |
+| `charges_amount_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 (en centimes) |
+| `payment_method` | `text` | NOT NULL, CHECK IN ('virement', 'cheque', 'especes', 'prelevement', 'autre') |
+| `notes` | `text` | NULL, CHECK length <= 500 |
+| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
+| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
+| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_payment()` |
+
+**Index** :
+- `idx_public_payments_landlord_id` (RLS filtrage auth.uid())
+- `idx_public_payments_lease_id` (listage paiements d'un bail)
+- `idx_public_payments_period_start_desc` (tri par période décroissante)
+- `idx_public_payments_active_partial` (WHERE deleted_at IS NULL, requête la plus fréquente)
++ équivalents dev
+
+**RLS** : activée
+
+**Policies** (public + dev) :
+
+| Policy | Opération | Condition |
+|---|---|---|
+| `payments_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
+| `payments_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
+| `payments_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
+
+**Notes** :
+- Pas de policy DELETE (soft-delete via RPC uniquement)
+- Aucune UNIQUE sur (lease_id, period_start, period_end) — doublons autorisés (régularisations)
+- FK lease_id RESTRICT : impossible de supprimer un bail avec des paiements
 
 ---
 
@@ -162,6 +206,15 @@
 
 **`dev.assert_lease_ownership_consistency()`** — Mirror DEV (SET search_path = dev, lit dev.properties et dev.tenants)
 
+**`public.assert_payment_lease_ownership()`** — Trigger BEFORE INSERT OR UPDATE sur `public.payments`, SECURITY DEFINER, SET search_path = public (FEAT-006)
+
+- Valide que `lease_id` existe dans `public.leases`
+- Valide que `lease_id.landlord_id` = `NEW.landlord_id`
+- ERRCODE 23514 (check_violation)
+- Bypass RLS intentionnellement pour voir toutes les lignes (cohérence cross-FK)
+
+**`dev.assert_payment_lease_ownership()`** — Mirror DEV (SET search_path = dev, lit dev.leases)
+
 ---
 
 ### Fonctions d'auto-provisioning et maintenance
@@ -191,7 +244,9 @@ Chacune pose `SET LOCAL app.allow_deleted_at_change = '1'` (scope transaction) p
 
 **`public.soft_delete_lease(p_id uuid)`** — Soft-delete lease (vérifie ownership). FEAT-002.
 
-**Versions dev** : `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()` — mêmes signatures, opèrent sur schéma `dev`.
+**`public.soft_delete_payment(p_id uuid)`** — Soft-delete payment (vérifie ownership `landlord_id = auth.uid()` AND deleted_at IS NULL). FEAT-006.
+
+**Versions dev** : `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()` — mêmes signatures, opèrent sur schéma `dev`.
 
 ---
 
@@ -199,9 +254,13 @@ Chacune pose `SET LOCAL app.allow_deleted_at_change = '1'` (scope transaction) p
 
 PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre garanti :
 
-1. **`tr_00_assert_lease_ownership`** (leases uniquement) — Validation cross-FK
-2. **`tr_01_prevent_protected_columns_change_*`** (toutes les 4 tables) — Bloque deleted_at, created_at ; force updated_at
-3. **`tr_02_set_updated_at_*`** (toutes les 4 tables sauf si DELETE) — Remet à jour updated_at
+1. **`tr_00_assert_*_ownership`** (leases + payments) — Validation cross-FK
+   - `tr_00_assert_lease_ownership` (leases)
+   - `tr_00_assert_payment_lease_ownership` (payments, FEAT-006)
+2. **`tr_01_prevent_protected_columns_change_*`** (toutes les 5 tables) — Bloque deleted_at, created_at ; force updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006)
+3. **`tr_02_set_updated_at_*`** (toutes les 5 tables sauf si DELETE) — Remet à jour updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006)
 
 ---
 
@@ -220,6 +279,22 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 - Roles : `authenticated`, `anon`, `service_role`
 - Default privileges : `SELECT, INSERT, UPDATE, DELETE` sur tables pour `authenticated`
 - Comment : "Development/staging mirror of public schema. Mapped to Git branch `develop`."
+
+---
+
+## Résumé des changements FEAT-006
+
+**Nouvelle table** : `payments` (public + dev) — Paiements mensuels d'un bail
+
+**Migration** : `20260531102202_feat006_payments.sql` (890 lignes)
+
+**Trigger framework** : Extend tr_00/tr_01/tr_02 à `payments` (order alphabétique maintenu)
+
+**RPC framework** : Ajoute `soft_delete_payment()` (public + dev)
+
+**RLS** : 3 policies × 2 schémas (SELECT/INSERT/UPDATE, pas de DELETE)
+
+**Cohérence cross-FK** : Trigger `assert_payment_lease_ownership()` SECURITY DEFINER valide lease_id → landlord_id
 
 ---
 
@@ -247,6 +322,6 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 
 - **Multi-env strategy** : Same database hosts `public` (PROD) et `dev` (DEV) sur Supabase free tier
 - **Migration rule** : Toutes les migrations futures DOIVENT appliquer les changements aux DEUX schémas (docs/ENVIRONMENTS.md)
-- **Applied to production** : FEAT-002 migration exécutée 2026-05-28 ~12:00 UTC ; FEAT-005 hardening (date bounds) exécutée 2026-05-29+ (migration 20260529120000)
-- **77 RLS tests** : `supabase/tests/rls_landlords.sql`, `rls_properties.sql`, `rls_tenants.sql`, `rls_leases.sql`
-- **Hardening audit (FEAT-005)** : Constraint `leases_date_range_check` ajoute borne 1900-01-01 à 2100-12-31 sur start_date et end_date (garde-fou DB contre dates absurdes échappant au DatePicker Flutter côté client)
+- **Applied to production** : FEAT-002 exécutée 2026-05-28 ~12:00 UTC; FEAT-006 en staging (prête prod)
+- **RLS tests** : `supabase/tests/rls_landlords.sql` (14), `rls_properties.sql` (12), `rls_tenants.sql` (12), `rls_leases.sql` (26), `rls_payments.sql` (31) = 95 tests totaux
+- **Date hardening** : Bornes 1900-01-01 à 2100-12-31 appliquées à leases (FEAT-005) et payments (FEAT-006)

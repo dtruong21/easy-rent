@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-29 (FEAT-004, aucun changement pubspec)
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-31 (FEAT-006, aucun changement pubspec)
 
 ## Flutter (pubspec.yaml)
 
@@ -50,7 +50,7 @@
 
 _(aucune fonction créée — `supabase/functions/` n'existe pas)_
 
-À créer lors de FEAT-007 (envoi quittance email).
+À créer lors de FEAT-007 (envoi quittance email) et FEAT-008 (email Edge Function).
 
 Structure prévue :
 - Deno runtime (TS)
