@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/widgets/lease_status_badge.dart';
 import '../../domain/lease.dart';
@@ -88,15 +89,10 @@ class LeaseCard extends StatelessWidget {
   }
 
   String _formatPeriod(DateTime startDate, DateTime? endDate) {
-    final start = _formatDate(startDate);
+    final start = FrenchDate.format(startDate);
     if (endDate == null) {
       return 'Depuis $start (CDI)';
     }
-    return 'Du $start au ${_formatDate(endDate)}';
+    return 'Du $start au ${FrenchDate.format(endDate)}';
   }
-
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
 }

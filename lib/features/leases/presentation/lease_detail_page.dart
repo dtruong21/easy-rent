@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../../core/widgets/lease_status_badge.dart';
@@ -267,14 +268,14 @@ class _InfoCard extends StatelessWidget {
             _InfoRow(
               icon: Icons.calendar_today_outlined,
               label: 'Début',
-              value: _formatDate(lease.startDate),
+              value: FrenchDate.format(lease.startDate),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.event_outlined,
               label: 'Fin',
               value: lease.endDate != null
-                  ? _formatDate(lease.endDate!)
+                  ? FrenchDate.format(lease.endDate!)
                   : '(CDI)',
             ),
           ],
@@ -282,11 +283,6 @@ class _InfoCard extends StatelessWidget {
       ),
     );
   }
-
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
 }
 
 /// Ligne avec un lien cliquable (pour bien et locataire).

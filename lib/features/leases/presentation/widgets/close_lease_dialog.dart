@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/french_date.dart';
+
 /// Dialog de clôture d'un bail actif.
 ///
 /// Affiche un date picker pré-rempli à aujourd'hui pour la date de fin
@@ -40,11 +42,6 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
     }
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/'
-      '${date.year}';
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -70,7 +67,7 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
                 suffixIcon: Icon(Icons.calendar_today_outlined),
               ),
               child: Text(
-                _formatDate(_selectedDate),
+                FrenchDate.format(_selectedDate),
                 key: const Key('close_lease_date_display'),
               ),
             ),
