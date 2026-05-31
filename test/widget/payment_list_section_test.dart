@@ -258,6 +258,30 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
+    // GAP-001 — bail archivé désactive aussi le bouton
+    testWidgets(
+      'bail archivé → bouton "Ajouter" désactivé + tooltip "Ce bail est clôturé."',
+      (tester) async {
+        final lease = _makeLease(status: LeaseStatus.archived);
+        await tester.pumpWidget(_buildSection(lease: lease, payments: []));
+        await tester.pumpAndSettle();
+
+        final btn = tester.widget<FilledButton>(
+          find.byKey(const Key('btn_add_payment')),
+        );
+        expect(btn.onPressed, isNull);
+
+        final tooltip = tester.widget<Tooltip>(
+          find.ancestor(
+            of: find.byKey(const Key('btn_add_payment')),
+            matching: find.byType(Tooltip),
+          ),
+        );
+        expect(tooltip.message, 'Ce bail est clôturé.');
+      },
+    );
+
+    // -----------------------------------------------------------------------
     testWidgets('bail clôturé → message "bail clôturé" dans placeholder vide', (
       tester,
     ) async {

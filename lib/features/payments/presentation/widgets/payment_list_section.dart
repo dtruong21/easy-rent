@@ -136,26 +136,25 @@ class _PaymentListContent extends ConsumerWidget {
     WidgetRef ref,
     String paymentId,
   ) async {
-    try {
-      await ref
-          .read(paymentFormControllerProvider.notifier)
-          .archive(paymentId: paymentId, leaseId: leaseId);
-      if (!context.mounted) return;
+    await ref
+        .read(paymentFormControllerProvider.notifier)
+        .archive(paymentId: paymentId, leaseId: leaseId);
+    if (!context.mounted) return;
+    final state = ref.read(paymentFormControllerProvider);
+    final errorMsg = state.maybeWhen(error: (msg) => msg, orElse: () => null);
+    if (errorMsg != null) {
+      _log.warning('archive payment error: $errorMsg');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        ),
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Paiement archivé'),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        ),
-      );
-    } catch (e, st) {
-      _log.severe('archive payment failed', e, st);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            "Impossible d'archiver ce paiement. Veuillez réessayer.",
-          ),
-          backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
     }

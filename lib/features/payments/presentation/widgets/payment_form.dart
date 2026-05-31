@@ -229,10 +229,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
           const SizedBox(height: 8),
 
           // --- Warning montant (non bloquant) ---
-          if (warning != null) ...[
-            PaymentAmountWarning(type: warning),
-            const SizedBox(height: 8),
-          ],
+          if (warning != null) PaymentAmountWarning(type: warning),
           const SizedBox(height: 8),
 
           // --- Mode de paiement ---
