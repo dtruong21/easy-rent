@@ -31,11 +31,16 @@ FEAT-001 (auth)
 ### Suite MVP non encore détaillée en stories (cf. `docs/ROADMAP.md`)
 
 - Navigation principale (drawer + routes)
-- FEAT-006 — Enregistrer un paiement de loyer
 - FEAT-007 — Générer quittance PDF (loi 6 juillet 1989)
 - FEAT-008 — Envoyer quittance par email (Resend / Edge Function)
 - FEAT-009 — Upload & stockage de documents (Supabase Storage)
 - FEAT-010 — Dashboard + polish PWA + déploiement prod
+
+### Stories détaillées (P0 — à implémenter)
+
+| Ordre | ID | Titre | Dépend de | Story |
+|---|---|---|---|---|
+| 6 | FEAT-006 | Enregistrer un paiement de loyer | FEAT-005 | [`backlog/006-payment-record.md`](backlog/006-payment-record.md) |
 
 > À détailler en stories lors du prochain `/discover` une fois la chaîne FEAT-001→005 entamée.
 

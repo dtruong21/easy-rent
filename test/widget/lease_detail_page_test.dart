@@ -3,6 +3,9 @@ import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/presentation/lease_detail_page.dart';
+import 'package:easyrent/features/payments/data/payment_repository.dart';
+import 'package:easyrent/features/payments/domain/payment.dart';
+import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,6 +58,38 @@ class _FakeRepo implements LeaseRepository {
 }
 
 // ---------------------------------------------------------------------------
+// Fake PaymentRepository
+// ---------------------------------------------------------------------------
+
+class _FakePaymentRepo implements PaymentRepository {
+  @override
+  Future<List<Payment>> listForLease(String leaseId) async => [];
+
+  @override
+  Future<Payment> getById(String id) async =>
+      throw PaymentNotFoundException(id);
+
+  @override
+  Future<Payment> create({
+    required String leaseId,
+    required String landlordId,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+    required DateTime paidAt,
+    required int rentAmountCents,
+    required int chargesAmountCents,
+    required PaymentMethod paymentMethod,
+    String? notes,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Payment> update(Payment payment) async => throw UnimplementedError();
+
+  @override
+  Future<void> archive(String id) async {}
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -76,7 +111,11 @@ Lease _makeLease({
   updatedAt: DateTime(2024),
 );
 
-Widget _buildDetailPage({required String leaseId, required _FakeRepo repo}) {
+Widget _buildDetailPage({
+  required String leaseId,
+  required _FakeRepo repo,
+  _FakePaymentRepo? paymentRepo,
+}) {
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -93,6 +132,16 @@ Widget _buildDetailPage({required String leaseId, required _FakeRepo repo}) {
             Scaffold(body: Text('edit ${state.pathParameters['id']}')),
       ),
       GoRoute(
+        path: '/leases/:id/payments/new',
+        builder: (_, state) =>
+            Scaffold(body: Text('new payment ${state.pathParameters['id']}')),
+      ),
+      GoRoute(
+        path: '/leases/:id/payments/:pid/edit',
+        builder: (_, state) =>
+            Scaffold(body: Text('edit payment ${state.pathParameters['pid']}')),
+      ),
+      GoRoute(
         path: '/properties/:id',
         builder: (_, state) =>
             Scaffold(body: Text('property ${state.pathParameters['id']}')),
@@ -106,7 +155,12 @@ Widget _buildDetailPage({required String leaseId, required _FakeRepo repo}) {
   );
 
   return ProviderScope(
-    overrides: [leaseRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      leaseRepositoryProvider.overrideWithValue(repo),
+      paymentRepositoryProvider.overrideWithValue(
+        paymentRepo ?? _FakePaymentRepo(),
+      ),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -190,7 +244,9 @@ void main() {
       expect(find.text('30/06/2025'), findsOneWidget);
     });
 
-    testWidgets('section paiements placeholder visible', (tester) async {
+    testWidgets('section paiements visible avec titre "Paiements"', (
+      tester,
+    ) async {
       final lease = _makeLease();
       await tester.pumpWidget(
         _buildDetailPage(
@@ -200,7 +256,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('FEAT-006'), findsOneWidget);
+      expect(find.text('Paiements'), findsOneWidget);
     });
 
     // -----------------------------------------------------------------------

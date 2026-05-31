@@ -12,6 +12,7 @@ import '../../features/properties/presentation/property_form_page.dart';
 import '../../features/leases/presentation/lease_detail_page.dart';
 import '../../features/leases/presentation/lease_form_page.dart';
 import '../../features/leases/presentation/leases_list_page.dart';
+import '../../features/payments/presentation/payment_form_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
@@ -121,6 +122,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/leases/:id/edit',
         builder: (context, state) =>
             LeaseEditPage(id: state.pathParameters['id']!),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Routes paiements (FEAT-006)
+      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/leases/:id/payments/new',
+        builder: (context, state) =>
+            PaymentFormPage(leaseId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/leases/:id/payments/:pid/edit',
+        builder: (context, state) => PaymentEditPage(
+          leaseId: state.pathParameters['id']!,
+          paymentId: state.pathParameters['pid']!,
+        ),
       ),
     ],
   );
