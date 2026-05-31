@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-29 (FEAT-004 mergée)
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-31 (FEAT-005 mergée)
 
 ## Légende
 
@@ -17,8 +17,9 @@
 | FEAT-001 | Auth propriétaire (signup, login, magic link) | ✅ done | PR#1, merge 8d91219, staging validée 2026-05-27 |
 | FEAT-002 | Modèle de données + RLS exhaustive (properties, tenants, leases) | ✅ done | PR#2, merge 6b28bbb, backend pur (aucun changement Flutter), 77 RLS tests |
 | FEAT-003 | CRUD UI propriétés (list, detail, form) | ✅ done | PR#3, merge c1b0571, 16 fichiers Dart, 4 routes GoRouter, 56 tests |
-| FEAT-004 | CRUD UI locataires (list, detail, form) | 🟢 ready | Commit 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
-| (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | 🟢 ready | Squelette + infra multi-env |
+| FEAT-004 | CRUD UI locataires (list, detail, form) | ✅ done | Commit 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
+| FEAT-005 | CRUD UI baux (list, detail, form) + hardening | ✅ done | PR#5, merge a795686, refine 129e398, 18 fichiers Dart, 4 routes GoRouter, money parser hardening, lease date bounds |
+| (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | ✅ done | Squelette + infra multi-env |
 
 ## Détails
 
@@ -155,13 +156,51 @@
 
 ---
 
+### FEAT-005 : CRUD UI baux (list, detail, form) + hardening
+
+**Status** : ✅ DONE (commit a795686, refinement 129e398, branche fix/lease-input-hardening)
+
+**Source** : `docs/backlog/005-crud-leases.md`
+
+**Code structure** :
+- `lib/features/leases/domain/` : `lease.dart` (freezed model), `lease_status.dart` (enum), `lease_form_state.dart`, `lease_list_item.dart`
+- `lib/features/leases/data/` : `lease_repository.dart` (Supabase Postgrest wrapper, CRUD via RLS)
+- `lib/features/leases/application/` : `leases_list_provider.dart`, `lease_detail_provider.dart`, `lease_form_controller.dart`
+- `lib/features/leases/presentation/` : `leases_list_page.dart`, `lease_detail_page.dart`, `lease_form_page.dart`, `widgets/` (lease_card, lease_form, close_lease_dialog, active_lease_warning_dialog)
+
+**Routes** (4 nouvelles) :
+- `/leases` : LeasesListPage
+- `/leases/new` : LeaseFormPage (mode CREATE)
+- `/leases/:id` : LeaseDetailPage (mode READ + DELETE)
+- `/leases/:id/edit` : LeaseEditPage (mode UPDATE)
+
+**Helpers** :
+- `lib/core/utils/lease_form_validators.dart` : Valide loyer, charges, dates (start < end, borne 1900-2100)
+
+**Hardening audit (fix/lease-input-hardening)** :
+- Money parser : Validation stricte montants (cents uniquement, max 999,999.99€)
+- Extract constant : `_kMaxAmountCents = 99999999` (10M€ max par bail)
+- DB constraint : `leases_date_range_check` ajoute borne `1900-01-01` à `2100-12-31` (migration 20260529120000)
+
+**Modèle Lease** :
+- Freezed + json_serializable avec `@JsonKey` pour snake_case
+- Montants en centimes (int, pas float)
+- Dates : DateTime côté Dart, `date` (YYYY-MM-DD) côté Postgres
+- Status enum : active, terminated, archived
+
+**Tests** : 1 test (lease repository) — intégration avec RLS
+
+**RLS passthrough** : Ownership délégué à Supabase RLS + cohérence cross-FK validée par trigger `assert_lease_ownership_consistency()`.
+
+---
+
 ### Bootstrap projet (non-feature)
 
-**Status** : 🟢 ready (infrastructure en place)
+**Status** : ✅ done (infrastructure en place)
 
-**Routes** : `/`, `/login`, `/privacy` + 4 × properties (FEAT-003) + 4 × tenants (FEAT-004)
+**Routes** : `/`, `/login`, `/privacy` + 4 × properties (FEAT-003) + 4 × tenants (FEAT-004) + 4 × leases (FEAT-005)
 
-**État** : Infrastructure multi-env stable, CI/CD fonctionnel
+**État** : Infrastructure multi-env stable, CI/CD fonctionnel, 4 features complètes
 
 ---
 
@@ -169,7 +208,6 @@
 
 | ID | Nom | Priorité | Effort | Backlog | Notes |
 |---|---|---|---|---|---|
-| FEAT-005 | CRUD UI baux | P0 | M | `docs/backlog/005-crud-leases.md` | Peut réutiliser error mapper |
 | FEAT-006 | Générer quittance PDF conforme loi 1989 | P0 | M | (à créer) | Utilise `pdf` + `printing` packages |
 | FEAT-007 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | (à créer) | Crée `supabase/functions/send-receipt` (Deno) |
 | FEAT-008 | Upload + stockage documents | P0 | M | (à créer) | Supabase Storage (RLS files) |
