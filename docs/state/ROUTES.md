@@ -1,6 +1,6 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-29 (FEAT-004 mergée)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-31 (FEAT-005 mergée)
 
 ## Routes go_router
 
@@ -17,6 +17,10 @@
 | `/tenants/new` | `TenantFormPage` | tenants | ✅ oui | 🟢 implémentée (CREATE form) |
 | `/tenants/:id` | `TenantDetailPage` | tenants | ✅ oui | 🟢 implémentée (READ + DELETE button + lease summary) |
 | `/tenants/:id/edit` | `TenantEditPage` | tenants | ✅ oui | 🟢 implémentée (UPDATE form) |
+| `/leases` | `LeasesListPage` | leases | ✅ oui | 🟢 implémentée (FEAT-005) |
+| `/leases/new` | `LeaseFormPage` | leases | ✅ oui | 🟢 implémentée (CREATE form) |
+| `/leases/:id` | `LeaseDetailPage` | leases | ✅ oui | 🟢 implémentée (READ + DELETE button) |
+| `/leases/:id/edit` | `LeaseEditPage` | leases | ✅ oui | 🟢 implémentée (UPDATE form) |
 
 ## Logique de redirect
 
@@ -36,14 +40,10 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Navigation principale
 
-Dashboard enrichi (FEAT-003/004) : ListTiles "Mes biens" et "Mes locataires" naviguent vers `/properties` et `/tenants`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-005+ pour baux, etc.).
+Dashboard enrichi (FEAT-003/004/005) : ListTiles "Mes biens", "Mes locataires", "Mes baux" naviguent vers `/properties`, `/tenants`, `/leases`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-006+ pour quittances, etc.).
 
 ## Routes prévues (non implémentées)
 
-- `/leases` — Liste des baux (FEAT-005)
-- `/leases/new` — Créer bail
-- `/leases/:id` — Fiche bail
-- `/leases/:id/edit` — Modifier bail
 - `/payments` — Suivi paiements (FEAT-008+)
 - `/receipts` — Quittances émises (FEAT-006+)
 - `/documents` — Documents stockés (FEAT-008+)

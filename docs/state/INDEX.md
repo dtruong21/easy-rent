@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-29T00:00:00Z
-- **Commit ref** : `911ca5c` (feat(tenants): CRUD locataires (FEAT-004))
-- **Branche** : `feature/crud-tenants`
-- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ implémentées. FEAT-005–010 en backlog.
+- **Dernière mise à jour** : 2026-05-31T00:00:00Z
+- **Commit ref** : `129e398` (refactor(leases): extract _kMaxAmountCents constant)
+- **Branche** : `fix/lease-input-hardening`
+- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ implémentées. FEAT-006–010 en backlog.
 
 ## Pointeurs
 

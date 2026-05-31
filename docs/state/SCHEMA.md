@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-29 (FEAT-004 mergée, aucun changement SQL — frontend only)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-005 mergée + hardening audit)
 
 ## Tables
 
@@ -108,8 +108,8 @@
 | `tenant_id` | `uuid` | FK → `tenants(id)` ON DELETE RESTRICT |
 | `rent_amount_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes, ex: 85000 = 850,00€) |
 | `charges_amount_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 |
-| `start_date` | `date` | NOT NULL |
-| `end_date` | `date` | NULL (= CDI), CHECK end_date > start_date (si renseigné) |
+| `start_date` | `date` | NOT NULL, CHECK BETWEEN '1900-01-01' AND '2100-12-31' (hardening audit FEAT-005) |
+| `end_date` | `date` | NULL (= CDI), CHECK end_date > start_date et BETWEEN '1900-01-01' AND '2100-12-31' (si renseigné) |
 | `status` | `text` | NOT NULL DEFAULT 'active', CHECK IN ('active', 'terminated', 'archived') |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
@@ -247,5 +247,6 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 
 - **Multi-env strategy** : Same database hosts `public` (PROD) et `dev` (DEV) sur Supabase free tier
 - **Migration rule** : Toutes les migrations futures DOIVENT appliquer les changements aux DEUX schémas (docs/ENVIRONMENTS.md)
-- **Applied to production** : Migration exécutée en réel sur Supabase `tbgttutodbqffrvsvkoz` (2026-05-28 ~12:00 UTC)
+- **Applied to production** : FEAT-002 migration exécutée 2026-05-28 ~12:00 UTC ; FEAT-005 hardening (date bounds) exécutée 2026-05-29+ (migration 20260529120000)
 - **77 RLS tests** : `supabase/tests/rls_landlords.sql`, `rls_properties.sql`, `rls_tenants.sql`, `rls_leases.sql`
+- **Hardening audit (FEAT-005)** : Constraint `leases_date_range_check` ajoute borne 1900-01-01 à 2100-12-31 sur start_date et end_date (garde-fou DB contre dates absurdes échappant au DatePicker Flutter côté client)
