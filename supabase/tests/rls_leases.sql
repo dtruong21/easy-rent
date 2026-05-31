@@ -29,6 +29,10 @@
 -- [F2] 25. INSERT avec deleted_at = now() refusé par trigger tr_01 (SQLSTATE 42501 — dev)
 -- [F2] 26. INSERT avec created_at antidaté : created_at corrigé silencieusement à now() (public)
 -- [F2] 27. INSERT avec created_at antidaté : created_at corrigé silencieusement à now() (dev)
+-- [date-bounds] 28. INSERT start_date='1850-01-01' refusé par CHECK leases_date_range_check (23514 — public)
+-- [date-bounds] 29. INSERT start_date='2200-01-01' refusé par CHECK leases_date_range_check (23514 — public)
+-- [date-bounds] 30. INSERT end_date='9999-12-31' refusé par CHECK leases_date_range_check (23514 — public)
+-- [date-bounds] 31. INSERT start_date='2026-01-01', end_date=NULL accepté (régression — public)
 -- ============================================================================
 -- USAGE: psql <connection_string> -f supabase/tests/rls_leases.sql
 -- ============================================================================
@@ -819,6 +823,111 @@ BEGIN
     RESET ROLE;
     RAISE EXCEPTION '[FAIL] TEST 27 dev: INSERT devrait réussir avec created_at corrigé (SQLSTATE %, msg: %)',
       SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 28 [date-bounds] : start_date hors borne inférieure refusé (public)
+-- Scénario : start_date='1850-01-01' est avant 1900-01-01 → CHECK leases_date_range_check
+-- Attendu : SQLSTATE 23514 (check_violation).
+-- ============================================================================
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.leases (
+      landlord_id, property_id, tenant_id, rent_amount_cents, start_date
+    ) VALUES (
+      '00000000-0000-0000-0003-000000000001',
+      '00000000-0000-0000-0003-000000000010',
+      '00000000-0000-0000-0003-000000000030',
+      70000, '1850-01-01'
+    );
+    RAISE EXCEPTION '[FAIL] TEST 28 public: start_date=''1850-01-01'' aurait dû être refusé par leases_date_range_check';
+  EXCEPTION
+    WHEN check_violation THEN
+      RAISE NOTICE '[PASS] TEST 28 public: start_date=''1850-01-01'' refusé par CHECK leases_date_range_check (23514)';
+    WHEN OTHERS THEN
+      RAISE EXCEPTION '[FAIL] TEST 28 public: erreur inattendue (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 29 [date-bounds] : start_date hors borne supérieure refusé (public)
+-- Scénario : start_date='2200-01-01' est après 2100-12-31 → CHECK leases_date_range_check
+-- Attendu : SQLSTATE 23514 (check_violation).
+-- ============================================================================
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.leases (
+      landlord_id, property_id, tenant_id, rent_amount_cents, start_date
+    ) VALUES (
+      '00000000-0000-0000-0003-000000000001',
+      '00000000-0000-0000-0003-000000000010',
+      '00000000-0000-0000-0003-000000000030',
+      70000, '2200-01-01'
+    );
+    RAISE EXCEPTION '[FAIL] TEST 29 public: start_date=''2200-01-01'' aurait dû être refusé par leases_date_range_check';
+  EXCEPTION
+    WHEN check_violation THEN
+      RAISE NOTICE '[PASS] TEST 29 public: start_date=''2200-01-01'' refusé par CHECK leases_date_range_check (23514)';
+    WHEN OTHERS THEN
+      RAISE EXCEPTION '[FAIL] TEST 29 public: erreur inattendue (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 30 [date-bounds] : end_date='9999-12-31' refusé (public)
+-- Scénario : end_date dépasse 2100-12-31 → CHECK leases_date_range_check
+-- Note : end_date > start_date (CHECK FEAT-002) est satisfait ; seul le range check doit lever.
+-- Attendu : SQLSTATE 23514 (check_violation).
+-- ============================================================================
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.leases (
+      landlord_id, property_id, tenant_id, rent_amount_cents, start_date, end_date
+    ) VALUES (
+      '00000000-0000-0000-0003-000000000001',
+      '00000000-0000-0000-0003-000000000010',
+      '00000000-0000-0000-0003-000000000030',
+      70000, '2026-01-01', '9999-12-31'
+    );
+    RAISE EXCEPTION '[FAIL] TEST 30 public: end_date=''9999-12-31'' aurait dû être refusé par leases_date_range_check';
+  EXCEPTION
+    WHEN check_violation THEN
+      RAISE NOTICE '[PASS] TEST 30 public: end_date=''9999-12-31'' refusé par CHECK leases_date_range_check (23514)';
+    WHEN OTHERS THEN
+      RAISE EXCEPTION '[FAIL] TEST 30 public: erreur inattendue (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
+  END;
+END $$;
+
+-- ============================================================================
+-- TEST 31 [date-bounds] : bail valide start_date='2026-01-01', end_date=NULL accepté (régression — public)
+-- Scénario : dates dans les bornes, end_date NULL (CDI locatif) — doit réussir.
+-- Attendu : INSERT réussit (pas d'exception).
+-- ============================================================================
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    '{"sub":"00000000-0000-0000-0003-000000000001","role":"authenticated"}', true);
+  SET LOCAL ROLE authenticated;
+
+  BEGIN
+    INSERT INTO public.leases (
+      landlord_id, property_id, tenant_id, rent_amount_cents, start_date
+    ) VALUES (
+      '00000000-0000-0000-0003-000000000001',
+      '00000000-0000-0000-0003-000000000010',
+      '00000000-0000-0000-0003-000000000030',
+      80000, '2026-01-01'
+      -- end_date intentionnellement omis (NULL = CDI)
+    );
+    RESET ROLE;
+    RAISE NOTICE '[PASS] TEST 31 public: bail valide (start_date=''2026-01-01'', end_date=NULL) accepté — régression OK';
+  EXCEPTION WHEN OTHERS THEN
+    RESET ROLE;
+    RAISE EXCEPTION '[FAIL] TEST 31 public: bail valide refusé à tort (SQLSTATE %, msg: %)', SQLSTATE, SQLERRM;
   END;
 END $$;
 

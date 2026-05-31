@@ -77,6 +77,29 @@ void main() {
     test('négatif décimal : "-0.01" → null', () {
       expect(MoneyFormat.eurosToCents('-0.01'), isNull);
     });
+
+    // --- Valeurs non-finies → null (Fix 1) ---
+    test('Infinity → null', () {
+      expect(MoneyFormat.eurosToCents('Infinity'), isNull);
+    });
+
+    test('-Infinity → null', () {
+      expect(MoneyFormat.eurosToCents('-Infinity'), isNull);
+    });
+
+    test('NaN → null', () {
+      expect(MoneyFormat.eurosToCents('NaN'), isNull);
+    });
+
+    // --- Débordement Postgres integer (max 2 147 483 647 centimes) → null ---
+    test('1e18 (>> int32) → null', () {
+      expect(MoneyFormat.eurosToCents('1e18'), isNull);
+    });
+
+    test('-1e9 (négatif hors plage) → null', () {
+      // négatif rejeté avant même le test de débordement
+      expect(MoneyFormat.eurosToCents('-1e9'), isNull);
+    });
   });
 
   group('MoneyFormat.centsToEuros', () {

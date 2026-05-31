@@ -26,7 +26,11 @@ class MoneyFormat {
     if (cleaned.isEmpty) return null;
     final parsed = double.tryParse(cleaned);
     if (parsed == null || parsed < 0) return null;
-    return (parsed * 100).round();
+    if (!parsed.isFinite) return null;
+    final cents = (parsed * 100).round();
+    // Reject values that overflow Postgres integer (max 2,147,483,647).
+    if (cents > 2147483647) return null;
+    return cents;
   }
 
   /// Convertit des centimes (int) en euros (double).
