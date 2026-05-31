@@ -34,9 +34,12 @@ String mapEdgeFunctionError(FunctionException e) {
   _log.warning('FunctionException status=$status details=$details');
 
   // 422 profile_incomplete → lever une exception spécifique pour le controller.
+  // L'Edge Function peut retourner "profile_incomplete" (court) ou
+  // "profile_incomplete — message long" (avec suffixe) : on teste le préfixe.
   if (status == 422) {
     if (details is Map<String, dynamic> &&
-        details['error'] == 'profile_incomplete') {
+        details['error'] != null &&
+        details['error'].toString().startsWith('profile_incomplete')) {
       final missing = details['missing'];
       final missingList = missing is List
           ? missing.map((e) => e.toString()).toList()

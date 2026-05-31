@@ -81,6 +81,12 @@ Widget _buildSection(List<Receipt> receipts) {
           ),
         ),
       ),
+      // Route cible du lien "Voir toutes les quittances".
+      GoRoute(
+        path: '/leases/:id/receipts',
+        builder: (context, _) =>
+            const Scaffold(body: Text('Toutes les quittances')),
+      ),
     ],
   );
 
@@ -180,5 +186,33 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('btn_download_receipt_r-1')), findsOneWidget);
     });
+
+    testWidgets(
+      '"Voir toutes les quittances" visible quand la liste est non vide',
+      (tester) async {
+        await tester.pumpWidget(_buildSection([_makeReceipt(id: 'r-1')]));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('btn_see_all_receipts')), findsOneWidget);
+      },
+    );
+
+    testWidgets('"Voir toutes les quittances" absent quand la liste est vide', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildSection([]));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('btn_see_all_receipts')), findsNothing);
+    });
+
+    testWidgets(
+      '"Voir toutes les quittances" navigue vers la page quittances',
+      (tester) async {
+        await tester.pumpWidget(_buildSection([_makeReceipt(id: 'r-1')]));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_see_all_receipts')));
+        await tester.pumpAndSettle();
+        expect(find.text('Toutes les quittances'), findsOneWidget);
+      },
+    );
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
 import '../application/lease_receipts_provider.dart';
@@ -62,9 +63,20 @@ class _ReceiptsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final receipt in receipts)
           ReceiptListTile(receipt: receipt, leaseId: leaseId),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: const Key('btn_see_all_receipts'),
+            onPressed: () => context.go('/leases/$leaseId/receipts'),
+            icon: const Icon(Icons.list_alt_outlined, size: 18),
+            label: const Text('Voir toutes les quittances'),
+          ),
+        ),
       ],
     );
   }

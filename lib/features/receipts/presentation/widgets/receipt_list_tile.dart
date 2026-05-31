@@ -138,18 +138,30 @@ class ReceiptListTile extends ConsumerWidget {
   Future<void> _showVoidDialog(BuildContext context, WidgetRef ref) async {
     await showDialog<void>(
       context: context,
-      builder: (_) => VoidReceiptDialog(
-        onConfirm: (reason) {
-          Navigator.of(context).pop();
-          ref
-              .read(voidReceiptControllerProvider.notifier)
-              .voidReceipt(
-                receiptId: receipt.id,
-                reason: reason,
-                leaseId: leaseId,
-              );
-        },
-      ),
+      builder: (dialogCtx) {
+        // On observe le state dans le dialog pour désactiver les boutons
+        // pendant la soumission (isSubmitting branché sur voidReceiptControllerProvider).
+        return Consumer(
+          builder: (context, ref, child) {
+            final isVoiding =
+                ref.watch(voidReceiptControllerProvider)
+                    is VoidReceiptSubmitting;
+            return VoidReceiptDialog(
+              isSubmitting: isVoiding,
+              onConfirm: (reason) {
+                Navigator.of(dialogCtx).pop();
+                ref
+                    .read(voidReceiptControllerProvider.notifier)
+                    .voidReceipt(
+                      receiptId: receipt.id,
+                      reason: reason,
+                      leaseId: leaseId,
+                    );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

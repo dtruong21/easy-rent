@@ -3,7 +3,6 @@ import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/db.dart';
-import '../../../core/utils/edge_function_error_mapper.dart';
 import '../domain/receipt.dart';
 import '../domain/receipt_generation_result.dart';
 
@@ -117,10 +116,21 @@ class SupabaseReceiptsRepository implements ReceiptsRepository {
   @override
   Future<String> signedUrl(String pdfPath) async {
     _log.info('signedUrl(pdfPath=$pdfPath)');
-    final url = await Supabase.instance.client.storage
+    final rawUrl = await Supabase.instance.client.storage
         .from('receipts')
         .createSignedUrl(pdfPath, 300);
-    return url;
+    // Force Content-Disposition: attachment côté Supabase Storage.
+    // Le SDK 2.x ne supporte pas le paramètre `download:` nativement ;
+    // on ajoute le query param manuellement.
+    // Extrait un nom court (8 premiers chars de l'UUID) pour le fichier.
+    final shortId = pdfPath.split('/').last.replaceAll('.pdf', '');
+    final filename =
+        'quittance_${shortId.length >= 8 ? shortId.substring(0, 8) : shortId}.pdf';
+    final uri = Uri.parse(rawUrl);
+    final withDownload = uri.replace(
+      queryParameters: {...uri.queryParameters, 'download': filename},
+    );
+    return withDownload.toString();
   }
 
   @override

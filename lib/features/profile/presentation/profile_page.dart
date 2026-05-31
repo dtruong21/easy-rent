@@ -86,6 +86,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     // Écouter les changements d'état pour les toasts.
     ref.listen<ProfileFormState>(profileFormControllerProvider, (_, next) {
+      if (!context.mounted) return;
       next.whenOrNull(
         success: () {
           ScaffoldMessenger.of(context).showSnackBar(
