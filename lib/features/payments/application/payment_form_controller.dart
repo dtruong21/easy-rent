@@ -103,6 +103,11 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
   /// Archive (soft-delete) un paiement via la RPC `soft_delete_payment`.
   ///
   /// [leaseId] est requis pour invalider le cache liste après archivage.
+  ///
+  /// Le controller est partagé avec [PaymentFormPage] ; on ne veut PAS qu'une
+  /// erreur résiduelle d'une session form précédente fuie dans le résultat de
+  /// l'archive. `state = submitting` ci-dessous est suffisant pour éviter ça,
+  /// mais on l'écrit explicitement pour rendre l'intention claire.
   Future<void> archive({
     required String paymentId,
     required String leaseId,

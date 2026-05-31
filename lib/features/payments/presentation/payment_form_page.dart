@@ -106,7 +106,19 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     final rentCents = MoneyFormat.eurosToCents(_rentCtrl.text);
     final chargesCents = MoneyFormat.eurosToCents(_chargesCtrl.text);
 
-    if (rentCents == null || chargesCents == null) return;
+    if (rentCents == null || chargesCents == null) {
+      _log.warning(
+        'Montants non parsables après validation — '
+        'rent="${_rentCtrl.text}" charges="${_chargesCtrl.text}"',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Vérifiez les montants saisis.'),
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        ),
+      );
+      return;
+    }
 
     // Récupérer l'id du landlord courant pour l'INSERT.
     final landlordId = Supabase.instance.client.auth.currentUser?.id;
