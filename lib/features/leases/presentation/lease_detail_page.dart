@@ -6,6 +6,7 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../../core/widgets/lease_status_badge.dart';
+import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../application/lease_detail_provider.dart';
 import '../application/lease_form_controller.dart';
 import '../application/leases_list_provider.dart';
@@ -95,7 +96,7 @@ class _LeaseDetailContent extends ConsumerWidget {
             const SizedBox(height: 16),
             _InfoCard(lease: lease),
             const SizedBox(height: 16),
-            const _PaymentsPlaceholder(),
+            PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)
@@ -372,35 +373,6 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Section paiements — placeholder FEAT-006.
-class _PaymentsPlaceholder extends StatelessWidget {
-  const _PaymentsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Paiements', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Suivi des paiements disponible après FEAT-006.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
