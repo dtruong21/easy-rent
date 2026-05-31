@@ -1,12 +1,12 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-31 (FEAT-005 mergée)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée)
 
 ## Routes go_router
 
 | Path | Widget | Feature | Auth requise | Statut |
 |---|---|---|---|---|
-| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 implémentée (layout + links "Mes biens", "Mes locataires") |
+| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 implémentée (layout + links "Mes biens", "Mes locataires", "Mes baux") |
 | `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | 🟢 implémentée (magic link PKCE) |
 | `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🚧 placeholder |
 | `/properties` | `PropertiesListPage` | properties | ✅ oui | 🟢 implémentée (FEAT-003) |
@@ -17,10 +17,12 @@
 | `/tenants/new` | `TenantFormPage` | tenants | ✅ oui | 🟢 implémentée (CREATE form) |
 | `/tenants/:id` | `TenantDetailPage` | tenants | ✅ oui | 🟢 implémentée (READ + DELETE button + lease summary) |
 | `/tenants/:id/edit` | `TenantEditPage` | tenants | ✅ oui | 🟢 implémentée (UPDATE form) |
-| `/leases` | `LeasesListPage` | leases | ✅ oui | 🟢 implémentée (FEAT-005) |
-| `/leases/new` | `LeaseFormPage` | leases | ✅ oui | 🟢 implémentée (CREATE form) |
-| `/leases/:id` | `LeaseDetailPage` | leases | ✅ oui | 🟢 implémentée (READ + DELETE button) |
+| `/leases` | `LeasesListPage` | leases | ✅ oui | 🟢 implémentée (FEAT-005, filtre par statut) |
+| `/leases/new` | `LeaseFormPage` | leases | ✅ oui | 🟢 implémentée (CREATE form, picker propriété/locataire) |
+| `/leases/:id` | `LeaseDetailPage` | leases | ✅ oui | 🟢 implémentée (READ + status enum, paiements section, quittances TBD FEAT-007) |
 | `/leases/:id/edit` | `LeaseEditPage` | leases | ✅ oui | 🟢 implémentée (UPDATE form) |
+| `/leases/:id/payments/new` | `PaymentFormPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, pré-remplit depuis lease) |
+| `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, UPDATE payment) |
 
 ## Logique de redirect
 
@@ -40,14 +42,16 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Navigation principale
 
-Dashboard enrichi (FEAT-003/004/005) : ListTiles "Mes biens", "Mes locataires", "Mes baux" naviguent vers `/properties`, `/tenants`, `/leases`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-006+ pour quittances, etc.).
+Dashboard enrichi (FEAT-003/004/005/006) : ListTiles "Mes biens", "Mes locataires" et "Mes baux" naviguent vers `/properties`, `/tenants` et `/leases`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-007+ pour quittances, etc.).
+
+LeaseDetailPage (FEAT-005) : Affiche bail + bouton "Ajouter paiement" (disabled si lease fermé) et section liste paiements (FEAT-006).
 
 ## Routes prévues (non implémentées)
 
-- `/payments` — Suivi paiements (FEAT-008+)
-- `/receipts` — Quittances émises (FEAT-006+)
-- `/documents` — Documents stockés (FEAT-008+)
-- `/settings` — Paramètres compte propriétaire (FEAT-009+)
+- `/leases/:id/receipts` — Quittances émises (FEAT-007)
+- `/documents` — Documents stockés (FEAT-009)
+- `/settings` — Paramètres compte propriétaire (FEAT-010)
+- `/dashboard` — Analytics + récap (FEAT-010)
 
 ## Widgets de layout
 

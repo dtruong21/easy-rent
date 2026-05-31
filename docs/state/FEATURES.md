@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-31 (FEAT-005 mergée)
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée, commit 2a18458)
 
 ## Légende
 
@@ -17,9 +17,10 @@
 | FEAT-001 | Auth propriétaire (signup, login, magic link) | ✅ done | PR#1, merge 8d91219, staging validée 2026-05-27 |
 | FEAT-002 | Modèle de données + RLS exhaustive (properties, tenants, leases) | ✅ done | PR#2, merge 6b28bbb, backend pur (aucun changement Flutter), 77 RLS tests |
 | FEAT-003 | CRUD UI propriétés (list, detail, form) | ✅ done | PR#3, merge c1b0571, 16 fichiers Dart, 4 routes GoRouter, 56 tests |
-| FEAT-004 | CRUD UI locataires (list, detail, form) | ✅ done | Commit 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
-| FEAT-005 | CRUD UI baux (list, detail, form) + hardening | ✅ done | PR#5, merge a795686, refine 129e398, 18 fichiers Dart, 4 routes GoRouter, money parser hardening, lease date bounds |
-| (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | ✅ done | Squelette + infra multi-env |
+| FEAT-004 | CRUD UI locataires (list, detail, form) | ✅ done | PR#4, merge 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
+| FEAT-005 | CRUD UI baux (list, detail, form) | ✅ done | PR#5, merge a795686, 18 fichiers Dart, 4 routes GoRouter, date hardening, 90+ tests |
+| FEAT-006 | CRUD paiements de loyer (enregistrement + archive) | 🟢 ready | PR#8, merge 2a18458, 15 fichiers Dart, 2 routes GoRouter, 31 RLS tests + 50 unit/widget tests |
+| (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | 🟢 ready | Squelette + infra multi-env |
 
 ## Détails
 
@@ -127,7 +128,7 @@
 
 ### FEAT-004 : CRUD UI locataires (list, detail, form)
 
-**Status** : 🟢 READY (commit 911ca5c, branche feature/crud-tenants)
+**Status** : ✅ DONE (mergé develop 2026-05-29, PR#4, commit 911ca5c)
 
 **Source** : `docs/backlog/004-crud-tenants.md`
 
@@ -156,51 +157,117 @@
 
 ---
 
-### FEAT-005 : CRUD UI baux (list, detail, form) + hardening
+### FEAT-005 : CRUD UI baux (list, detail, form)
 
-**Status** : ✅ DONE (commit a795686, refinement 129e398, branche fix/lease-input-hardening)
+**Status** : ✅ DONE (mergé develop 2026-05-29, PR#5, commit a795686)
 
 **Source** : `docs/backlog/005-crud-leases.md`
 
+**Migration** : `supabase/migrations/20260529120000_lease_date_bounds.sql` (date hardening, bornes 1900–2100)
+
 **Code structure** :
-- `lib/features/leases/domain/` : `lease.dart` (freezed model), `lease_status.dart` (enum), `lease_form_state.dart`, `lease_list_item.dart`
+- `lib/features/leases/domain/` : `lease.dart` (freezed model), `lease_status.dart` (enum: active, terminated, archived), `lease_form_state.dart`
 - `lib/features/leases/data/` : `lease_repository.dart` (Supabase Postgrest wrapper, CRUD via RLS)
 - `lib/features/leases/application/` : `leases_list_provider.dart`, `lease_detail_provider.dart`, `lease_form_controller.dart`
-- `lib/features/leases/presentation/` : `leases_list_page.dart`, `lease_detail_page.dart`, `lease_form_page.dart`, `widgets/` (lease_card, lease_form, close_lease_dialog, active_lease_warning_dialog)
+- `lib/features/leases/presentation/` : `leases_list_page.dart`, `lease_detail_page.dart`, `lease_form_page.dart`, `lease_edit_page.dart`, `widgets/`
 
 **Routes** (4 nouvelles) :
 - `/leases` : LeasesListPage
 - `/leases/new` : LeaseFormPage (mode CREATE)
-- `/leases/:id` : LeaseDetailPage (mode READ + DELETE)
+- `/leases/:id` : LeaseDetailPage (mode READ, prépare FEAT-006 paiements + FEAT-007 quittances)
 - `/leases/:id/edit` : LeaseEditPage (mode UPDATE)
 
+**Helpers réutilisables** :
+- `lib/core/utils/lease_form_validators.dart` : Valide dates (start < end), montants, bornes 1900–2100
+- `lib/core/utils/date_helpers.dart` : Helpers date Postgres ↔ Dart
+
+**Widget spécialisé** :
+- `LeaseDetailPage` : Affiche le détail du bail, boutons "Ajouter paiement" et affichage quittances (préparés pour FEAT-006/007)
+- Placeholder `_PaymentsPlaceholder` : sera remplacé par `PaymentListSection` en FEAT-006
+
+**Tests** : 90+ tests (unit + widget), incluant date boundary validation
+
+**RLS passthrough** : Ownership délégué à Supabase RLS.
+
+**Décisions hardening** :
+- Date bounds : 1900-01-01 à 2100-12-31 (CHECK SQL + validation Dart)
+- Bornes intégrées dès la création (FEAT-005 audit débloque FEAT-006)
+
+---
+
+### FEAT-006 : CRUD paiements de loyer
+
+**Status** : 🟢 READY (commit 2a18458, PR#8, branche develop)
+
+**Source** : `docs/backlog/006-payment-record.md` et `docs/plans/FEAT-006-payment-record.md`
+
+**Migration** : `supabase/migrations/20260531102202_feat006_payments.sql` (890 lignes)
+
+**Code structure** :
+- `lib/features/payments/domain/` : `payment.dart` (freezed model + PaymentExtension), `payment_method.dart` (enum: virement, cheque, especes, prelevement, autre), `payment_form_state.dart` (sealed union)
+- `lib/features/payments/data/` : `payment_repository.dart` (Supabase Postgrest wrapper, listForLease/getById/create/update/archive via RPC)
+- `lib/features/payments/application/` : `lease_payments_provider.dart` (AsyncNotifierProvider.family by leaseId), `payment_detail_provider.dart` (FutureProvider.family), `payment_form_controller.dart` (StateNotifier)
+- `lib/features/payments/presentation/` : `payment_form_page.dart`, `payment_edit_page.dart`, `widgets/payment_form.dart`, `widgets/payment_list_section.dart`, `widgets/payment_list_tile.dart`, `widgets/payment_amount_warning.dart`
+
+**Routes** (2 nouvelles) :
+- `/leases/:id/payments/new` : PaymentFormPage (mode CREATE, pré-remplit depuis lease)
+- `/leases/:id/payments/:pid/edit` : PaymentEditPage (mode UPDATE)
+
+**Database** :
+- Table `public.payments` et `dev.payments` : 13 colonnes (id, lease_id, landlord_id, period_start, period_end, paid_at, rent_amount_cents, charges_amount_cents, payment_method, notes, created_at, updated_at, deleted_at)
+- 4 index : landlord_id (RLS), lease_id (listage), period_start DESC (tri), active partial (deleted_at IS NULL)
+- 3 policies RLS : SELECT/INSERT/UPDATE, pas de DELETE (soft-delete via RPC uniquement)
+- Trigger tr_00 : `assert_payment_lease_ownership()` SECURITY DEFINER, cross-FK (lease_id → landlord_id)
+- Trigger tr_01 / tr_02 : réutilisées (prevent_protected_columns_change, set_updated_at)
+- RPC `soft_delete_payment()` SECURITY DEFINER : GRANT authenticated, REVOKE PUBLIC
+
+**Modèle `Payment`** :
+- Freezed + json_serializable
+- Montants en centimes (integer), jamais double (ex: 85000 = 850,00€)
+- Dates en `date` Postgres (YYYY-MM-DD) convertis via helpers JSON
+- PaymentMethod enum (fromSql / sqlValue / label pour pivot SQL/Dart)
+- Extension PaymentExtension : getter `totalAmountCents`
+
 **Helpers** :
-- `lib/core/utils/lease_form_validators.dart` : Valide loyer, charges, dates (start < end, borne 1900-2100)
+- `lib/core/utils/payment_form_validators.dart` : Valide period_start < period_end, montants > 0, méthode, notes max 500 chars
+- Date conversion JSON : _dateFromJson / _dateToJson
 
-**Hardening audit (fix/lease-input-hardening)** :
-- Money parser : Validation stricte montants (cents uniquement, max 999,999.99€)
-- Extract constant : `_kMaxAmountCents = 99999999` (10M€ max par bail)
-- DB constraint : `leases_date_range_check` ajoute borne `1900-01-01` à `2100-12-31` (migration 20260529120000)
+**Widgets** :
+- `PaymentForm` : Formulaire création/édition, pré-remplit depuis lease (rent_amount_cents + charges_amount_cents), warning banner si montant ≠ loyer+charges
+- `PaymentListSection` : Liste paiements actifs du bail (remplace _PaymentsPlaceholder de FEAT-005), bouton "Ajouter paiement" (disabled si lease fermé)
+- `PaymentListTile` : Ligne paiement avec actions (edit, archive)
+- `PaymentAmountWarning` : Banner non-bloquant si montant hors normes
 
-**Modèle Lease** :
-- Freezed + json_serializable avec `@JsonKey` pour snake_case
-- Montants en centimes (int, pas float)
-- Dates : DateTime côté Dart, `date` (YYYY-MM-DD) côté Postgres
-- Status enum : active, terminated, archived
+**Tests** :
+- RLS : 31 tests dans `supabase/tests/rls_payments.sql` (SELECT/INSERT/UPDATE ownership validation)
+- Unit : `payment_test.dart`, `payment_method_test.dart`, `payment_form_validators_test.dart`, `payment_repository_test.dart`
+- Widget : `payment_form_test.dart`, `payment_list_section_test.dart`
+- LeaseDetailPage test enrichi (PaymentListSection embedding)
 
-**Tests** : 1 test (lease repository) — intégration avec RLS
+**Décisions produit** (tranchées + documentées) :
+1. **Paiements partiels libres** : Pas de vérification "montant ≤ loyer+charges". Warning UI seulement (non-bloquant).
+2. **Doublons autorisés** : Pas de UNIQUE sur (lease_id, period_start, period_end). Cas légitimes : régularisation après audit.
+3. **paid_at futur OK** : Autorisée (prélèvements programmés).
+4. **Paiement sur bail fermé autorisé au DB** : Cas légitimes : régularisation, dernière mensualité après clôture. Bouton UI désactivé seulement.
+5. **Soft-delete uniquement** : Pas de hard-delete. RPC `soft_delete_payment()` pour compliance RGPD.
 
-**RLS passthrough** : Ownership délégué à Supabase RLS + cohérence cross-FK validée par trigger `assert_lease_ownership_consistency()`.
+**RLS exhaustive** :
+- SELECT : `landlord_id = auth.uid() AND deleted_at IS NULL`
+- INSERT : `landlord_id = auth.uid()` (trigger tr_00 valide lease_id → landlord_id)
+- UPDATE : USING `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK `landlord_id = auth.uid()`
+- DELETE : aucune policy (soft-delete via RPC)
+
+**Validation** : Tests RLS passent (31/31), unit/widget tests passent. Prêt pour deploy.
 
 ---
 
 ### Bootstrap projet (non-feature)
 
-**Status** : ✅ done (infrastructure en place)
+**Status** : 🟢 ready (infrastructure en place)
 
-**Routes** : `/`, `/login`, `/privacy` + 4 × properties (FEAT-003) + 4 × tenants (FEAT-004) + 4 × leases (FEAT-005)
+**Routes** : `/`, `/login`, `/privacy` + 4 × properties (FEAT-003) + 4 × tenants (FEAT-004) + 4 × leases (FEAT-005) + 2 × payments (FEAT-006)
 
-**État** : Infrastructure multi-env stable, CI/CD fonctionnel, 4 features complètes
+**État** : Infrastructure multi-env stable, CI/CD fonctionnel
 
 ---
 
@@ -208,10 +275,11 @@
 
 | ID | Nom | Priorité | Effort | Backlog | Notes |
 |---|---|---|---|---|---|
-| FEAT-006 | Générer quittance PDF conforme loi 1989 | P0 | M | (à créer) | Utilise `pdf` + `printing` packages |
-| FEAT-007 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | (à créer) | Crée `supabase/functions/send-receipt` (Deno) |
-| FEAT-008 | Upload + stockage documents | P0 | M | (à créer) | Supabase Storage (RLS files) |
-| FEAT-009 | Dashboard récap (actif, loyers, charges) | P0 | S | (à créer) | Agrégation, charts |
-| FEAT-010 | Polish PWA (offline shell, install prompt) | P0 | S | (à créer) | Service worker, manifest |
+| FEAT-007 | Générer quittance PDF conforme loi 1989 | P0 | M | `docs/backlog/007-receipt-pdf.md` | Utilise `pdf` + `printing` packages, lira payments.rent/charges_cents |
+| FEAT-008 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | `docs/backlog/008-send-receipt-email.md` | Crée `supabase/functions/send-receipt` (Deno), RPC trigger |
+| FEAT-009 | Upload + stockage documents | P0 | M | `docs/backlog/009-document-storage.md` | Supabase Storage (RLS files), table documents |
+| FEAT-010 | Dashboard récap (actif, loyers, charges) | P0 | M | `docs/backlog/010-dashboard-analytics.md` | Agrégation SQL, charts, graphiques |
+| FEAT-011 | Polish PWA (offline shell, install prompt) | P1 | S | (à créer) | Service worker, manifest, offline cache |
+| FEAT-012 | Prod release (secrets, logs, monitoring) | P1 | M | (à créer) | Hosting prod, secrets, alertes |
 
 **Location** : `docs/backlog/*.md` — user stories détaillées + acceptance criteria
