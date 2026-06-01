@@ -98,17 +98,17 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.home_outlined,
               size: 80,
-              color: Theme.of(context).colorScheme.outline,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun bien enregistré',
+              'Démarrez votre parc locatif',
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Ajoutez votre premier bien pour commencer\nà gérer votre parc locatif.',
+              'Vos biens apparaîtront ici.\nCommencez par en ajouter un — ça prend une minute.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

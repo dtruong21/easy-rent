@@ -108,7 +108,7 @@ void main() {
       await tester.pumpWidget(_buildPage(const _FakeRepo()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aucun locataire enregistré'), findsOneWidget);
+      expect(find.text('Votre annuaire de locataires'), findsOneWidget);
     });
 
     testWidgets('état vide — bouton "Ajouter un locataire" dans le corps', (
@@ -168,7 +168,7 @@ void main() {
       await tester.pumpWidget(_buildPage(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aucun locataire enregistré'), findsNothing);
+      expect(find.text('Votre annuaire de locataires'), findsNothing);
     });
 
     // -----------------------------------------------------------------------
