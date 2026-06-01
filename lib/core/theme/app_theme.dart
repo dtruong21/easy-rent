@@ -22,11 +22,28 @@ class AppTheme {
       brightness: brightness,
     );
 
+    // M3 génère un textTheme avec color=null sur chaque TextStyle ; la couleur
+    // est injectée par les widgets Material via DefaultTextStyle. Mais certains
+    // widgets ne s'appuient pas dessus — typiquement RichText / TextSpan, qui
+    // tombent alors sur le fallback `Colors.black` → invisible en dark mode.
+    // On force la couleur via .apply() pour que tout texte soit lisible.
+    final baseTextTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+    ).textTheme;
+    final textTheme = baseTextTheme.apply(
+      bodyColor: colorScheme.onSurface,
+      displayColor: colorScheme.onSurface,
+      decorationColor: colorScheme.onSurface,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
+      textTheme: textTheme,
+      primaryTextTheme: textTheme,
 
       // AppBar : on force foreground/background pour éviter le rendu M3 par
       // défaut où le titre peut devenir invisible (surfaceTint dynamique mal
