@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée, commit 2a18458)
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 en WIP, commit a4386d5, branche feature/quittance-pdf)
 
 ## Légende
 
@@ -19,7 +19,8 @@
 | FEAT-003 | CRUD UI propriétés (list, detail, form) | ✅ done | PR#3, merge c1b0571, 16 fichiers Dart, 4 routes GoRouter, 56 tests |
 | FEAT-004 | CRUD UI locataires (list, detail, form) | ✅ done | PR#4, merge 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
 | FEAT-005 | CRUD UI baux (list, detail, form) | ✅ done | PR#5, merge a795686, 18 fichiers Dart, 4 routes GoRouter, date hardening, 90+ tests |
-| FEAT-006 | CRUD paiements de loyer (enregistrement + archive) | 🟢 ready | PR#8, merge 2a18458, 15 fichiers Dart, 2 routes GoRouter, 31 RLS tests + 50 unit/widget tests |
+| FEAT-006 | CRUD paiements de loyer (enregistrement + archive) | ✅ done | PR#8, merge 2a18458, 15 fichiers Dart, 2 routes GoRouter, 31 RLS tests + 50 unit/widget tests |
+| FEAT-007 | Générer quittance PDF conforme loi 1989 (Phase 1+2+3) | 🚧 wip | Branche feature/quittance-pdf, commit a4386d5; SQL Phase 1 appliquée; Phase 2 (Edge Function + PDF builder); Phase 3 (UI + void flow + profile) |
 | (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | 🟢 ready | Squelette + infra multi-env |
 
 ## Détails
@@ -261,6 +262,84 @@
 
 ---
 
+### FEAT-007 : Générer quittance PDF conforme loi 1989 (Phase 1+2+3)
+
+**Status** : 🚧 WIP (feature/quittance-pdf, commit a4386d5)
+
+**Source** : `docs/plans/FEAT-007-quittance-pdf.md`
+
+**Phase 1 — SQL (MERGED 2026-05-31)** :
+
+- **Migrations** :
+  - `20260531172904_feat007_receipts.sql` (610 lignes) : table receipts + enum document_type + RPC void_receipt + bucket receipts/ + RLS policies
+  - `20260531200000_feat007_receipts_stale_bidirectional.sql` (152 lignes) : fix is_stale bidirectionnel (soft-delete + résurrection)
+  
+- **Database** :
+  - Table `public.receipts` / `dev.receipts` : 16 colonnes (id, landlord_id, lease_id, payment_ids[], period_start/end, rent_cents, charges_cents, total_cents, document_type, pdf_path, generated_at, created_at, is_voided, voided_at, voided_reason, is_stale)
+  - Enum `public.document_type` : ('quittance', 'recu')
+  - 4 index : landlord_id (RLS), lease_id, period_start_desc, payment_ids GIN
+  - 2 policies RLS : SELECT (all receipts), INSERT (own landlord)
+  - Triggers : tr_00 (ownership), tr_01 (protect columns), tr_03 AFTER UPDATE (is_stale recompute)
+  - RPC `void_receipt(p_id uuid, p_reason text)` SECURITY DEFINER
+  - Bucket Storage receipts/ (privé, PDF-only, 10MB, 2 policies SELECT/INSERT)
+
+**Phase 2 — Edge Function (MERGED 2026-05-31)** :
+
+- **Edge Function** : `supabase/functions/generate-receipt/` (Deno TS)
+  - `index.ts` : Orchestration (invoke → fetch payments → build PDF → upload Storage → INSERT DB)
+  - `pdf_layout.ts` : PDF template (pdf-lib, FR legal compliance, loi 1989 art. 21)
+  - `types.ts` : Types TS (ReceiptInput, PaymentRecord, DocumentType)
+  - `deps.ts` : Imports (pdf-lib, @supabase/supabase-js)
+  - Tests : `tests/generate_receipt_test.ts`
+  - Blockers fix (FEAT-007 Round 2) : CORS allowlist, edge function invocation timeout
+
+**Phase 3 — UI + Void Flow (MERGED 2026-06-01)** :
+
+- **Code structure** :
+  - Domain : `receipt.dart` (freezed), `document_type.dart` (enum), `receipt_generation_state.dart` (sealed union), `receipt_generation_result.dart`
+  - Data : `receipts_repository.dart` (query, void via RPC)
+  - Application : `lease_receipts_provider.dart` (AsyncNotifierProvider.family), `generate_receipt_controller.dart`, `void_receipt_controller.dart`
+  - Presentation : `lease_receipts_page.dart`, `receipts_list_section.dart`, widgets (receipt_list_tile, receipt_preview_dialog, void_receipt_dialog, generate_receipt_button, profile_incomplete_dialog)
+  - 18 fichiers Dart
+
+- **Routes** :
+  - `/leases/:id/receipts` : LeaseReceiptsPage (liste quittances + bouton générer)
+  - `/profile` : ProfilePage (paramètres bailleur, test API Edge Function)
+
+- **Widgets** :
+  - `LeaseReceiptsPage` : Liste quittances + tri période DESC + bouton "Générer quittance"
+  - `GenerateReceiptButton` : Invoque Edge Function, gère états (loading, success, error, profile_incomplete)
+  - `ReceiptListTile` : Affiche quittance (type, période, montant), actions (preview, void)
+  - `ReceiptPreviewDialog` : PDF viewer (url signée 5 min Storage) + téléchargement
+  - `VoidReceiptDialog` : Formulaire annulation (raison 3-500 chars) + confirmation
+  - `ProfileIncompleteDialog` : Warning si landlord.full_name vide (prérequis génération)
+
+- **Business logic** :
+  - Génération : appelle Edge Function avec lease_id → fonction fetch payments + build PDF + upload + INSERT receipts
+  - Voiding : appelle RPC void_receipt(id, reason) → immédiat, no edge function
+  - is_stale tracking : trigger AFTER UPDATE payment.deleted_at → marque receipts stale (soft-delete) ou recompute (résurrection)
+  - Profile validation : demande full_name avant de générer (loi 1989 requires owner name)
+
+- **Tests** (en cours) :
+  - Unit : repository, model, payment fetch logic
+  - Widget : list, dialog interactions, voiding flow
+  - E2E : full generation cycle (create payments → generate receipt → preview → void)
+
+**RLS** : SELECT toutes receipts du bailleur (y compris voided). INSERT via Edge Function (JWT). Pas d'UPDATE direct (voiding uniquement via RPC).
+
+**Décisions tranchées** :
+- is_stale bidirectionnel : soft-delete marque stale, résurrection recompute (FEAT-007 Round 2 E5)
+- Pas de DELETE (rétention légale 5 ans, immuabilité)
+- Bucket privé (URLs signées 5 min uniquement)
+- document_type = enum SQL natif (quittance ou recu)
+
+**Backlog (Phase 4+)** :
+- Email envoi (FEAT-008, Edge Function send-receipt)
+- Dashboard agrégation (FEAT-010)
+- Rappel/notification paiement attendu (FEAT-011 P1)
+
+---
+
 ### Bootstrap projet (non-feature)
 
 **Status** : 🟢 ready (infrastructure en place)
@@ -275,9 +354,8 @@
 
 | ID | Nom | Priorité | Effort | Backlog | Notes |
 |---|---|---|---|---|---|
-| FEAT-007 | Générer quittance PDF conforme loi 1989 | P0 | M | `docs/backlog/007-receipt-pdf.md` | Utilise `pdf` + `printing` packages, lira payments.rent/charges_cents |
-| FEAT-008 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | `docs/backlog/008-send-receipt-email.md` | Crée `supabase/functions/send-receipt` (Deno), RPC trigger |
-| FEAT-009 | Upload + stockage documents | P0 | M | `docs/backlog/009-document-storage.md` | Supabase Storage (RLS files), table documents |
+| FEAT-008 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | `docs/backlog/008-send-receipt-email.md` | Crée `supabase/functions/send-receipt` (Deno), appelle generate-receipt d'abord |
+| FEAT-009 | Upload + stockage documents | P0 | M | `docs/backlog/009-document-storage.md` | Supabase Storage (RLS files), table documents, intégration avec receipts |
 | FEAT-010 | Dashboard récap (actif, loyers, charges) | P0 | M | `docs/backlog/010-dashboard-analytics.md` | Agrégation SQL, charts, graphiques |
 | FEAT-011 | Polish PWA (offline shell, install prompt) | P1 | S | (à créer) | Service worker, manifest, offline cache |
 | FEAT-012 | Prod release (secrets, logs, monitoring) | P1 | M | (à créer) | Hosting prod, secrets, alertes |

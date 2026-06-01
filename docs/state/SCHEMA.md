@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-007 Phase 1 appliquée, table receipts + bucket receipts/ + RPC void_receipt)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 — receipts UI + Edge Function + fix is_stale bidirectionnel)
 
 ## Tables
 

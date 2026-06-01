@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml`. **Dernière sync** : 2026-05-31 (FEAT-006, aucun changement pubspec)
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 + theme + hosting CSP)
 
 ## Flutter (pubspec.yaml)
 
@@ -48,13 +48,31 @@
 
 ## Edge Functions (Deno)
 
-_(aucune fonction créée — `supabase/functions/` n'existe pas)_
+**`generate-receipt`** (créée FEAT-007 Phase 2) :
 
-À créer lors de FEAT-007 (envoi quittance email) et FEAT-008 (email Edge Function).
+- **Structure** : Deno TS dans `supabase/functions/generate-receipt/`
+  - `index.ts` : Orchestration (fetch payments → build PDF → upload Storage → INSERT DB)
+  - `pdf_layout.ts` : Template PDF (pdf-lib 1.17.1, loi 1989 art. 21)
+  - `types.ts` : Interfaces TS
+  - `deps.ts` : Imports (pdf-lib, @supabase/supabase-js)
+  - `deno.json` : imports resolver
+  - `tests/generate_receipt_test.ts` : Unit tests
+  - `deno.lock` : Lockfile dépendances
 
-Structure prévue :
-- Deno runtime (TS)
-- `import_map.json` pour dépendances externes (Resend, Supabase client, etc.)
+- **Dépendances** :
+  - `pdf-lib@1.17.1` (esm.sh)
+  - `@supabase/supabase-js@2.45.0` (esm.sh)
+
+- **Invocation** : POST `/functions/v1/generate-receipt` avec JWT + body `{lease_id, schema}`
+
+- **Blockers fixes** (FEAT-007 Round 2) :
+  - CORS allowlist : Edge Function accessible depuis Flutter Web
+  - Timeout : Edge Function respecte limite 540s (PDF build + Storage upload)
+  - Privacy : pas d'export sensitive data en logs
+
+À créer lors de FEAT-008 (envoi quittance email) :
+- `send-receipt` (Edge Function Deno)
+- Dépendance : Resend API (`RESEND_API_KEY` secret)
 
 ## Outils CLI requis localement
 
@@ -66,6 +84,49 @@ Structure prévue :
 | `supabase` CLI | latest | Migrations locales, emulator | ⚠️ optionnel (fallback: web UI) |
 | `firebase` CLI | latest | Firebase Hosting deploy | ✅ requis (staging + prod) |
 | `gh` | latest | GitHub API, PR automation | ✅ requis (agent ticketing) |
+
+## Hosting & Security (firebase.json)
+
+**Source** : `firebase.json` (commit e322c87)
+
+### Headers & CSP
+
+| Header | Value | Notes |
+|---|---|---|
+| HSTS | `max-age=31536000; includeSubDomains; preload` | Force HTTPS for 1 year |
+| X-Content-Type-Options | `nosniff` | Prevent MIME type sniffing |
+| X-Frame-Options | `DENY` | Block embedding in iframes |
+| Referrer-Policy | `strict-origin-when-cross-origin` | Privacy-safe referer leakage |
+| Permissions-Policy | (all disabled) | No camera, microphone, geolocation, payment APIs |
+| **Content-Security-Policy** | See below | Strict, with exceptions for Supabase + Google Fonts |
+
+### CSP Details (post-#16 fix)
+
+```
+default-src 'self'
+script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com
+style-src 'self' 'unsafe-inline'
+img-src 'self' data: blob: https://www.gstatic.com
+font-src 'self' data: https://www.gstatic.com https://fonts.gstatic.com
+connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.gstatic.com https://fonts.gstatic.com
+manifest-src 'self'
+worker-src 'self' blob:
+frame-ancestors 'none'
+base-uri 'self'
+form-action 'self'
+object-src 'none'
+```
+
+**Key allowances** :
+- `script-src 'wasm-unsafe-eval'` : Flutter Web WASM runtime
+- `font-src https://fonts.gstatic.com` : Google Fonts (fix #16 — was invisible in dark mode)
+- `connect-src https://*.supabase.co` : Supabase Auth + DB + Storage + Functions
+- `style-src 'unsafe-inline'` : Material 3 dynamic theming
+
+### Cache headers
+
+- Static assets (js, css, woff2, woff, ttf, otf, wasm) : `max-age=31536000, immutable` (1 year)
+- `index.html` : `no-cache, no-store, must-revalidate` (always fetch fresh)
 
 ## Build configuration
 

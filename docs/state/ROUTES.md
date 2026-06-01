@@ -1,6 +1,6 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 mergée — `/leases/:id/receipts` + `/profile`)
 
 ## Routes go_router
 
@@ -23,6 +23,8 @@
 | `/leases/:id/edit` | `LeaseEditPage` | leases | ✅ oui | 🟢 implémentée (UPDATE form) |
 | `/leases/:id/payments/new` | `PaymentFormPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, pré-remplit depuis lease) |
 | `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, UPDATE payment) |
+| `/leases/:id/receipts` | `LeaseReceiptsPage` | receipts | ✅ oui | 🚧 implémentée (FEAT-007, liste quittances + PDF preview + void) |
+| `/profile` | `ProfilePage` | profile | ✅ oui | 🚧 implémentée (FEAT-007, paramètres bailleur + test API) |
 
 ## Logique de redirect
 
@@ -48,10 +50,9 @@ LeaseDetailPage (FEAT-005) : Affiche bail + bouton "Ajouter paiement" (disabled 
 
 ## Routes prévues (non implémentées)
 
-- `/leases/:id/receipts` — Quittances émises (FEAT-007)
 - `/documents` — Documents stockés (FEAT-009)
-- `/settings` — Paramètres compte propriétaire (FEAT-010)
-- `/dashboard` — Analytics + récap (FEAT-010)
+- `/settings` — Paramètres avancés (FEAT-010)
+- `/analytics` — Dashboard analytics (FEAT-010)
 
 ## Widgets de layout
 
