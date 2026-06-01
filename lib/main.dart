@@ -70,10 +70,6 @@ class EasyRentApp extends ConsumerWidget {
       title: 'EasyRent',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      // Workaround urgent issue #16 : en dark mode, le texte rend invisible
-      // sur tous les écrans (cause non identifiée, voir ticket). On force le
-      // light mode jusqu'à fix propre du thème dark.
-      themeMode: ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
