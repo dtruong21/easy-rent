@@ -106,7 +106,7 @@ class _LeaseDetailContent extends ConsumerWidget {
             const SizedBox(height: 16),
             PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 16),
-            ReceiptsListSection(leaseId: lease.id),
+            ReceiptsListSection(leaseId: lease.id, tenantId: lease.tenantId),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)

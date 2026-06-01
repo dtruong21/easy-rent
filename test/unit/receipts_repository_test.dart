@@ -97,6 +97,13 @@ class _InMemoryReceiptsRepository implements ReceiptsRepository {
       voidedReason: reason,
     );
   }
+
+  @override
+  Future<Receipt> sendReceipt({required String receiptId}) async {
+    final matches = _receipts.where((r) => r.id == receiptId);
+    if (matches.isEmpty) throw ReceiptNotFoundException(receiptId);
+    return matches.first;
+  }
 }
 
 // ---------------------------------------------------------------------------

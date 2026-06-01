@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../features/leases/application/lease_detail_provider.dart';
 import '../application/lease_receipts_provider.dart';
 import '../domain/receipt.dart';
 import 'widgets/receipt_list_tile.dart';
@@ -22,6 +23,11 @@ class LeaseReceiptsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncReceipts = ref.watch(leaseReceiptsProvider(leaseId));
+    // Résoudre tenantId pour le bouton "Modifier" en cas de tenantNoEmail.
+    final tenantId = ref
+        .watch(leaseDetailProvider(leaseId))
+        .valueOrNull
+        ?.tenantId;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -61,7 +67,11 @@ class LeaseReceiptsPage extends ConsumerWidget {
           if (receipts.isEmpty) {
             return const _EmptyPage();
           }
-          return _ReceiptsList(receipts: receipts, leaseId: leaseId);
+          return _ReceiptsList(
+            receipts: receipts,
+            leaseId: leaseId,
+            tenantId: tenantId,
+          );
         },
       ),
     );
@@ -69,10 +79,15 @@ class LeaseReceiptsPage extends ConsumerWidget {
 }
 
 class _ReceiptsList extends StatelessWidget {
-  const _ReceiptsList({required this.receipts, required this.leaseId});
+  const _ReceiptsList({
+    required this.receipts,
+    required this.leaseId,
+    this.tenantId,
+  });
 
   final List<Receipt> receipts;
   final String leaseId;
+  final String? tenantId;
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +97,11 @@ class _ReceiptsList extends StatelessWidget {
       separatorBuilder: (context, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final receipt = receipts[index];
-        return ReceiptListTile(receipt: receipt, leaseId: leaseId);
+        return ReceiptListTile(
+          receipt: receipt,
+          leaseId: leaseId,
+          tenantId: tenantId,
+        );
       },
     );
   }

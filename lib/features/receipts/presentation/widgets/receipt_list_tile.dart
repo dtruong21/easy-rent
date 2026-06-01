@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../application/void_receipt_controller.dart';
 import '../../data/receipts_repository.dart';
 import '../../domain/receipt.dart';
+import 'send_receipt_button.dart';
 import 'void_receipt_dialog.dart';
 
 final _log = Logger('ReceiptListTile');
@@ -22,10 +23,15 @@ class ReceiptListTile extends ConsumerWidget {
     super.key,
     required this.receipt,
     required this.leaseId,
+    this.tenantId,
   });
 
   final Receipt receipt;
   final String leaseId;
+
+  /// Identifiant du locataire — transmis à [SendReceiptButton] pour la
+  /// navigation "Modifier la fiche" en cas d'absence d'email.
+  final String? tenantId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,6 +68,11 @@ class ReceiptListTile extends ConsumerWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          SendReceiptButton(
+            receipt: receipt,
+            leaseId: leaseId,
+            tenantId: tenantId,
+          ),
           IconButton(
             key: Key('btn_download_receipt_${receipt.id}'),
             icon: const Icon(Icons.download_outlined),
@@ -96,11 +107,27 @@ class ReceiptListTile extends ConsumerWidget {
   }
 
   Widget _buildSubtitle(ThemeData theme) {
-    return Text(
+    final baseText = Text(
       '${receipt.documentType.label} · ${receipt.totalEuros}',
       style: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
       ),
+    );
+
+    if (!receipt.hasBeenSent) return baseText;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        baseText,
+        Text(
+          'Envoyé le ${receipt.sentAtLabel} à ${receipt.maskedSentToEmail}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontSize: 11,
+          ),
+        ),
+      ],
     );
   }
 

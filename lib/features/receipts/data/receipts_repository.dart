@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/db.dart';
+import '../../../core/utils/edge_function_error_mapper.dart';
 import '../domain/receipt.dart';
 import '../domain/receipt_generation_result.dart';
 
@@ -51,6 +52,18 @@ abstract interface class ReceiptsRepository {
   /// [reason] : motif obligatoire 3-500 caractères (validé côté client ET DB).
   /// Lance [PostgrestException] si cross-user ou déjà annulée (ERRCODE P0002).
   Future<void> voidReceipt(String id, String reason);
+
+  /// Envoie la quittance [receiptId] par email via l'Edge Function `send-receipt`.
+  ///
+  /// Retourne la quittance mise à jour avec [Receipt.sentAt] et [Receipt.sentToEmail].
+  ///
+  /// Exceptions typées :
+  /// - [TenantNoEmailException] si le locataire n'a pas d'email (422 tenant_no_email)
+  /// - [ReceiptInvalidForSendException] si la quittance est annulée/périmée (422 receipt_invalid)
+  /// - [PdfUnavailableException] si le PDF est introuvable (422 pdf_unavailable)
+  /// - [EmailQuotaExceededException] si le quota Resend est dépassé (429 quota_exceeded)
+  /// - [FunctionException] pour les autres erreurs HTTP
+  Future<Receipt> sendReceipt({required String receiptId});
 }
 
 /// Implémentation Supabase du [ReceiptsRepository].
@@ -139,6 +152,44 @@ class SupabaseReceiptsRepository implements ReceiptsRepository {
     await Db.rpc('void_receipt', params: {'p_id': id, 'p_reason': reason});
   }
 
+  @override
+  Future<Receipt> sendReceipt({required String receiptId}) async {
+    _log.info('sendReceipt(receiptId=$receiptId)');
+
+    // Invoke Edge Function — Db.invokeFunction injecte le schéma actif.
+    // Les erreurs HTTP sont propagées en FunctionException.
+    // mapEdgeFunctionError peut lever TenantNoEmailException,
+    // ReceiptInvalidForSendException, PdfUnavailableException,
+    // EmailQuotaExceededException (exceptions typées — doivent remonter).
+    final FunctionResponse response;
+    try {
+      response = await Db.invokeFunction(
+        'send-receipt',
+        body: {'receipt_id': receiptId},
+      );
+    } on FunctionException catch (e) {
+      // mapEdgeFunctionError peut lever TenantNoEmailException,
+      // ReceiptInvalidForSendException, PdfUnavailableException,
+      // EmailQuotaExceededException — ces exceptions typées remontent
+      // directement. Sinon, la fonction retourne un message string.
+      final msg = mapEdgeFunctionError(e); // peut throw une exception typée
+      throw ReceiptSendException(msg);
+    }
+
+    if (response.data == null) {
+      throw const ReceiptSendException(
+        'Réponse vide de l\'Edge Function send-receipt',
+      );
+    }
+
+    // Re-fetch la quittance mise à jour depuis la DB pour obtenir sentAt/sentToEmail.
+    final rows = await Db.from(
+      'receipts',
+    ).select().eq('id', receiptId).limit(1);
+    if (rows.isEmpty) throw ReceiptNotFoundException(receiptId);
+    return Receipt.fromJson(rows.first);
+  }
+
   // ---------------------------------------------------------------------------
   // Helpers privés
   // ---------------------------------------------------------------------------
@@ -171,6 +222,20 @@ class ReceiptGenerationException implements Exception {
 
   @override
   String toString() => 'ReceiptGenerationException: $message';
+}
+
+/// Exception levée lors d'un échec d'envoi par email (message générique).
+///
+/// Les erreurs métier spécifiques utilisent des exceptions typées :
+/// [TenantNoEmailException], [ReceiptInvalidForSendException],
+/// [PdfUnavailableException], [EmailQuotaExceededException].
+class ReceiptSendException implements Exception {
+  const ReceiptSendException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'ReceiptSendException: $message';
 }
 
 // ---------------------------------------------------------------------------

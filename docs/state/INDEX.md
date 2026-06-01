@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-01T04:00:00Z
-- **Commit ref** : `e322c87` (fix(hosting): allow fonts.gstatic.com in CSP — fixes invisible text (#16))
-- **Branche** : `feature/quittance-pdf`
-- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ implémentées. FEAT-007 🚧 (Phase 1+2+3 + theme + hosting) en WIP (feature/quittance-pdf). FEAT-008–012 en backlog.
+- **Dernière mise à jour** : 2026-06-01T10:37:51Z
+- **Commit ref** : `a4386d5` (feature/email-quittance — FEAT-008 couche données en cours)
+- **Branche** : `feature/email-quittance`
+- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ + FEAT-007 ✅ implémentées. FEAT-008 🚧 Phase 1 (couche données SQL) appliquée. FEAT-009–012 en backlog.
 
 ## Pointeurs
 
