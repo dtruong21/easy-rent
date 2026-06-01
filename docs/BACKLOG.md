@@ -41,6 +41,7 @@ FEAT-001 (auth)
 |---|---|---|---|---|
 | 6 | FEAT-006 | Enregistrer un paiement de loyer | FEAT-005 | [`backlog/006-payment-record.md`](backlog/006-payment-record.md) |
 | 7 | FEAT-007 | Générer une quittance PDF de loyer (loi 6 juillet 1989) | FEAT-006 | [`backlog/007-quittance-pdf.md`](backlog/007-quittance-pdf.md) |
+| 8 | FEAT-008 | Envoyer une quittance par email (Resend / Edge Function) | FEAT-007 | [`backlog/008-email-quittance.md`](backlog/008-email-quittance.md) |
 
 > À détailler en stories lors du prochain `/discover` une fois la chaîne FEAT-001→005 entamée.
 
