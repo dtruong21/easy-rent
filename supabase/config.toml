@@ -366,6 +366,9 @@ deno_version = 2
 # before reaching the function handler. Explicit here for security audit clarity.
 verify_jwt = true
 
+[functions.send-receipt]
+verify_jwt = true
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

@@ -70,9 +70,32 @@
   - Timeout : Edge Function respecte limite 540s (PDF build + Storage upload)
   - Privacy : pas d'export sensitive data en logs
 
-À créer lors de FEAT-008 (envoi quittance email) :
-- `send-receipt` (Edge Function Deno)
-- Dépendance : Resend API (`RESEND_API_KEY` secret)
+**`send-receipt`** (créée FEAT-008) :
+
+- **Structure** : Deno TS dans `supabase/functions/send-receipt/`
+  - `index.ts` : Orchestration (charge receipt + tenant → fetch PDF → envoi Resend → RPC mark_receipt_as_sent)
+  - `email_template.ts` : Template HTML minimal FR (sujet + corps, loi 1989 art. 21)
+  - `resend_client.ts` : Wrapper `fetch` Resend REST API (pas de SDK)
+  - `types.ts` : Interfaces TS (SendReceiptRequest, SuccessResponse, ErrorResponse, ReceiptRow)
+  - `deps.ts` : Imports (@supabase/supabase-js)
+  - `deno.json` : imports resolver
+  - `tests/` : 6 fichiers de tests Deno (62 tests)
+
+- **Dépendances** :
+  - `@supabase/supabase-js@2.45.0` (esm.sh)
+  - `fetch` natif Deno (appel Resend REST API — pas de SDK tiers)
+
+- **Secrets requis** :
+  - `RESEND_API_KEY` : clé Bearer Resend (ex: `re_xxx`)
+  - `RESEND_FROM_EMAIL` : adresse expéditeur vérifiée (ex: `EasyRent <noreply@easyrent.app>`)
+
+- **Provisionner avant déploiement** :
+  ```bash
+  supabase secrets set RESEND_API_KEY="re_xxx" RESEND_FROM_EMAIL="EasyRent <noreply@<domaine>>"
+  supabase functions deploy send-receipt --project-ref tbgttutodbqffrvsvkoz
+  ```
+
+- **Invocation** : POST `/functions/v1/send-receipt` avec JWT + body `{receipt_id, schema}`
 
 ## Outils CLI requis localement
 
