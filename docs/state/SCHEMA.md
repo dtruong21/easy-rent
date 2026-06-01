@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 — receipts UI + Edge Function + fix is_stale bidirectionnel)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-01 (FEAT-008 Phase 1 — ajout colonnes sent_at/sent_to_email + RPC mark_receipt_as_sent)
 
 ## Tables
 
@@ -131,7 +131,7 @@
 
 ### `receipts` (public + dev)
 
-**Migration source** : `20260531172904_feat007_receipts.sql` (FEAT-007)
+**Migration source** : `20260531172904_feat007_receipts.sql` (FEAT-007), `20260601103751_feat008_email_quittance.sql` (FEAT-008)
 
 | Colonne | Type | Contraintes |
 |---|---|---|
@@ -152,10 +152,13 @@
 | `voided_at` | `timestamptz` | NULL (doit être non-NULL si is_voided = true) |
 | `voided_reason` | `text` | NULL, CHECK char_length BETWEEN 3 AND 500 (obligatoire si voided) |
 | `is_stale` | `boolean` | NOT NULL DEFAULT false — recomputed par trigger tr_03 |
+| `sent_at` | `timestamptz` | NULL = jamais envoyé. Audit trail email. Modifiable uniquement via `mark_receipt_as_sent` RPC. FEAT-008. |
+| `sent_to_email` | `text` | NULL si `sent_at IS NULL`. Snapshot email destination au moment de l'envoi. CHECK char_length BETWEEN 3 AND 255. Modifiable uniquement via `mark_receipt_as_sent` RPC. FEAT-008. |
 
 **Contraintes** :
 - `receipts_total_check` : `total_cents = rent_cents + charges_cents`
 - `receipts_voiding_consistency` : `(is_voided=false AND voided_at IS NULL AND voided_reason IS NULL) OR (is_voided=true AND voided_at IS NOT NULL AND voided_reason IS NOT NULL)`
+- `receipts_sent_consistency` : `(sent_at IS NULL AND sent_to_email IS NULL) OR (sent_at IS NOT NULL AND sent_to_email IS NOT NULL AND char_length(sent_to_email) BETWEEN 3 AND 255)` — FEAT-008
 - Pas de `updated_at` ni `deleted_at` : document immuable hors flags
 
 **Indexes** :
@@ -179,6 +182,7 @@
 **Triggers** :
 - `tr_00_assert_receipt_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
 - `tr_01_prevent_protected_columns_change_receipts` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
+- `tr_01b_protect_sent_columns_receipts` BEFORE UPDATE (protège sent_at + sent_to_email — dédié FEAT-008, GUC app.allow_sent_columns_change)
 - Pas de tr_02 (pas de updated_at)
 - `tr_03_set_receipt_stale_on_payment_archive` sur public.payments + dev.payments AFTER UPDATE OF deleted_at
 
@@ -334,6 +338,26 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 - Roles : `authenticated`, `anon`, `service_role`
 - Default privileges : `SELECT, INSERT, UPDATE, DELETE` sur tables pour `authenticated`
 - Comment : "Development/staging mirror of public schema. Mapped to Git branch `develop`."
+
+---
+
+## Résumé des changements FEAT-008 (Phase 1 — SQL)
+
+**Migration** : `20260601103751_feat008_email_quittance.sql`
+
+**Colonnes ajoutées à `receipts`** (public + dev) :
+- `sent_at timestamptz NULL` — audit trail email, NULL = jamais envoyé
+- `sent_to_email text NULL` — snapshot email destination au moment de l'envoi
+
+**Contrainte** : `receipts_sent_consistency` CHECK — sent_at et sent_to_email sont NULL ensemble ou non-NULL ensemble (+ char_length 3..255)
+
+**Nouveau trigger** (public + dev) : `tr_01b_protect_sent_columns_receipts` BEFORE UPDATE — protège sent_at et sent_to_email contre toute écriture directe hors RPC. Mécanisme GUC `app.allow_sent_columns_change = '1'`.
+
+**Nouvelle RPC** (public + dev) : `mark_receipt_as_sent(p_receipt_id uuid, p_sent_to_email text) RETURNS receipts` — SECURITY DEFINER, SET search_path = public/dev, REVOKE anon. Vérifie ownership + is_voided=false + is_stale=false. Pose le flag GUC. Idempotent (2e appel écrase). ERRCODE 22023 si email invalide, P0002 si not found/voided/stale/cross-user.
+
+**RLS** : inchangée (pas de nouvelle policy — l'immuabilité document reste garantie par l'absence de policy UPDATE ; la RPC est SECURITY DEFINER).
+
+**Tests** : `supabase/tests/rls_receipts_send.sql` (14 tests)
 
 ---
 
