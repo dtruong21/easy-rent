@@ -337,11 +337,16 @@ export async function generateReceiptPdf(
   y -= 20;
 
   // -------------------------------------------------------------------------
-  // 8. "Fait a" line + signature placeholder
+  // 8. "Fait le" line + signature placeholder
+  // Note: the full landlord address is intentionally omitted here (Fix E1 —
+  // security-auditor). The landlord address already appears in the header
+  // block above and need not be repeated on the signature line, which would
+  // expose PII unnecessarily. Art. 21 loi 6 juillet 1989 does not require
+  // the lieu to appear on this line.
   // -------------------------------------------------------------------------
-  const faitAText = `Fait a ${sanitize(data.landlord.address)}, le ${formatDateFr(data.generated_at)}`;
-  const faitALines = wrapText(faitAText, regular, sectionSize, CONTENT_WIDTH);
-  for (const line of faitALines) {
+  const faitLeText = `Fait le ${formatDateFr(data.generated_at)}`;
+  const faitLeLines = wrapText(faitLeText, regular, sectionSize, CONTENT_WIDTH);
+  for (const line of faitLeLines) {
     y = drawText(page, line, MARGIN, y, regular, sectionSize);
   }
   y -= 30;

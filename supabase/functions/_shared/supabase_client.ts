@@ -1,5 +1,25 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
+/** Allowed schema values. Any other value must be rejected with HTTP 400. */
+export type AllowedSchema = "public" | "dev";
+
+/**
+ * Validates and parses the schema field from the request body.
+ * Returns the schema name if valid, or throws an object with a 400 response
+ * payload if invalid.
+ *
+ * Callers must check the return type:
+ *   const schema = parseSchema(body.schema);
+ *   // if invalid, parseSchema has already returned the error payload — handle it.
+ */
+export function parseSchema(raw: unknown): AllowedSchema {
+  if (raw === undefined || raw === null) return "public";
+  if (raw === "public" || raw === "dev") return raw as AllowedSchema;
+  throw new RangeError(
+    `schema invalide : "${raw}" — valeurs acceptees : "public", "dev"`,
+  );
+}
+
 /**
  * Creates a Supabase client that propagates the caller's JWT so that
  * Row Level Security policies apply automatically.

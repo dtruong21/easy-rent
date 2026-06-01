@@ -51,6 +51,8 @@ export interface RequestByPaymentIds {
   lease_id?: never;
   period_start?: never;
   period_end?: never;
+  /** Target DB schema. Accepted values: "public" (default) or "dev". */
+  schema?: string;
 }
 
 export interface RequestByPeriod {
@@ -58,6 +60,8 @@ export interface RequestByPeriod {
   lease_id: string;
   period_start: string; // "YYYY-MM-DD"
   period_end: string;   // "YYYY-MM-DD"
+  /** Target DB schema. Accepted values: "public" (default) or "dev". */
+  schema?: string;
 }
 
 export type GenerateReceiptRequest = RequestByPaymentIds | RequestByPeriod;
@@ -70,6 +74,10 @@ export interface SuccessResponse {
   total_cents: number;
   pdf_url: string;
   pdf_url_expires_at: string;
+  /** ISO date "YYYY-MM-DD" — earliest period_start across included payments */
+  period_start: string;
+  /** ISO date "YYYY-MM-DD" — latest period_end across included payments */
+  period_end: string;
 }
 
 export interface ErrorResponse {
