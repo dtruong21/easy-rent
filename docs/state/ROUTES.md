@@ -23,7 +23,7 @@
 | `/leases/:id/edit` | `LeaseEditPage` | leases | ✅ oui | 🟢 implémentée (UPDATE form) |
 | `/leases/:id/payments/new` | `PaymentFormPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, pré-remplit depuis lease) |
 | `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, UPDATE payment) |
-| `/leases/:id/receipts` | `LeaseReceiptsPage` | receipts | ✅ oui | 🚧 implémentée (FEAT-007, liste quittances + PDF preview + void) |
+| `/leases/:id/receipts` | `LeaseReceiptsPage` | receipts | ✅ oui | 🚧 implémentée (FEAT-007/FEAT-008, liste quittances + PDF preview + void + bouton envoi email dans ReceiptListTile) |
 | `/profile` | `ProfilePage` | profile | ✅ oui | 🚧 implémentée (FEAT-007, paramètres bailleur + test API) |
 
 ## Logique de redirect

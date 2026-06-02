@@ -49,6 +49,8 @@ class Receipt with _$Receipt {
     @JsonKey(name: 'is_stale') required bool isStale,
     @JsonKey(name: 'generated_at') required DateTime generatedAt,
     @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'sent_at') DateTime? sentAt,
+    @JsonKey(name: 'sent_to_email') String? sentToEmail,
   }) = _Receipt;
 
   factory Receipt.fromJson(Map<String, dynamic> json) =>
@@ -99,4 +101,25 @@ extension ReceiptExtension on Receipt {
   /// Libellé de période formaté en FR (ex: "01/01/2026 – 31/01/2026").
   String get periodLabel =>
       '${FrenchDate.format(periodStart)} – ${FrenchDate.format(periodEnd)}';
+
+  /// Vrai si la quittance a déjà été envoyée par email.
+  bool get hasBeenSent => sentAt != null;
+
+  /// Date d'envoi formatée en FR (ex: "01/06/2026"), ou null si jamais envoyée.
+  String? get sentAtLabel => sentAt != null ? FrenchDate.format(sentAt!) : null;
+
+  /// Email de destination masqué pour l'affichage RGPD
+  /// (ex: "j***@example.com" — premier caractère + 3 étoiles + @domaine).
+  ///
+  /// Retourne null si [sentToEmail] est null.
+  String? get maskedSentToEmail {
+    final email = sentToEmail;
+    if (email == null) return null;
+    final atIndex = email.indexOf('@');
+    if (atIndex <= 0) return '***';
+    final local = email.substring(0, atIndex);
+    final domain = email.substring(atIndex); // includes '@'
+    final firstChar = local.isNotEmpty ? local[0] : '';
+    return '$firstChar***$domain';
+  }
 }

@@ -41,6 +41,10 @@ class _FakeReceiptsRepo implements ReceiptsRepository {
 
   @override
   Future<void> voidReceipt(String id, String reason) async {}
+
+  @override
+  Future<Receipt> sendReceipt({required String receiptId}) async =>
+      throw UnimplementedError();
 }
 
 // ---------------------------------------------------------------------------

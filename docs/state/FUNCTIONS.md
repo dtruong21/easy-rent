@@ -1,6 +1,6 @@
 # Edge Functions et RPC — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 — Edge Function generate-receipt implémentée + fix is_stale bidirectionnel)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-01 (FEAT-008 — Edge Function send-receipt implémentée)
 
 ## Edge Functions (Deno / TypeScript)
 
@@ -33,11 +33,65 @@
 - Timeout : respects 540s limit (build + upload)
 - Privacy : no sensitive data in logs
 
+---
+
+**`send-receipt`** (FEAT-008, implémentée — déploiement en attente des secrets Resend) :
+
+| Propriété | Valeur |
+|---|---|
+| **Dossier** | `supabase/functions/send-receipt/` |
+| **Fichiers** | index.ts, email_template.ts, resend_client.ts, types.ts, deps.ts, deno.json, tests/ |
+| **Invocation** | POST `/functions/v1/send-receipt` (JWT required) |
+| **Body** | `{receipt_id: uuid, schema: 'public' \| 'dev'}` |
+| **Retour 200** | `{success: true, sent_at: ISO, sent_to_email: string, resend_id: string}` |
+| **Auth** | JWT required (landlord_id = auth.uid()) |
+| **Secrets** | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ALLOWED_ORIGINS` (optionnel) |
+| **Dépendances** | @supabase/supabase-js@2.45.0, fetch natif Deno (pas de SDK Resend) |
+| **Priorité** | P0 |
+
+**Pipeline** :
+1. CORS preflight check + Origin allowlist (réutilise `_shared/cors.ts`)
+2. Méthode POST only
+3. Parse body — valide `receipt_id` (UUID v4) + `schema` (enum strict)
+4. JWT verify via `createClientWithJwt` + `auth.getUser()`
+5. Charge `receipts` (avec JOIN `leases.tenants`) via RLS — `data == null` → 404
+6. Valide état quittance : `is_voided` / `is_stale` → 422 `receipt_invalid` ; `pdf_path IS NULL` → 422 `pdf_unavailable`
+7. Valide `tenant.email` NOT NULL / non vide → sinon 422 `tenant_no_email`
+8. Charge `landlord.full_name` (signature mail)
+9. Crée signed URL Storage (60s) → fetch PDF → encode base64
+10. Construit email via `email_template.ts` (sujet + HTML minimal FR)
+11. Envoie via `resend_client.ts` → 429 → 429 `quota_exceeded` ; autres erreurs → 500 `email_send_failed`
+12. Appelle RPC `mark_receipt_as_sent` — si RPC échoue après Resend OK : log critique `[email-sent-not-persisted]` + return 200
+13. Return `{success, sent_at, sent_to_email, resend_id}`
+
+**Codes d'erreur** :
+
+| HTTP | Code | Quand |
+|---|---|---|
+| 400 | `invalid_request` | body malformé, UUID invalide, schema invalide |
+| 404 | `receipt_not_found` | RLS retourne null (cross-user ou inexistant) |
+| 405 | `method_not_allowed` | méthode != POST |
+| 422 | `tenant_no_email` | `tenant.email IS NULL` ou vide |
+| 422 | `receipt_invalid` | `is_voided = true` OU `is_stale = true` |
+| 422 | `pdf_unavailable` | `pdf_path IS NULL` ou fetch Storage échoue |
+| 429 | `quota_exceeded` | Resend retourne 429 |
+| 500 | `email_config_missing` | `RESEND_API_KEY` ou `RESEND_FROM_EMAIL` absent |
+| 500 | `email_send_failed` | autre erreur Resend (5xx, timeout, 4xx hors 422/429) |
+| 500 | `internal_error` | erreur DB inattendue |
+
+**Secrets à provisionner** :
+```bash
+supabase secrets set RESEND_API_KEY="re_xxx" RESEND_FROM_EMAIL="EasyRent <noreply@<domaine>>"
+```
+
+**Commande de déploiement** :
+```bash
+supabase functions deploy send-receipt --project-ref tbgttutodbqffrvsvkoz
+```
+
 ### Fonctions planifiées
 
-| Nom | Trigger | Auth | Secrets | Priorité | Feat |
-|---|---|---|---|---|---|
-| `send-receipt` | Manual (via UI button) | JWT required | `RESEND_API_KEY` | P0 | FEAT-008 |
+_(aucune restante pour le MVP)_
 
 ### Appel côté client
 
@@ -118,7 +172,31 @@ await supabase.rpc('void_receipt', params: {'p_id': receiptId, 'p_reason': reaso
 
 **Error** : ERRCODE 22023 si p_reason hors bornes 3-500 chars. ERRCODE P0002 si receipt inexistante, cross-user ou déjà voided.
 
-#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()`, `dev.void_receipt()` — FEAT-002 + FEAT-006 + FEAT-007
+#### `public.mark_receipt_as_sent(p_receipt_id uuid, p_sent_to_email text)` — FEAT-008
+
+Marque une quittance comme envoyée par email (audit trail). SECURITY DEFINER, SET search_path = public, pg_temp.
+
+```dart
+await supabase.rpc('mark_receipt_as_sent', params: {
+  'p_receipt_id': receiptId,
+  'p_sent_to_email': tenantEmail,
+});
+```
+
+**Retour** : la row `receipts` mise à jour (`sent_at`, `sent_to_email` renseignés).
+
+**Checks** (dans l'ordre) :
+1. `p_sent_to_email` non null et longueur 3..255 → sinon ERRCODE 22023
+2. `p_sent_to_email` regex `^[^@\s]+@[^@\s]+\.[^@\s]+$` → sinon ERRCODE 22023
+3. WHERE ownership (`landlord_id = auth.uid()`) + `is_voided = false` + `is_stale = false` → sinon ERRCODE P0002 (pas de fuite d'info)
+
+**Comportement** : idempotent — 2e appel écrase `sent_at` et `sent_to_email` (cas renvoi, D2=B).
+
+**Mécanisme** : pose `SET LOCAL app.allow_sent_columns_change = '1'` pour contourner le trigger `tr_01b_protect_sent_columns_receipts`.
+
+**Invocation** : par l'Edge Function `send-receipt` après envoi Resend confirmé. Si RPC échoue après mail parti → log critique `[email-sent-not-persisted]` côté Edge Function + return 200 quand même (évite double-mail sur retry).
+
+#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()`, `dev.void_receipt()`, `dev.mark_receipt_as_sent()` — FEAT-002 + FEAT-006 + FEAT-007 + FEAT-008
 
 Mêmes signatures que les versions public, opèrent sur schéma `dev`. Utilisées uniquement en staging/dev.
 
@@ -229,6 +307,24 @@ Mirror de `public.recompute_receipt_stale_on_payment_archive()`, opère sur dev.
 
 **Trigger** : `tr_03_set_receipt_stale_on_payment_archive` (dev.payments)
 
+#### `public.protect_sent_columns_receipts()` — FEAT-008
+
+Trigger BEFORE UPDATE sur `public.receipts`. Bloque toute modification de `sent_at` ou `sent_to_email` sauf si le flag de session GUC `app.allow_sent_columns_change = '1'` est posé.
+
+Ce flag est posé **exclusivement** par la RPC `mark_receipt_as_sent` (SECURITY DEFINER) via `set_config('app.allow_sent_columns_change', '1', true)` (scope transaction).
+
+**ERRCODE** : 42501 (insufficient_privilege) si tentative directe.
+
+**Trigger** : `tr_01b_protect_sent_columns_receipts` BEFORE UPDATE (public.receipts)
+
+**Note dette technique** : le mécanisme GUC est cohérent avec `app.allow_deleted_at_change` (FEAT-002). Hardening P1 : migrer vers `pg_trigger_depth()` (tracké backlog). Voir `docs/SECURITY.md §Patterns sensibles`.
+
+#### `dev.protect_sent_columns_receipts()` — FEAT-008
+
+Mirror DEV de `public.protect_sent_columns_receipts()`.
+
+**Trigger** : `tr_01b_protect_sent_columns_receipts` BEFORE UPDATE (dev.receipts)
+
 #### `public.handle_new_user()` — FEAT-001
 
 Trigger AFTER INSERT ON `auth.users`, SECURITY DEFINER, SET search_path = public.
@@ -260,6 +356,7 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom de trigger
    - `tr_00_assert_receipt_lease_ownership` (receipts, FEAT-007 — BEFORE INSERT uniquement)
 2. **`tr_01_prevent_protected_columns_change_*`** (6 tables) — Bloque deleted_at, created_at ; force updated_at
    - landlords, properties, tenants, leases, payments (FEAT-006), receipts (FEAT-007)
+   - `tr_01b_protect_sent_columns_receipts` (receipts uniquement — FEAT-008, GUC app.allow_sent_columns_change)
 3. **`tr_02_set_updated_at_*`** (5 tables — receipts exclue : pas de updated_at) — Met à jour updated_at
    - landlords, properties, tenants, leases, payments (FEAT-006)
 4. **`tr_03_set_receipt_stale_on_payment_archive`** — AFTER UPDATE OF deleted_at sur public.payments + dev.payments (FEAT-007)

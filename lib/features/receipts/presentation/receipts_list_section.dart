@@ -13,10 +13,17 @@ final _log = Logger('ReceiptsListSection');
 ///
 /// Affiche la liste des quittances triées par [period_start DESC].
 /// Inclut les quittances annulées avec badge "Annulée" pour traçabilité.
+///
+/// [tenantId] est transmis à chaque [ReceiptListTile] pour afficher le bouton
+/// "Modifier" dans le SnackBar [tenantNoEmail].
 class ReceiptsListSection extends ConsumerWidget {
-  const ReceiptsListSection({super.key, required this.leaseId});
+  const ReceiptsListSection({super.key, required this.leaseId, this.tenantId});
 
   final String leaseId;
+
+  /// Identifiant du locataire — transmis aux tiles pour la navigation
+  /// "Modifier la fiche" en cas d'absence d'email.
+  final String? tenantId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +51,11 @@ class ReceiptsListSection extends ConsumerWidget {
                 if (receipts.isEmpty) {
                   return _EmptyReceiptsHint();
                 }
-                return _ReceiptsList(receipts: receipts, leaseId: leaseId);
+                return _ReceiptsList(
+                  receipts: receipts,
+                  leaseId: leaseId,
+                  tenantId: tenantId,
+                );
               },
             ),
           ],
@@ -55,10 +66,15 @@ class ReceiptsListSection extends ConsumerWidget {
 }
 
 class _ReceiptsList extends StatelessWidget {
-  const _ReceiptsList({required this.receipts, required this.leaseId});
+  const _ReceiptsList({
+    required this.receipts,
+    required this.leaseId,
+    this.tenantId,
+  });
 
   final List<Receipt> receipts;
   final String leaseId;
+  final String? tenantId;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +82,11 @@ class _ReceiptsList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final receipt in receipts)
-          ReceiptListTile(receipt: receipt, leaseId: leaseId),
+          ReceiptListTile(
+            receipt: receipt,
+            leaseId: leaseId,
+            tenantId: tenantId,
+          ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,
