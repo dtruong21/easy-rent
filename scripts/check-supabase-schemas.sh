@@ -33,20 +33,32 @@ echo
 
 check_schema() {
   local schema="$1"
-  local code
-  code=$(curl -s -o /dev/null -w "%{http_code}" \
+  local body_file code
+  body_file=$(mktemp)
+  code=$(curl -s -o "$body_file" -w "%{http_code}" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Accept-Profile: $schema" \
     "$SUPABASE_URL/rest/v1/landlords?select=id&limit=1")
+  local body
+  body=$(cat "$body_file")
+  rm -f "$body_file"
 
+  # 200 : schéma exposé + anon a GRANT (cas typique du schéma public)
+  # 401 + code 42501 : schéma exposé mais anon n'a pas GRANT (cas voulu pour dev
+  #                    — seul `authenticated` a accès, défini dans la migration init).
+  #                    L'app marche en logged-in. C'est OK.
+  # 406 + code PGRST106 : schéma PAS exposé dans l'API → FIX requis (dashboard).
   if [ "$code" = "200" ]; then
-    echo "  ✅ $schema schema exposé (HTTP $code)"
+    echo "  ✅ $schema schema exposé (anon GRANT OK)"
     return 0
-  elif [ "$code" = "406" ]; then
-    echo "  ❌ $schema schema NON exposé (HTTP $code — PGRST106 'Invalid schema')"
+  elif [ "$code" = "401" ] && echo "$body" | grep -q "42501"; then
+    echo "  ✅ $schema schema exposé (anon bloqué par GRANT — normal, only authenticated has access)"
+    return 0
+  elif [ "$code" = "406" ] && echo "$body" | grep -q "PGRST106"; then
+    echo "  ❌ $schema schema NON exposé dans l'API (PGRST106 'Invalid schema')"
     return 1
   else
-    echo "  ⚠️  $schema schema retour inattendu (HTTP $code)"
+    echo "  ⚠️  $schema schema retour inattendu (HTTP $code) — body: $(echo "$body" | head -c 200)"
     return 1
   fi
 }
