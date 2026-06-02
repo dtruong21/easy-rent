@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 + theme + hosting CSP)
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-02 (FEAT-009 — nouveau bucket Storage documents)
 
 ## Flutter (pubspec.yaml)
 
@@ -24,6 +24,8 @@
 | `uuid` | `^4.5.0` | Génération d'identifiants |
 | `collection` | `^1.18.0` | Helpers de collection |
 | `cupertino_icons` | `^1.0.8` | Icons (compat iOS) |
+| `file_picker` | `^11.0.2` | Sélection multi-fichiers (Web + mobile), bytes en mémoire (FEAT-009) |
+| `mime` | `^2.0.0` | Détection MIME client-side depuis extension (defense in depth, FEAT-009) |
 
 ### Dépendances dev
 
@@ -96,6 +98,15 @@
   ```
 
 - **Invocation** : POST `/functions/v1/send-receipt` avec JWT + body `{receipt_id, schema}`
+
+## Storage Buckets (Supabase)
+
+| Bucket | Visibilité | MIME whitelist | Taille max | Policies | Path format |
+|---|---|---|---|---|---|
+| `receipts` | privé | `application/pdf` | 10 MB | SELECT + INSERT (segment[1]=landlord_id) | `{landlord_id}/{receipt_id}.pdf` |
+| `documents` | privé | `application/pdf`, `image/jpeg`, `image/png`, `image/webp` | 10 MB | SELECT + INSERT + DELETE (segment[2]=landlord_id) | `{env}/{landlord_id}/{document_id}.{ext}` |
+
+**Note path** : `documents` utilise le préfixe env (segment[1]) contrairement à `receipts` — isolation stricte dev/prod. Conséquence : policy isolation sur segment [2] (et non [1] comme receipts).
 
 ## Outils CLI requis localement
 

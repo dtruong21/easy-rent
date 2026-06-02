@@ -7,6 +7,7 @@ import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../../core/widgets/lease_status_badge.dart';
+import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../receipts/presentation/receipts_list_section.dart';
 import '../application/lease_detail_provider.dart';
@@ -107,6 +108,8 @@ class _LeaseDetailContent extends ConsumerWidget {
             PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 16),
             ReceiptsListSection(leaseId: lease.id, tenantId: lease.tenantId),
+            const SizedBox(height: 16),
+            DocumentsSection(leaseId: lease.id),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)

@@ -22,6 +22,7 @@
 | FEAT-006 | CRUD paiements de loyer (enregistrement + archive) | ✅ done | PR#8, merge 2a18458, 15 fichiers Dart, 2 routes GoRouter, 31 RLS tests + 50 unit/widget tests |
 | FEAT-007 | Générer quittance PDF conforme loi 1989 (Phase 1+2+3) | 🚧 wip | Branche feature/quittance-pdf, commit a4386d5; SQL Phase 1 appliquée; Phase 2 (Edge Function + PDF builder); Phase 3 (UI + void flow + profile) |
 | FEAT-008 | Envoyer quittance par email (Resend) | 🚧 wip | Branche feature/email-quittance; couche Flutter UI implémentée (controller + bouton + dialog + mapper); SQL + Edge Function en attente supabase-dev |
+| FEAT-009 | Upload & stockage de documents (PDF, images) | 🚧 dev | Branche feature/documents-storage; couche Flutter UI implémentée (domain + data + application + presentation, 15 tests) ; migration SQL en attente supabase-dev ; tests Storage RLS : `supabase/tests/storage_documents.sql` (10 tests — security-auditor finding résolu) |
 | (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | 🟢 ready | Squelette + infra multi-env |
 
 ## Détails

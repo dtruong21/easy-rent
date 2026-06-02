@@ -38,6 +38,8 @@ dependencies:
   collection: ^1.18.0
   cupertino_icons: ^1.0.8
   url_launcher: ^6.3.2
+  file_picker: ^11.0.2
+  mime: ^2.0.0
 
 dev_dependencies:
   flutter_test:
