@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-02T12:00:00Z
-- **Commit ref** : `8f1fe54` (fix/empty-states-ux — FEAT-009 couche données SQL en cours)
-- **Branche** : `feature/documents-storage`
-- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ + FEAT-007 ✅ + FEAT-008 ✅ implémentées. FEAT-009 🚧 Phase 1 (couche données SQL + Storage) appliquée. FEAT-010–012 en backlog.
+- **Dernière mise à jour** : 2026-06-02T18:00:00Z
+- **Commit ref** : `feature/dashboard-pwa-prod-setup` (en cours)
+- **Branche** : `feature/dashboard-pwa-prod-setup`
+- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ + FEAT-007 ✅ + FEAT-008 ✅ implémentées. FEAT-009 🚧 Phase 1 appliquée. FEAT-010 🚧 Section A+B+C implémentées (feature/dashboard-pwa-prod-setup). FEAT-011–012 en backlog.
 
 ## Pointeurs
 

@@ -6,7 +6,7 @@
 
 | Path | Widget | Feature | Auth requise | Statut |
 |---|---|---|---|---|
-| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 implémentée (layout + links "Mes biens", "Mes locataires", "Mes baux") |
+| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 refondée FEAT-010 (4 KPI cards, barchart 6 mois, activité récente, onboarding, install prompt PWA) |
 | `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | 🟢 implémentée (magic link PKCE) |
 | `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🚧 placeholder |
 | `/properties` | `PropertiesListPage` | properties | ✅ oui | 🟢 implémentée (FEAT-003) |
