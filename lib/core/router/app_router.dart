@@ -13,6 +13,8 @@ import '../../features/leases/presentation/lease_detail_page.dart';
 import '../../features/leases/presentation/lease_form_page.dart';
 import '../../features/leases/presentation/leases_list_page.dart';
 import '../../features/payments/presentation/payment_form_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
+import '../../features/receipts/presentation/lease_receipts_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
@@ -139,6 +141,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           leaseId: state.pathParameters['id']!,
           paymentId: state.pathParameters['pid']!,
         ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Routes quittances (FEAT-007)
+      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/leases/:id/receipts',
+        builder: (context, state) =>
+            LeaseReceiptsPage(leaseId: state.pathParameters['id']!),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Route profil bailleur (FEAT-007 — sous-feature /profile)
+      // Protégée par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfilePage(),
       ),
     ],
   );

@@ -8,6 +8,7 @@ import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../../core/widgets/lease_status_badge.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
+import '../../receipts/presentation/receipts_list_section.dart';
 import '../application/lease_detail_provider.dart';
 import '../application/lease_form_controller.dart';
 import '../application/leases_list_provider.dart';
@@ -81,6 +82,12 @@ class _LeaseDetailContent extends ConsumerWidget {
         leading: BackButton(onPressed: () => context.go('/leases')),
         actions: [
           IconButton(
+            key: const Key('btn_profile'),
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Mon profil',
+            onPressed: () => context.push('/profile'),
+          ),
+          IconButton(
             key: const Key('btn_edit_lease'),
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Modifier',
@@ -98,6 +105,8 @@ class _LeaseDetailContent extends ConsumerWidget {
             _InfoCard(lease: lease),
             const SizedBox(height: 16),
             PaymentListSection(leaseId: lease.id),
+            const SizedBox(height: 16),
+            ReceiptsListSection(leaseId: lease.id),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)

@@ -113,6 +113,7 @@ class _PaymentListContent extends ConsumerWidget {
                     for (final payment in payments)
                       PaymentListTile(
                         payment: payment,
+                        leaseId: leaseId,
                         onEdit: () => context.push(
                           '/leases/$leaseId/payments/${payment.id}/edit',
                         ),

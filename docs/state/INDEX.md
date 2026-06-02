@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-05-31T00:00:00Z
-- **Commit ref** : `2a18458` (feat(payments): CRUD paiements de loyer (FEAT-006) (#8))
-- **Branche** : `develop`
-- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ implémentées. FEAT-007–010 en backlog.
+- **Dernière mise à jour** : 2026-06-01T04:00:00Z
+- **Commit ref** : `e322c87` (fix(hosting): allow fonts.gstatic.com in CSP — fixes invisible text (#16))
+- **Branche** : `feature/quittance-pdf`
+- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ implémentées. FEAT-007 🚧 (Phase 1+2+3 + theme + hosting) en WIP (feature/quittance-pdf). FEAT-008–012 en backlog.
 
 ## Pointeurs
 
@@ -16,8 +16,9 @@
 | Schéma Postgres (tables, colonnes, RLS, fonctions) | [`SCHEMA.md`](SCHEMA.md) |
 | Routes Flutter et widgets principaux | [`ROUTES.md`](ROUTES.md) |
 | Features implémentées et statut | [`FEATURES.md`](FEATURES.md) |
-| Dépendances (pubspec, Deno imports, CLI tools) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
+| Dépendances (pubspec, Deno imports, CLI tools, hosting CSP) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
 | Edge Functions déployées et planifiées | [`FUNCTIONS.md`](FUNCTIONS.md) |
+| Material 3 theme config + dark mode fixes | [`THEME.md`](THEME.md) |
 
 ## Comment l'utiliser
 
@@ -50,7 +51,70 @@
 | Hosting | Firebase Hosting (staging ✅, prod TBD) |
 | CI/CD | GitHub Actions (ci.yml + deploy.yml avec build_runner step) |
 
-## Changements majeurs FEAT-006
+## Changements majeurs FEAT-007 (Phase 1+2+3 — WIP)
+
+**Status** : Branche feature/quittance-pdf, commit a4386d5. Phase 1 (SQL) appliquée 2026-05-31. Phase 2 (Edge Function) + Phase 3 (UI) en cours.
+
+1. **Migrations SQL** (Phase 1, appliquée) :
+   - `20260531172904_feat007_receipts.sql` (610 lignes) : table receipts + enum document_type + RPC void_receipt + bucket receipts/
+   - `20260531200000_feat007_receipts_stale_bidirectional.sql` (152 lignes) : fix is_stale bidirectionnel (soft-delete + résurrection, FEAT-007 Round 2 E5)
+
+2. **Table `receipts`** (public + dev) :
+   - 16 colonnes (id, landlord_id, lease_id, payment_ids[], period_start/end, rent_cents, charges_cents, total_cents, document_type, pdf_path, generated_at, created_at, is_voided, voided_at, voided_reason, is_stale)
+   - Enum `document_type` (quittance | recu)
+   - 4 index stratégiques (landlord_id, lease_id, period_start_desc, payment_ids GIN)
+   - 2 policies RLS (SELECT all, INSERT own landlord) — pas d'UPDATE ni DELETE (immuable)
+   - Triggers : tr_00 (ownership), tr_01 (protect columns), tr_03 AFTER (is_stale recompute bidirectionnel)
+   - RPC `void_receipt()` SECURITY DEFINER (annulation via RLS bypass)
+   - Bucket Storage receipts/ (privé, PDF-only, 10MB, 2 policies)
+
+3. **Edge Function generate-receipt** (Phase 2) :
+   - `supabase/functions/generate-receipt/` (Deno TS)
+   - Orchestration : fetch payments → build PDF (pdf-lib + loi 1989 AR 21) → upload Storage → INSERT receipts
+   - Dépendances : pdf-lib@1.17.1, @supabase/supabase-js@2.45.0
+   - Invocation : POST `/functions/v1/generate-receipt` avec JWT + `{lease_id, schema}`
+   - Blockers fixes (Round 2) : CORS allowlist, timeout, privacy
+
+4. **UI + Void Flow** (Phase 3) :
+   - 18 fichiers Dart : `lib/features/receipts/` (domain, data, application, presentation)
+   - Modèles : `receipt.dart` (freezed), `document_type.dart`, `receipt_generation_state.dart` (sealed union)
+   - Providers : `lease_receipts_provider.dart` (AsyncNotifierProvider.family), `generate_receipt_controller.dart`, `void_receipt_controller.dart`
+   - Routes : `/leases/:id/receipts` (LeaseReceiptsPage), `/profile` (ProfilePage paramètres bailleur)
+   - Widgets : receipt_list_tile, receipt_preview_dialog, void_receipt_dialog, generate_receipt_button, profile_incomplete_dialog
+   - Business logic : génération via Edge Function, voiding via RPC, is_stale tracking automatique
+
+5. **Décisions tranchées** :
+   - is_stale bidirectionnel : soft-delete → stale, résurrection → recompute (E5 FEAT-007 Round 2)
+   - Immuabilité document : pas de DELETE (rétention légale 5 ans)
+   - Bucket privé : URLs signées 5 min uniquement
+   - document_type : enum SQL natif (validation + cohérence)
+   - Profile validation : full_name obligatoire avant génération (loi 1989)
+
+6. **Tests** :
+   - RLS tests : rls_receipts.sql (en cours)
+   - Unit tests : receipt.dart, receipt_generation, receipt_repository
+   - Widget tests : lease_receipts_page, dialogs, generation flow
+   - E2E : full cycle (create payments → generate → preview → void)
+
+### Bugfixes post-FEAT-007 Phase 3 (commits dd1673e–e322c87)
+
+1. **Theme bugfixes** (commits dd1673e, 870c335, b71cdfb) :
+   - Problème : M3 textTheme opacity trop faible → texte invisible en dark mode (notamment RichText/TextSpan)
+   - **Fix appliqué** : `app_theme.dart` rewritten pour forcer `textTheme.apply(bodyColor, displayColor)` + sous-thèmes explicites (AppBar, Card, ListTile, Dialog…)
+   - Status : Workaround `ThemeMode.light` appliqué puis reverté (e322c87)
+
+2. **Hosting CSP bugfix** (commit e322c87, issue #16) :
+   - Problème : Google Fonts invisible car `fonts.gstatic.com` bloqué par CSP strict
+   - **Fix appliqué** : `firebase.json` CSP étendue :
+     - `font-src` : ajout `https://fonts.gstatic.com`
+     - `connect-src` : ajout `https://fonts.gstatic.com`
+   - Status : Déployé staging, issue #16 closed
+
+### Incohérences détectées (FEAT-007 + bugfixes)
+
+Aucune — state entièrement synchronisé avec code feature/quittance-pdf (commit e322c87).
+
+## Changements majeurs FEAT-006 (Complétée)
 
 1. **Migration SQL** : `supabase/migrations/20260531102202_feat006_payments.sql` (890 lignes)
    - Table `public.payments` et `dev.payments` (13 colonnes + 4 index + 3 policies RLS)
@@ -111,8 +175,10 @@ Blockers pré-release B1 du code-reviewer résolus :
 
 ## État de la base de code
 
-- Code matches state — aucun drift détecté post-FEAT-006
-- ~4200 lignes de tests totales (31 RLS + ~50 unitaires/widget)
-- RLS validée sur Postgres côté backend (FEAT-006, 31 tests)
-- Flutter stable — 6 features complètes, prêt pour FEAT-007 (quittance PDF + email)
-- Backlog : FEAT-007 (PDF), FEAT-008 (email), FEAT-009 (storage), FEAT-010 (dashboard + prod)
+- Code matches state — synchronisé avec feature/quittance-pdf (commit a4386d5)
+- ~6000+ lignes de tests totales (31 RLS payments + ~31 RLS receipts en cours + unit/widget)
+- RLS validée sur Postgres côté backend (payments: 31 tests, receipts: en cours)
+- Edge Function implémentée : generate-receipt (Phase 2, Deno TS)
+- Flutter Phase 3 : UI + void flow implémentée (18 fichiers Dart)
+- is_stale bidirectionnel fixé (FEAT-007 Round 2 E5)
+- Backlog : FEAT-008 (email send-receipt), FEAT-009 (storage), FEAT-010 (dashboard), FEAT-011 (PWA polish), FEAT-012 (prod release)

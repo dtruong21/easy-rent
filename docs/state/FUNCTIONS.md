@@ -1,39 +1,56 @@
 # Edge Functions et RPC — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée, RPC soft_delete_payment ajoutée)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 — Edge Function generate-receipt implémentée + fix is_stale bidirectionnel)
 
 ## Edge Functions (Deno / TypeScript)
 
-_(aucune fonction déployée — `supabase/functions/` n'existe pas)_
+### Fonctions déployées
 
-À créer lors de FEAT-007+ (envoi quittance email).
+**`generate-receipt`** (FEAT-007 Phase 2, active) :
+
+| Propriété | Valeur |
+|---|---|
+| **Dossier** | `supabase/functions/generate-receipt/` |
+| **Fichiers** | index.ts, pdf_layout.ts, types.ts, deps.ts, deno.json, tests/ |
+| **Invocation** | POST `/functions/v1/generate-receipt` (JWT required) |
+| **Body** | `{lease_id: uuid, schema: 'public' \| 'dev'}` |
+| **Retour** | `{receipt_id: uuid, pdf_url: string}` |
+| **Auth** | JWT required (authentified user = landlord_id) |
+| **Secrets** | — (aucun) |
+| **Dépendances** | pdf-lib@1.17.1, @supabase/supabase-js@2.45.0 |
+| **Priorité** | P0 |
+
+**Étapes** :
+1. Validate lease_id ownership (auth.uid() = landlord_id via JWT)
+2. Fetch payments for lease (period-grouped)
+3. Build PDF with pdf-lib (FR format, loi 1989 mentions légales)
+4. Upload PDF to Storage `receipts/<landlord_id>/<receipt_id>.pdf`
+5. INSERT `receipts` table via RLS (landlord_id from auth.uid())
+6. Return receipt_id + signed URL (5 min expiry)
+
+**Blockers fixes** (FEAT-007 Round 2) :
+- CORS allowlist : Flutter Web origin allowed
+- Timeout : respects 540s limit (build + upload)
+- Privacy : no sensitive data in logs
 
 ### Fonctions planifiées
 
 | Nom | Trigger | Auth | Secrets | Priorité | Feat |
 |---|---|---|---|---|---|
-| `send-receipt` | Manual (on receipt create) | JWT required | `RESEND_API_KEY` | P0 | FEAT-007 |
-| `generate-receipt` | Manual (on payment record) | JWT required | — | P0 | FEAT-006 |
-
-### Structure
-
-À créer avec :
-- Deno runtime (TypeScript)
-- `import_map.json` ou `deno.json` pour dépendances (Supabase Functions v2+)
-- Error handling + logging via `Db.invokeFunction()` wrapper
+| `send-receipt` | Manual (via UI button) | JWT required | `RESEND_API_KEY` | P0 | FEAT-008 |
 
 ### Appel côté client
 
-Via `lib/core/db.dart` :
+Via `lib/features/receipts/application/generate_receipt_controller.dart` :
 
 ```dart
 final result = await supabase.functions.invoke(
-  'send-receipt',
-  body: {'receipt_id': '...', 'schema': 'public'},
+  'generate-receipt',
+  body: {'lease_id': leaseId, 'schema': schema},
 );
 ```
 
-Passage automatique du `schema` (public ou dev) en paramètre.
+Retour : `{receipt_id: ..., pdf_url: ...}`
 
 ---
 
@@ -91,7 +108,17 @@ await supabase.rpc('soft_delete_payment', params: {'p_id': paymentId});
 
 **Error** : ERRCODE P0002 si paiement inexistant, appartenant à un autre user, ou déjà supprimé.
 
-#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()` — FEAT-002 + FEAT-006
+#### `public.void_receipt(p_id uuid, p_reason text)` — FEAT-007
+
+Annule une quittance (is_voided = true, voided_at = now(), voided_reason = p_reason). SECURITY DEFINER, SET search_path = public.
+
+```dart
+await supabase.rpc('void_receipt', params: {'p_id': receiptId, 'p_reason': reason});
+```
+
+**Error** : ERRCODE 22023 si p_reason hors bornes 3-500 chars. ERRCODE P0002 si receipt inexistante, cross-user ou déjà voided.
+
+#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()`, `dev.void_receipt()` — FEAT-002 + FEAT-006 + FEAT-007
 
 Mêmes signatures que les versions public, opèrent sur schéma `dev`. Utilisées uniquement en staging/dev.
 
@@ -164,6 +191,44 @@ Mirror de `public.assert_payment_lease_ownership()`, opère sur schéma `dev` (l
 
 **Trigger** : `tr_00_assert_payment_lease_ownership` (dev)
 
+#### `public.assert_receipt_lease_ownership()` — FEAT-007
+
+Trigger BEFORE INSERT sur `public.receipts`, SECURITY DEFINER, SET search_path = public.
+
+Valide 2 cas :
+1. `lease_id` existe dans `public.leases` (bail soft-deleted toléré — régularisation rétroactive)
+2. `lease_id.landlord_id = NEW.landlord_id`
+
+**Trigger** : `tr_00_assert_receipt_lease_ownership` (public)
+
+**Error** : ERRCODE 23514 (check_violation)
+
+#### `dev.assert_receipt_lease_ownership()` — FEAT-007
+
+Mirror de `public.assert_receipt_lease_ownership()`, opère sur schéma `dev` (lit dev.leases).
+
+**Trigger** : `tr_00_assert_receipt_lease_ownership` (dev)
+
+#### `public.recompute_receipt_stale_on_payment_archive()` — FEAT-007
+
+Trigger AFTER UPDATE OF deleted_at sur `public.payments`, SECURITY DEFINER, SET search_path = public.
+
+**Cas 1 (soft-delete)** : `OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL` → `UPDATE public.receipts SET is_stale = true WHERE payment_ids @> ARRAY[NEW.id]::uuid[]`.
+
+**Cas 2 (résurrection)** : `OLD.deleted_at IS NOT NULL AND NEW.deleted_at IS NULL` → recompute is_stale pour chaque receipt liée : si tous les payment_ids sont actifs (aucun deleted_at IS NOT NULL parmi les autres) → `is_stale := false`, sinon `is_stale := true`.
+
+Index GIN `idx_public_receipts_payment_ids_gin` rend l'opérateur `@>` performant.
+
+**Fix FEAT-007 Round 2 (E5)** : Ajout du Cas 2 (résurrection) — sans lui, un payment "ressuscité" laisserait les receipts marquées stale à jamais.
+
+**Trigger** : `tr_03_set_receipt_stale_on_payment_archive` (public.payments)
+
+#### `dev.recompute_receipt_stale_on_payment_archive()` — FEAT-007
+
+Mirror de `public.recompute_receipt_stale_on_payment_archive()`, opère sur dev.payments / dev.receipts.
+
+**Trigger** : `tr_03_set_receipt_stale_on_payment_archive` (dev.payments)
+
 #### `public.handle_new_user()` — FEAT-001
 
 Trigger AFTER INSERT ON `auth.users`, SECURITY DEFINER, SET search_path = public.
@@ -189,13 +254,17 @@ Trigger BEFORE UPDATE, maintient `updated_at = now()`.
 
 PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom de trigger. Ordre garanti :
 
-1. **`tr_00_assert_*_ownership`** (leases + payments) — Validation cross-FK
+1. **`tr_00_assert_*_ownership`** (leases + payments + receipts) — Validation cross-FK
    - `tr_00_assert_lease_ownership` (leases)
    - `tr_00_assert_payment_lease_ownership` (payments, FEAT-006)
-2. **`tr_01_prevent_protected_columns_change_*`** (5 tables) — Bloque deleted_at, created_at ; force updated_at
+   - `tr_00_assert_receipt_lease_ownership` (receipts, FEAT-007 — BEFORE INSERT uniquement)
+2. **`tr_01_prevent_protected_columns_change_*`** (6 tables) — Bloque deleted_at, created_at ; force updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006), receipts (FEAT-007)
+3. **`tr_02_set_updated_at_*`** (5 tables — receipts exclue : pas de updated_at) — Met à jour updated_at
    - landlords, properties, tenants, leases, payments (FEAT-006)
-3. **`tr_02_set_updated_at_*`** (5 tables) — Met à jour updated_at
-   - landlords, properties, tenants, leases, payments (FEAT-006)
+4. **`tr_03_set_receipt_stale_on_payment_archive`** — AFTER UPDATE OF deleted_at sur public.payments + dev.payments (FEAT-007)
+   - Soft-delete payment → marque is_stale = true sur les receipts liées
+   - Résurrection payment → recompute is_stale (Cas 2, FEAT-007 Round 2 E5 fix)
 
 ---
 
@@ -234,3 +303,5 @@ Assert que RLS est activée sur la table donnée dans les deux schémas (public 
 - **Soft-delete flow** : Client appelle RPC soft_delete_* → RPC pose SET LOCAL flag → trigger tr_01 le voit → UPDATE succeeds
 - **SET LOCAL** : Scope = transaction courante uniquement, aucun risque de fuite entre connexions
 - **SECURITY DEFINER** : Bypass RLS (intentionnel pour cohérence cross-FK, auto-provisioning)
+- **void_receipt flow** : Client appelle RPC void_receipt → SECURITY DEFINER contourne l'absence de policy UPDATE → UPDATE receipts SET is_voided=true ... WHERE landlord_id = auth.uid()
+- **is_stale flow** : soft_delete_payment → UPDATE payments.deleted_at → AFTER trigger tr_03 → UPDATE receipts SET is_stale=true (GIN index sur payment_ids)

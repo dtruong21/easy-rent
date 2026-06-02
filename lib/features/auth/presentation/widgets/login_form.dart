@@ -105,12 +105,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
         FilledButton(
           onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
           child: isSubmitting
-              ? const SizedBox(
+              ? SizedBox(
                   height: 18,
                   width: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 )
               : const Text('Recevoir mon lien de connexion'),

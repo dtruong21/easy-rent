@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-05-31 (FEAT-006 mergée, table payments + RPC soft_delete_payment)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 — receipts UI + Edge Function + fix is_stale bidirectionnel)
 
 ## Tables
 
@@ -126,6 +126,61 @@
 | `leases_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
 | `leases_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
 | `leases_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
+
+---
+
+### `receipts` (public + dev)
+
+**Migration source** : `20260531172904_feat007_receipts.sql` (FEAT-007)
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
+| `landlord_id` | `uuid` | NOT NULL, FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
+| `lease_id` | `uuid` | NOT NULL, FK → `leases(id)` ON DELETE RESTRICT |
+| `payment_ids` | `uuid[]` | NOT NULL, CHECK array_length >= 1 |
+| `period_start` | `date` | NOT NULL, CHECK BETWEEN 1900-01-01..2100-12-31 |
+| `period_end` | `date` | NOT NULL, CHECK > period_start AND BETWEEN bornes |
+| `rent_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes) |
+| `charges_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 (en centimes) |
+| `total_cents` | `integer` | NOT NULL, CHECK > 0 AND CHECK = rent_cents + charges_cents |
+| `document_type` | `public.document_type` | NOT NULL — enum `quittance` ou `recu` |
+| `pdf_path` | `text` | NOT NULL — chemin Storage `receipts/<landlord_id>/<receipt_id>.pdf` |
+| `generated_at` | `timestamptz` | NOT NULL DEFAULT now() |
+| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
+| `is_voided` | `boolean` | NOT NULL DEFAULT false |
+| `voided_at` | `timestamptz` | NULL (doit être non-NULL si is_voided = true) |
+| `voided_reason` | `text` | NULL, CHECK char_length BETWEEN 3 AND 500 (obligatoire si voided) |
+| `is_stale` | `boolean` | NOT NULL DEFAULT false — recomputed par trigger tr_03 |
+
+**Contraintes** :
+- `receipts_total_check` : `total_cents = rent_cents + charges_cents`
+- `receipts_voiding_consistency` : `(is_voided=false AND voided_at IS NULL AND voided_reason IS NULL) OR (is_voided=true AND voided_at IS NOT NULL AND voided_reason IS NOT NULL)`
+- Pas de `updated_at` ni `deleted_at` : document immuable hors flags
+
+**Indexes** :
+- `idx_public_receipts_landlord_id` (filtrage RLS)
+- `idx_public_receipts_lease_id` (listing par bail)
+- `idx_public_receipts_period_start_desc` (lease_id, period_start DESC)
+- `idx_public_receipts_payment_ids_gin` USING GIN (payment_ids — trigger is_stale)
+- Équivalents `idx_dev_receipts_*`
+
+**RLS** : activée
+
+**Policies** (public + dev) :
+
+| Policy | Opération | Condition |
+|---|---|---|
+| `receipts_select_own` | SELECT | `landlord_id = auth.uid()` (toutes receipts y compris voided) |
+| `receipts_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
+
+**Pas de policy UPDATE ni DELETE** : immuabilité des champs métier ; voiding uniquement via RPC `void_receipt`.
+
+**Triggers** :
+- `tr_00_assert_receipt_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
+- `tr_01_prevent_protected_columns_change_receipts` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
+- Pas de tr_02 (pas de updated_at)
+- `tr_03_set_receipt_stale_on_payment_archive` sur public.payments + dev.payments AFTER UPDATE OF deleted_at
 
 ---
 
@@ -282,6 +337,29 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 
 ---
 
+## Résumé des changements FEAT-007 (Phase 1 — SQL)
+
+**Nouveau type** : `public.document_type` + `dev.document_type` — ENUM (`quittance`, `recu`)
+
+**Nouvelles tables** : `receipts` (public + dev) — Quittances et reçus PDF
+
+**Migration** : `20260531172904_feat007_receipts.sql` (610 lignes)
+
+**Trigger framework** :
+- `tr_00_assert_receipt_lease_ownership` BEFORE INSERT (ownership lease → receipt, SECURITY DEFINER)
+- `tr_01_prevent_protected_columns_change_receipts` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
+- `tr_03_set_receipt_stale_on_payment_archive` AFTER UPDATE OF deleted_at ON payments → marque is_stale = true sur les receipts liées
+
+**RPC framework** : `void_receipt(p_id uuid, p_reason text)` (public + dev) — SECURITY DEFINER, REVOKE anon
+
+**RLS** : 2 policies × 2 schémas (SELECT/INSERT seulement — pas d'UPDATE ni DELETE)
+
+**Storage** : Bucket `receipts` créé (privé, PDF-only, 10MB max) + 2 policies (SELECT + INSERT, pas UPDATE/DELETE)
+
+**Cohérence cross-FK** : Trigger `assert_receipt_lease_ownership()` valide lease_id → landlord_id (bail soft-deleted toléré — régularisation post-clôture)
+
+---
+
 ## Résumé des changements FEAT-006
 
 **Nouvelle table** : `payments` (public + dev) — Paiements mensuels d'un bail
@@ -323,5 +401,6 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 - **Multi-env strategy** : Same database hosts `public` (PROD) et `dev` (DEV) sur Supabase free tier
 - **Migration rule** : Toutes les migrations futures DOIVENT appliquer les changements aux DEUX schémas (docs/ENVIRONMENTS.md)
 - **Applied to production** : FEAT-002 exécutée 2026-05-28 ~12:00 UTC; FEAT-006 en staging (prête prod)
-- **RLS tests** : `supabase/tests/rls_landlords.sql` (14), `rls_properties.sql` (12), `rls_tenants.sql` (12), `rls_leases.sql` (26), `rls_payments.sql` (31) = 95 tests totaux
-- **Date hardening** : Bornes 1900-01-01 à 2100-12-31 appliquées à leases (FEAT-005) et payments (FEAT-006)
+- **RLS tests** : `supabase/tests/rls_landlords.sql` (14), `rls_properties.sql` (12), `rls_tenants.sql` (12), `rls_leases.sql` (26), `rls_payments.sql` (31), `rls_receipts.sql` (31) = 126 tests totaux
+- **Date hardening** : Bornes 1900-01-01 à 2100-12-31 appliquées à leases (FEAT-005), payments (FEAT-006) et receipts (FEAT-007)
+- **Applied to production** : FEAT-007 Phase 1 (SQL) exécutée 2026-05-31 via supabase db push (confirmed "Remote database is up to date")
