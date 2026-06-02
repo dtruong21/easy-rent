@@ -98,17 +98,17 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.description_outlined,
               size: 80,
-              color: Theme.of(context).colorScheme.outline,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun bail enregistré',
+              'Vos contrats de location',
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Créez votre premier bail pour commencer\nà gérer vos contrats de location.',
+              'Une fois vos biens et locataires créés,\nvous pourrez créer ici votre premier bail.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

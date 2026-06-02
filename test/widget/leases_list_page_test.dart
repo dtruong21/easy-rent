@@ -125,7 +125,7 @@ void main() {
       await tester.pumpWidget(_buildPage(const _FakeRepo()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aucun bail enregistré'), findsOneWidget);
+      expect(find.text('Vos contrats de location'), findsOneWidget);
     });
 
     testWidgets('état vide — bouton "Créer un bail" dans le corps', (
@@ -175,7 +175,7 @@ void main() {
       await tester.pumpWidget(_buildPage(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aucun bail enregistré'), findsNothing);
+      expect(find.text('Vos contrats de location'), findsNothing);
     });
 
     testWidgets('liste — tri : bail actif affiché avant bail terminé', (

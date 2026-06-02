@@ -100,7 +100,7 @@ void main() {
       await tester.pumpWidget(_buildPage(const _FakeRepo()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aucun bien enregistré'), findsOneWidget);
+      expect(find.text('Démarrez votre parc locatif'), findsOneWidget);
     });
 
     testWidgets('état vide — bouton "Ajouter un bien" présent', (tester) async {
@@ -146,7 +146,7 @@ void main() {
       await tester.pumpWidget(_buildPage(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aucun bien enregistré'), findsNothing);
+      expect(find.text('Démarrez votre parc locatif'), findsNothing);
     });
 
     // -----------------------------------------------------------------------

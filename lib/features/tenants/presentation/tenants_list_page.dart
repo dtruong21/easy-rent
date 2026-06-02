@@ -98,17 +98,17 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.people_outline,
               size: 80,
-              color: Theme.of(context).colorScheme.outline,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun locataire enregistré',
+              'Votre annuaire de locataires',
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Ajoutez votre premier locataire pour commencer\nà gérer votre annuaire.',
+              'Vos locataires apparaîtront ici.\nAjoutez-en un dès que vous êtes prêt.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

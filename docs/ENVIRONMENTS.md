@@ -13,6 +13,20 @@ Le free tier Supabase impose un seul projet utilisable. Donc :
 
 → Il faut **séparer les données au niveau applicatif** sans pouvoir s'appuyer sur l'isolation native.
 
+## ✅ Setup checklist (à faire UNE FOIS par projet Supabase)
+
+⚠️ **Étape critique souvent oubliée** : sur Supabase Cloud, seul le schéma `public` est exposé par défaut via l'API PostgREST. Sans config additionnelle, toute requête contre `dev.X` retourne **HTTP 406 — PGRST106 "Invalid schema: dev"**, et l'UI staging affiche "Impossible de charger" sur tous les écrans data (bug rencontré le 2026-06-02, issue #18).
+
+**À configurer dans le dashboard Supabase** (lien direct : `https://supabase.com/dashboard/project/<PROJECT_REF>/settings/api`) :
+
+1. Section **Data API → Exposed schemas**
+2. Ajoute `dev` à la liste (à côté de `public` et `graphql_public`)
+3. Save — effet immédiat, pas de redéploiement nécessaire
+
+**Vérification** : `./scripts/check-supabase-schemas.sh` — affiche ✅ si les 2 schémas sont exposés, ❌ avec instructions sinon.
+
+À refaire si tu changes de projet Supabase ou si tu ajoutes un nouveau schéma (ex: `staging` un jour pour 3 envs).
+
 ## 🗄 Stratégie Postgres : schémas séparés
 
 ### Architecture
