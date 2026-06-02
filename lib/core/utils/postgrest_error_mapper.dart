@@ -18,10 +18,20 @@ String mapPostgrestError(PostgrestException e) {
 
   // Violation de RLS (permission denied) — ne devrait pas arriver via l'UI normale.
   if (code == '42501' || msg.contains('permission denied')) {
+    // Documents — colonnes immuables protégées par trigger tr_01b
+    if (msg.contains('immutable on documents')) {
+      return 'Ces propriétés du document ne peuvent pas être modifiées.';
+    }
     return "Vous n'avez pas les droits pour effectuer cette action.";
   }
   // RPC qui lève NOT FOUND : soft_delete_* cross-user ou ID inexistant.
   if (code == 'P0002' || msg.contains('no_data_found')) {
+    // Documents — soft_delete_document : not found, not owned, or already deleted
+    if (msg.contains('document not found') ||
+        msg.contains('not owned') ||
+        msg.contains('already deleted')) {
+      return 'Document introuvable ou déjà supprimé.';
+    }
     return 'Élément introuvable. Il a peut-être déjà été archivé.';
   }
   // Violation de contrainte CHECK (surface, dates, montants, etc.).
@@ -56,6 +66,18 @@ String mapPostgrestError(PostgrestException e) {
     }
     if (msg.contains('notes')) {
       return 'Les notes ne peuvent pas dépasser 500 caractères.';
+    }
+    // Documents — validation MIME whitelist (CHECK mime_type IN (...))
+    if (msg.contains('mime_type')) {
+      return 'Format non supporté. Formats acceptés : PDF, JPG, PNG, WEBP.';
+    }
+    // Documents — validation taille (CHECK size_bytes <= 10485760)
+    if (msg.contains('size_bytes')) {
+      return 'Ce fichier dépasse la limite de 10 Mo.';
+    }
+    // Documents — trigger ownership mismatch (bail non owned)
+    if (msg.contains('document lease ownership mismatch')) {
+      return "Le bail n'existe pas ou ne vous appartient pas.";
     }
     return 'Données invalides. Vérifiez les champs et réessayez.';
   }

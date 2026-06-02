@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-01T10:37:51Z
-- **Commit ref** : `a4386d5` (feature/email-quittance — FEAT-008 couche données en cours)
-- **Branche** : `feature/email-quittance`
-- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ + FEAT-007 ✅ implémentées. FEAT-008 🚧 Phase 1 (couche données SQL) appliquée. FEAT-009–012 en backlog.
+- **Dernière mise à jour** : 2026-06-02T12:00:00Z
+- **Commit ref** : `8f1fe54` (fix/empty-states-ux — FEAT-009 couche données SQL en cours)
+- **Branche** : `feature/documents-storage`
+- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ + FEAT-007 ✅ + FEAT-008 ✅ implémentées. FEAT-009 🚧 Phase 1 (couche données SQL + Storage) appliquée. FEAT-010–012 en backlog.
 
 ## Pointeurs
 

@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-01 (FEAT-008 Phase 1 — ajout colonnes sent_at/sent_to_email + RPC mark_receipt_as_sent)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-02 (FEAT-009 — table documents + enum document_category + bucket Storage documents + RPC soft_delete_document)
 
 ## Tables
 
@@ -126,6 +126,55 @@
 | `leases_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
 | `leases_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
 | `leases_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
+
+---
+
+### `documents` (public + dev)
+
+**Migration source** : `20260602100520_feat009_documents.sql` (FEAT-009)
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
+| `landlord_id` | `uuid` | NOT NULL, FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
+| `lease_id` | `uuid` | NOT NULL, FK → `leases(id)` ON DELETE RESTRICT |
+| `category` | `public.document_category` | NOT NULL — enum (bail_signe, etat_des_lieux, attestation_assurance, quittance_scannee, autre) |
+| `filename` | `text` | NOT NULL, CHECK char_length BETWEEN 1 AND 255 |
+| `storage_path` | `text` | NOT NULL UNIQUE, CHECK char_length BETWEEN 1 AND 500 |
+| `mime_type` | `text` | NOT NULL, CHECK IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp') |
+| `size_bytes` | `integer` | NOT NULL, CHECK BETWEEN 1 AND 10485760 (10 MB max) |
+| `legal_hold` | `boolean` | NOT NULL DEFAULT false — calculé par trigger tr_00b : true ssi category IN ('bail_signe', 'etat_des_lieux'). Immuable après INSERT |
+| `uploaded_at` | `timestamptz` | NOT NULL DEFAULT now() |
+| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
+| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() (trigger `tr_02_set_updated_at_documents`) |
+| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_document()` uniquement |
+
+**Nouveau type** : `public.document_category` + `dev.document_category` — ENUM (`bail_signe`, `etat_des_lieux`, `attestation_assurance`, `quittance_scannee`, `autre`)
+
+**Index** :
+- `idx_public_documents_lease (landlord_id, lease_id, deleted_at)` — listing par bail
+- `idx_public_documents_landlord (landlord_id, deleted_at)` — quota global landlord
+- `idx_public_documents_storage_path (storage_path) WHERE deleted_at IS NULL` — lookup soft-delete aware (UNIQUE partial)
+- Équivalents `idx_dev_documents_*`
+
+**RLS** : activée
+
+**Policies** (public + dev) :
+
+| Policy | Opération | Condition |
+|---|---|---|
+| `documents_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
+| `documents_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
+| `documents_update_category_only` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
+
+**Pas de policy DELETE** : soft-delete via RPC `soft_delete_document()` uniquement.
+
+**Triggers** :
+- `tr_00_assert_documents_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
+- `tr_00b_compute_legal_hold` BEFORE INSERT (calcul legal_hold depuis category)
+- `tr_01_prevent_protected_columns_change_documents` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
+- `tr_01b_protect_immutable_documents` BEFORE UPDATE (protège filename, storage_path, mime_type, size_bytes, legal_hold — aucun GUC bypass)
+- `tr_02_set_updated_at_documents` BEFORE UPDATE (réutilise FEAT-001)
 
 ---
 
@@ -358,6 +407,31 @@ PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre gar
 **RLS** : inchangée (pas de nouvelle policy — l'immuabilité document reste garantie par l'absence de policy UPDATE ; la RPC est SECURITY DEFINER).
 
 **Tests** : `supabase/tests/rls_receipts_send.sql` (14 tests)
+
+---
+
+## Résumé des changements FEAT-009 (SQL — couche données + Storage)
+
+**Migration** : `20260602100520_feat009_documents.sql`
+
+**Nouveau type** : `public.document_category` + `dev.document_category` — ENUM (`bail_signe`, `etat_des_lieux`, `attestation_assurance`, `quittance_scannee`, `autre`)
+
+**Nouvelles tables** : `documents` (public + dev) — Documents locatifs uploadés par le bailleur
+
+**Trigger framework** :
+- `tr_00_assert_documents_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
+- `tr_00b_compute_legal_hold` BEFORE INSERT (calcule legal_hold depuis category — D3 modifié)
+- `tr_01_prevent_protected_columns_change_documents` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
+- `tr_01b_protect_immutable_documents` BEFORE UPDATE (protège 5 colonnes immuables, aucun GUC bypass)
+- `tr_02_set_updated_at_documents` BEFORE UPDATE (réutilise FEAT-001)
+
+**RPC** : `soft_delete_document(p_id uuid) RETURNS TABLE(storage_path text, hard_deleted boolean)` (public + dev) — SECURITY DEFINER, REVOKE anon. Retourne (storage_path, true) si legal_hold=false (frontend hard-delete), (NULL, false) si legal_hold=true (fichier conservé).
+
+**RLS** : 3 policies × 2 schémas (SELECT/INSERT/UPDATE, pas de DELETE). UPDATE protégé réellement par tr_01b (seule category mutable).
+
+**Storage** : Bucket `documents` créé (privé, MIME whitelist PDF/JPEG/PNG/WEBP, 10MB max) + 3 policies (SELECT + INSERT + DELETE — pas d'UPDATE). Path = `{env}/{landlord_id}/{document_id}.{ext}`, isolation sur segment [2].
+
+**Tests** : `supabase/tests/rls_documents.sql` (23 tests)
 
 ---
 

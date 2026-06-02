@@ -1,6 +1,6 @@
 # Edge Functions et RPC — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-01 (FEAT-008 — Edge Function send-receipt implémentée)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-02 (FEAT-009 — RPC soft_delete_document + triggers documents)
 
 ## Edge Functions (Deno / TypeScript)
 
@@ -196,7 +196,24 @@ await supabase.rpc('mark_receipt_as_sent', params: {
 
 **Invocation** : par l'Edge Function `send-receipt` après envoi Resend confirmé. Si RPC échoue après mail parti → log critique `[email-sent-not-persisted]` côté Edge Function + return 200 quand même (évite double-mail sur retry).
 
-#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()`, `dev.void_receipt()`, `dev.mark_receipt_as_sent()` — FEAT-002 + FEAT-006 + FEAT-007 + FEAT-008
+#### `public.soft_delete_document(p_id uuid)` — FEAT-009
+
+Soft-delete document (ownership check : `landlord_id = auth.uid()` AND `deleted_at IS NULL`). Retourne `TABLE(storage_path text, hard_deleted boolean)`.
+
+```dart
+final res = await supabase.rpc('soft_delete_document', params: {'p_id': documentId});
+// res = [{'storage_path': '...' | null, 'hard_deleted': true | false}]
+```
+
+**Comportement** :
+- `hard_deleted=true, storage_path=<path>` → legal_hold=false → frontend doit appeler `storage.from('documents').remove([storage_path])`
+- `hard_deleted=false, storage_path=null` → legal_hold=true → fichier conservé pour obligation légale
+
+**Error** : ERRCODE P0002 si document inexistant, cross-user, ou déjà soft-deleted.
+
+**Mécanisme** : pose `SET LOCAL app.allow_deleted_at_change = '1'` + `FOR UPDATE` (atomique).
+
+#### `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()`, `dev.void_receipt()`, `dev.mark_receipt_as_sent()`, `dev.soft_delete_document()` — FEAT-002 + FEAT-006 + FEAT-007 + FEAT-008 + FEAT-009
 
 Mêmes signatures que les versions public, opèrent sur schéma `dev`. Utilisées uniquement en staging/dev.
 
@@ -307,6 +324,54 @@ Mirror de `public.recompute_receipt_stale_on_payment_archive()`, opère sur dev.
 
 **Trigger** : `tr_03_set_receipt_stale_on_payment_archive` (dev.payments)
 
+#### `public.assert_document_lease_ownership()` — FEAT-009
+
+Trigger BEFORE INSERT sur `public.documents`, SECURITY DEFINER, SET search_path = public.
+
+Valide 2 cas :
+1. `lease_id` existe dans `public.leases` (bail soft-deleted toléré)
+2. `lease_id.landlord_id = NEW.landlord_id`
+
+**Trigger** : `tr_00_assert_documents_lease_ownership` (public)
+
+**Error** : ERRCODE 23514 (check_violation), message contient "Document lease ownership mismatch"
+
+Bypass RLS intentionnellement pour voir toutes les leases (cohérence cross-FK).
+
+#### `dev.assert_document_lease_ownership()` — FEAT-009
+
+Mirror DEV de `public.assert_document_lease_ownership()`, opère sur schéma `dev` (lit dev.leases).
+
+**Trigger** : `tr_00_assert_documents_lease_ownership` (dev)
+
+#### `public.compute_document_legal_hold()` — FEAT-009
+
+Trigger BEFORE INSERT sur `public.documents`. Calcule `NEW.legal_hold := (NEW.category IN ('bail_signe', 'etat_des_lieux'))`. La catégorie est source de vérité — écrase toujours la valeur envoyée par le client.
+
+**Trigger** : `tr_00b_compute_legal_hold` (public + dev)
+
+**Pas SECURITY DEFINER** : logique pure sur NEW, pas d'accès aux autres tables.
+
+#### `dev.compute_document_legal_hold()` — FEAT-009
+
+Mirror DEV de `public.compute_document_legal_hold()`.
+
+#### `public.protect_immutable_documents()` — FEAT-009
+
+Trigger BEFORE UPDATE sur `public.documents`. Bloque toute modification de : `filename`, `storage_path`, `mime_type`, `size_bytes`, `legal_hold`.
+
+**Aucun GUC bypass** : ces colonnes sont immuables même pour les RPC SECURITY DEFINER.
+
+**ERRCODE** : 42501 (insufficient_privilege)
+
+**Trigger** : `tr_01b_protect_immutable_documents` BEFORE UPDATE (public + dev)
+
+**Note** : un UPDATE de `category` ne change PAS `legal_hold` (tr_01b le bloque). Voulu — on ne veut pas qu'un bailleur dégrade le legal_hold d'un fichier déjà uploadé.
+
+#### `dev.protect_immutable_documents()` — FEAT-009
+
+Mirror DEV de `public.protect_immutable_documents()`.
+
 #### `public.protect_sent_columns_receipts()` — FEAT-008
 
 Trigger BEFORE UPDATE sur `public.receipts`. Bloque toute modification de `sent_at` ou `sent_to_email` sauf si le flag de session GUC `app.allow_sent_columns_change = '1'` est posé.
@@ -350,15 +415,18 @@ Trigger BEFORE UPDATE, maintient `updated_at = now()`.
 
 PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom de trigger. Ordre garanti :
 
-1. **`tr_00_assert_*_ownership`** (leases + payments + receipts) — Validation cross-FK
+1. **`tr_00_assert_*_ownership`** (leases + payments + receipts + documents) — Validation cross-FK
    - `tr_00_assert_lease_ownership` (leases)
    - `tr_00_assert_payment_lease_ownership` (payments, FEAT-006)
    - `tr_00_assert_receipt_lease_ownership` (receipts, FEAT-007 — BEFORE INSERT uniquement)
-2. **`tr_01_prevent_protected_columns_change_*`** (6 tables) — Bloque deleted_at, created_at ; force updated_at
-   - landlords, properties, tenants, leases, payments (FEAT-006), receipts (FEAT-007)
+   - `tr_00_assert_documents_lease_ownership` (documents, FEAT-009 — BEFORE INSERT uniquement)
+   - `tr_00b_compute_legal_hold` (documents, FEAT-009 — BEFORE INSERT, calcul legal_hold)
+2. **`tr_01_prevent_protected_columns_change_*`** (7 tables) — Bloque deleted_at, created_at ; force updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006), receipts (FEAT-007), documents (FEAT-009)
    - `tr_01b_protect_sent_columns_receipts` (receipts uniquement — FEAT-008, GUC app.allow_sent_columns_change)
-3. **`tr_02_set_updated_at_*`** (5 tables — receipts exclue : pas de updated_at) — Met à jour updated_at
-   - landlords, properties, tenants, leases, payments (FEAT-006)
+   - `tr_01b_protect_immutable_documents` (documents uniquement — FEAT-009, aucun GUC bypass)
+3. **`tr_02_set_updated_at_*`** (6 tables — receipts exclue : pas de updated_at) — Met à jour updated_at
+   - landlords, properties, tenants, leases, payments (FEAT-006), documents (FEAT-009)
 4. **`tr_03_set_receipt_stale_on_payment_archive`** — AFTER UPDATE OF deleted_at sur public.payments + dev.payments (FEAT-007)
    - Soft-delete payment → marque is_stale = true sur les receipts liées
    - Résurrection payment → recompute is_stale (Cas 2, FEAT-007 Round 2 E5 fix)
