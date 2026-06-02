@@ -145,8 +145,8 @@ void main() {
 
         // Le dashboard affiche son contenu — pas la LoginPage (pas de TextField).
         expect(find.byType(TextField), findsNothing);
-        // Le dashboard contient ce texte placeholder, pas la LoginPage.
-        expect(find.textContaining('Tableau de bord'), findsOneWidget);
+        // Le dashboard affiche "EasyRent" dans l'AppBar — pas la LoginPage.
+        expect(find.text('EasyRent'), findsWidgets);
       },
     );
 

@@ -26,6 +26,9 @@
 | `cupertino_icons` | `^1.0.8` | Icons (compat iOS) |
 | `file_picker` | `^11.0.2` | Sélection multi-fichiers (Web + mobile), bytes en mémoire (FEAT-009) |
 | `mime` | `^2.0.0` | Détection MIME client-side depuis extension (defense in depth, FEAT-009) |
+| `fl_chart` | `^0.69.0` | Barchart 6 mois encaissé/dû (FEAT-010 Dashboard) |
+| `shared_preferences` | `^2.3.5` | Persist dismiss install prompt PWA (FEAT-010 PWA) |
+| `web` | `^1.1.0` | JS interop `beforeinstallprompt` + `matchMedia` (FEAT-010 PWA, remplace dart:html legacy) |
 
 ### Dépendances dev
 

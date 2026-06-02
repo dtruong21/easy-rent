@@ -41,6 +41,15 @@ dependencies:
   file_picker: ^11.0.2
   mime: ^2.0.0
 
+  # Dashboard charts
+  fl_chart: ^0.69.0
+
+  # PWA install prompt dismiss persistence
+  shared_preferences: ^2.3.5
+
+  # JS interop (install prompt bridge)
+  web: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

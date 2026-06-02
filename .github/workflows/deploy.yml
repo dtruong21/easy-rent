@@ -83,29 +83,8 @@ jobs:
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           channelId: ${{ needs.determine-env.outputs.firebase_channel }}
 
-  apply-supabase-migrations:
-    name: Apply Supabase migrations
-    needs: determine-env
-    runs-on: ubuntu-latest
-    environment: ${{ needs.determine-env.outputs.env_name }}
-    # Les migrations sont identiques quel que soit l'env (touchent les 2 schémas via SQL)
-    # On les applique uniquement depuis main pour éviter les doubles applications
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Link project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      - name: Apply migrations (both public + dev schemas)
-        run: supabase db push
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+  # FEAT-010 (D5) : Les migrations prod sont désactivées ici.
+  # Utiliser le workflow dédié `.github/workflows/migrate-prod.yml`
+  # (workflow_dispatch avec confirmation manuelle "yes").
+  # Raison : éviter une migration silencieuse sur chaque push main.
+  # apply-supabase-migrations: (désactivé intentionnellement)

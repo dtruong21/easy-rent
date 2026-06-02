@@ -33,7 +33,7 @@ FEAT-001 (auth)
 - Navigation principale (drawer + routes)
 - FEAT-008 — Envoyer quittance par email (Resend / Edge Function)
 - FEAT-009 — Upload & stockage de documents (Supabase Storage)
-- FEAT-010 — Dashboard + polish PWA + déploiement prod
+- FEAT-010 — Dashboard + polish PWA + déploiement prod → [`backlog/010-dashboard-pwa-prod-setup.md`](backlog/010-dashboard-pwa-prod-setup.md)
 
 ### Stories détaillées (P0 — à implémenter)
 

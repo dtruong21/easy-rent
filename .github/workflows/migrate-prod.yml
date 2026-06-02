@@ -1,0 +1,73 @@
+name: Apply migrations to PROD (manuel)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Taper "yes" pour confirmer l''application des migrations sur public (PROD)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Afficher les migrations à appliquer sans les exécuter (true = dry-run)'
+        required: false
+        type: boolean
+        default: false
+
+# Empêche 2 runs simultanés sur les migrations prod (race condition).
+concurrency:
+  group: migrate-prod
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validation de la confirmation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier la confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "yes" ]; then
+            echo "::error::Confirmation invalide. Tapez exactement 'yes' pour exécuter les migrations."
+            exit 1
+          fi
+          echo "Confirmation OK — migrations prod autorisées."
+
+  apply:
+    name: Appliquer les migrations
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link projet Supabase (prod)
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Lister les migrations en attente
+        run: supabase migration list --linked
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Appliquer les migrations (db push)
+        if: github.event.inputs.dry_run != 'true'
+        run: supabase db push --linked
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Résumé
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "::notice::Dry-run terminé — migrations listées mais non appliquées."
+          else
+            echo "::notice::Migrations appliquées avec succès sur l'environnement production."
+          fi

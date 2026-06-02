@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +56,11 @@ Future<void> main() async {
       authFlowType: AuthFlowType.pkce,
     ),
   );
+
+  // BLOCKER-1 : capture l'événement beforeinstallprompt le plus tôt possible,
+  // avant runApp, pour ne pas le rater (l'event est émis par le navigateur
+  // très tôt au chargement de la page).
+  InstallPromptJsBridge.captureDeferred();
 
   runApp(const ProviderScope(child: EasyRentApp()));
 }
