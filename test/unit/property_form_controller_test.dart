@@ -4,6 +4,7 @@ import 'package:easyrent/features/properties/application/property_detail_provide
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_form_state.dart';
+import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,9 @@ class _FakeRepo implements PropertyRepository {
 
   @override
   Future<void> archive(String id) async {}
+
+  @override
+  Future<List<PropertyListItem>> listWithLeases() async => [];
 }
 
 // ---------------------------------------------------------------------------
