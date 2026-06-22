@@ -505,7 +505,7 @@ BEGIN
     'hashed_placeholder',
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}',
-    '{}',
+    '{"full_name":"Test User"}',
     'authenticated',
     'authenticated'
   ) ON CONFLICT (id) DO NOTHING;
@@ -532,11 +532,13 @@ BEGIN
     RAISE EXCEPTION '[FAIL] TEST 16: email mal copié dans public.landlords (got "%")', pub_email;
   END IF;
 
-  IF pub_fullname IS NOT NULL THEN
-    RAISE EXCEPTION '[FAIL] TEST 16: full_name devrait être NULL à la création (got "%")', pub_fullname;
+  -- FEAT-011 : full_name est lu depuis raw_user_meta_data->>'full_name'.
+  -- Si fourni, il doit être présent. Si absent, fallback = email (voir auth_password_signup_smoke.sql).
+  IF pub_fullname IS DISTINCT FROM 'Test User' THEN
+    RAISE EXCEPTION '[FAIL] TEST 16: full_name attendu "Test User" (depuis raw_user_meta_data), obtenu "%"', pub_fullname;
   END IF;
 
-  RAISE NOTICE '[PASS] TEST 16: handle_new_user provisionne landlords avec email copié et full_name NULL dans les deux schémas';
+  RAISE NOTICE '[PASS] TEST 16: handle_new_user provisionne landlords avec email + full_name (depuis meta) dans les deux schémas';
 
   -- Cleanup (le ROLLBACK final s'en charge, mais on nettoie explicitement
   -- pour éviter les conflits si le test tourne en COMMIT)
