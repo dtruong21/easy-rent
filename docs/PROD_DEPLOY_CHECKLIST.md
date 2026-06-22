@@ -2,6 +2,7 @@
 
 > Cocher chaque item avant / pendant / après le déploiement.
 > Durée estimée : 30 min (smoke test) + 1–2h (provisionnement initial).
+> Dernière mise à jour : 2026-06-22 (FEAT-008 pivot — suppression dépendance Resend).
 
 ---
 
@@ -22,21 +23,7 @@ Aller dans GitHub → Settings → Environments → `production`.
 
 ---
 
-## B. Resend — Email (peut être fait après go-live)
-
-- [ ] Compte Resend créé sur resend.com
-- [ ] Domaine vérifié (enregistrements DNS ajoutés + propagation OK)
-- [ ] DPA signée sur resend.com/legal/dpa
-- [ ] API Key dédiée production créée (nommer `easyrent-prod`)
-- [ ] Secrets Supabase provisionnés : `RESEND_API_KEY` + `RESEND_FROM_EMAIL`
-- [ ] Edge Function `send-receipt` déployée sur le projet prod
-
-> Sans Resend configuré, l'envoi d'emails de quittances échouera.
-> Le reste de l'app fonctionne normalement.
-
----
-
-## C. Supabase Auth — Configuration URL
+## B. Supabase Auth — Configuration URL
 
 - [ ] Site URL configuré : `https://easy-rent-54cd4.web.app`
 - [ ] Redirect Allow-List configurée : `https://easy-rent-54cd4.web.app/**`
@@ -46,7 +33,7 @@ Aller dans GitHub → Settings → Environments → `production`.
 
 ---
 
-## D. Migrations
+## C. Migrations
 
 - [ ] `migrate-prod.yml` lancé en `dry_run=true` → liste de migrations vérifiée
 - [ ] `migrate-prod.yml` lancé en `dry_run=false, confirmation=yes` → appliqué OK
@@ -54,7 +41,7 @@ Aller dans GitHub → Settings → Environments → `production`.
 
 ---
 
-## E. Build + Deploy
+## D. Build + Deploy
 
 - [ ] Merge `feature/dashboard-pwa-prod-setup` → `develop` → staging déployé
 - [ ] Tests manuels en staging passent
@@ -64,7 +51,7 @@ Aller dans GitHub → Settings → Environments → `production`.
 
 ---
 
-## F. Smoke test (15 étapes — ~30 min)
+## E. Smoke test (15 étapes — ~30 min)
 
 Ouvrir `https://easy-rent-54cd4.web.app` dans Chrome.
 
@@ -79,23 +66,22 @@ Ouvrir `https://easy-rent-54cd4.web.app` dans Chrome.
 - [ ] Retour dashboard → 4 KPI cards affichées (loyers, retards, renouvellements, docs)
 - [ ] Naviguer vers le bail créé → enregistrer un paiement → dashboard KPI mis à jour
 - [ ] Sur la page quittances → générer une quittance PDF → preview PDF s'ouvre OK
-- [ ] Cliquer "Envoyer par email" → email reçu (vérifier dossier spam) _(nécessite Resend configuré)_
+- [ ] Cliquer "Partager" → la feuille de partage natif du système s'ouvre → sélectionner Mail/Gmail/WhatsApp → vérifier que PDF + sujet + corps sont pré-remplis
 - [ ] Uploader un document PDF de test (catégorie "autre") → visible dans la liste
 - [ ] Retour dashboard → activité récente affiche le paiement + la quittance
 - [ ] Chrome desktop : PWA install prompt visible → cliquer "Installer" → app installée
 
 ---
 
-## G. Vérifications post-deploy (48h)
+## F. Vérifications post-deploy (48h)
 
 - [ ] Supabase Dashboard → Logs : aucune erreur Auth ou Edge Function
-- [ ] Resend Dashboard : emails délivrés sans rebond
 - [ ] Test logout + re-login : magic link fonctionne toujours
 - [ ] Rafraîchissement forcé (Ctrl+Shift+R) : nouvelle version servie (pas de cache stale SW)
 
 ---
 
-## H. Documentation
+## G. Documentation
 
 - [ ] `docs/state/FEATURES.md` : FEAT-010 marqué ✅ déployé
 - [ ] `docs/state/INDEX.md` : timestamp mis à jour

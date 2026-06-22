@@ -1,6 +1,6 @@
 # Edge Functions et RPC — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-02 (FEAT-009 — RPC soft_delete_document + triggers documents)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-22 (FEAT-008 pivot Web Share API, FEAT-009 ✅, FEAT-010 ✅)
 
 ## Edge Functions (Deno / TypeScript)
 
@@ -33,61 +33,7 @@
 - Timeout : respects 540s limit (build + upload)
 - Privacy : no sensitive data in logs
 
----
-
-**`send-receipt`** (FEAT-008, implémentée — déploiement en attente des secrets Resend) :
-
-| Propriété | Valeur |
-|---|---|
-| **Dossier** | `supabase/functions/send-receipt/` |
-| **Fichiers** | index.ts, email_template.ts, resend_client.ts, types.ts, deps.ts, deno.json, tests/ |
-| **Invocation** | POST `/functions/v1/send-receipt` (JWT required) |
-| **Body** | `{receipt_id: uuid, schema: 'public' \| 'dev'}` |
-| **Retour 200** | `{success: true, sent_at: ISO, sent_to_email: string, resend_id: string}` |
-| **Auth** | JWT required (landlord_id = auth.uid()) |
-| **Secrets** | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ALLOWED_ORIGINS` (optionnel) |
-| **Dépendances** | @supabase/supabase-js@2.45.0, fetch natif Deno (pas de SDK Resend) |
-| **Priorité** | P0 |
-
-**Pipeline** :
-1. CORS preflight check + Origin allowlist (réutilise `_shared/cors.ts`)
-2. Méthode POST only
-3. Parse body — valide `receipt_id` (UUID v4) + `schema` (enum strict)
-4. JWT verify via `createClientWithJwt` + `auth.getUser()`
-5. Charge `receipts` (avec JOIN `leases.tenants`) via RLS — `data == null` → 404
-6. Valide état quittance : `is_voided` / `is_stale` → 422 `receipt_invalid` ; `pdf_path IS NULL` → 422 `pdf_unavailable`
-7. Valide `tenant.email` NOT NULL / non vide → sinon 422 `tenant_no_email`
-8. Charge `landlord.full_name` (signature mail)
-9. Crée signed URL Storage (60s) → fetch PDF → encode base64
-10. Construit email via `email_template.ts` (sujet + HTML minimal FR)
-11. Envoie via `resend_client.ts` → 429 → 429 `quota_exceeded` ; autres erreurs → 500 `email_send_failed`
-12. Appelle RPC `mark_receipt_as_sent` — si RPC échoue après Resend OK : log critique `[email-sent-not-persisted]` + return 200
-13. Return `{success, sent_at, sent_to_email, resend_id}`
-
-**Codes d'erreur** :
-
-| HTTP | Code | Quand |
-|---|---|---|
-| 400 | `invalid_request` | body malformé, UUID invalide, schema invalide |
-| 404 | `receipt_not_found` | RLS retourne null (cross-user ou inexistant) |
-| 405 | `method_not_allowed` | méthode != POST |
-| 422 | `tenant_no_email` | `tenant.email IS NULL` ou vide |
-| 422 | `receipt_invalid` | `is_voided = true` OU `is_stale = true` |
-| 422 | `pdf_unavailable` | `pdf_path IS NULL` ou fetch Storage échoue |
-| 429 | `quota_exceeded` | Resend retourne 429 |
-| 500 | `email_config_missing` | `RESEND_API_KEY` ou `RESEND_FROM_EMAIL` absent |
-| 500 | `email_send_failed` | autre erreur Resend (5xx, timeout, 4xx hors 422/429) |
-| 500 | `internal_error` | erreur DB inattendue |
-
-**Secrets à provisionner** :
-```bash
-supabase secrets set RESEND_API_KEY="re_xxx" RESEND_FROM_EMAIL="EasyRent <noreply@<domaine>>"
-```
-
-**Commande de déploiement** :
-```bash
-supabase functions deploy send-receipt --project-ref tbgttutodbqffrvsvkoz
-```
+**Note (FEAT-008 pivot 2026-06-22)** : Edge Function `send-receipt` (Resend/Deno TS) a été supprimée. Le partage de quittances utilise le Web Share API natif côté client Flutter (zéro dépendance backend email).
 
 ### Fonctions planifiées
 

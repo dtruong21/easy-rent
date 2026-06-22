@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-02 (FEAT-009 — table documents + enum document_category + bucket Storage documents + RPC soft_delete_document)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-22 (FEAT-009 ✅ + FEAT-010 ✅ — FEAT-010 ne modifie pas le schéma, Flutter+infra seulement)
 
 ## Tables
 
@@ -201,8 +201,8 @@
 | `voided_at` | `timestamptz` | NULL (doit être non-NULL si is_voided = true) |
 | `voided_reason` | `text` | NULL, CHECK char_length BETWEEN 3 AND 500 (obligatoire si voided) |
 | `is_stale` | `boolean` | NOT NULL DEFAULT false — recomputed par trigger tr_03 |
-| `sent_at` | `timestamptz` | NULL = jamais envoyé. Audit trail email. Modifiable uniquement via `mark_receipt_as_sent` RPC. FEAT-008. |
-| `sent_to_email` | `text` | NULL si `sent_at IS NULL`. Snapshot email destination au moment de l'envoi. CHECK char_length BETWEEN 3 AND 255. Modifiable uniquement via `mark_receipt_as_sent` RPC. FEAT-008. |
+| `sent_at` | `timestamptz` | NULL = jamais partagé. Audit trail partage. Marqué côté client APRÈS Web Share API réussi (FEAT-008 pivot 2026-06-22). Modifiable uniquement via `mark_receipt_as_sent` RPC. |
+| `sent_to_email` | `text` | NULL si `sent_at IS NULL`. Snapshot email destination au moment du partage. CHECK char_length BETWEEN 3 AND 255. Modifiable uniquement via `mark_receipt_as_sent` RPC. FEAT-008 pivot. |
 
 **Contraintes** :
 - `receipts_total_check` : `total_cents = rent_cents + charges_cents`

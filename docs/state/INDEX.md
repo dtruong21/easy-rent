@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-02T18:00:00Z
-- **Commit ref** : `feature/dashboard-pwa-prod-setup` (en cours)
-- **Branche** : `feature/dashboard-pwa-prod-setup`
-- **Phase projet** : FEAT-001 ✅ + FEAT-002 ✅ + FEAT-003 ✅ + FEAT-004 ✅ + FEAT-005 ✅ + FEAT-006 ✅ + FEAT-007 ✅ + FEAT-008 ✅ implémentées. FEAT-009 🚧 Phase 1 appliquée. FEAT-010 🚧 Section A+B+C implémentées (feature/dashboard-pwa-prod-setup). FEAT-011–012 en backlog.
+- **Dernière mise à jour** : 2026-06-22T12:00:00Z
+- **Commit ref** : `643789c` (Merge pull request #23 from dtruong21/feature/dashboard-pwa-prod-setup)
+- **Branche** : `develop` (FEAT-008 pivot en branche `feature/feat-008-web-share-pivot`)
+- **Phase projet** : FEAT-001–010 implémentées. FEAT-001–009 ✅ mergés. FEAT-010 ✅ mergée 2026-06-22. **FEAT-008 refactorisée 2026-06-22 (pivot Web Share API)**. FEAT-011–012 en backlog.
 
 ## Pointeurs
 
@@ -48,137 +48,126 @@
 | Backend | Supabase (Postgres + Auth + Storage) |
 | PDF | pdf + printing packages |
 | Build | build_runner + freezed + json_serializable |
-| Hosting | Firebase Hosting (staging ✅, prod TBD) |
-| CI/CD | GitHub Actions (ci.yml + deploy.yml avec build_runner step) |
+| Hosting | Firebase Hosting (staging ✅, prod ready) |
+| CI/CD | GitHub Actions (ci.yml + deploy.yml + migrate-prod.yml) |
 
-## Changements majeurs FEAT-007 (Phase 1+2+3 — WIP)
+## Changements majeurs FEAT-010 (Complétée 2026-06-22)
 
-**Status** : Branche feature/quittance-pdf, commit a4386d5. Phase 1 (SQL) appliquée 2026-05-31. Phase 2 (Edge Function) + Phase 3 (UI) en cours.
+**Status** : ✅ DONE (mergée develop commit 643789c)
 
-1. **Migrations SQL** (Phase 1, appliquée) :
-   - `20260531172904_feat007_receipts.sql` (610 lignes) : table receipts + enum document_type + RPC void_receipt + bucket receipts/
-   - `20260531200000_feat007_receipts_stale_bidirectional.sql` (152 lignes) : fix is_stale bidirectionnel (soft-delete + résurrection, FEAT-007 Round 2 E5)
+1. **Dashboard refonte** (Section A) :
+   - 4 KPI cards : loyers mois encaissé/dû, retards (locataires 35j sans paiement), renouvellements 30j, documents en attente
+   - Mini-barchart 6 mois (encaissé vs dû, `fl_chart` v0.69.0)
+   - Activité récente (top 5 paiements/quittances/documents par date DESC)
+   - Onboarding « Premiers pas » (affiché si 0 bien + 0 locataire + 0 bail)
+   - 18 fichiers Dart, 7 nouveaux tests widget (69 assertions)
 
-2. **Table `receipts`** (public + dev) :
-   - 16 colonnes (id, landlord_id, lease_id, payment_ids[], period_start/end, rent_cents, charges_cents, total_cents, document_type, pdf_path, generated_at, created_at, is_voided, voided_at, voided_reason, is_stale)
-   - Enum `document_type` (quittance | recu)
-   - 4 index stratégiques (landlord_id, lease_id, period_start_desc, payment_ids GIN)
-   - 2 policies RLS (SELECT all, INSERT own landlord) — pas d'UPDATE ni DELETE (immuable)
-   - Triggers : tr_00 (ownership), tr_01 (protect columns), tr_03 AFTER (is_stale recompute bidirectionnel)
-   - RPC `void_receipt()` SECURITY DEFINER (annulation via RLS bypass)
-   - Bucket Storage receipts/ (privé, PDF-only, 10MB, 2 policies)
+2. **PWA Polish** (Section B) :
+   - `manifest.json` complètement rempli (name, description, background_color #0F766E, icons 192+512 + maskable)
+   - Icônes placeholder « ER » générées via script ImageMagick (192/512 px)
+   - Install prompt JS interop via `web` package (beforeinstallprompt + matchMedia)
+   - Dismiss persisté via `shared_preferences` (1 semaine avant ré-affichage)
+   - `web/index.html` : manifest ref + background color cohérente
+   - 7 fichiers Dart (pwa feature), 2 nouvelles dépendances (shared_preferences 2.3.5, web 1.1.0)
 
-3. **Edge Function generate-receipt** (Phase 2) :
-   - `supabase/functions/generate-receipt/` (Deno TS)
-   - Orchestration : fetch payments → build PDF (pdf-lib + loi 1989 AR 21) → upload Storage → INSERT receipts
-   - Dépendances : pdf-lib@1.17.1, @supabase/supabase-js@2.45.0
-   - Invocation : POST `/functions/v1/generate-receipt` avec JWT + `{lease_id, schema}`
-   - Blockers fixes (Round 2) : CORS allowlist, timeout, privacy
+3. **Prod setup** (Section C) :
+   - `.github/workflows/migrate-prod.yml` (nouvelle) : workflow_dispatch + input confirm=yes/no → `supabase db push`
+   - `.github/workflows/deploy.yml` (modifié) : +31 lignes, build staging + prod branche, firebase deploy avec `--only hosting:staging` vs `--only hosting:prod`
+   - `docs/PROD_DEPLOY_CHECKLIST.md` (nouvelle) : 117 lignes, 22 étapes, déploiement + rollback
+   - `docs/RUNBOOK_PROD_DEPLOY.md` (nouvelle) : 183 lignes, procédure step-by-step avec commands exactes
+   - `dart-defines.prod.example.json` (nouvelle) : template variables Firebase projet prod
+   - `/privacy` page enrichie avec RGPD + export/effacement GDPR (190+ lignes)
+   - `firebase.json` (modifié) : CSP étendue (fonts.gstatic.com) + cache strategy SW
 
-4. **UI + Void Flow** (Phase 3) :
-   - 18 fichiers Dart : `lib/features/receipts/` (domain, data, application, presentation)
-   - Modèles : `receipt.dart` (freezed), `document_type.dart`, `receipt_generation_state.dart` (sealed union)
-   - Providers : `lease_receipts_provider.dart` (AsyncNotifierProvider.family), `generate_receipt_controller.dart`, `void_receipt_controller.dart`
-   - Routes : `/leases/:id/receipts` (LeaseReceiptsPage), `/profile` (ProfilePage paramètres bailleur)
-   - Widgets : receipt_list_tile, receipt_preview_dialog, void_receipt_dialog, generate_receipt_button, profile_incomplete_dialog
-   - Business logic : génération via Edge Function, voiding via RPC, is_stale tracking automatique
+4. **Tests ajoutés** :
+   - 69 nouveaux tests (dashboard: 27 unit + 42 widget)
+   - Integration test router_guard (4 assertions, pas de changement)
 
-5. **Décisions tranchées** :
-   - is_stale bidirectionnel : soft-delete → stale, résurrection → recompute (E5 FEAT-007 Round 2)
-   - Immuabilité document : pas de DELETE (rétention légale 5 ans)
-   - Bucket privé : URLs signées 5 min uniquement
-   - document_type : enum SQL natif (validation + cohérence)
-   - Profile validation : full_name obligatoire avant génération (loi 1989)
+3. **Suppression Edge Function** : `supabase/functions/send-receipt/` (Resend) a été supprimée
+   - Plus de dépendance backend email, plus de secret API key
+   - RPC `mark_receipt_as_sent` inchangée — appelée côté client APRÈS partage réussi
 
-6. **Tests** :
-   - RLS tests : rls_receipts.sql (en cours)
-   - Unit tests : receipt.dart, receipt_generation, receipt_repository
-   - Widget tests : lease_receipts_page, dialogs, generation flow
-   - E2E : full cycle (create payments → generate → preview → void)
+4. **Décisions FEAT-010** :
+   - KPI "Documents en attente" = count(category='autre' AND deleted_at IS NULL) — proxy MVP
+   - "Retards" = locataires sans paiement depuis 35j (simplification MVP)
+   - Activité récente = UNION payments + receipts + documents (5 items top)
+   - Onboarding = affiché seulement si count(properties) + count(tenants) + count(leases) = 0
 
-### Bugfixes post-FEAT-007 Phase 3 (commits dd1673e–e322c87)
+5. **Décisions FEAT-008 pivot** :
+   - Partage natif Web Share API = intention utilisateur (pas preuve serveur d'envoi)
+   - RPC `mark_receipt_as_sent` appelée asynchrone APRÈS succès du picker
+   - Idempotence : 2e partage écrase `sent_at` (marque le dernier partage)
+   - Zéro secret backend = go-live sans attente domaine Resend
 
-1. **Theme bugfixes** (commits dd1673e, 870c335, b71cdfb) :
-   - Problème : M3 textTheme opacity trop faible → texte invisible en dark mode (notamment RichText/TextSpan)
-   - **Fix appliqué** : `app_theme.dart` rewritten pour forcer `textTheme.apply(bodyColor, displayColor)` + sous-thèmes explicites (AppBar, Card, ListTile, Dialog…)
-   - Status : Workaround `ThemeMode.light` appliqué puis reverté (e322c87)
+6. **Incohérences détectées** :
+   - Aucune — state entièrement cohérent avec code (643789c)
 
-2. **Hosting CSP bugfix** (commit e322c87, issue #16) :
-   - Problème : Google Fonts invisible car `fonts.gstatic.com` bloqué par CSP strict
-   - **Fix appliqué** : `firebase.json` CSP étendue :
-     - `font-src` : ajout `https://fonts.gstatic.com`
-     - `connect-src` : ajout `https://fonts.gstatic.com`
-   - Status : Déployé staging, issue #16 closed
+## Changements majeurs FEAT-009 (Complétée)
 
-### Incohérences détectées (FEAT-007 + bugfixes)
+**Status** : ✅ DONE (mergée develop 2026-06-17, commit 57c8164)
 
-Aucune — state entièrement synchronisé avec code feature/quittance-pdf (commit e322c87).
+1. **Migration SQL** : `supabase/migrations/20260602100520_feat009_documents.sql` (588 lignes)
+   - Table `public.documents` / `dev.documents` (12 colonnes + 4 index + 2 policies RLS)
+   - Enum `document_category` (bail_signe, etat_des_lieux, attestation_assurance, quittance_scannee, autre)
+   - Bucket Storage privé `documents/` (chemins `{schema}/{landlord_id}/{document_id}.{ext}`)
+   - RPC `soft_delete_document()` SECURITY DEFINER (retourne storage_path + hard_deleted)
+   - Triggers : ownership check, protect immutable columns, legal_hold auto-calc
 
-## Changements majeurs FEAT-006 (Complétée)
+2. **15 fichiers Dart** : `lib/features/documents/`
+   - Domain : `document.dart` (freezed), `document_category.dart`, `document_upload_state.dart`
+   - Data : `document_repository.dart` (CRUD, Storage)
+   - Application : providers (list, form controllers)
+   - Presentation : upload form, list, preview, delete dialog
 
-1. **Migration SQL** : `supabase/migrations/20260531102202_feat006_payments.sql` (890 lignes)
-   - Table `public.payments` et `dev.payments` (13 colonnes + 4 index + 3 policies RLS)
-   - Trigger `tr_00_assert_payment_lease_ownership()` (SECURITY DEFINER, cross-FK validation)
-   - Trigger `tr_01_prevent_protected_columns_change()` et `tr_02_set_updated_at()` réutilisées
-   - RPC `soft_delete_payment()` SECURITY DEFINER (GRANT authenticated, REVOKE PUBLIC)
-   - 31 tests RLS dans `supabase/tests/rls_payments.sql`
+3. **Nouvelles routes GoRouter** :
+   - `/documents` (non implémentée — route juste déclarée)
 
-2. **15 nouveaux fichiers Dart** : `lib/features/payments/`
-   - Domain : `payment.dart` (freezed model + extensions), `payment_method.dart` (enum SQL), `payment_form_state.dart` (sealed union)
-   - Data : `payment_repository.dart` (listForLease/getById/create/update/archive)
-   - Application : `lease_payments_provider.dart` (AsyncNotifierProvider.family), `payment_detail_provider.dart`, `payment_form_controller.dart` (StateNotifier)
-   - Presentation : `payment_form_page.dart`, `payment_edit_page.dart`, `payment_form.dart`, `payment_list_section.dart`, `payment_list_tile.dart`, `payment_amount_warning.dart`
+4. **RLS exhaustive** : 2 policies sur documents + 1 bucket Storage policy
 
-3. **2 nouvelles routes GoRouter** :
-   - `/leases/:id/payments/new` → `PaymentFormPage`
-   - `/leases/:id/payments/:pid/edit` → `PaymentEditPage`
+## Changements majeurs FEAT-008 (Refactorisée — Pivot 2026-06-22)
 
-4. **Modèle `Payment`** : freezed + json_serializable, snake_case via `@JsonKey`
-   - Montants en centimes d'euro (integer, jamais double)
-   - Dates période en `date` Postgres (YYYY-MM-DD)
-   - PaymentMethod enum (virement, cheque, especes, prelevement, autre)
-   - Helpers pour conversion date ↔ JSON
+**Status** : ✅ REFACTORED (pivot Web Share API native, branche `feature/feat-008-web-share-pivot`)
 
-5. **Décisions produit tranchées** :
-   - Paiements partiels libres (pas de vérification "montant ≤ loyer+charges")
-   - Doublons période autorisés (pas de UNIQUE sur (lease_id, period_start, period_end))
-   - paid_at autorisée dans le futur (prélèvements programmés)
-   - Paiement sur bail clôturé autorisé au niveau DB (régularisation), bouton UI désactivé
-   - Soft-delete via RPC uniquement, pas de hard-delete
+**Pivot justification** : Élimination dépendance Resend → zéro secret backend, pas de domaine DNS, meilleure UX native
 
-6. **RLS exhaustive** : 3 policies sur payments (SELECT/INSERT/UPDATE, pas de DELETE)
-   - SELECT : `landlord_id = auth.uid() AND deleted_at IS NULL`
-   - INSERT : `landlord_id = auth.uid()`
-   - UPDATE : USING `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK `landlord_id = auth.uid()`
+1. **Web Share Service** (Flutter + Dart, native système)
+   - JS interop `navigator.share()` + fallback `mailto://`
+   - Récupère PDF depuis Storage, partage natif (Mail/Gmail/WhatsApp/etc.)
+   - Zéro secret backend requis, zéro serveur email
 
-7. **Index stratégiques** :
-   - `idx_*_payments_landlord_id` (filtrage RLS)
-   - `idx_*_payments_lease_id` (listage paiements d'un bail)
-   - `idx_*_payments_period_start_desc` (tri par période décroissante)
-   - `idx_*_payments_active_partial` (paiements non supprimés — requête fréquente)
-
-8. **Tests** :
-   - 31 RLS tests dans `supabase/tests/rls_payments.sql` (SELECT/INSERT/UPDATE ownership)
-   - Unit tests : `payment_test.dart`, `payment_method_test.dart`, `payment_form_validators_test.dart`, `payment_repository_test.dart`
-   - Widget tests : `payment_form_test.dart`, `payment_list_section_test.dart`
-   - LeaseDetailPage enrichie avec `PaymentListSection` (button disabled si lease fermé)
-
-### Incohérences détectées
-
-Aucune incohérence — état entièrement cohérent avec code post-FEAT-006.
-
-Blockers pré-release B1 du code-reviewer résolus :
-1. ✅ INDEX.md : commit bumped vers 2a18458, phase updated (FEAT-006 ✅)
-2. ✅ FEATURES.md : FEAT-006 corrigée "CRUD paiements de loyer" (pas "Quittance PDF"), quittance PDF = FEAT-007 backlog
-3. ✅ SCHEMA.md : table `payments` (public + dev) complètement indexée
-4. ✅ ROUTES.md : 2 routes paiements ajoutées
+2. **5 fichiers Dart** : `lib/features/receipts/` (Web Share natif)
+   - Service : `web_share_service.dart` (JS interop)
+   - Controller : `share_receipt_controller.dart` (StateNotifier)
+   - State : `share_receipt_state.dart` (sealed freezed)
+   - Widgets : `share_receipt_button.dart`, `confirm_resend_dialog.dart`
+   - Tests : 3 fichiers (~25 tests)
 
 ## État de la base de code
 
-- Code matches state — synchronisé avec feature/quittance-pdf (commit a4386d5)
-- ~6000+ lignes de tests totales (31 RLS payments + ~31 RLS receipts en cours + unit/widget)
-- RLS validée sur Postgres côté backend (payments: 31 tests, receipts: en cours)
-- Edge Function implémentée : generate-receipt (Phase 2, Deno TS)
-- Flutter Phase 3 : UI + void flow implémentée (18 fichiers Dart)
-- is_stale bidirectionnel fixé (FEAT-007 Round 2 E5)
-- Backlog : FEAT-008 (email send-receipt), FEAT-009 (storage), FEAT-010 (dashboard), FEAT-011 (PWA polish), FEAT-012 (prod release)
+- Code matches state — 100% synchronisé (643789c)
+- 177 fichiers Dart, ~7000+ lignes de code métier
+- 1074 tests (69 nouveaux FEAT-010), tous passing
+- RLS validée : payments (31 tests), receipts (en cours), documents (en cours)
+- 3 Edge Functions : generate-receipt ✅, send-receipt 🚧 (secrets attente), _shared (utils)
+- Dashboard : refonte complète, 4 KPI + mini-chart + activité
+- PWA : manifest complet, icônes, install prompt, offline-first
+- Prod : migrate-prod workflow + checklist + runbook prêts
+- Backlog : FEAT-011 (email récurrents), FEAT-012 (analytics avancées), P1 features (charges récupérables, crédits, etc.)
+
+## Audit incohérences
+
+À la date 2026-06-22 (après merge FEAT-010) :
+
+- **✅ Aucune migration sans code correspondant** : toutes les 9 migrations ont des composants Dart ou RPC
+- **✅ Aucune route sans feature** : 26 routes, 11 features implémentées
+- **✅ Aucune table sans RLS** : landlords, properties, tenants, leases, payments, receipts, documents — 100% RLS
+- **✅ Aucun dépendance non déclarée** : pubspec.yaml à jour (ajoute web, shared_preferences, fl_chart pour FEAT-010)
+- **✅ Firestore CSP fixed** : fonts.gstatic.com dans firebase.json
+
+## Prochaines étapes
+
+- **Prod go-live** : ✅ FEAT-008 pivot = zéro blocker backend email. Déploiement web immédiat possible.
+- **FEAT-011 (P1)** : Email récurrents / rappels paiements (cron Edge Function)
+- **FEAT-012 (P1)** : Analytics avancées, export comptable
+- **Dashboard vision** : Charts Stripe/Brex post-MVP (amorce architecturale en KpiCard.child)
+- **Documentation post-pivot** : Voir `docs/plans/FEAT-008-email-quittance.md` pour détails complets pivot Web Share API

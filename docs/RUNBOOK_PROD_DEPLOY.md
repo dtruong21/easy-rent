@@ -1,7 +1,10 @@
 # Runbook — 1er déploiement production EasyRent
 
 > Audience : développeur / exploitant EasyRent.
-> Durée estimée (1er deploy) : 2–3 heures (hors provisionnement Resend domaine DNS qui peut prendre 48h).
+> Durée estimée (1er deploy) : 2–3 heures.
+> Dernière mise à jour : 2026-06-22
+> 
+> **FEAT-008 pivot (2026-06-22)** : L'envoi de quittances utilise le partage natif Web Share API côté client. Aucun secret backend email requis.
 
 ---
 
@@ -23,24 +26,7 @@ Aller dans GitHub → Settings → Environments → `production` → Add secret 
 | `SUPABASE_ACCESS_TOKEN` | `sbp_xxx...` | Dashboard Supabase → Account → Access Tokens |
 | `SUPABASE_DB_PASSWORD` | mot de passe DB | Dashboard Supabase → Settings → Database |
 
-Note : `RESEND_API_KEY` et `RESEND_FROM_EMAIL` sont des secrets Supabase (Edge Functions), pas GitHub.
-
-### 1.2 Resend (email quittances)
-
-- Créer un compte Resend (resend.com)
-- Vérifier un domaine email (ajouter les enregistrements DNS — peut prendre 24–48h)
-- Signer la DPA sur resend.com/legal/dpa
-- Créer une API Key dédiée production (nommer : `easyrent-prod`)
-- Provisionner les secrets sur Supabase prod :
-  ```bash
-  supabase secrets set --project-ref tbgttutodbqffrvsvkoz \
-    RESEND_API_KEY="re_xxx" \
-    RESEND_FROM_EMAIL="EasyRent <noreply@votre-domaine.fr>"
-  ```
-
-**Note** : Sans Resend configuré, l'app fonctionne. Seul l'envoi de quittances par email échouera. Ce n'est pas un blocant pour le déploiement de l'app elle-même.
-
-### 1.3 Supabase Auth — Configuration URL
+### 1.2 Supabase Auth — Configuration URL
 
 Dans Dashboard Supabase → Authentication → URL Configuration :
 
@@ -48,6 +34,8 @@ Dans Dashboard Supabase → Authentication → URL Configuration :
 - **Redirect Allow-List** : `https://easy-rent-54cd4.web.app/**`
 
 Sans cette configuration, les magic links redirigeront vers une mauvaise URL et l'authentification échouera en production.
+
+**Remarque** : Aucun secret email n'est requis. Le partage de quittances utilise le Web Share API natif côté client.
 
 ---
 
@@ -68,18 +56,9 @@ supabase link --project-ref tbgttutodbqffrvsvkoz
 
 # Déployer les functions
 supabase functions deploy generate-receipt --project-ref tbgttutodbqffrvsvkoz
-supabase functions deploy send-receipt --project-ref tbgttutodbqffrvsvkoz
 ```
 
-### Étape c. Provisionner les secrets Edge Functions
-
-```bash
-supabase secrets set --project-ref tbgttutodbqffrvsvkoz \
-  RESEND_API_KEY="re_xxx" \
-  RESEND_FROM_EMAIL="EasyRent <noreply@votre-domaine.fr>"
-```
-
-### Étape d. Appliquer les migrations (workflow_dispatch)
+### Étape c. Appliquer les migrations (workflow_dispatch)
 
 Sur GitHub → Actions → "Apply migrations to PROD (manuel)" :
 1. Cliquer "Run workflow"
@@ -87,7 +66,7 @@ Sur GitHub → Actions → "Apply migrations to PROD (manuel)" :
 3. Re-lancer avec `dry_run: false` et `confirmation: yes`
 4. Vérifier la réussite dans les logs
 
-### Étape e. Déployer l'app (push sur main)
+### Étape d. Déployer l'app (push sur main)
 
 ```bash
 git checkout main
@@ -97,7 +76,7 @@ git push origin main
 
 Le workflow `deploy.yml` se déclenche automatiquement → Build + Firebase Hosting.
 
-### Étape f. Smoke test
+### Étape e. Smoke test
 
 Suivre la checklist `docs/PROD_DEPLOY_CHECKLIST.md` (15 étapes).
 
@@ -169,7 +148,6 @@ Le build prod utilise `--pwa-strategy=offline-first` (Flutter par défaut).
 Pendant les 48h post-deploy, vérifier 2x/jour :
 
 - **Supabase Dashboard** → Logs (Auth errors, Edge Function failures)
-- **Resend Dashboard** → Email delivery failures
 - **Firebase Hosting** → Usage / Requests (console.firebase.google.com)
 
 Alertes automatisées (Sentry, Pagerduty) : non implémentées en MVP — planifiées P1.
