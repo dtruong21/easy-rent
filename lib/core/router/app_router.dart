@@ -38,10 +38,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: refreshStream,
     redirect: (context, state) {
-      // On lit la valeur synchrone du provider (pas de watch ici car on est
-      // en dehors du build tree). Le GoRouterRefreshStream garantit que cette
-      // fonction est rappelée dès que la session change.
-      final isAuthed = ref.read(isAuthenticatedProvider);
+      // currentSession est mis à jour synchroniquement par le SDK Supabase
+      // AVANT l'émission du stream. Le StreamProvider, lui, propage la
+      // nouvelle valeur en microtask suivante — race avec GoRouterRefreshStream
+      // qui peut déclencher le redirect avant cette propagation. On lit donc
+      // directement la session du repo pour éviter ce race au signup.
+      final isAuthed = ref.read(authRepositoryProvider).currentSession != null;
       final isRecovery = ref.read(isInPasswordRecoveryProvider);
       final location = state.matchedLocation;
 
