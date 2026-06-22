@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/ui/cards/card_empty_state.dart';
+import '../../../core/ui/cards/view_mode.dart';
+import '../../../core/ui/cards/view_mode_provider.dart';
+import '../../../core/ui/breakpoints.dart';
 import '../../../core/utils/postgrest_error_mapper.dart';
-import '../application/leases_list_provider.dart';
-import '../domain/lease_list_item.dart';
-import 'widgets/lease_card.dart';
+import '../application/leases_filter_provider.dart';
+import 'widgets/leases_card_view.dart';
+import 'widgets/leases_filter_bar.dart';
+import 'widgets/leases_table_view.dart';
 
 /// Liste des baux du landlord courant.
 ///
@@ -15,12 +20,17 @@ import 'widgets/lease_card.dart';
 /// - État vide : "Aucun bail enregistré" + bouton "Créer un bail".
 /// - Triés par `status ASC` (actif d'abord) puis `start_date DESC`.
 /// - Bandeau si la limite de 200 baux est atteinte.
+/// - Toggle Card/Tableau (masqué sur mobile).
+/// - Filtre par statut (SegmentedButton sur desktop, Dropdown sur mobile).
 class LeasesListPage extends ConsumerWidget {
   const LeasesListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncLeases = ref.watch(leasesListProvider);
+    final asyncLeases = ref.watch(filteredLeasesProvider);
+    final viewMode = context.isMobile
+        ? ViewMode.card
+        : ref.watch(viewModeProvider('leases'));
 
     return Scaffold(
       appBar: AppBar(
@@ -33,100 +43,55 @@ class LeasesListPage extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Créer un bail'),
       ),
-      body: asyncLeases.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(
-          message: e is PostgrestException
-              ? mapPostgrestError(e)
-              : 'Erreur de chargement',
-          onRetry: () => ref.invalidate(leasesListProvider),
-        ),
-        data: (leases) => _LeasesList(leases: leases),
-      ),
-    );
-  }
-}
-
-class _LeasesList extends StatelessWidget {
-  const _LeasesList({required this.leases});
-
-  final List<LeaseListItem> leases;
-
-  @override
-  Widget build(BuildContext context) {
-    if (leases.isEmpty) {
-      return const _EmptyState();
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 96),
-      itemCount: leases.length + (leases.length >= 200 ? 1 : 0),
-      itemBuilder: (context, index) {
-        // Bandeau limite 200
-        if (index == leases.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'Limite de 200 baux atteinte. Contactez le support pour augmenter cette limite.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          );
-        }
-        final item = leases[index];
-        return LeaseCard(
-          key: ValueKey(item.lease.id),
-          item: item,
-          onTap: () => context.push('/leases/${item.lease.id}'),
-        );
-      },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.description_outlined,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Vos contrats de location',
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Une fois vos biens et locataires créés,\nvous pourrez créer ici votre premier bail.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const LeasesFilterBar(),
+          Expanded(
+            child: asyncLeases.when(
+              loading: () => viewMode == ViewMode.table
+                  ? LeasesTableView.loading()
+                  : LeasesCardView.loading(),
+              error: (e, _) => _ErrorView(
+                message: e is PostgrestException
+                    ? mapPostgrestError(e)
+                    : 'Erreur de chargement',
+                onRetry: () => ref.invalidate(filteredLeasesProvider),
               ),
-              textAlign: TextAlign.center,
+              data: (leases) {
+                if (leases.isEmpty) {
+                  return CardEmptyState(
+                    icon: Icons.description_outlined,
+                    title: 'Aucun bail enregistré',
+                    message:
+                        'Créez un bail pour démarrer la gestion locative.\n'
+                        "Vous aurez besoin d'au moins un bien et un locataire.",
+                    action: FilledButton.icon(
+                      key: const Key('btn_add_lease_empty'),
+                      onPressed: () => context.push('/leases/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Créer un bail'),
+                    ),
+                  );
+                }
+
+                if (viewMode == ViewMode.table) {
+                  return LeasesTableView(leases: leases);
+                }
+
+                return LeasesCardView(leases: leases);
+              },
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              key: const Key('btn_add_lease_empty'),
-              onPressed: () => context.push('/leases/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('Créer un bail'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Error view
+// ---------------------------------------------------------------------------
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message, required this.onRetry});
