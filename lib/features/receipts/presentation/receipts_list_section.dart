@@ -5,7 +5,7 @@ import 'package:logging/logging.dart';
 
 import '../application/lease_receipts_provider.dart';
 import '../domain/receipt.dart';
-import 'widgets/receipt_list_tile.dart';
+import 'widgets/receipts_timeline_view.dart';
 
 final _log = Logger('ReceiptsListSection');
 
@@ -64,7 +64,7 @@ class ReceiptsListSection extends ConsumerWidget {
               },
               data: (receipts) {
                 if (receipts.isEmpty) {
-                  return _EmptyReceiptsHint();
+                  return const _EmptyReceiptsHint();
                 }
                 return _ReceiptsList(
                   receipts: receipts,
@@ -102,18 +102,23 @@ class _ReceiptsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Affiche les 3 premières quittances max avec la timeline compacte.
+    // Pour la liste complète, naviguer vers /leases/:id/receipts.
+    final preview = receipts.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final receipt in receipts)
-          ReceiptListTile(
-            receipt: receipt,
+        SizedBox(
+          height: preview.length * 90.0,
+          child: ReceiptsTimelineView(
+            receipts: preview,
             leaseId: leaseId,
             tenantEmail: tenantEmail,
             tenantFirstName: tenantFirstName,
             propertyAddress: propertyAddress,
             landlordFullName: landlordFullName,
           ),
+        ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerRight,
@@ -130,6 +135,8 @@ class _ReceiptsList extends StatelessWidget {
 }
 
 class _EmptyReceiptsHint extends StatelessWidget {
+  const _EmptyReceiptsHint();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

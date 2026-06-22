@@ -3,32 +3,45 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/cards/card_empty_state.dart';
+import '../../../core/ui/cards/view_mode.dart';
+import '../../../core/ui/cards/view_mode_provider.dart';
+import '../../../core/ui/breakpoints.dart';
 import '../../leases/application/lease_detail_provider.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/property_detail_provider.dart';
 import '../../tenants/application/tenant_detail_provider.dart';
-import '../application/lease_receipts_provider.dart';
-import '../domain/receipt.dart';
-import 'widgets/receipt_list_tile.dart';
+import '../application/receipts_filter_provider.dart';
+import 'widgets/lease_context_banner.dart';
+import 'widgets/receipts_card_view.dart';
+import 'widgets/receipts_filter_bar.dart';
+import 'widgets/receipts_timeline_view.dart';
 
 final _log = Logger('LeaseReceiptsPage');
 
 /// Page `/leases/:id/receipts` — liste complète des quittances d'un bail.
 ///
-/// Route dédiée pour consulter toutes les quittances (y compris annulées).
-/// La [ReceiptsListSection] dans [LeaseDetailPage] offre une vue résumée
-/// intégrée ; cette page permet l'accès direct et un affichage complet.
+/// Vue par défaut : Timeline verticale groupée par année.
+/// Vue alternative : grille de Cards.
+/// Filtre statut + filtre année en tête de page.
+/// Bandeau contextuel bail au sommet.
 class LeaseReceiptsPage extends ConsumerWidget {
   const LeaseReceiptsPage({super.key, required this.leaseId});
 
   final String leaseId;
 
+  String get _viewModeKey => 'receipts:$leaseId';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncReceipts = ref.watch(leaseReceiptsProvider(leaseId));
-    final theme = Theme.of(context);
+    final asyncFiltered = ref.watch(filteredReceiptsProvider(leaseId));
 
-    // Charger le contexte nécessaire au bouton de partage des quittances.
+    // Vue : Timeline (table) par défaut. Sur mobile, force Timeline.
+    final viewMode = context.isMobile
+        ? ViewMode.table
+        : ref.watch(viewModeProvider(_viewModeKey));
+
+    // Charger le contexte pour les actions de partage.
     final asyncLease = ref.watch(leaseDetailProvider(leaseId));
     final tenantId = asyncLease.valueOrNull?.tenantId;
     final propertyId = asyncLease.valueOrNull?.propertyId;
@@ -51,120 +64,103 @@ class LeaseReceiptsPage extends ConsumerWidget {
         title: const Text('Quittances'),
         leading: BackButton(onPressed: () => context.go('/leases/$leaseId')),
       ),
-      body: asyncReceipts.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) {
-          _log.warning('Erreur chargement quittances', e);
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Impossible de charger les quittances.',
-                    style: TextStyle(color: theme.colorScheme.error),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () => ref
-                        .read(leaseReceiptsProvider(leaseId).notifier)
-                        .refresh(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Réessayer'),
-                  ),
-                ],
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Bandeau contexte bail.
+          LeaseContextBanner(leaseId: leaseId),
+          // Barre de filtres.
+          ReceiptsFilterBar(leaseId: leaseId),
+          // Liste principale.
+          Expanded(
+            child: asyncFiltered.when(
+              loading: () => viewMode == ViewMode.card
+                  ? ReceiptsCardView.loading()
+                  : ReceiptsTimelineView.loading(),
+              error: (e, _) {
+                _log.warning('Erreur chargement quittances', e);
+                return _ErrorView(
+                  onRetry: () =>
+                      ref.invalidate(filteredReceiptsProvider(leaseId)),
+                );
+              },
+              data: (receipts) {
+                if (receipts.isEmpty) {
+                  return CardEmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Aucune quittance générée',
+                    message:
+                        "Les quittances apparaissent ici dès qu'un paiement est "
+                        'enregistré et qu\'une quittance est générée depuis la page '
+                        'Paiements.',
+                    action: FilledButton.icon(
+                      key: const Key('btn_go_payments_empty'),
+                      onPressed: () =>
+                          context.push('/leases/$leaseId/payments/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Voir les paiements'),
+                    ),
+                  );
+                }
+
+                if (viewMode == ViewMode.card) {
+                  return ReceiptsCardView(
+                    receipts: receipts,
+                    leaseId: leaseId,
+                    tenantEmail: tenantEmail,
+                    tenantFirstName: tenantFirstName,
+                    propertyAddress: propertyAddress,
+                    landlordFullName: landlordFullName,
+                  );
+                }
+
+                return ReceiptsTimelineView(
+                  receipts: receipts,
+                  leaseId: leaseId,
+                  tenantEmail: tenantEmail,
+                  tenantFirstName: tenantFirstName,
+                  propertyAddress: propertyAddress,
+                  landlordFullName: landlordFullName,
+                );
+              },
             ),
-          );
-        },
-        data: (receipts) {
-          if (receipts.isEmpty) {
-            return const _EmptyPage();
-          }
-          return _ReceiptsList(
-            receipts: receipts,
-            leaseId: leaseId,
-            tenantEmail: tenantEmail,
-            tenantFirstName: tenantFirstName,
-            propertyAddress: propertyAddress,
-            landlordFullName: landlordFullName,
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ReceiptsList extends StatelessWidget {
-  const _ReceiptsList({
-    required this.receipts,
-    required this.leaseId,
-    this.tenantEmail,
-    this.tenantFirstName = '',
-    this.propertyAddress = '',
-    this.landlordFullName = '',
-  });
+// ---------------------------------------------------------------------------
+// Error view
+// ---------------------------------------------------------------------------
 
-  final List<Receipt> receipts;
-  final String leaseId;
-  final String? tenantEmail;
-  final String tenantFirstName;
-  final String propertyAddress;
-  final String landlordFullName;
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({required this.onRetry});
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: receipts.length,
-      separatorBuilder: (context, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final receipt = receipts[index];
-        return ReceiptListTile(
-          receipt: receipt,
-          leaseId: leaseId,
-          tenantEmail: tenantEmail,
-          tenantFirstName: tenantFirstName,
-          propertyAddress: propertyAddress,
-          landlordFullName: landlordFullName,
-        );
-      },
-    );
-  }
-}
-
-class _EmptyPage extends StatelessWidget {
-  const _EmptyPage();
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 80,
-              color: theme.colorScheme.outline,
-            ),
+            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              'Aucune quittance générée',
-              style: theme.textTheme.titleLarge,
+              'Impossible de charger les quittances.',
+              style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Les quittances générées depuis les paiements apparaîtront ici.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
             ),
           ],
         ),
