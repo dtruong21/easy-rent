@@ -39,11 +39,7 @@ Uint8List _createPng(int w, int h) {
   // IHDR : largeur, hauteur, bit depth=8, color type=2 (RGB), compression, filter, interlace
   final ihdr = _pngChunk(
     'IHDR',
-    Uint8List.fromList([
-      ..._pack32(w),
-      ..._pack32(h),
-      8, 2, 0, 0, 0,
-    ]),
+    Uint8List.fromList([..._pack32(w), ..._pack32(h), 8, 2, 0, 0, 0]),
   );
 
   // Pixels : fond teal #0F766E = RGB (15, 118, 110)
