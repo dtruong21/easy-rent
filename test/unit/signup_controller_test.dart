@@ -9,17 +9,33 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Fake repository
 // ---------------------------------------------------------------------------
 
+class _FakeSession extends Session {
+  _FakeSession()
+    : super(
+        accessToken: 'fake-token',
+        tokenType: 'bearer',
+        user: const User(
+          id: '00000000-0000-0000-0000-000000000001',
+          appMetadata: {},
+          userMetadata: {},
+          aud: 'authenticated',
+          createdAt: '2026-01-01T00:00:00Z',
+        ),
+      );
+}
+
 class _FakeAuthRepository implements AuthRepository {
   bool signUpCalled = false;
   String? lastEmail;
   String? lastFullName;
   Exception? signUpError;
+  Session? sessionAfterSignUp;
 
   @override
   Stream<AuthState> get authStateChanges => const Stream.empty();
 
   @override
-  Session? get currentSession => null;
+  Session? get currentSession => sessionAfterSignUp;
 
   @override
   Future<void> signInWithPassword({
@@ -89,8 +105,8 @@ void main() {
     });
 
     group('signUp — chemin nominal', () {
-      test('transitions idle → submitting → awaitingConfirmation', () async {
-        final repo = _FakeAuthRepository();
+      test('session active après signup (MVP) → idle', () async {
+        final repo = _FakeAuthRepository()..sessionAfterSignUp = _FakeSession();
         final container = ProviderContainer(
           overrides: [authRepositoryProvider.overrideWithValue(repo)],
         );
@@ -118,11 +134,27 @@ void main() {
           states[1].maybeWhen(submitting: () => true, orElse: () => false),
           isTrue,
         );
-        expect(_isAwaiting(states[2]), isTrue);
+        expect(states[2], const SignupPageState.idle());
         expect(repo.signUpCalled, isTrue);
         expect(repo.lastEmail, _validSignup.email);
         expect(repo.lastFullName, _validSignup.fullName);
       });
+
+      test(
+        'session null après signup (email confirmation activée) → awaitingConfirmation',
+        () async {
+          final repo = _FakeAuthRepository();
+          final ctrl = _makeController(repo);
+          await ctrl.signUp(
+            fullName: _validSignup.fullName,
+            email: _validSignup.email,
+            password: _validSignup.password,
+            confirmPassword: _validSignup.confirmPassword,
+            rgpdConsent: _validSignup.rgpdConsent,
+          );
+          expect(_isAwaiting(ctrl.state), isTrue);
+        },
+      );
 
       test('trimme email et fullName', () async {
         final repo = _FakeAuthRepository();

@@ -55,9 +55,13 @@ class SignupController extends StateNotifier<SignupPageState> {
         password: password,
         fullName: fullName.trim(),
       );
-      // Email confirmation obligatoire → on ne redirige pas directement.
-      state = const SignupPageState.awaitingConfirmation();
-      _log.info('Signup réussi — email de confirmation envoyé');
+      if (_repository.currentSession != null) {
+        state = const SignupPageState.idle();
+        _log.info('Signup réussi — session active');
+      } else {
+        state = const SignupPageState.awaitingConfirmation();
+        _log.info('Signup réussi — email de confirmation envoyé');
+      }
     } on AuthException catch (e, st) {
       _log.warning('AuthException signup', e, st);
       state = SignupPageState.error(message: AuthErrorMapper.fromException(e));

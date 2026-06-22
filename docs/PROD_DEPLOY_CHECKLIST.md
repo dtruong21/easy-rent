@@ -48,7 +48,9 @@ Vérifier que les flags suivants correspondent à `supabase/config.toml` :
 
 - [ ] `Minimum password length` = 8
 - [ ] `Password requirements` = Letters and digits
-- [ ] `Enable email confirmations` = ON
+- [ ] `Enable email confirmations` = **OFF** (MVP — pas de SMTP custom configuré)
+
+> **MVP** : email confirmation désactivée pour ne pas dépendre du SMTP gratuit Supabase (rate limit 3-4/h, peu fiable). À réactiver quand un SMTP propre sera configuré (Brevo / Resend / SES). Voir [docs/plans/FEAT-011-auth-password.md] pour la décision.
 
 ---
 
@@ -76,9 +78,7 @@ Ouvrir `https://easy-rent-54cd4.web.app` dans Chrome.
 
 - [ ] La page de login s'affiche correctement (pas de page blanche)
 - [ ] Cliquer "Politique de confidentialité" → page `/privacy` complète s'affiche sans login
-- [ ] **Signup** : créer un compte (email réel + password 8 chars + lettre + chiffre + RGPD coché) → écran "Vérifiez votre boîte mail" affiché
-- [ ] Email de confirmation reçu en moins de 30s (sujet FR "Confirmez votre adresse email — EasyRent")
-- [ ] Cliquer le lien email → redirect vers app authentifiée, session active, dashboard visible
+- [ ] **Signup** : créer un compte (email réel + password 8 chars + lettre + chiffre + RGPD coché) → redirect direct vers dashboard, session active
 - [ ] **Login** : logout + re-login avec email + password → connexion OK
 - [ ] **Mauvais password** : tentative avec password incorrect → message "Email ou mot de passe incorrect" + email conservé
 - [ ] **Reset password** : `/forgot-password` → email reset reçu → cliquer lien → page `/reset-password` → définir nouveau password → redirect `/login` + snackbar succès → login avec nouveau password OK
