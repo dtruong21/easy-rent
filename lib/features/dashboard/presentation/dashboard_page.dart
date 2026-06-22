@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/ui/theme/app_spacing.dart';
 import '../../auth/application/login_controller.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../pwa/application/install_prompt_controller.dart';
@@ -87,15 +88,26 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          children: [
-            const InstallPromptBanner(),
-            DashboardHeader(firstName: firstName),
-            _DashboardContent(asyncSnapshot: asyncSnapshot),
-            const SizedBox(height: 24),
-            const ShortcutsRow(),
-          ],
+        child: Builder(
+          builder: (context) {
+            final spacing =
+                Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                spacing.lg,
+                spacing.lg,
+                spacing.lg,
+                spacing.xxl,
+              ),
+              children: [
+                const InstallPromptBanner(),
+                DashboardHeader(firstName: firstName),
+                _DashboardContent(asyncSnapshot: asyncSnapshot),
+                SizedBox(height: spacing.xl),
+                const ShortcutsRow(),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -172,6 +184,8 @@ class _DataView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing =
+        Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     if (snapshot.isOnboarding) {
       return const OnboardingFirstSteps();
     }
@@ -179,9 +193,9 @@ class _DataView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         KpiGrid(snapshot: snapshot),
-        const SizedBox(height: 24),
+        SizedBox(height: spacing.xl),
         MonthlyBarchart(months: snapshot.monthly),
-        const SizedBox(height: 24),
+        SizedBox(height: spacing.xl),
         RecentActivitySection(items: snapshot.activity),
       ],
     );

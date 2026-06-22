@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/theme/app_colors.dart';
+import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/dashboard_snapshot.dart';
 import 'kpi_card.dart';
@@ -17,6 +19,8 @@ class KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing =
+        Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -29,8 +33,8 @@ class KpiGrid extends StatelessWidget {
         return GridView.count(
           crossAxisCount: crossAxisCount,
           childAspectRatio: ratio,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          crossAxisSpacing: spacing.md,
+          mainAxisSpacing: spacing.md,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: _buildCards(context),
@@ -40,7 +44,7 @@ class KpiGrid extends StatelessWidget {
   }
 
   List<Widget> _buildCards(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
     final loyers = snapshot.loyers;
     final retards = snapshot.retards;
     final renouvellements = snapshot.renouvellements;
@@ -48,18 +52,21 @@ class KpiGrid extends StatelessWidget {
 
     // Couleur sémantique loyers.
     final loyersColor = loyers.encaissedCents < loyers.dueCents
-        ? theme.colorScheme.error
-        : theme.colorScheme.primary;
+        ? colors.danger.solid
+        : colors.success.solid;
 
     // Couleur sémantique retards.
     final retardsColor = retards.count > 0
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
+        ? colors.danger.solid
+        : colors.neutral.solid;
 
     // Couleur sémantique renouvellements.
     final renouvellementsColor = renouvellements.count > 0
-        ? theme.colorScheme.tertiary
-        : theme.colorScheme.onSurfaceVariant;
+        ? colors.warning.solid
+        : colors.neutral.solid;
+
+    // Couleur sémantique docs.
+    final docsColor = docs.count > 0 ? colors.info.solid : colors.neutral.solid;
 
     return [
       KpiCard(
@@ -94,7 +101,7 @@ class KpiGrid extends StatelessWidget {
         label: 'Documents en attente',
         value: docs.count.toString(),
         subtitle: 'catégorie "autre"',
-        semanticColor: theme.colorScheme.onSurfaceVariant,
+        semanticColor: docsColor,
       ),
     ];
   }

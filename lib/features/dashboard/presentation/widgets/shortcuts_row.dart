@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/theme/app_spacing.dart';
+
 /// Raccourcis compacts vers les 3 sections principales.
 ///
 /// Remplace les 3 ListTiles de l'ancien dashboard.
@@ -10,8 +12,10 @@ class ShortcutsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing =
+        Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     return Wrap(
-      spacing: 12,
+      spacing: spacing.md,
       runSpacing: 8,
       children: const [
         _ShortcutCard(
@@ -52,12 +56,16 @@ class _ShortcutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.go(route),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: spacing.lg,
+            vertical: spacing.md,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
