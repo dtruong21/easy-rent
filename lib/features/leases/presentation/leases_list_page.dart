@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
@@ -33,10 +34,7 @@ class LeasesListPage extends ConsumerWidget {
         : ref.watch(viewModeProvider('leases'));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes baux'),
-        leading: BackButton(onPressed: () => context.go('/')),
-      ),
+      appBar: AppAppBar(title: 'Mes baux', fallbackRoute: '/'),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_lease'),
         onPressed: () => context.push('/leases/new'),

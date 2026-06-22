@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../application/tenant_detail_provider.dart';
 import '../application/tenant_form_controller.dart';
 import '../domain/tenant.dart';
@@ -107,8 +108,9 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isCreating ? 'Nouveau locataire' : 'Modifier le locataire'),
+      appBar: AppAppBar(
+        title: isCreating ? 'Nouveau locataire' : 'Modifier le locataire',
+        fallbackRoute: '/tenants',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -167,7 +169,10 @@ class TenantEditPage extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Modifier le locataire')),
+        appBar: AppAppBar(
+          title: 'Modifier le locataire',
+          fallbackRoute: '/tenants',
+        ),
         body: Center(
           child: Text(
             'Locataire introuvable.',

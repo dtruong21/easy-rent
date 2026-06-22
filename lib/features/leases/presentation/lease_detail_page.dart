@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
@@ -93,9 +94,9 @@ class _LeaseDetailContent extends ConsumerWidget {
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bail'),
-        leading: BackButton(onPressed: () => context.go('/leases')),
+      appBar: AppAppBar(
+        title: 'Bail',
+        fallbackRoute: '/leases',
         actions: [
           IconButton(
             key: const Key('btn_profile'),
@@ -413,10 +414,7 @@ class _NotFoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fiche bail'),
-        leading: BackButton(onPressed: () => context.go('/leases')),
-      ),
+      appBar: AppAppBar(title: 'Fiche bail', fallbackRoute: '/leases'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/utils/payment_form_validators.dart';
 import '../../leases/application/lease_detail_provider.dart';
@@ -195,8 +196,9 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
 
     if (asyncLease.isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(isCreating ? 'Nouveau paiement' : 'Modifier le paiement'),
+        appBar: AppAppBar(
+          title: isCreating ? 'Nouveau paiement' : 'Modifier le paiement',
+          fallbackRoute: '/leases/${widget.leaseId}',
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -205,22 +207,18 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     final lease = asyncLease.valueOrNull ?? widget.lease;
     if (lease == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(isCreating ? 'Nouveau paiement' : 'Modifier le paiement'),
-          leading: BackButton(
-            onPressed: () => context.go('/leases/${widget.leaseId}'),
-          ),
+        appBar: AppAppBar(
+          title: isCreating ? 'Nouveau paiement' : 'Modifier le paiement',
+          fallbackRoute: '/leases/${widget.leaseId}',
         ),
         body: const Center(child: Text('Bail introuvable.')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isCreating ? 'Nouveau paiement' : 'Modifier le paiement'),
-        leading: BackButton(
-          onPressed: () => context.go('/leases/${widget.leaseId}'),
-        ),
+      appBar: AppAppBar(
+        title: isCreating ? 'Nouveau paiement' : 'Modifier le paiement',
+        fallbackRoute: '/leases/${widget.leaseId}',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -298,9 +296,9 @@ class PaymentEditPage extends ConsumerWidget {
 
     if (asyncPayment.hasError) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Modifier le paiement'),
-          leading: BackButton(onPressed: () => context.go('/leases/$leaseId')),
+        appBar: AppAppBar(
+          title: 'Modifier le paiement',
+          fallbackRoute: '/leases/$leaseId',
         ),
         body: Center(
           child: Text(

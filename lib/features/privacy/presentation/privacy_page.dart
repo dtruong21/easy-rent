@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+
+import '../../../core/ui/app_bar/app_app_bar.dart';
 
 /// Page de politique de confidentialité — conforme RGPD.
 ///
@@ -13,11 +14,9 @@ class PrivacyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Politique de confidentialité'),
-        leading: BackButton(
-          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-        ),
+      appBar: AppAppBar(
+        title: 'Politique de confidentialité',
+        fallbackRoute: '/',
       ),
       body: const SafeArea(
         child: SingleChildScrollView(

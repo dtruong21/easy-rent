@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/lease_form_validators.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../features/properties/application/properties_list_provider.dart';
@@ -197,8 +198,9 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     // Afficher un loader si les listes ne sont pas encore prêtes.
     if (asyncProperties.isLoading || asyncTenants.isLoading) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(isCreating ? 'Nouveau bail' : 'Modifier le bail'),
+        appBar: AppAppBar(
+          title: isCreating ? 'Nouveau bail' : 'Modifier le bail',
+          fallbackRoute: '/leases',
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -208,8 +210,9 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     final tenants = asyncTenants.valueOrNull ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isCreating ? 'Nouveau bail' : 'Modifier le bail'),
+      appBar: AppAppBar(
+        title: isCreating ? 'Nouveau bail' : 'Modifier le bail',
+        fallbackRoute: '/leases',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -276,7 +279,7 @@ class LeaseEditPage extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Modifier le bail')),
+        appBar: AppAppBar(title: 'Modifier le bail', fallbackRoute: '/leases'),
         body: Center(
           child: Text(
             'Bail introuvable.',

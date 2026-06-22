@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../application/tenant_detail_provider.dart';
@@ -51,9 +52,9 @@ class _TenantDetailContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${tenant.firstName} ${tenant.lastName}'),
-        leading: BackButton(onPressed: () => context.go('/tenants')),
+      appBar: AppAppBar(
+        title: '${tenant.firstName} ${tenant.lastName}',
+        fallbackRoute: '/tenants',
         actions: [
           IconButton(
             key: const Key('btn_edit_tenant'),
@@ -350,10 +351,7 @@ class _NotFoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fiche locataire'),
-        leading: BackButton(onPressed: () => context.go('/tenants')),
-      ),
+      appBar: AppAppBar(title: 'Fiche locataire', fallbackRoute: '/tenants'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

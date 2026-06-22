@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
@@ -60,10 +61,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quittances'),
-        leading: BackButton(onPressed: () => context.go('/leases/$leaseId')),
-      ),
+      appBar: AppAppBar(title: 'Quittances', fallbackRoute: '/leases/$leaseId'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

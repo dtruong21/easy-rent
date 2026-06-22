@@ -22,6 +22,7 @@ import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
 import 'go_router_refresh_stream.dart';
+import 'transitions.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   // GoRouterRefreshStream écoute le flux d'auth et déclenche une réévaluation
@@ -79,20 +80,60 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const DashboardPage()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
+      // -----------------------------------------------------------------------
+      // Dashboard
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const DashboardPage(),
+          transition: AppTransition.standard,
+        ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Routes auth (transition fade — pas de slide)
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const LoginPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
+      GoRoute(
+        path: '/signup',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const SignupPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
       GoRoute(
         path: '/forgot-password',
-        builder: (context, state) => const ForgotPasswordPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ForgotPasswordPage(),
+          transition: AppTransition.fade,
+        ),
       ),
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) => const ResetPasswordPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ResetPasswordPage(),
+          transition: AppTransition.fade,
+        ),
       ),
       GoRoute(
         path: '/privacy',
-        builder: (context, state) => const PrivacyPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const PrivacyPage(),
+          transition: AppTransition.fade,
+        ),
       ),
 
       // -----------------------------------------------------------------------
@@ -101,21 +142,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/properties',
-        builder: (context, state) => const PropertiesListPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const PropertiesListPage(),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/properties/new',
-        builder: (context, state) => const PropertyFormPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const PropertyFormPage(),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/properties/:id',
-        builder: (context, state) =>
-            PropertyDetailPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: PropertyDetailPage(id: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/properties/:id/edit',
-        builder: (context, state) =>
-            PropertyEditPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: PropertyEditPage(id: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
 
       // -----------------------------------------------------------------------
@@ -124,21 +179,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/tenants',
-        builder: (context, state) => const TenantsListPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const TenantsListPage(),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/tenants/new',
-        builder: (context, state) => const TenantFormPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const TenantFormPage(),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/tenants/:id',
-        builder: (context, state) =>
-            TenantDetailPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: TenantDetailPage(id: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/tenants/:id/edit',
-        builder: (context, state) =>
-            TenantEditPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: TenantEditPage(id: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
 
       // -----------------------------------------------------------------------
@@ -147,21 +216,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/leases',
-        builder: (context, state) => const LeasesListPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const LeasesListPage(),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/leases/new',
-        builder: (context, state) => const LeaseFormPage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const LeaseFormPage(),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/leases/:id',
-        builder: (context, state) =>
-            LeaseDetailPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: LeaseDetailPage(id: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/leases/:id/edit',
-        builder: (context, state) =>
-            LeaseEditPage(id: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: LeaseEditPage(id: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
 
       // -----------------------------------------------------------------------
@@ -170,14 +253,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/leases/:id/payments/new',
-        builder: (context, state) =>
-            PaymentFormPage(leaseId: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: PaymentFormPage(leaseId: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
       GoRoute(
         path: '/leases/:id/payments/:pid/edit',
-        builder: (context, state) => PaymentEditPage(
-          leaseId: state.pathParameters['id']!,
-          paymentId: state.pathParameters['pid']!,
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: PaymentEditPage(
+            leaseId: state.pathParameters['id']!,
+            paymentId: state.pathParameters['pid']!,
+          ),
+          transition: AppTransition.standard,
         ),
       ),
 
@@ -187,8 +277,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/leases/:id/receipts',
-        builder: (context, state) =>
-            LeaseReceiptsPage(leaseId: state.pathParameters['id']!),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: LeaseReceiptsPage(leaseId: state.pathParameters['id']!),
+          transition: AppTransition.standard,
+        ),
       ),
 
       // -----------------------------------------------------------------------
@@ -197,7 +290,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/profile',
-        builder: (context, state) => const ProfilePage(),
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ProfilePage(),
+          transition: AppTransition.standard,
+        ),
       ),
     ],
   );
