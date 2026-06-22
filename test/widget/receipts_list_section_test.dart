@@ -1,8 +1,14 @@
 /// Tests widget de [ReceiptsListSection].
 ///
-/// Couvre : liste vide, liste avec items, badges "Annulée" et "Périmée".
+/// Couvre : liste vide, liste avec items (pills), bouton "Voir toutes".
+///
+/// Note : ReceiptsListSection utilise désormais ReceiptsTimelineView
+/// (FEAT-012 Phase 4). Les tests vérifient les pills via StatusPill
+/// plutôt que les anciennes clés de ReceiptListTile.
 library;
 
+import 'package:easyrent/core/ui/theme/app_colors.dart';
+import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
@@ -53,6 +59,11 @@ class _FakeReceiptsRepo implements ReceiptsRepository {
 // Helpers
 // ---------------------------------------------------------------------------
 
+ThemeData _appTheme() => ThemeData(
+  colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+  extensions: const [AppColors.light, AppRadii()],
+);
+
 Receipt _makeReceipt({
   required String id,
   bool isVoided = false,
@@ -62,7 +73,7 @@ Receipt _makeReceipt({
   id: id,
   landlordId: 'landlord-1',
   leaseId: 'lease-1',
-  paymentIds: ['pay-1'],
+  paymentIds: const ['pay-1'],
   periodStart: DateTime(2026, 1, 1),
   periodEnd: DateTime(2026, 1, 31),
   totalCents: 90000,
@@ -100,7 +111,7 @@ Widget _buildSection(List<Receipt> receipts) {
     overrides: [
       receiptsRepositoryProvider.overrideWithValue(_FakeReceiptsRepo(receipts)),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
   );
 }
 
@@ -124,12 +135,12 @@ void main() {
       expect(find.text('Aucune quittance générée.'), findsOneWidget);
     });
 
-    testWidgets('liste avec items → tiles visibles', (tester) async {
+    testWidgets('liste avec items → pills statut visibles', (tester) async {
       final receipts = [_makeReceipt(id: 'r-1'), _makeReceipt(id: 'r-2')];
       await tester.pumpWidget(_buildSection(receipts));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('receipt_tile_r-1')), findsOneWidget);
-      expect(find.byKey(const Key('receipt_tile_r-2')), findsOneWidget);
+      // Avec paymentIds non vide → pills "Payée" visibles.
+      expect(find.text('Payée'), findsWidgets);
     });
 
     testWidgets('badge "Annulée" si isVoided = true', (tester) async {
@@ -163,35 +174,6 @@ void main() {
         expect(find.text('Périmée'), findsNothing);
       },
     );
-
-    testWidgets('bouton voider masqué si quittance déjà annulée', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildSection([_makeReceipt(id: 'r-voided', isVoided: true)]),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('btn_void_receipt_r-voided')), findsNothing);
-    });
-
-    testWidgets('bouton voider visible si quittance non annulée', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_buildSection([_makeReceipt(id: 'r-active')]));
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const Key('btn_void_receipt_r-active')),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('bouton télécharger toujours visible', (tester) async {
-      await tester.pumpWidget(
-        _buildSection([_makeReceipt(id: 'r-1', isVoided: true)]),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('btn_download_receipt_r-1')), findsOneWidget);
-    });
 
     testWidgets(
       '"Voir toutes les quittances" visible quand la liste est non vide',
