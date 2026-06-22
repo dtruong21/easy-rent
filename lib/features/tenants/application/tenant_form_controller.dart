@@ -32,6 +32,16 @@ class TenantFormController extends StateNotifier<TenantFormState> {
     required String lastName,
     required String email,
     String? phone,
+    DateTime? birthDate,
+    String? birthPlace,
+    String? nationality,
+    String? profession,
+    String? employer,
+    int? monthlyIncomeCents,
+    String? previousAddress,
+    String? guarantorName,
+    String? guarantorEmail,
+    String? guarantorPhone,
   }) async {
     state = const TenantFormState.submitting();
 
@@ -46,6 +56,30 @@ class TenantFormController extends StateNotifier<TenantFormState> {
           lastName: lastName,
           email: email,
           phone: phone,
+          birthDate: birthDate,
+          birthPlace: birthPlace?.trim().isEmpty == true
+              ? null
+              : birthPlace?.trim(),
+          nationality: nationality?.trim().isEmpty == true
+              ? null
+              : nationality?.trim(),
+          profession: profession?.trim().isEmpty == true
+              ? null
+              : profession?.trim(),
+          employer: employer?.trim().isEmpty == true ? null : employer?.trim(),
+          monthlyIncomeCents: monthlyIncomeCents,
+          previousAddress: previousAddress?.trim().isEmpty == true
+              ? null
+              : previousAddress?.trim(),
+          guarantorName: guarantorName?.trim().isEmpty == true
+              ? null
+              : guarantorName?.trim(),
+          guarantorEmail: guarantorEmail?.trim().isEmpty == true
+              ? null
+              : guarantorEmail?.trim(),
+          guarantorPhone: guarantorPhone?.trim().isEmpty == true
+              ? null
+              : guarantorPhone?.trim(),
         );
         _log.info('tenant created id=${result.id}');
       } else {
@@ -55,6 +89,30 @@ class TenantFormController extends StateNotifier<TenantFormState> {
           lastName: lastName,
           email: email,
           phone: phone?.trim().isEmpty == true ? null : phone?.trim(),
+          birthDate: birthDate,
+          birthPlace: birthPlace?.trim().isEmpty == true
+              ? null
+              : birthPlace?.trim(),
+          nationality: nationality?.trim().isEmpty == true
+              ? null
+              : nationality?.trim(),
+          profession: profession?.trim().isEmpty == true
+              ? null
+              : profession?.trim(),
+          employer: employer?.trim().isEmpty == true ? null : employer?.trim(),
+          monthlyIncomeCents: monthlyIncomeCents,
+          previousAddress: previousAddress?.trim().isEmpty == true
+              ? null
+              : previousAddress?.trim(),
+          guarantorName: guarantorName?.trim().isEmpty == true
+              ? null
+              : guarantorName?.trim(),
+          guarantorEmail: guarantorEmail?.trim().isEmpty == true
+              ? null
+              : guarantorEmail?.trim(),
+          guarantorPhone: guarantorPhone?.trim().isEmpty == true
+              ? null
+              : guarantorPhone?.trim(),
         );
         result = await repo.update(updated);
         _log.info('tenant updated id=${result.id}');
