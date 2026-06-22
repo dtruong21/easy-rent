@@ -55,4 +55,121 @@ class TenantFormValidators {
     // Pas de validation en V1 — string libre.
     return null;
   }
+
+  // ---------------------------------------------------------------------------
+  // Champs FEAT-014 Phase 2 — tous optionnels (retournent null si vide)
+  // ---------------------------------------------------------------------------
+
+  /// Valide la date de naissance.
+  ///
+  /// Retourne [null] si null (champ optionnel).
+  /// Sinon vérifie : >= 1900-01-01 et <= aujourd'hui - 18 ans.
+  static String? validateBirthDate(DateTime? value) {
+    if (value == null) return null;
+    final minDate = DateTime(1900);
+    final maxDate = DateTime(
+      DateTime.now().year - 18,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+    if (value.isBefore(minDate)) {
+      return 'Date de naissance invalide (minimum 1900)';
+    }
+    if (value.isAfter(maxDate)) {
+      return 'Le locataire doit avoir au moins 18 ans';
+    }
+    return null;
+  }
+
+  /// Valide le lieu de naissance (1..100 caractères). Optionnel : null si vide.
+  static String? validateBirthPlace(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 100) {
+      return 'Lieu de naissance trop long (100 caractères maximum)';
+    }
+    return null;
+  }
+
+  /// Valide la nationalité (1..60 caractères). Optionnel : null si vide.
+  static String? validateNationality(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 60) {
+      return 'Nationalité trop longue (60 caractères maximum)';
+    }
+    return null;
+  }
+
+  /// Valide la profession (1..100 caractères). Optionnel : null si vide.
+  static String? validateProfession(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 100) {
+      return 'Profession trop longue (100 caractères maximum)';
+    }
+    return null;
+  }
+
+  /// Valide l'employeur (1..100 caractères). Optionnel : null si vide.
+  static String? validateEmployer(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 100) {
+      return 'Employeur trop long (100 caractères maximum)';
+    }
+    return null;
+  }
+
+  /// Valide les revenus mensuels nets en centimes (0..10 000 000 000).
+  ///
+  /// Retourne [null] si null (champ optionnel).
+  static String? validateMonthlyIncomeCents(int? value) {
+    if (value == null) return null;
+    if (value < 0 || value > 10000000000) {
+      return 'Revenus invalides';
+    }
+    return null;
+  }
+
+  /// Valide l'adresse précédente (1..300 caractères). Optionnel : null si vide.
+  static String? validatePreviousAddress(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 300) {
+      return 'Adresse précédente trop longue (300 caractères maximum)';
+    }
+    return null;
+  }
+
+  /// Valide le nom du garant (1..200 caractères). Optionnel : null si vide.
+  static String? validateGuarantorName(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 200) {
+      return 'Nom du garant trop long (200 caractères maximum)';
+    }
+    return null;
+  }
+
+  /// Valide l'email du garant. Optionnel : null si vide.
+  ///
+  /// Si renseigné, vérifie le format email RFC-5322 simplifié.
+  static String? validateGuarantorEmail(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    if (!EmailValidator.isValid(value)) {
+      return 'Email du garant invalide (ex. : garant@email.com)';
+    }
+    return null;
+  }
+
+  /// Valide le téléphone du garant (1..30 caractères). Optionnel : null si vide.
+  static String? validateGuarantorPhone(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final trimmed = value.trim();
+    if (trimmed.length > 30) {
+      return 'Téléphone du garant trop long (30 caractères maximum)';
+    }
+    return null;
+  }
 }

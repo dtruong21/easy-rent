@@ -1,3 +1,4 @@
+// ignore_for_file: use_null_aware_elements
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
@@ -35,6 +36,16 @@ abstract interface class TenantRepository {
     required String lastName,
     required String email,
     String? phone,
+    DateTime? birthDate,
+    String? birthPlace,
+    String? nationality,
+    String? profession,
+    String? employer,
+    int? monthlyIncomeCents,
+    String? previousAddress,
+    String? guarantorName,
+    String? guarantorEmail,
+    String? guarantorPhone,
   });
 
   /// Met à jour les champs métier d'un locataire existant.
@@ -109,16 +120,48 @@ class SupabaseTenantRepository implements TenantRepository {
     required String lastName,
     required String email,
     String? phone,
+    DateTime? birthDate,
+    String? birthPlace,
+    String? nationality,
+    String? profession,
+    String? employer,
+    int? monthlyIncomeCents,
+    String? previousAddress,
+    String? guarantorName,
+    String? guarantorEmail,
+    String? guarantorPhone,
   }) async {
     _log.info('create()');
     // Ne PAS inclure landlord_id : la RLS WITH CHECK le fixe à auth.uid().
     // Ne PAS inclure created_at / updated_at / deleted_at : gérés par triggers.
     // Ne pas logger email/firstName/lastName (PII).
+    // birth_date sérialisée en ISO YYYY-MM-DD.
     final payload = <String, dynamic>{
       'first_name': firstName.trim(),
       'last_name': lastName.trim(),
       'email': email.trim(),
       if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (birthDate != null)
+        'birth_date':
+            '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
+      if (birthPlace != null && birthPlace.trim().isNotEmpty)
+        'birth_place': birthPlace.trim(),
+      if (nationality != null && nationality.trim().isNotEmpty)
+        'nationality': nationality.trim(),
+      if (profession != null && profession.trim().isNotEmpty)
+        'profession': profession.trim(),
+      if (employer != null && employer.trim().isNotEmpty)
+        'employer': employer.trim(),
+      if (monthlyIncomeCents != null)
+        'monthly_income_cents': monthlyIncomeCents,
+      if (previousAddress != null && previousAddress.trim().isNotEmpty)
+        'previous_address': previousAddress.trim(),
+      if (guarantorName != null && guarantorName.trim().isNotEmpty)
+        'guarantor_name': guarantorName.trim(),
+      if (guarantorEmail != null && guarantorEmail.trim().isNotEmpty)
+        'guarantor_email': guarantorEmail.trim(),
+      if (guarantorPhone != null && guarantorPhone.trim().isNotEmpty)
+        'guarantor_phone': guarantorPhone.trim(),
     };
     final rows = await Db.from('tenants').insert(payload).select();
     return Tenant.fromJson(rows.first);
@@ -129,6 +172,8 @@ class SupabaseTenantRepository implements TenantRepository {
     _log.info('update(id=${tenant.id})');
     // Seuls les champs métier — JAMAIS created_at, updated_at, deleted_at.
     // Ne pas logger email/firstName/lastName (PII).
+    // birth_date sérialisée en ISO YYYY-MM-DD (null efface la valeur existante).
+    final bd = tenant.birthDate;
     final payload = <String, dynamic>{
       'first_name': tenant.firstName.trim(),
       'last_name': tenant.lastName.trim(),
@@ -136,6 +181,34 @@ class SupabaseTenantRepository implements TenantRepository {
       'phone': tenant.phone?.trim().isEmpty == true
           ? null
           : tenant.phone?.trim(),
+      'birth_date': bd == null
+          ? null
+          : '${bd.year.toString().padLeft(4, '0')}-${bd.month.toString().padLeft(2, '0')}-${bd.day.toString().padLeft(2, '0')}',
+      'birth_place': tenant.birthPlace?.trim().isEmpty == true
+          ? null
+          : tenant.birthPlace?.trim(),
+      'nationality': tenant.nationality?.trim().isEmpty == true
+          ? null
+          : tenant.nationality?.trim(),
+      'profession': tenant.profession?.trim().isEmpty == true
+          ? null
+          : tenant.profession?.trim(),
+      'employer': tenant.employer?.trim().isEmpty == true
+          ? null
+          : tenant.employer?.trim(),
+      'monthly_income_cents': tenant.monthlyIncomeCents,
+      'previous_address': tenant.previousAddress?.trim().isEmpty == true
+          ? null
+          : tenant.previousAddress?.trim(),
+      'guarantor_name': tenant.guarantorName?.trim().isEmpty == true
+          ? null
+          : tenant.guarantorName?.trim(),
+      'guarantor_email': tenant.guarantorEmail?.trim().isEmpty == true
+          ? null
+          : tenant.guarantorEmail?.trim(),
+      'guarantor_phone': tenant.guarantorPhone?.trim().isEmpty == true
+          ? null
+          : tenant.guarantorPhone?.trim(),
     };
     final rows = await Db.from(
       'tenants',

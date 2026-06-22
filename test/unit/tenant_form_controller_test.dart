@@ -23,6 +23,16 @@ class _FakeRepo implements TenantRepository {
     required String lastName,
     required String email,
     String? phone,
+    DateTime? birthDate,
+    String? birthPlace,
+    String? nationality,
+    String? profession,
+    String? employer,
+    int? monthlyIncomeCents,
+    String? previousAddress,
+    String? guarantorName,
+    String? guarantorEmail,
+    String? guarantorPhone,
   }) async {
     if (createError != null) throw createError!;
     _stored = _make(

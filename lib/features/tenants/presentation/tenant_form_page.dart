@@ -31,19 +31,56 @@ class TenantFormPage extends ConsumerStatefulWidget {
 class _TenantFormPageState extends ConsumerState<TenantFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _formWidgetKey = GlobalKey<TenantFormWidgetState>();
+
+  // Section 1 — Identité
   late final TextEditingController _firstNameCtrl;
   late final TextEditingController _lastNameCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _phoneCtrl;
+  DateTime? _birthDate;
+  late final TextEditingController _birthPlaceCtrl;
+  late final TextEditingController _nationalityCtrl;
+
+  // Section 2 — Situation professionnelle
+  late final TextEditingController _professionCtrl;
+  late final TextEditingController _employerCtrl;
+  late final TextEditingController _monthlyIncomeCtrl;
+  late final TextEditingController _previousAddressCtrl;
+
+  // Section 3 — Garant
+  late final TextEditingController _guarantorNameCtrl;
+  late final TextEditingController _guarantorEmailCtrl;
+  late final TextEditingController _guarantorPhoneCtrl;
 
   @override
   void initState() {
     super.initState();
     final t = widget.initial;
+
     _firstNameCtrl = TextEditingController(text: t?.firstName ?? '');
     _lastNameCtrl = TextEditingController(text: t?.lastName ?? '');
     _emailCtrl = TextEditingController(text: t?.email ?? '');
     _phoneCtrl = TextEditingController(text: t?.phone ?? '');
+
+    _birthDate = t?.birthDate;
+    _birthPlaceCtrl = TextEditingController(text: t?.birthPlace ?? '');
+    _nationalityCtrl = TextEditingController(text: t?.nationality ?? '');
+
+    _professionCtrl = TextEditingController(text: t?.profession ?? '');
+    _employerCtrl = TextEditingController(text: t?.employer ?? '');
+    // Convertir centimes → euros pour l'affichage.
+    _monthlyIncomeCtrl = TextEditingController(
+      text: t?.monthlyIncomeCents != null
+          ? '${t!.monthlyIncomeCents! ~/ 100}'
+          : '',
+    );
+    _previousAddressCtrl = TextEditingController(
+      text: t?.previousAddress ?? '',
+    );
+
+    _guarantorNameCtrl = TextEditingController(text: t?.guarantorName ?? '');
+    _guarantorEmailCtrl = TextEditingController(text: t?.guarantorEmail ?? '');
+    _guarantorPhoneCtrl = TextEditingController(text: t?.guarantorPhone ?? '');
   }
 
   @override
@@ -52,7 +89,25 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _birthPlaceCtrl.dispose();
+    _nationalityCtrl.dispose();
+    _professionCtrl.dispose();
+    _employerCtrl.dispose();
+    _monthlyIncomeCtrl.dispose();
+    _previousAddressCtrl.dispose();
+    _guarantorNameCtrl.dispose();
+    _guarantorEmailCtrl.dispose();
+    _guarantorPhoneCtrl.dispose();
     super.dispose();
+  }
+
+  // Convertit la valeur texte euros → centimes (null si vide ou invalide).
+  int? _parseMonthlyIncomeCents() {
+    final text = _monthlyIncomeCtrl.text.trim();
+    if (text.isEmpty) return null;
+    final euros = int.tryParse(text);
+    if (euros == null) return null;
+    return euros * 100;
   }
 
   Future<void> _submit() async {
@@ -68,6 +123,32 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
           lastName: _lastNameCtrl.text,
           email: _emailCtrl.text,
           phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text,
+          birthDate: _birthDate,
+          birthPlace: _birthPlaceCtrl.text.trim().isEmpty
+              ? null
+              : _birthPlaceCtrl.text,
+          nationality: _nationalityCtrl.text.trim().isEmpty
+              ? null
+              : _nationalityCtrl.text,
+          profession: _professionCtrl.text.trim().isEmpty
+              ? null
+              : _professionCtrl.text,
+          employer: _employerCtrl.text.trim().isEmpty
+              ? null
+              : _employerCtrl.text,
+          monthlyIncomeCents: _parseMonthlyIncomeCents(),
+          previousAddress: _previousAddressCtrl.text.trim().isEmpty
+              ? null
+              : _previousAddressCtrl.text,
+          guarantorName: _guarantorNameCtrl.text.trim().isEmpty
+              ? null
+              : _guarantorNameCtrl.text,
+          guarantorEmail: _guarantorEmailCtrl.text.trim().isEmpty
+              ? null
+              : _guarantorEmailCtrl.text,
+          guarantorPhone: _guarantorPhoneCtrl.text.trim().isEmpty
+              ? null
+              : _guarantorPhoneCtrl.text,
         );
   }
 
@@ -124,6 +205,17 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
               lastNameController: _lastNameCtrl,
               emailController: _emailCtrl,
               phoneController: _phoneCtrl,
+              birthDate: _birthDate,
+              onBirthDateChanged: (d) => setState(() => _birthDate = d),
+              birthPlaceController: _birthPlaceCtrl,
+              nationalityController: _nationalityCtrl,
+              professionController: _professionCtrl,
+              employerController: _employerCtrl,
+              monthlyIncomeController: _monthlyIncomeCtrl,
+              previousAddressController: _previousAddressCtrl,
+              guarantorNameController: _guarantorNameCtrl,
+              guarantorEmailController: _guarantorEmailCtrl,
+              guarantorPhoneController: _guarantorPhoneCtrl,
               enabled: !isSubmitting,
             ),
             if (errorMessage != null) ...[

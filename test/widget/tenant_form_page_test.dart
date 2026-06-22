@@ -30,6 +30,16 @@ class _FakeTenantRepository implements TenantRepository {
     required String lastName,
     required String email,
     String? phone,
+    DateTime? birthDate,
+    String? birthPlace,
+    String? nationality,
+    String? profession,
+    String? employer,
+    int? monthlyIncomeCents,
+    String? previousAddress,
+    String? guarantorName,
+    String? guarantorEmail,
+    String? guarantorPhone,
   }) async {
     if (createError != null) throw createError!;
     createdTenant = _makeTenant(
@@ -158,8 +168,15 @@ void main() {
         await tester.pumpWidget(_buildForm());
         await tester.pumpAndSettle();
 
-        // Taper sur Submit sans remplir les champs.
+        // Le formulaire est plus long avec les nouveaux champs — scroll jusqu'au bouton,
+        // soumettre, puis remonter pour voir l'erreur en haut du formulaire.
+        await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
+        await tester.pumpAndSettle();
         await tester.tap(find.byKey(const Key('btn_submit_form')));
+        await tester.pumpAndSettle();
+
+        // Remonter au champ en erreur pour le rendre visible.
+        await tester.ensureVisible(find.byKey(const Key('field_first_name')));
         await tester.pumpAndSettle();
 
         expect(find.text('Le prénom est obligatoire'), findsOneWidget);
@@ -177,6 +194,8 @@ void main() {
           find.byKey(const Key('field_first_name')),
           'Jean',
         );
+        // Scroller jusqu'au bouton avant de tapper (formulaire plus long).
+        await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
         await tester.tap(find.byKey(const Key('btn_submit_form')));
         await tester.pumpAndSettle();
 
@@ -196,6 +215,8 @@ void main() {
         find.byKey(const Key('field_last_name')),
         'Dupont',
       );
+      // Scroller jusqu'au bouton avant de tapper (formulaire plus long).
+      await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
       await tester.tap(find.byKey(const Key('btn_submit_form')));
       await tester.pumpAndSettle();
 
@@ -218,6 +239,8 @@ void main() {
         find.byKey(const Key('field_email')),
         'pas-un-email',
       );
+      // Scroller jusqu'au bouton avant de tapper (formulaire plus long).
+      await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
       await tester.tap(find.byKey(const Key('btn_submit_form')));
       await tester.pumpAndSettle();
 

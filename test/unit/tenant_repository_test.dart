@@ -47,6 +47,16 @@ class _InMemoryTenantRepository implements TenantRepository {
     required String lastName,
     required String email,
     String? phone,
+    DateTime? birthDate,
+    String? birthPlace,
+    String? nationality,
+    String? profession,
+    String? employer,
+    int? monthlyIncomeCents,
+    String? previousAddress,
+    String? guarantorName,
+    String? guarantorEmail,
+    String? guarantorPhone,
   }) async {
     final t = Tenant(
       id: 'gen-${_tenants.length + 1}',
@@ -55,6 +65,16 @@ class _InMemoryTenantRepository implements TenantRepository {
       lastName: lastName,
       email: email,
       phone: phone,
+      birthDate: birthDate,
+      birthPlace: birthPlace,
+      nationality: nationality,
+      profession: profession,
+      employer: employer,
+      monthlyIncomeCents: monthlyIncomeCents,
+      previousAddress: previousAddress,
+      guarantorName: guarantorName,
+      guarantorEmail: guarantorEmail,
+      guarantorPhone: guarantorPhone,
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
     );
@@ -113,6 +133,32 @@ Tenant _make({
   lastName: lastName,
   email: email,
   phone: phone,
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+);
+
+Tenant _makeWithAllFields({
+  String id = 'tid-full',
+  String firstName = 'Jean',
+  String lastName = 'Dupont',
+  String email = 'jean@test.com',
+}) => Tenant(
+  id: id,
+  landlordId: 'owner-1',
+  firstName: firstName,
+  lastName: lastName,
+  email: email,
+  phone: '06 12 34 56 78',
+  birthDate: DateTime(1990, 5, 15),
+  birthPlace: 'Paris',
+  nationality: 'Française',
+  profession: 'Ingénieur',
+  employer: 'Tech Corp',
+  monthlyIncomeCents: 350000,
+  previousAddress: '10 rue Ancienne, 75001 Paris',
+  guarantorName: 'Pierre Martin',
+  guarantorEmail: 'pierre.martin@test.com',
+  guarantorPhone: '06 98 76 54 32',
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -306,6 +352,49 @@ void main() {
     test('listLeasesForTenant() retourne List<Map<String,dynamic>>', () async {
       final result = await repo.listLeasesForTenant('any-id');
       expect(result, isA<List<Map<String, dynamic>>>());
+    });
+
+    // -----------------------------------------------------------------------
+    // create() — champs enrichis FEAT-014 Phase 2
+    // -----------------------------------------------------------------------
+    test(
+      'create() préserve les champs enrichis (birth_date, guarantor, etc.)',
+      () async {
+        final t = await repo.create(
+          firstName: 'Marie',
+          lastName: 'Dupont',
+          email: 'marie@test.com',
+          birthDate: DateTime(1990, 5, 15),
+          birthPlace: 'Paris',
+          nationality: 'Française',
+          profession: 'Ingénieure',
+          employer: 'Tech Corp',
+          monthlyIncomeCents: 300000,
+          previousAddress: '1 rue Ancienne',
+          guarantorName: 'Pierre Martin',
+          guarantorEmail: 'pierre@test.com',
+          guarantorPhone: '06 98 76 54 32',
+        );
+
+        expect(t.birthDate?.year, 1990);
+        expect(t.birthPlace, 'Paris');
+        expect(t.nationality, 'Française');
+        expect(t.profession, 'Ingénieure');
+        expect(t.employer, 'Tech Corp');
+        expect(t.monthlyIncomeCents, 300000);
+        expect(t.previousAddress, '1 rue Ancienne');
+        expect(t.guarantorName, 'Pierre Martin');
+        expect(t.guarantorEmail, 'pierre@test.com');
+        expect(t.guarantorPhone, '06 98 76 54 32');
+      },
+    );
+
+    test('_makeWithAllFields() construit un Tenant avec tous les champs', () {
+      // Vérifie que le helper de test génère bien un Tenant complet.
+      final t = _makeWithAllFields();
+      expect(t.birthDate?.year, 1990);
+      expect(t.monthlyIncomeCents, 350000);
+      expect(t.guarantorEmail, 'pierre.martin@test.com');
     });
 
     // -----------------------------------------------------------------------
