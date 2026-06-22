@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 /// Script Dart standalone pour générer les icônes PWA placeholder "ER".
 ///
-/// Génère des PNG valides fond teal #0F766E (15, 118, 110) en Dart pur.
+/// Génère des PNG valides fond indigo #4F46E5 (79, 70, 229) en Dart pur.
 /// Exécution : dart run scripts/generate_pwa_icons.dart
 void main() {
   final iconsDir = Directory('web/icons');
@@ -29,7 +29,7 @@ void main() {
   print('Done. Icons written to web/icons/');
 }
 
-/// Crée un PNG [w]×[h] avec fond teal #0F766E (RGB 15, 118, 110).
+/// Crée un PNG [w]×[h] avec fond indigo #4F46E5 (RGB 79, 70, 229).
 ///
 /// Implémentation RFC 2083 en Dart pur — sans dépendance externe.
 Uint8List _createPng(int w, int h) {
@@ -42,8 +42,8 @@ Uint8List _createPng(int w, int h) {
     Uint8List.fromList([..._pack32(w), ..._pack32(h), 8, 2, 0, 0, 0]),
   );
 
-  // Pixels : fond teal #0F766E = RGB (15, 118, 110)
-  const r = 15, g = 118, b = 110;
+  // Pixels : fond indigo #4F46E5 = RGB (79, 70, 229)
+  const r = 79, g = 70, b = 229;
   final scanlines = BytesBuilder();
   for (int y = 0; y < h; y++) {
     scanlines.addByte(0); // filter type None

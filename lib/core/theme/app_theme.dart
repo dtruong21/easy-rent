@@ -4,7 +4,7 @@ import '../ui/theme/app_colors.dart';
 import '../ui/theme/app_radii.dart';
 import '../ui/theme/app_spacing.dart';
 
-/// Thème EasyRent — Material 3 avec seed teal.
+/// Thème EasyRent — Material 3 avec seed indigo.
 ///
 /// `ColorScheme.fromSeed` ne suffit pas seul : sans sous-thèmes explicites,
 /// les composants (AppBar, Card, Divider, ListTile…) héritent de défauts
@@ -14,7 +14,9 @@ import '../ui/theme/app_spacing.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const Color _seed = Color(0xFF0F766E);
+  static const Color _seed = Color(
+    0xFF4F46E5,
+  ); // indigo-600 (était #0F766E teal-700)
 
   static ThemeData get light => _build(Brightness.light);
 

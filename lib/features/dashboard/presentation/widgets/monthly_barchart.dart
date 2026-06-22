@@ -10,7 +10,7 @@ import '../../domain/monthly_amount.dart';
 /// Mini-barchart 6 mois "Encaissé / Dû".
 ///
 /// Chaque mois = 2 barres côte à côte :
-/// - Encaissé : [AppColors.info.solid] (bleu)
+/// - Encaissé : [AppColors.success.solid] (vert — argent rentré)
 /// - Dû       : [AppColors.neutral.surface] (gris pâle)
 ///
 /// Enveloppé dans un card container (border, radius, padding, bg surface).
@@ -68,7 +68,7 @@ class _MonthlyBarchartState extends State<MonthlyBarchart> {
             ),
             const SizedBox(height: 8),
             _Legend(
-              encaissedColor: colors.info.solid,
+              encaissedColor: colors.success.solid,
               dueColor: colors.neutral.surface,
             ),
           ],
@@ -78,7 +78,7 @@ class _MonthlyBarchartState extends State<MonthlyBarchart> {
   }
 
   BarChartData _buildBarChart(ThemeData theme, AppColors colors) {
-    final encaissedColor = colors.info.solid;
+    final encaissedColor = colors.success.solid;
     final dueColor = colors.neutral.surface;
     final groups = <BarChartGroupData>[];
 
