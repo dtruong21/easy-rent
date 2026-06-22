@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-02 (FEAT-009 — nouveau bucket Storage documents)
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-22 (FEAT-010 — ajoute fl_chart, shared_preferences, web)
 
 ## Flutter (pubspec.yaml)
 
@@ -17,18 +17,19 @@
 | `go_router` | `^14.6.0` | Navigation et deep linking |
 | `freezed_annotation` | `^2.4.4` | Modèles immutables (code generation) |
 | `json_annotation` | `^4.9.0` | Sérialisation JSON (code generation) |
-| `pdf` | `^3.11.0` | Génération PDF quittances |
-| `printing` | `^5.13.0` | Affichage/téléchargement PDF |
+| `pdf` | `^3.11.0` | Génération PDF quittances (FEAT-007) |
+| `printing` | `^5.13.0` | Affichage/téléchargement PDF (FEAT-007) |
 | `intl` | `^0.19.0` | Locale FR (dates, devise) |
 | `logging` | `^1.3.0` | Logs structurés |
 | `uuid` | `^4.5.0` | Génération d'identifiants |
 | `collection` | `^1.18.0` | Helpers de collection |
 | `cupertino_icons` | `^1.0.8` | Icons (compat iOS) |
-| `file_picker` | `^11.0.2` | Sélection multi-fichiers (Web + mobile), bytes en mémoire (FEAT-009) |
-| `mime` | `^2.0.0` | Détection MIME client-side depuis extension (defense in depth, FEAT-009) |
+| `url_launcher` | `^6.3.2` | Ouvre links externes (profil, privacy) |
+| `file_picker` | `^11.0.2` | Sélection multi-fichiers (Web + mobile, bytes en mémoire — FEAT-009) |
+| `mime` | `^2.0.0` | Détection MIME client-side depuis extension (defense in depth — FEAT-009) |
 | `fl_chart` | `^0.69.0` | Barchart 6 mois encaissé/dû (FEAT-010 Dashboard) |
 | `shared_preferences` | `^2.3.5` | Persist dismiss install prompt PWA (FEAT-010 PWA) |
-| `web` | `^1.1.0` | JS interop `beforeinstallprompt` + `matchMedia` (FEAT-010 PWA, remplace dart:html legacy) |
+| `web` | `^1.1.0` | JS interop beforeinstallprompt + matchMedia (FEAT-010 PWA, remplace dart:html legacy) |
 
 ### Dépendances dev
 
@@ -49,138 +50,171 @@
 
 ### Custom implementations
 
-- `GoRouterRefreshStream` : Custom class wrapper pour écouter `authRepository.authStateChanges` et déclencher GoRouter redirect logic
+- `GoRouterRefreshStream` : Custom class wrapper pour écouter `authRepository.authStateChanges` et déclencher GoRouter redirect logic (dans `lib/core/router/go_router_refresh_stream.dart`)
 
 ## Edge Functions (Deno)
 
-**`generate-receipt`** (créée FEAT-007 Phase 2) :
+**3 fonctions déployées/planifiées** :
+
+### 1. `generate-receipt` (FEAT-007 Phase 2, ✅ active)
 
 - **Structure** : Deno TS dans `supabase/functions/generate-receipt/`
-  - `index.ts` : Orchestration (fetch payments → build PDF → upload Storage → INSERT DB)
-  - `pdf_layout.ts` : Template PDF (pdf-lib 1.17.1, loi 1989 art. 21)
-  - `types.ts` : Interfaces TS
-  - `deps.ts` : Imports (pdf-lib, @supabase/supabase-js)
-  - `deno.json` : imports resolver
-  - `tests/generate_receipt_test.ts` : Unit tests
-  - `deno.lock` : Lockfile dépendances
-
+- **Fichiers** : index.ts, pdf_layout.ts, types.ts, deps.ts, deno.json, tests/
+- **Invocation** : POST `/functions/v1/generate-receipt` (JWT required)
+- **Body** : `{lease_id: uuid, schema: 'public' | 'dev'}`
+- **Retour** : `{receipt_id: uuid, pdf_url: string (5 min signed)}`
 - **Dépendances** :
-  - `pdf-lib@1.17.1` (esm.sh)
-  - `@supabase/supabase-js@2.45.0` (esm.sh)
+  - `pdf-lib@1.17.1` (PDF building, loi 1989 art. 21)
+  - `@supabase/supabase-js@2.45.0` (client SDK)
+- **Secrets** : aucun
+- **Priorité** : P0
 
-- **Invocation** : POST `/functions/v1/generate-receipt` avec JWT + body `{lease_id, schema}`
-
-- **Blockers fixes** (FEAT-007 Round 2) :
-  - CORS allowlist : Edge Function accessible depuis Flutter Web
-  - Timeout : Edge Function respecte limite 540s (PDF build + Storage upload)
-  - Privacy : pas d'export sensitive data en logs
-
-**`send-receipt`** (créée FEAT-008) :
+### 2. `send-receipt` (FEAT-008, ✅ implémentée — déploiement attente secrets)
 
 - **Structure** : Deno TS dans `supabase/functions/send-receipt/`
-  - `index.ts` : Orchestration (charge receipt + tenant → fetch PDF → envoi Resend → RPC mark_receipt_as_sent)
-  - `email_template.ts` : Template HTML minimal FR (sujet + corps, loi 1989 art. 21)
-  - `resend_client.ts` : Wrapper `fetch` Resend REST API (pas de SDK)
-  - `types.ts` : Interfaces TS (SendReceiptRequest, SuccessResponse, ErrorResponse, ReceiptRow)
-  - `deps.ts` : Imports (@supabase/supabase-js)
-  - `deno.json` : imports resolver
-  - `tests/` : 6 fichiers de tests Deno (62 tests)
-
+- **Fichiers** : index.ts, email_template.ts, resend_client.ts, types.ts, deps.ts, deno.json, tests/
+- **Invocation** : POST `/functions/v1/send-receipt` (JWT required)
+- **Body** : `{receipt_id: uuid, schema: 'public' | 'dev'}`
+- **Retour** : `{success: true, sent_at: ISO, sent_to_email: string, resend_id: string}`
 - **Dépendances** :
-  - `@supabase/supabase-js@2.45.0` (esm.sh)
-  - `fetch` natif Deno (appel Resend REST API — pas de SDK tiers)
+  - `@supabase/supabase-js@2.45.0`
+  - Fetch natif Deno (pas de SDK Resend — direct HTTP)
+- **Secrets** :
+  - `RESEND_API_KEY` (attente production, domaine non vérifié)
+  - `RESEND_FROM_EMAIL` (attente production)
+  - `ALLOWED_ORIGINS` (optionnel)
+- **Priorité** : P0
+- **Blockers** : Resend domaine verification
 
-- **Secrets requis** :
-  - `RESEND_API_KEY` : clé Bearer Resend (ex: `re_xxx`)
-  - `RESEND_FROM_EMAIL` : adresse expéditeur vérifiée (ex: `EasyRent <noreply@easyrent.app>`)
+### 3. `_shared` (Utilitaire, ✅ en place)
 
-- **Provisionner avant déploiement** :
-  ```bash
-  supabase secrets set RESEND_API_KEY="re_xxx" RESEND_FROM_EMAIL="EasyRent <noreply@<domaine>>"
-  supabase functions deploy send-receipt --project-ref tbgttutodbqffrvsvkoz
-  ```
+- **Structure** : Deno TS partagée
+- **Fichiers** : cors.ts, db_helpers.ts, types.ts
+- **Usage** : CORS utilities, database helpers réutilisées par autres functions
 
-- **Invocation** : POST `/functions/v1/send-receipt` avec JWT + body `{receipt_id, schema}`
+## Deno (supabase/functions/)
 
-## Storage Buckets (Supabase)
+### deno.json (par fonction)
 
-| Bucket | Visibilité | MIME whitelist | Taille max | Policies | Path format |
-|---|---|---|---|---|---|
-| `receipts` | privé | `application/pdf` | 10 MB | SELECT + INSERT (segment[1]=landlord_id) | `{landlord_id}/{receipt_id}.pdf` |
-| `documents` | privé | `application/pdf`, `image/jpeg`, `image/png`, `image/webp` | 10 MB | SELECT + INSERT + DELETE (segment[2]=landlord_id) | `{env}/{landlord_id}/{document_id}.{ext}` |
+Chaque fonction a son `deno.json` déclarant dépendances ES modules :
 
-**Note path** : `documents` utilise le préfixe env (segment[1]) contrairement à `receipts` — isolation stricte dev/prod. Conséquence : policy isolation sur segment [2] (et non [1] comme receipts).
-
-## Outils CLI requis localement
-
-| Outil | Version | Usage | Status |
-|---|---|---|---|
-| `flutter` | stable | `flutter pub`, `flutter run` | ✅ requis |
-| `dart` | ✅ inclus | `dart analyze`, `dart format` | ✅ requis |
-| `git` | any | VCS | ✅ requis |
-| `supabase` CLI | latest | Migrations locales, emulator | ⚠️ optionnel (fallback: web UI) |
-| `firebase` CLI | latest | Firebase Hosting deploy | ✅ requis (staging + prod) |
-| `gh` | latest | GitHub API, PR automation | ✅ requis (agent ticketing) |
-
-## Hosting & Security (firebase.json)
-
-**Source** : `firebase.json` (commit e322c87)
-
-### Headers & CSP
-
-| Header | Value | Notes |
-|---|---|---|
-| HSTS | `max-age=31536000; includeSubDomains; preload` | Force HTTPS for 1 year |
-| X-Content-Type-Options | `nosniff` | Prevent MIME type sniffing |
-| X-Frame-Options | `DENY` | Block embedding in iframes |
-| Referrer-Policy | `strict-origin-when-cross-origin` | Privacy-safe referer leakage |
-| Permissions-Policy | (all disabled) | No camera, microphone, geolocation, payment APIs |
-| **Content-Security-Policy** | See below | Strict, with exceptions for Supabase + Google Fonts |
-
-### CSP Details (post-#16 fix)
-
-```
-default-src 'self'
-script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com
-style-src 'self' 'unsafe-inline'
-img-src 'self' data: blob: https://www.gstatic.com
-font-src 'self' data: https://www.gstatic.com https://fonts.gstatic.com
-connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.gstatic.com https://fonts.gstatic.com
-manifest-src 'self'
-worker-src 'self' blob:
-frame-ancestors 'none'
-base-uri 'self'
-form-action 'self'
-object-src 'none'
+```json
+{
+  "imports": {
+    "pdf-lib": "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.0"
+  }
+}
 ```
 
-**Key allowances** :
-- `script-src 'wasm-unsafe-eval'` : Flutter Web WASM runtime
-- `font-src https://fonts.gstatic.com` : Google Fonts (fix #16 — was invisible in dark mode)
-- `connect-src https://*.supabase.co` : Supabase Auth + DB + Storage + Functions
-- `style-src 'unsafe-inline'` : Material 3 dynamic theming
+**Versions fixées** : pdf-lib 1.17.1, supabase-js 2.45.0 (pas de wildcard)
 
-### Cache headers
+## Firebase Hosting
 
-- Static assets (js, css, woff2, woff, ttf, otf, wasm) : `max-age=31536000, immutable` (1 year)
-- `index.html` : `no-cache, no-store, must-revalidate` (always fetch fresh)
+### firebase.json (configuration deployment)
 
-## Build configuration
+**CSP (Content Security Policy)** : dernière mise à jour 2026-06-22 (FEAT-010 Section C, fix fonts.gstatic.com)
 
-### pubspec.yaml flags
+```json
+"headers": [
+  {
+    "key": "Content-Security-Policy",
+    "value": "default-src 'self'; font-src 'self' https://fonts.gstatic.com; connect-src 'self' *.supabase.co https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; base-uri 'self'; form-action 'self';"
+  }
+]
+```
 
-- `generate: true` : Active Flutter code generation (`lib/generated_plugins.dart`, etc.)
+**Rewriting** :
+- `/index.html` fallback pour SPA routing (GoRouter)
+- Assets caching avec max-age
 
-### CI/CD build steps (GitHub Actions)
+**Service Worker caching** (FEAT-010 Section C) :
+- Offline-first strategy
+- Cache busting via hash
 
-- `deploy.yml` : `dart run build_runner build` exécutée avant `flutter build web`
-- `ci.yml` : `flutter analyze`, `flutter test`, `flutter build web --release`
+### deploy.yml (CI/CD — FEAT-010 Section C)
 
-## Architecture notes
+**Staging** : `firebase hosting:channel:deploy staging`
+**Prod** : `firebase hosting:channel:deploy prod` (workflow_dispatch avec input confirm)
 
-- **State management** : Riverpod (provider-based, NOT hooks-based) + provider watchers
-- **Navigation** : GoRouter with Riverpod-based redirect logic (voir `GoRouterRefreshStream`)
-- **Freezed** : Used for immutable models (domain models, form state)
-- **JSON serialization** : json_serializable (not used in FEAT-001, planned for FEAT-002+)
-- **PDF** : pdf + printing packages for receipt generation (FEAT-006+)
-- **Locale** : intl for FR formatting (dates, devise, etc.)
+**Steps** :
+1. `flutter pub get`
+2. `dart run build_runner build` (freezed + json_serializable)
+3. `flutter build web --release`
+4. Firebase deploy (staging vs prod based on workflow input)
+
+### migrate-prod.yml (nouveau — FEAT-010 Section C)
+
+**Trigger** : workflow_dispatch + input `confirm=yes/no`
+**Steps** :
+1. Checkout code
+2. Setup Supabase CLI
+3. `supabase db push` (PROD database push)
+4. Logging versioned + rollback-ready
+
+## Schémas Supabase
+
+**Schémas gérés** : `public` (prod) + `dev` (dev environment)
+
+**Migrations** :
+- `supabase/migrations/` : SQL files chronologiquement nommés
+- 9 migrations à date (FEAT-001 à FEAT-009) :
+  1. 00000000000000_init_dev_schema.sql
+  2. 20260527081533_feat001_landlords_auth.sql
+  3. 20260528120000_feat002_data_model.sql
+  4. 20260529120000_lease_date_bounds.sql
+  5. 20260531102202_feat006_payments.sql
+  6. 20260531172904_feat007_receipts.sql
+  7. 20260531200000_feat007_receipts_stale_bidirectional.sql
+  8. 20260601103751_feat008_email_quittance.sql
+  9. 20260602100520_feat009_documents.sql
+
+**Stratégie** : multi-env via Supabase projects (public pour prod, dev pour staging)
+
+## Secrets management
+
+**Fichiers secrets** (`.gitignored`) :
+- `supabase/.env` (Supabase local dev)
+- `firebase-credentials.json` (Firebase local)
+- `pubspec.lock` (generated, committed)
+
+**Fichiers examples** (commités) :
+- `dart-defines.example.json` → `dart-defines.prod.example.json` (FEAT-010)
+- CI/CD : secrets via GitHub Actions secrets (RESEND_API_KEY, etc.)
+
+## PWA Web Assets
+
+**Icons** (FEAT-010 Section B) :
+- `web/icons/Icon-192.png` (192x192, EasyRent logo teal)
+- `web/icons/Icon-512.png` (512x512, EasyRent logo teal)
+- `web/icons/Icon-maskable-192.png` (maskable variant)
+- `web/icons/Icon-maskable-512.png` (maskable variant)
+
+**Manifest** :
+- `web/manifest.json` : PWA metadata (name, description, theme_color #0F766E, categories productivity/business/finance)
+
+**HTML** :
+- `web/index.html` : manifest ref, background-color CSS pour cohérence loading
+
+## Build & Code generation
+
+**Step CI/CD** : `dart run build_runner build`
+- Génère : freezed models, json_serializable serde
+- Output : `*.freezed.dart`, `*.g.dart`
+- Fail-fast : si fichier non formaté → CI fail
+
+**Linting** : `flutter analyze`
+- Rules : `analysis_options.yaml`
+
+**Testing** :
+- Unit : `flutter test`
+- Widget : `flutter test`
+- E2E : `flutter test integration_test/`
+
+## Notes de maintenance
+
+- **Flutter Web CanvasKit** : Nécessite fonts.gstatic.com dans CSP (sinon glyphs invisibles) — fix appliqué firebase.json FEAT-010
+- **build_runner** : Prendre soin de formater avant commit (CI fail sinon)
+- **Riverpod** : CodeGen optionnel — à activer si needed (commenté dans pubspec.yaml)
+- **Resend** : Attente domaine verification pour prod deploy FEAT-008
+- **PWA install prompt** : Nécessite web package (dart:html deprecié), SharedPreferences pour persistance dismiss

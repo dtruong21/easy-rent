@@ -1,4 +1,6 @@
-# FEAT-008 — Envoyer une quittance par email
+# FEAT-008 — Partager une quittance par email
+
+> **Pivot 2026-06-22** : La story originale (Resend/Edge Function) a été refactorisée vers **Web Share API natif**. Voir [`docs/plans/FEAT-008-email-quittance.md`](../plans/FEAT-008-email-quittance.md) pour la version actuelle.
 
 ## User story
 

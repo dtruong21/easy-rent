@@ -18,8 +18,8 @@
 ### Semaine 3 — Quittances
 - [ ] Enregistrer un paiement de loyer
 - [ ] Générer quittance PDF (mentions légales conformes loi 6 juillet 1989)
-- [ ] Envoyer quittance par email (Resend via Edge Function)
-- [ ] Historique des quittances envoyées
+- [ ] Partager quittance par email (Web Share API native + fallback mailto)
+- [ ] Historique des quittances partagées
 
 ### Semaine 4 — Documents + dashboard + livraison
 - [ ] Upload et stockage de documents (Supabase Storage)

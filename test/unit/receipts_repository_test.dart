@@ -99,10 +99,18 @@ class _InMemoryReceiptsRepository implements ReceiptsRepository {
   }
 
   @override
-  Future<Receipt> sendReceipt({required String receiptId}) async {
-    final matches = _receipts.where((r) => r.id == receiptId);
-    if (matches.isEmpty) throw ReceiptNotFoundException(receiptId);
-    return matches.first;
+  Future<Receipt> markReceiptAsShared({
+    required String receiptId,
+    required String tenantEmail,
+  }) async {
+    final idx = _receipts.indexWhere((r) => r.id == receiptId);
+    if (idx == -1) throw ReceiptNotFoundException(receiptId);
+    final sharedAt = DateTime(2026, 6, 1, 12);
+    _receipts[idx] = _receipts[idx].copyWith(
+      sentAt: sharedAt,
+      sentToEmail: tenantEmail,
+    );
+    return _receipts[idx];
   }
 }
 
@@ -270,6 +278,38 @@ void main() {
     test('lève ReceiptNotFoundException si introuvable', () async {
       expect(
         () => repo.voidReceipt('inconnu', 'motif'),
+        throwsA(isA<ReceiptNotFoundException>()),
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  group('markReceiptAsShared', () {
+    test('marque la quittance avec sentAt et sentToEmail', () async {
+      repo._receipts.add(_makeReceipt(id: 'r-1'));
+      final updated = await repo.markReceiptAsShared(
+        receiptId: 'r-1',
+        tenantEmail: 'locataire@example.com',
+      );
+      expect(updated.sentAt, isNotNull);
+      expect(updated.sentToEmail, 'locataire@example.com');
+    });
+
+    test('hasBeenShared est true après markReceiptAsShared', () async {
+      repo._receipts.add(_makeReceipt(id: 'r-1'));
+      final updated = await repo.markReceiptAsShared(
+        receiptId: 'r-1',
+        tenantEmail: 'locataire@example.com',
+      );
+      expect(updated.hasBeenShared, true);
+    });
+
+    test('lève ReceiptNotFoundException si id introuvable', () async {
+      expect(
+        () => repo.markReceiptAsShared(
+          receiptId: 'inconnu',
+          tenantEmail: 'test@example.com',
+        ),
         throwsA(isA<ReceiptNotFoundException>()),
       );
     });

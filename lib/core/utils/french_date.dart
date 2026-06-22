@@ -9,6 +9,21 @@
 class FrenchDate {
   const FrenchDate._();
 
+  static const List<String> _monthNames = [
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
+  ];
+
   /// Formate une [date] au format français `dd/MM/yyyy`.
   ///
   /// Applique [DateTime.toLocal] pour gérer correctement les timestamps UTC
@@ -31,5 +46,13 @@ class FrenchDate {
     final parts = isoDate.split('-');
     if (parts.length < 3) return isoDate;
     return '${parts[2]}/${parts[1]}/${parts[0]}';
+  }
+
+  /// Retourne le libellé "mois année" en français (ex: `"mars 2026"`).
+  ///
+  /// Utilisé pour les sujets d'email et noms de fichier des quittances.
+  static String frenchMonthYear(DateTime date) {
+    final d = date.toLocal();
+    return '${_monthNames[d.month - 1]} ${d.year}';
   }
 }

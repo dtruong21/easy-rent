@@ -1,30 +1,30 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 mergée — `/leases/:id/receipts` + `/profile`)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-06-22 (FEAT-010 Section A — dashboard refonte, `/` route refondée)
 
 ## Routes go_router
 
 | Path | Widget | Feature | Auth requise | Statut |
 |---|---|---|---|---|
-| `/` | `DashboardPage` | dashboard | ✅ oui | 🟢 refondée FEAT-010 (4 KPI cards, barchart 6 mois, activité récente, onboarding, install prompt PWA) |
-| `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | 🟢 implémentée (magic link PKCE) |
-| `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🚧 placeholder |
-| `/properties` | `PropertiesListPage` | properties | ✅ oui | 🟢 implémentée (FEAT-003) |
-| `/properties/new` | `PropertyFormPage` | properties | ✅ oui | 🟢 implémentée (CREATE form) |
-| `/properties/:id` | `PropertyDetailPage` | properties | ✅ oui | 🟢 implémentée (READ + DELETE button) |
-| `/properties/:id/edit` | `PropertyEditPage` | properties | ✅ oui | 🟢 implémentée (UPDATE form) |
-| `/tenants` | `TenantsListPage` | tenants | ✅ oui | 🟢 implémentée (FEAT-004) |
-| `/tenants/new` | `TenantFormPage` | tenants | ✅ oui | 🟢 implémentée (CREATE form) |
-| `/tenants/:id` | `TenantDetailPage` | tenants | ✅ oui | 🟢 implémentée (READ + DELETE button + lease summary) |
-| `/tenants/:id/edit` | `TenantEditPage` | tenants | ✅ oui | 🟢 implémentée (UPDATE form) |
-| `/leases` | `LeasesListPage` | leases | ✅ oui | 🟢 implémentée (FEAT-005, filtre par statut) |
-| `/leases/new` | `LeaseFormPage` | leases | ✅ oui | 🟢 implémentée (CREATE form, picker propriété/locataire) |
-| `/leases/:id` | `LeaseDetailPage` | leases | ✅ oui | 🟢 implémentée (READ + status enum, paiements section, quittances TBD FEAT-007) |
-| `/leases/:id/edit` | `LeaseEditPage` | leases | ✅ oui | 🟢 implémentée (UPDATE form) |
-| `/leases/:id/payments/new` | `PaymentFormPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, pré-remplit depuis lease) |
-| `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | payments | ✅ oui | 🟢 implémentée (FEAT-006, UPDATE payment) |
-| `/leases/:id/receipts` | `LeaseReceiptsPage` | receipts | ✅ oui | 🚧 implémentée (FEAT-007/FEAT-008, liste quittances + PDF preview + void + bouton envoi email dans ReceiptListTile) |
-| `/profile` | `ProfilePage` | profile | ✅ oui | 🚧 implémentée (FEAT-007, paramètres bailleur + test API) |
+| `/` | `DashboardPage` | dashboard | ✅ oui | ✅ refondée FEAT-010 (4 KPI cards, barchart 6 mois, activité récente, onboarding, install prompt PWA) |
+| `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | ✅ implémentée (magic link PKCE) |
+| `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🟢 enrichie FEAT-010 (RGPD + mentions légales + export/effacement GDPR) |
+| `/properties` | `PropertiesListPage` | properties | ✅ oui | ✅ implémentée (FEAT-003) |
+| `/properties/new` | `PropertyFormPage` | properties | ✅ oui | ✅ implémentée (CREATE form) |
+| `/properties/:id` | `PropertyDetailPage` | properties | ✅ oui | ✅ implémentée (READ + DELETE button) |
+| `/properties/:id/edit` | `PropertyEditPage` | properties | ✅ oui | ✅ implémentée (UPDATE form) |
+| `/tenants` | `TenantsListPage` | tenants | ✅ oui | ✅ implémentée (FEAT-004) |
+| `/tenants/new` | `TenantFormPage` | tenants | ✅ oui | ✅ implémentée (CREATE form) |
+| `/tenants/:id` | `TenantDetailPage` | tenants | ✅ oui | ✅ implémentée (READ + DELETE button + lease summary) |
+| `/tenants/:id/edit` | `TenantEditPage` | tenants | ✅ oui | ✅ implémentée (UPDATE form) |
+| `/leases` | `LeasesListPage` | leases | ✅ oui | ✅ implémentée (FEAT-005, filtre par statut) |
+| `/leases/new` | `LeaseFormPage` | leases | ✅ oui | ✅ implémentée (CREATE form, picker propriété/locataire) |
+| `/leases/:id` | `LeaseDetailPage` | leases | ✅ oui | ✅ implémentée (READ + status enum, paiements section, quittances section) |
+| `/leases/:id/edit` | `LeaseEditPage` | leases | ✅ oui | ✅ implémentée (UPDATE form) |
+| `/leases/:id/payments/new` | `PaymentFormPage` | payments | ✅ oui | ✅ implémentée (FEAT-006, pré-remplit depuis lease) |
+| `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | payments | ✅ oui | ✅ implémentée (FEAT-006, UPDATE payment) |
+| `/leases/:id/receipts` | `LeaseReceiptsPage` | receipts | ✅ oui | ✅ implémentée (FEAT-007+008, liste quittances + PDF preview + void + send email) |
+| `/profile` | `ProfilePage` | profile | ✅ oui | ✅ implémentée (FEAT-007, paramètres bailleur + test API) |
 
 ## Logique de redirect
 
@@ -44,22 +44,25 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Navigation principale
 
-Dashboard enrichi (FEAT-003/004/005/006) : ListTiles "Mes biens", "Mes locataires" et "Mes baux" naviguent vers `/properties`, `/tenants` et `/leases`. Drawer ou bottom nav complète à ajouter dans les prochaines features (FEAT-007+ pour quittances, etc.).
+Dashboard (FEAT-010 refonde) : Affiche 4 KPI cards + barchart + activité récente + onboarding (si zéro données) + install prompt PWA au 1er login.
 
-LeaseDetailPage (FEAT-005) : Affiche bail + bouton "Ajouter paiement" (disabled si lease fermé) et section liste paiements (FEAT-006).
+LeaseDetailPage (FEAT-005) : Affiche bail + bouton "Ajouter paiement" (disabled si lease fermé) et section liste paiements (FEAT-006) + section quittances (FEAT-007).
+
+DashboardPage (FEAT-010) : Navigation principale → `/properties`, `/tenants`, `/leases` via raccourcis ou drawer (TBD).
 
 ## Routes prévues (non implémentées)
 
-- `/documents` — Documents stockés (FEAT-009)
-- `/settings` — Paramètres avancés (FEAT-010)
-- `/analytics` — Dashboard analytics (FEAT-010)
+- `/documents` — Documents stockés (FEAT-009, route juste déclarée, UI non implémentée)
+- `/settings` — Paramètres avancés (FEAT-011+)
+- `/analytics` — Dashboard analytics avancées (FEAT-012+)
 
 ## Widgets de layout
 
-- **AppBar** : `title: "EasyRent"` (à enrichir avec menu/actions)
-- **Drawer/NavBar** : À créer (prochaine étape navigation)
+- **AppBar** : `title: "EasyRent"` + actions (back button, menu contextuel)
+- **Drawer** : Navigation principale (propriétés, locataires, baux, documents TBD, profil)
+- **InstallPromptBanner** : PWA install banner (FEAT-010, visible 1 fois par semaine)
 
 ## Code generation & Build
 
 - `flutter pub run build_runner build` génère les routeurs et modèles (freezed + json_serializable)
-- **Step ajouté en CI/CD** : `deploy.yml` exécute `dart run build_runner build` avant la build Flutter
+- **Step en CI/CD** : `deploy.yml` exécute `dart run build_runner build` avant la build Flutter

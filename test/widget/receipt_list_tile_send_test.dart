@@ -1,8 +1,8 @@
-/// Tests widget de [ReceiptListTile] — AC8 audit trail "Envoyé le …".
+/// Tests widget de [ReceiptListTile] — audit trail "Partagée le …".
 ///
 /// Couvre :
-/// - subtitle sans info d'envoi si jamais envoyée
-/// - subtitle avec "Envoyé le JJ/MM/YYYY à email masqué" si sentAt + sentToEmail
+/// - subtitle sans info de partage si jamais partagée
+/// - subtitle avec "Partagée le JJ/MM/YYYY à email masqué" si sentAt + sentToEmail
 library;
 
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
@@ -41,8 +41,10 @@ class _FakeRepo implements ReceiptsRepository {
   Future<void> voidReceipt(String id, String reason) async {}
 
   @override
-  Future<Receipt> sendReceipt({required String receiptId}) async =>
-      throw UnimplementedError();
+  Future<Receipt> markReceiptAsShared({
+    required String receiptId,
+    required String tenantEmail,
+  }) async => throw UnimplementedError();
 }
 
 // ---------------------------------------------------------------------------
@@ -94,18 +96,19 @@ Widget _buildTile(Receipt receipt) {
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('ReceiptListTile — AC8 audit trail envoi', () {
-    testWidgets('subtitle sans mention "Envoyé" si quittance jamais envoyée', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_buildTile(_makeReceipt()));
-      await tester.pumpAndSettle();
+  group('ReceiptListTile — audit trail partage', () {
+    testWidgets(
+      'subtitle sans mention "Partagée" si quittance jamais partagée',
+      (tester) async {
+        await tester.pumpWidget(_buildTile(_makeReceipt()));
+        await tester.pumpAndSettle();
 
-      expect(find.textContaining('Envoyé le'), findsNothing);
-    });
+        expect(find.textContaining('Partagée le'), findsNothing);
+      },
+    );
 
     testWidgets(
-      'subtitle affiche "Envoyé le JJ/MM/YYYY à email masqué" si sentAt + sentToEmail',
+      'subtitle affiche "Partagée le JJ/MM/YYYY à email masqué" si sentAt + sentToEmail',
       (tester) async {
         final receipt = _makeReceipt(
           sentAt: DateTime(2026, 6, 1),
@@ -115,7 +118,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // La date doit être au format DD/MM/YYYY.
-        expect(find.textContaining('Envoyé le 01/06/2026'), findsOneWidget);
+        expect(find.textContaining('Partagée le 01/06/2026'), findsOneWidget);
         // L'email doit être masqué (premier char + *** + @domaine).
         expect(find.textContaining('l***@example.com'), findsOneWidget);
       },

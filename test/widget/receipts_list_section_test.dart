@@ -43,8 +43,10 @@ class _FakeReceiptsRepo implements ReceiptsRepository {
   Future<void> voidReceipt(String id, String reason) async {}
 
   @override
-  Future<Receipt> sendReceipt({required String receiptId}) async =>
-      throw UnimplementedError();
+  Future<Receipt> markReceiptAsShared({
+    required String receiptId,
+    required String tenantEmail,
+  }) async => throw UnimplementedError();
 }
 
 // ---------------------------------------------------------------------------

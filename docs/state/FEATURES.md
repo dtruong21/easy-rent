@@ -1,13 +1,13 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-06-01 (FEAT-007 Phase 3 en WIP, commit a4386d5, branche feature/quittance-pdf)
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-06-22 (FEAT-010 Section A+B+C ✅ mergée, commit 643789c, branche develop)
 
 ## Légende
 
-- ✅ **done** : code mergé, testé, déployé (staging ≥ production)
+- ✅ **done** : code mergé, testé, déployé ou prêt pour prod
 - 🟢 **ready** : code mergé, en attente de deploy production
-- 🚧 **wip** : en cours de développement
-- 📋 **planned** : story écrite, pas commencé
+- 🚧 **wip** : en cours de développement (branche ouverte)
+- 📋 **planned** : user story écrite, pas commencé
 - 💡 **idea** : dans le backlog mais pas spec'd
 
 ## Features implémentées
@@ -15,352 +15,313 @@
 | ID | Nom | Statut | Notes |
 |---|---|---|---|
 | FEAT-001 | Auth propriétaire (signup, login, magic link) | ✅ done | PR#1, merge 8d91219, staging validée 2026-05-27 |
-| FEAT-002 | Modèle de données + RLS exhaustive (properties, tenants, leases) | ✅ done | PR#2, merge 6b28bbb, backend pur (aucun changement Flutter), 77 RLS tests |
+| FEAT-002 | Modèle de données + RLS exhaustive (properties, tenants, leases) | ✅ done | PR#2, merge 6b28bbb, backend pur, 77 RLS tests |
 | FEAT-003 | CRUD UI propriétés (list, detail, form) | ✅ done | PR#3, merge c1b0571, 16 fichiers Dart, 4 routes GoRouter, 56 tests |
 | FEAT-004 | CRUD UI locataires (list, detail, form) | ✅ done | PR#4, merge 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
 | FEAT-005 | CRUD UI baux (list, detail, form) | ✅ done | PR#5, merge a795686, 18 fichiers Dart, 4 routes GoRouter, date hardening, 90+ tests |
 | FEAT-006 | CRUD paiements de loyer (enregistrement + archive) | ✅ done | PR#8, merge 2a18458, 15 fichiers Dart, 2 routes GoRouter, 31 RLS tests + 50 unit/widget tests |
-| FEAT-007 | Générer quittance PDF conforme loi 1989 (Phase 1+2+3) | 🚧 wip | Branche feature/quittance-pdf, commit a4386d5; SQL Phase 1 appliquée; Phase 2 (Edge Function + PDF builder); Phase 3 (UI + void flow + profile) |
-| FEAT-008 | Envoyer quittance par email (Resend) | 🚧 wip | Branche feature/email-quittance; couche Flutter UI implémentée (controller + bouton + dialog + mapper); SQL + Edge Function en attente supabase-dev |
-| FEAT-009 | Upload & stockage de documents (PDF, images) | 🚧 dev | Branche feature/documents-storage; couche Flutter UI implémentée (domain + data + application + presentation, 15 tests) ; migration SQL en attente supabase-dev ; tests Storage RLS : `supabase/tests/storage_documents.sql` (10 tests — security-auditor finding résolu) |
-| FEAT-010 | Dashboard + Polish PWA + Prod setup | 🚧 dev | Branche feature/dashboard-pwa-prod-setup ; Section A (dashboard 4 KPI cards + barchart + onboarding) + Section B (PWA manifest + icônes + install prompt) + Section C (migrate-prod.yml + privacy RGPD + runbook + checklist) implémentées. 1005 tests (69 nouveaux). |
-| (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | 🟢 ready | Squelette + infra multi-env |
+| FEAT-007 | Générer quittance PDF conforme loi 1989 (Phase 1+2+3) | ✅ done | PR#15, merge db5d522, SQL + Edge Function + 18 fichiers Dart, 2 routes GoRouter, void flow |
+| FEAT-008 | Envoyer quittance par email (Resend) | ✅ done | PR#20, merge 7d3a57e, Edge Function + 8 fichiers Dart, secrets RESEND attente go-live |
+| FEAT-009 | Upload & stockage de documents (PDF, images) | ✅ done | PR#22, merge 57c8164, migration SQL + 15 fichiers Dart, Storage bucket privé, soft-delete RPC |
+| FEAT-010 | Dashboard + Polish PWA + Prod setup | ✅ done | PR#23, merge 643789c, 3 sections (A=dashboard 18 Dart, B=PWA 7 Dart, C=workflows+docs) |
+| (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | ✅ done | Squelette + infra multi-env |
 
-## Détails
+## Détails par feature
 
-### FEAT-001 : Auth propriétaire (magic link)
+### FEAT-010 : Dashboard + Polish PWA + Prod setup
 
-**Status** : ✅ DONE (mergé develop 2026-05-26, staging déployée 2026-05-27)
+**Status** : ✅ DONE (mergée develop 2026-06-22, commit 643789c)
 
-**Source** : `docs/backlog/001-auth-magic-link.md`
+**Branche** : feature/dashboard-pwa-prod-setup
 
-**Code structure** :
-- `lib/features/auth/domain/` : `login_form_state.dart` (freezed model)
-- `lib/features/auth/data/` : `auth_repository.dart` (SupabaseAuth wrapper)
-- `lib/features/auth/application/` : `auth_controller.dart`, `auth_session_provider.dart` (providers Riverpod)
-- `lib/features/auth/presentation/` : `login_page.dart`, `widgets/login_form.dart`, `widgets/magic_link_sent_view.dart`
+**Sections** :
 
-**Routes** :
-- `/login` : Login form (email input, magic link send)
-- Redirect logic : Auto-redirect `/login` → `/` si authentifié
+#### A. Dashboard refonte
+- **Pages** : 1 (DashboardPage refondée)
+- **Widgets** : 7 (KpiCard, KpiGrid, MonthlyBarchart, DashboardHeader, RecentActivitySection, ShortcutsRow, OnboardingFirstSteps)
+- **Models** : 5 (DashboardKpi, DashboardSnapshot, ActivityItem, MonthlyAmount, dashboar\_kpi freezed)
+- **Data layer** : dashboard_repository.dart (queries agrégées, Future.wait 7 requêtes)
+- **Application layer** : dashboard_provider.dart (AsyncNotifierProvider + invalidate)
+- **Features** :
+  - 4 KPI cards : loyers mois encaissé/dû, retards (35j sans paiement), renouvellements 30j, documents en attente
+  - Mini-barchart 6 mois (fl_chart v0.69.0, encaissé vs dû)
+  - Activité récente (top 5 paiements + quittances + documents)
+  - Onboarding (affiche « Premiers pas » si 0 propriété + 0 locataire + 0 bail)
+  - Install prompt PWA (visible 1 fois par semaine)
+- **Dépendances** : fl_chart 0.69.0, shared_preferences 2.3.5, web 1.1.0
+- **Tests** : 27 unit + 42 widget (69 assertions)
 
-**Database** :
-- Table `landlords` (public + dev) : PK = `auth.users.id`, colonnes (email, created_at, updated_at, deleted_at)
-- Trigger `handle_new_user()` : Auto-provisioning à chaque signup
-- RLS policies : SELECT/UPDATE sur sa propre ligne uniquement
+#### B. Polish PWA
+- **Manifest** : manifest.json complètement rempli (name, description, theme_color #0F766E, background_color, icons)
+- **Icônes** : 192/512 px + maskable variants, générées via script ImageMagick
+- **Install prompt** : beforeinstallprompt JS interop (web package)
+- **Persistance dismiss** : shared_preferences (1 semaine avant ré-affichage)
+- **Features** :
+  - install_prompt_controller.dart (Riverpod StateNotifier)
+  - install_prompt_js_bridge.dart (JS interop avec fallback stub)
+  - install_prompt_storage.dart (SharedPreferences wrapper)
+  - install_prompt_banner.dart (Widget affichage)
+- **Files** : 7 fichiers Dart + 2 icônes PNG + script shell generate-pwa-icons.sh
+- **Tests** : 2 unit + 2 widget
 
-**Tests** :
-- `test/unit/auth_*` : Logic tests
-- `test/widget/login_form_test.dart` : Widget tests
-- `test/widget/router_guard_test.dart` : Navigation guard tests
-- `supabase/tests/rls_landlords.sql` : RLS cross-user validation
+#### C. Prod setup
+- **Workflows** :
+  - `.github/workflows/migrate-prod.yml` (nouvelle) : workflow_dispatch, input confirm, `supabase db push`, 73 lignes
+  - `.github/workflows/deploy.yml` (modifiée) : +31 lignes, staging + prod build/deploy
+- **Documentation** :
+  - `docs/PROD_DEPLOY_CHECKLIST.md` (nouvelle) : 117 lignes, 22 étapes (déploiement + rollback)
+  - `docs/RUNBOOK_PROD_DEPLOY.md` (nouvelle) : 183 lignes, procédure step-by-step avec commands
+- **Configuration** :
+  - `dart-defines.prod.example.json` (nouvelle) : template variables Firebase projet prod
+  - `firebase.json` (modifiée) : CSP étendue (fonts.gstatic.com), cache strategy Service Worker
+- **Pages** :
+  - `/privacy` enrichie (190+ lignes) : RGPD + mentions légales + export/effacement GDPR
+- **Décisions** :
+  - Resend secrets = blocker prod (domaine non vérifié, deploy infra OK attente go-live)
+  - KPI "Documents attente" = category='autre' AND deleted_at IS NULL
+  - "Retards" = locataires sans paiement 35j (MVP simplification)
 
-**Validation** : Staging déployée — bout-en-bout OK (signup → magic link → session → RLS isolation)
+**Fichiers** :
+- Dart : 18 dashboard + 7 pwa = 25 nouveaux
+- Workflows : 1 nouveau (migrate-prod.yml) + 1 modifié (deploy.yml)
+- Docs : 2 nouveaux (checklist + runbook)
+- Config : 1 nouveau (dart-defines.prod.example.json), 1 modifié (firebase.json)
 
----
-
-### FEAT-002 : Modèle de données + RLS (properties, tenants, leases)
-
-**Status** : ✅ DONE (mergé develop 2026-05-28, backend appliqué 2026-05-28 12:00 UTC)
-
-**Source** : `docs/backlog/002-data-model-rls.md`
-
-**Migration** : `supabase/migrations/20260528120000_feat002_data_model.sql` (757 lignes)
-
-**Tables créées** :
-- `public.properties` / `dev.properties` — Biens immobiliers (FK → landlords)
-- `public.tenants` / `dev.tenants` — Locataires (FK → landlords)
-- `public.leases` / `dev.leases` — Baux (FK → landlords, properties, tenants)
-
-**Colonnes ajoutées à `landlords`** : `full_name`, `phone`, `address` (optionnels)
-
-**Changement FK** : `landlords.id → auth.users(id)` : CASCADE → NO ACTION (rétention légale 5 ans)
-
-**RLS** :
-- 24 policies (4 tables × 2 schémas × 3 opérations SELECT/INSERT/UPDATE)
-- Aucune policy DELETE (soft-delete via RPC)
-- Ownership check : `landlord_id = auth.uid() AND deleted_at IS NULL`
-
-**Soft-delete** :
-- Trigger `prevent_protected_columns_change()` bloque modification de `deleted_at`, `created_at` sauf flag `app.allow_deleted_at_change = '1'`
-- 4 RPC SECURITY DEFINER × 2 schémas : `soft_delete_landlord()`, `soft_delete_property()`, `soft_delete_tenant()`, `soft_delete_lease()`
-
-**Cohérence cross-FK** :
-- Trigger `assert_lease_ownership_consistency()` SECURITY DEFINER valide que property_id et tenant_id appartiennent au même landlord_id
-
-**Triggers** :
-- tr_00 : `assert_lease_ownership` (leases uniquement)
-- tr_01 : `prevent_protected_columns_change_*` (4 tables)
-- tr_02 : `set_updated_at_*` (4 tables)
-
-**Tests RLS** : 77 tests (rls_landlords.sql, rls_properties.sql, rls_tenants.sql, rls_leases.sql)
-
-**Code Flutter** : Aucun changement (backend pur)
-
-**Validation** : Migration appliquée en réel sur Supabase 2026-05-28 12:00 UTC.
+**Commits** :
+1. c32eb9d — feat(dashboard): KPI cards + barchart 6 mois + onboarding (Section A)
+2. 0a6f156 — feat(pwa): install prompt + manifest + icônes placeholder (Section B)
+3. 3bd420f — feat(prod-setup): workflows + privacy RGPD + runbook + SW cache fix (Section C)
 
 ---
 
-### FEAT-003 : CRUD UI propriétés (list, detail, form)
+### FEAT-009 : Upload & stockage de documents
 
-**Status** : ✅ DONE (mergé develop 2026-05-28, PR#3, commit c1b0571)
+**Status** : ✅ DONE (mergée develop 2026-06-17, commit 57c8164)
 
-**Source** : `docs/backlog/003-crud-properties.md`
+**Branche** : feature/documents-storage
 
-**Code structure** :
-- `lib/features/properties/domain/` : `property.dart` (freezed model), `property_type.dart` (enum), `property_form_state.dart`
-- `lib/features/properties/data/` : `property_repository.dart` (Supabase Postgrest wrapper, CRUD via RLS)
-- `lib/features/properties/application/` : `properties_list_provider.dart`, `property_detail_provider.dart`, `property_form_controller.dart`
-- `lib/features/properties/presentation/` : `properties_list_page.dart`, `property_detail_page.dart`, `property_form_page.dart`, `widgets/`
+**Phase** : 1 (SQL migration) + 2 (UI Flutter)
 
-**Routes** (4 nouvelles) :
-- `/properties` : PropertiesListPage
-- `/properties/new` : PropertyFormPage (mode CREATE)
-- `/properties/:id` : PropertyDetailPage (mode READ + DELETE)
-- `/properties/:id/edit` : PropertyEditPage (mode UPDATE)
+**SQL** : `supabase/migrations/20260602100520_feat009_documents.sql` (588 lignes)
+- Table `documents` (12 colonnes : id, landlord_id, lease_id, category, title, file_name, file_size_bytes, mime_type, storage_path, legal_hold, created_at, deleted_at)
+- Enum `document_category` (bail_signe, etat_des_lieux, attestation_assurance, quittance_scannee, autre)
+- Bucket Storage `documents/` privé (chemins `{schema}/{landlord_id}/{document_id}.{ext}`)
+- RPC `soft_delete_document(p_id uuid)` SECURITY DEFINER (retourne storage_path, hard_deleted)
+- Triggers : ownership check, protect immutable columns (category seule updatable), legal_hold auto-calc
 
-**Helpers réutilisables** :
-- `lib/core/utils/postgrest_error_mapper.dart` : Mappe erreurs Postgrest → messages UI localisés
-- `lib/core/utils/surface_validator.dart` : Valide `surface_m2 > 0`
-- `lib/core/utils/property_form_validators.dart` : Valide nom, adresse, type
+**Flutter** :
+- Domain : document.dart, document_category.dart, document_upload_state.dart
+- Data : document_repository.dart (CRUD, Storage integration)
+- Application : document_list_provider.dart, document_form_controller.dart
+- Presentation : document_list_page.dart, document_form_page.dart, document_preview_dialog.dart, delete_dialog.dart
+- Features : upload multi-fichiers (file_picker), preview inline, soft-delete
 
-**Tests** : 56 tests (unit + widget + integration)
+**RLS** : 2 policies (SELECT/INSERT, pas UPDATE/DELETE à ce stade), 1 bucket Storage policy
 
-**RLS passthrough** : Ownership délégué à Supabase RLS.
+**Routes** : `/documents` déclarée (route juste, UI non accessible pour l'instant)
 
----
-
-### FEAT-004 : CRUD UI locataires (list, detail, form)
-
-**Status** : ✅ DONE (mergé develop 2026-05-29, PR#4, commit 911ca5c)
-
-**Source** : `docs/backlog/004-crud-tenants.md`
-
-**Code structure** :
-- `lib/features/tenants/domain/` : `tenant.dart` (freezed model), `tenant_form_state.dart`
-- `lib/features/tenants/data/` : `tenant_repository.dart` (Supabase Postgrest wrapper, CRUD via RLS)
-- `lib/features/tenants/application/` : `tenants_list_provider.dart`, `tenant_detail_provider.dart`, `tenant_form_controller.dart`
-- `lib/features/tenants/presentation/` : `tenants_list_page.dart`, `tenant_detail_page.dart`, `tenant_form_page.dart`, `widgets/` (tenant_card, tenant_form, tenant_lease_summary)
-
-**Routes** (4 nouvelles) :
-- `/tenants` : TenantsListPage
-- `/tenants/new` : TenantFormPage (mode CREATE)
-- `/tenants/:id` : TenantDetailPage (mode READ + DELETE + lease summary)
-- `/tenants/:id/edit` : TenantEditPage (mode UPDATE)
-
-**Helpers** :
-- `lib/core/utils/tenant_form_validators.dart` : Valide prénom, nom, email, téléphone
-- `lib/core/widgets/archive_confirm_dialog.dart` : Widget réutilisable soft-delete (déplacé de properties → core)
-
-**Widget spécialisé** :
-- `TenantLeaseSummary` : Affiche les baux actifs du locataire (prépare FEAT-005)
-
-**Tests** : 80+ tests (unit + widget)
-
-**RLS passthrough** : Ownership délégué à Supabase RLS.
+**Tests** : 15 unit + widget tests
 
 ---
 
-### FEAT-005 : CRUD UI baux (list, detail, form)
+### FEAT-008 : Partager une quittance par email (Web Share API Native)
 
-**Status** : ✅ DONE (mergé develop 2026-05-29, PR#5, commit a795686)
+**Status** : ✅ REFACTORED (pivot 2026-06-22) — Web Share API native remplace Resend/Edge Function
 
-**Source** : `docs/backlog/005-crud-leases.md`
+**Branche** : feature/feat-008-web-share-pivot
 
-**Migration** : `supabase/migrations/20260529120000_lease_date_bounds.sql` (date hardening, bornes 1900–2100)
+**Pivot justification** : Élimination dépendance Resend (pas de secret backend, pas de domaine DNS à vérifier, meilleure UX native)
 
-**Code structure** :
-- `lib/features/leases/domain/` : `lease.dart` (freezed model), `lease_status.dart` (enum: active, terminated, archived), `lease_form_state.dart`
-- `lib/features/leases/data/` : `lease_repository.dart` (Supabase Postgrest wrapper, CRUD via RLS)
-- `lib/features/leases/application/` : `leases_list_provider.dart`, `lease_detail_provider.dart`, `lease_form_controller.dart`
-- `lib/features/leases/presentation/` : `leases_list_page.dart`, `lease_detail_page.dart`, `lease_form_page.dart`, `lease_edit_page.dart`, `widgets/`
+**Web Share Service** : `lib/features/receipts/data/web_share_service.dart`
+- JS interop via `package:web` : `navigator.share()` + `navigator.canShare()`
+- Récupère PDF depuis Storage (signed URL 60s)
+- Fallback `mailto://` pour navigateurs sans Web Share API (Safari desktop)
+- Aucun secret backend requis
 
-**Routes** (4 nouvelles) :
-- `/leases` : LeasesListPage
-- `/leases/new` : LeaseFormPage (mode CREATE)
-- `/leases/:id` : LeaseDetailPage (mode READ, prépare FEAT-006 paiements + FEAT-007 quittances)
-- `/leases/:id/edit` : LeaseEditPage (mode UPDATE)
+**Flutter** :
+- Service : web_share_service.dart (native share + fallback mailto)
+- Controller : share_receipt_controller.dart (StateNotifier, transitions d'état)
+- State : share_receipt_state.dart (sealed freezed, idle/loading/confirmingResend/success/error)
+- Widgets : share_receipt_button.dart (icon + tooltip + listener), confirm_resend_dialog.dart
+- Features : partage natif système, dialog confirmation renvoi, masquage email RGPD, SnackBars
 
-**Helpers réutilisables** :
-- `lib/core/utils/lease_form_validators.dart` : Valide dates (start < end), montants, bornes 1900–2100
-- `lib/core/utils/date_helpers.dart` : Helpers date Postgres ↔ Dart
+**RLS** : inchangée (colonnes `sent_at`, `sent_to_email` existent depuis FEAT-008 original, RPC `mark_receipt_as_sent` inchangée)
 
-**Widget spécialisé** :
-- `LeaseDetailPage` : Affiche le détail du bail, boutons "Ajouter paiement" et affichage quittances (préparés pour FEAT-006/007)
-- Placeholder `_PaymentsPlaceholder` : sera remplacé par `PaymentListSection` en FEAT-006
+**Tests** : 3 fichiers (web_share_service, share_receipt_controller, share_receipt_button), ~25 tests
 
-**Tests** : 90+ tests (unit + widget), incluant date boundary validation
+**Décisions** :
+- Partage = intention utilisateur (pas preuve serveur d'envoi réel, acceptable MVP)
+- RPC `mark_receipt_as_sent` appelée asynchrone après partage réussi
+- Idempotence : 2e partage écrase `sent_at` (marque le dernier partage)
+- Pas de Edge Function Resend
 
-**RLS passthrough** : Ownership délégué à Supabase RLS.
+---
 
-**Décisions hardening** :
-- Date bounds : 1900-01-01 à 2100-12-31 (CHECK SQL + validation Dart)
-- Bornes intégrées dès la création (FEAT-005 audit débloque FEAT-006)
+### FEAT-007 : Générer quittance PDF conforme loi 1989
+
+**Status** : ✅ DONE (mergée develop 2026-05-31, commit db5d522)
+
+**Branche** : feature/quittance-pdf
+
+**Phases** :
+
+**Phase 1 (SQL)** : `supabase/migrations/20260531172904_feat007_receipts.sql`
+- Table `receipts` (16 colonnes, id, landlord_id, lease_id, payment_ids[], period_start/end, rent_cents, charges_cents, total_cents, document_type, pdf_path, generated_at, created_at, is_voided, voided_at, voided_reason, is_stale)
+- Enum `document_type` (quittance, recu)
+- Bucket Storage `receipts/` privé
+- RPC `void_receipt()` SECURITY DEFINER
+- 4 index stratégiques, 2 policies RLS, triggers ownership + protection + is_stale bidirectionnel
+- `supabase/migrations/20260531200000_feat007_receipts_stale_bidirectional.sql` : fix is_stale bidirectionnel (soft-delete + résurrection)
+
+**Phase 2 (Edge Function)** : `supabase/functions/generate-receipt/` (Deno TS)
+- Orchestration : fetch payments → build PDF → upload Storage → INSERT receipts
+- PDF template : pdf-lib 1.17.1, loi 1989 mentions légales (AR 21)
+- Invocation : POST `/functions/v1/generate-receipt` JWT + `{lease_id, schema}`
+- Retour : `{receipt_id, pdf_url (5 min signed)}`
+
+**Phase 3 (UI)** : 18 fichiers Dart, domain/data/application/presentation
+- Models : receipt.dart, document_type.dart, receipt_generation_state.dart
+- Providers : lease_receipts_provider.dart (AsyncNotifierProvider.family)
+- Routes : `/leases/:id/receipts` (LeaseReceiptsPage)
+- Features : génération via Edge Function, preview PDF, void avec raison, list avec tri période, profile validation
+
+**RLS** : 2 policies (SELECT/INSERT), triggers protect immuability, RPC bypass RLS pour admin
+
+**Tests** : 31 RLS tests, ~50 unit/widget tests
 
 ---
 
 ### FEAT-006 : CRUD paiements de loyer
 
-**Status** : 🟢 READY (commit 2a18458, PR#8, branche develop)
+**Status** : ✅ DONE (mergée develop 2026-05-31, commit 2a18458)
 
-**Source** : `docs/backlog/006-payment-record.md` et `docs/plans/FEAT-006-payment-record.md`
+**SQL** : `supabase/migrations/20260531102202_feat006_payments.sql` (890 lignes)
+- Table `payments` (13 colonnes : id, landlord_id, lease_id, amount_cents, method, period_start/end, paid_at, notes, created_at, updated_at, deleted_at)
+- Enum `payment_method` (virement, cheque, especes, prelevement, autre)
+- 4 index stratégiques, 3 policies RLS, triggers ownership + protect + updated_at
+- RPC `soft_delete_payment()` SECURITY DEFINER
 
-**Migration** : `supabase/migrations/20260531102202_feat006_payments.sql` (890 lignes)
+**Flutter** :
+- Domain : payment.dart (freezed), payment_method.dart (enum)
+- Data : payment_repository.dart (listForLease, create, update, archive)
+- Application : lease_payments_provider.dart (AsyncNotifierProvider.family)
+- Presentation : payment_form_page.dart, payment_list_section.dart, payment_list_tile.dart
+- 2 routes : `/leases/:id/payments/new`, `/leases/:id/payments/:pid/edit`
 
-**Code structure** :
-- `lib/features/payments/domain/` : `payment.dart` (freezed model + PaymentExtension), `payment_method.dart` (enum: virement, cheque, especes, prelevement, autre), `payment_form_state.dart` (sealed union)
-- `lib/features/payments/data/` : `payment_repository.dart` (Supabase Postgrest wrapper, listForLease/getById/create/update/archive via RPC)
-- `lib/features/payments/application/` : `lease_payments_provider.dart` (AsyncNotifierProvider.family by leaseId), `payment_detail_provider.dart` (FutureProvider.family), `payment_form_controller.dart` (StateNotifier)
-- `lib/features/payments/presentation/` : `payment_form_page.dart`, `payment_edit_page.dart`, `widgets/payment_form.dart`, `widgets/payment_list_section.dart`, `widgets/payment_list_tile.dart`, `widgets/payment_amount_warning.dart`
+**Features** : montants en centimes, dates en date SQL, paiements partiels libres, soft-delete
 
-**Routes** (2 nouvelles) :
-- `/leases/:id/payments/new` : PaymentFormPage (mode CREATE, pré-remplit depuis lease)
-- `/leases/:id/payments/:pid/edit` : PaymentEditPage (mode UPDATE)
-
-**Database** :
-- Table `public.payments` et `dev.payments` : 13 colonnes (id, lease_id, landlord_id, period_start, period_end, paid_at, rent_amount_cents, charges_amount_cents, payment_method, notes, created_at, updated_at, deleted_at)
-- 4 index : landlord_id (RLS), lease_id (listage), period_start DESC (tri), active partial (deleted_at IS NULL)
-- 3 policies RLS : SELECT/INSERT/UPDATE, pas de DELETE (soft-delete via RPC uniquement)
-- Trigger tr_00 : `assert_payment_lease_ownership()` SECURITY DEFINER, cross-FK (lease_id → landlord_id)
-- Trigger tr_01 / tr_02 : réutilisées (prevent_protected_columns_change, set_updated_at)
-- RPC `soft_delete_payment()` SECURITY DEFINER : GRANT authenticated, REVOKE PUBLIC
-
-**Modèle `Payment`** :
-- Freezed + json_serializable
-- Montants en centimes (integer), jamais double (ex: 85000 = 850,00€)
-- Dates en `date` Postgres (YYYY-MM-DD) convertis via helpers JSON
-- PaymentMethod enum (fromSql / sqlValue / label pour pivot SQL/Dart)
-- Extension PaymentExtension : getter `totalAmountCents`
-
-**Helpers** :
-- `lib/core/utils/payment_form_validators.dart` : Valide period_start < period_end, montants > 0, méthode, notes max 500 chars
-- Date conversion JSON : _dateFromJson / _dateToJson
-
-**Widgets** :
-- `PaymentForm` : Formulaire création/édition, pré-remplit depuis lease (rent_amount_cents + charges_amount_cents), warning banner si montant ≠ loyer+charges
-- `PaymentListSection` : Liste paiements actifs du bail (remplace _PaymentsPlaceholder de FEAT-005), bouton "Ajouter paiement" (disabled si lease fermé)
-- `PaymentListTile` : Ligne paiement avec actions (edit, archive)
-- `PaymentAmountWarning` : Banner non-bloquant si montant hors normes
-
-**Tests** :
-- RLS : 31 tests dans `supabase/tests/rls_payments.sql` (SELECT/INSERT/UPDATE ownership validation)
-- Unit : `payment_test.dart`, `payment_method_test.dart`, `payment_form_validators_test.dart`, `payment_repository_test.dart`
-- Widget : `payment_form_test.dart`, `payment_list_section_test.dart`
-- LeaseDetailPage test enrichi (PaymentListSection embedding)
-
-**Décisions produit** (tranchées + documentées) :
-1. **Paiements partiels libres** : Pas de vérification "montant ≤ loyer+charges". Warning UI seulement (non-bloquant).
-2. **Doublons autorisés** : Pas de UNIQUE sur (lease_id, period_start, period_end). Cas légitimes : régularisation après audit.
-3. **paid_at futur OK** : Autorisée (prélèvements programmés).
-4. **Paiement sur bail fermé autorisé au DB** : Cas légitimes : régularisation, dernière mensualité après clôture. Bouton UI désactivé seulement.
-5. **Soft-delete uniquement** : Pas de hard-delete. RPC `soft_delete_payment()` pour compliance RGPD.
-
-**RLS exhaustive** :
-- SELECT : `landlord_id = auth.uid() AND deleted_at IS NULL`
-- INSERT : `landlord_id = auth.uid()` (trigger tr_00 valide lease_id → landlord_id)
-- UPDATE : USING `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK `landlord_id = auth.uid()`
-- DELETE : aucune policy (soft-delete via RPC)
-
-**Validation** : Tests RLS passent (31/31), unit/widget tests passent. Prêt pour deploy.
+**Tests** : 31 RLS tests, ~50 unit/widget tests
 
 ---
 
-### FEAT-007 : Générer quittance PDF conforme loi 1989 (Phase 1+2+3)
+### FEAT-005 : CRUD UI baux
 
-**Status** : 🚧 WIP (feature/quittance-pdf, commit a4386d5)
+**Status** : ✅ DONE (mergée develop 2026-05-29, commit a795686)
 
-**Source** : `docs/plans/FEAT-007-quittance-pdf.md`
+**SQL** : `supabase/migrations/20260529120000_lease_date_bounds.sql`
+- Table `leases` (11 colonnes : id, landlord_id, property_id, tenant_id, status, rent_amount_cents, charges_amount_cents, start_date, end_date, created_at, updated_at)
+- Enum `lease_status` (draft, active, ended, archived)
+- Validation dates : start_date <= end_date
 
-**Phase 1 — SQL (MERGED 2026-05-31)** :
+**Flutter** :
+- Domain : lease.dart (freezed), lease_status.dart (enum)
+- Data : lease_repository.dart (CRUD operations)
+- Application : leases_list_provider.dart, lease_detail_provider.dart
+- Presentation : leases_list_page.dart, lease_form_page.dart, lease_detail_page.dart
+- 4 routes : `/leases`, `/leases/new`, `/leases/:id`, `/leases/:id/edit`
 
-- **Migrations** :
-  - `20260531172904_feat007_receipts.sql` (610 lignes) : table receipts + enum document_type + RPC void_receipt + bucket receipts/ + RLS policies
-  - `20260531200000_feat007_receipts_stale_bidirectional.sql` (152 lignes) : fix is_stale bidirectionnel (soft-delete + résurrection)
-  
-- **Database** :
-  - Table `public.receipts` / `dev.receipts` : 16 colonnes (id, landlord_id, lease_id, payment_ids[], period_start/end, rent_cents, charges_cents, total_cents, document_type, pdf_path, generated_at, created_at, is_voided, voided_at, voided_reason, is_stale)
-  - Enum `public.document_type` : ('quittance', 'recu')
-  - 4 index : landlord_id (RLS), lease_id, period_start_desc, payment_ids GIN
-  - 2 policies RLS : SELECT (all receipts), INSERT (own landlord)
-  - Triggers : tr_00 (ownership), tr_01 (protect columns), tr_03 AFTER UPDATE (is_stale recompute)
-  - RPC `void_receipt(p_id uuid, p_reason text)` SECURITY DEFINER
-  - Bucket Storage receipts/ (privé, PDF-only, 10MB, 2 policies SELECT/INSERT)
+**Features** : date hardening, status transitions, soft-delete, RLS isolation
 
-**Phase 2 — Edge Function (MERGED 2026-05-31)** :
-
-- **Edge Function** : `supabase/functions/generate-receipt/` (Deno TS)
-  - `index.ts` : Orchestration (invoke → fetch payments → build PDF → upload Storage → INSERT DB)
-  - `pdf_layout.ts` : PDF template (pdf-lib, FR legal compliance, loi 1989 art. 21)
-  - `types.ts` : Types TS (ReceiptInput, PaymentRecord, DocumentType)
-  - `deps.ts` : Imports (pdf-lib, @supabase/supabase-js)
-  - Tests : `tests/generate_receipt_test.ts`
-  - Blockers fix (FEAT-007 Round 2) : CORS allowlist, edge function invocation timeout
-
-**Phase 3 — UI + Void Flow (MERGED 2026-06-01)** :
-
-- **Code structure** :
-  - Domain : `receipt.dart` (freezed), `document_type.dart` (enum), `receipt_generation_state.dart` (sealed union), `receipt_generation_result.dart`
-  - Data : `receipts_repository.dart` (query, void via RPC)
-  - Application : `lease_receipts_provider.dart` (AsyncNotifierProvider.family), `generate_receipt_controller.dart`, `void_receipt_controller.dart`
-  - Presentation : `lease_receipts_page.dart`, `receipts_list_section.dart`, widgets (receipt_list_tile, receipt_preview_dialog, void_receipt_dialog, generate_receipt_button, profile_incomplete_dialog)
-  - 18 fichiers Dart
-
-- **Routes** :
-  - `/leases/:id/receipts` : LeaseReceiptsPage (liste quittances + bouton générer)
-  - `/profile` : ProfilePage (paramètres bailleur, test API Edge Function)
-
-- **Widgets** :
-  - `LeaseReceiptsPage` : Liste quittances + tri période DESC + bouton "Générer quittance"
-  - `GenerateReceiptButton` : Invoque Edge Function, gère états (loading, success, error, profile_incomplete)
-  - `ReceiptListTile` : Affiche quittance (type, période, montant), actions (preview, void)
-  - `ReceiptPreviewDialog` : PDF viewer (url signée 5 min Storage) + téléchargement
-  - `VoidReceiptDialog` : Formulaire annulation (raison 3-500 chars) + confirmation
-  - `ProfileIncompleteDialog` : Warning si landlord.full_name vide (prérequis génération)
-
-- **Business logic** :
-  - Génération : appelle Edge Function avec lease_id → fonction fetch payments + build PDF + upload + INSERT receipts
-  - Voiding : appelle RPC void_receipt(id, reason) → immédiat, no edge function
-  - is_stale tracking : trigger AFTER UPDATE payment.deleted_at → marque receipts stale (soft-delete) ou recompute (résurrection)
-  - Profile validation : demande full_name avant de générer (loi 1989 requires owner name)
-
-- **Tests** (en cours) :
-  - Unit : repository, model, payment fetch logic
-  - Widget : list, dialog interactions, voiding flow
-  - E2E : full generation cycle (create payments → generate receipt → preview → void)
-
-**RLS** : SELECT toutes receipts du bailleur (y compris voided). INSERT via Edge Function (JWT). Pas d'UPDATE direct (voiding uniquement via RPC).
-
-**Décisions tranchées** :
-- is_stale bidirectionnel : soft-delete marque stale, résurrection recompute (FEAT-007 Round 2 E5)
-- Pas de DELETE (rétention légale 5 ans, immuabilité)
-- Bucket privé (URLs signées 5 min uniquement)
-- document_type = enum SQL natif (quittance ou recu)
-
-**Backlog (Phase 4+)** :
-- Email envoi (FEAT-008, Edge Function send-receipt)
-- Dashboard agrégation (FEAT-010)
-- Rappel/notification paiement attendu (FEAT-011 P1)
+**Tests** : ~90 unit/widget tests
 
 ---
 
-### Bootstrap projet (non-feature)
+### FEAT-004 : CRUD UI locataires
 
-**Status** : 🟢 ready (infrastructure en place)
+**Status** : ✅ DONE (mergée develop 2026-05-28, commit 911ca5c)
 
-**Routes** : `/`, `/login`, `/privacy` + 4 × properties (FEAT-003) + 4 × tenants (FEAT-004) + 4 × leases (FEAT-005) + 2 × payments (FEAT-006)
+**SQL** : table `tenants` (FEAT-002)
 
-**État** : Infrastructure multi-env stable, CI/CD fonctionnel
+**Flutter** :
+- Domain : tenant.dart (freezed)
+- Data : tenant_repository.dart
+- Application : tenants_list_provider.dart, tenant_detail_provider.dart
+- Presentation : tenants_list_page.dart, tenant_form_page.dart, tenant_detail_page.dart
+- 4 routes : `/tenants`, `/tenants/new`, `/tenants/:id`, `/tenants/:id/edit`
+
+**Features** : email validation (regex), phone optional, soft-delete
+
+**Tests** : ~80 unit/widget tests
 
 ---
 
-## Backlog (prochaines features)
+### FEAT-003 : CRUD UI propriétés
 
-| ID | Nom | Priorité | Effort | Backlog | Notes |
-|---|---|---|---|---|---|
-| FEAT-008 | Envoyer quittance par email (Edge Function + Resend) | P0 | M | `docs/backlog/008-send-receipt-email.md` | Crée `supabase/functions/send-receipt` (Deno), appelle generate-receipt d'abord |
-| FEAT-009 | Upload + stockage documents | P0 | M | `docs/backlog/009-document-storage.md` | Supabase Storage (RLS files), table documents, intégration avec receipts |
-| FEAT-010 | Dashboard récap (actif, loyers, charges) | P0 | M | `docs/backlog/010-dashboard-analytics.md` | Agrégation SQL, charts, graphiques |
-| FEAT-011 | Polish PWA (offline shell, install prompt) | P1 | S | (à créer) | Service worker, manifest, offline cache |
-| FEAT-012 | Prod release (secrets, logs, monitoring) | P1 | M | (à créer) | Hosting prod, secrets, alertes |
+**Status** : ✅ DONE (mergée develop 2026-05-28, commit c1b0571)
 
-**Location** : `docs/backlog/*.md` — user stories détaillées + acceptance criteria
+**SQL** : table `properties` (FEAT-002)
+
+**Flutter** :
+- Domain : property.dart (freezed)
+- Data : property_repository.dart
+- Application : properties_list_provider.dart, property_detail_provider.dart
+- Presentation : properties_list_page.dart, property_form_page.dart, property_detail_page.dart
+- 4 routes : `/properties`, `/properties/new`, `/properties/:id`, `/properties/:id/edit`
+
+**Features** : type enum (appartement/maison/studio/autre), surface optional, soft-delete
+
+**Tests** : ~56 unit/widget tests
+
+---
+
+### FEAT-002 : Modèle de données + RLS exhaustive
+
+**Status** : ✅ DONE (mergée develop 2026-05-28, commit 6b28bbb)
+
+**SQL** : `supabase/migrations/20260528120000_feat002_data_model.sql` (757 lignes)
+- Tables : properties, tenants, leases (+ colonnes landlords)
+- RLS : 24 policies (4 tables × 2 schémas × 3 opérations)
+- Index : stratégiques pour filtrage RLS
+
+**Backend pur** : aucun changement Flutter
+
+**Tests** : 77 RLS tests (SQL)
+
+---
+
+### FEAT-001 : Auth propriétaire (magic link)
+
+**Status** : ✅ DONE (mergée develop 2026-05-26, commit 8d91219)
+
+**SQL** : table `landlords` + trigger `handle_new_user()`
+
+**Flutter** :
+- Domain : login_form_state.dart (freezed)
+- Data : auth_repository.dart
+- Application : auth_controller.dart, auth_session_provider.dart
+- Presentation : login_page.dart, login_form.dart, magic_link_sent_view.dart
+- Routes : `/login`, redirect guard
+
+**Features** : magic link PKCE, auto-provisioning, RLS isolation
+
+**Tests** : ~40 unit/widget tests + RLS tests
+
+## Incohérences détectées
+
+À la date 2026-06-22 : **Aucune**. État entièrement cohérent avec code (643789c).
+
+- ✅ Toutes migrations ont code Dart/RPC correspondant
+- ✅ Toutes routes ont features implémentées
+- ✅ Toutes tables ont RLS
+- ✅ Dépendances pubspec.yaml à jour (nouvelles : fl_chart, shared_preferences, web)
+
+## Prochaines étapes
+
+**Avant go-live prod** :
+- Resend domaine verification → FEAT-008 prod secrets
+- Tests E2E staging complet
+
+**Post-MVP (FEAT-011+)** :
+- FEAT-011 : Email récurrents (cron Edge Function)
+- FEAT-012 : Analytics avancées, export comptable
+- P1 backlog : charges récupérables, crédits, régularisation annuelle, état des lieux digital, rappels cron, OCR

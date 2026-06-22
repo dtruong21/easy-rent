@@ -9,7 +9,10 @@ import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../../core/widgets/lease_status_badge.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
+import '../../profile/application/landlord_profile_provider.dart';
+import '../../properties/application/property_detail_provider.dart';
 import '../../receipts/presentation/receipts_list_section.dart';
+import '../../tenants/application/tenant_detail_provider.dart';
 import '../application/lease_detail_provider.dart';
 import '../application/lease_form_controller.dart';
 import '../application/leases_list_provider.dart';
@@ -77,6 +80,18 @@ class _LeaseDetailContent extends ConsumerWidget {
       );
     });
 
+    // Charger le contexte nécessaire au bouton de partage des quittances.
+    final asyncTenant = ref.watch(tenantDetailProvider(lease.tenantId));
+    final asyncProperty = ref.watch(propertyDetailProvider(lease.propertyId));
+    final asyncProfile = ref.watch(landlordProfileProvider);
+
+    // Extraire les valeurs dès qu'elles sont disponibles — null sinon
+    // (le bouton de partage se désactive gracieusement).
+    final tenantEmail = asyncTenant.valueOrNull?.email;
+    final tenantFirstName = asyncTenant.valueOrNull?.firstName ?? '';
+    final propertyAddress = asyncProperty.valueOrNull?.address ?? '';
+    final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bail'),
@@ -107,7 +122,13 @@ class _LeaseDetailContent extends ConsumerWidget {
             const SizedBox(height: 16),
             PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 16),
-            ReceiptsListSection(leaseId: lease.id, tenantId: lease.tenantId),
+            ReceiptsListSection(
+              leaseId: lease.id,
+              tenantEmail: tenantEmail,
+              tenantFirstName: tenantFirstName,
+              propertyAddress: propertyAddress,
+              landlordFullName: landlordFullName,
+            ),
             const SizedBox(height: 16),
             DocumentsSection(leaseId: lease.id),
             const SizedBox(height: 32),

@@ -3,7 +3,7 @@
 /// Couvre :
 /// - dialog s'ouvre avec titre et corps corrects
 /// - bouton Annuler ferme sans appeler onConfirm
-/// - bouton Renvoyer appelle onConfirm et ferme le dialog
+/// - bouton Repartager appelle onConfirm et ferme le dialog
 library;
 
 import 'package:easyrent/features/receipts/presentation/widgets/confirm_resend_dialog.dart';
@@ -51,7 +51,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('dialog_confirm_resend')), findsOneWidget);
-      expect(find.textContaining('Renvoyer cette quittance'), findsOneWidget);
+      expect(find.textContaining('Repartager cette quittance'), findsOneWidget);
     });
 
     testWidgets('dialog contient la date formatée FR', (tester) async {
@@ -75,7 +75,7 @@ void main() {
       expect(find.textContaining('l***@test.fr'), findsOneWidget);
     });
 
-    testWidgets('boutons Annuler et Renvoyer présents', (tester) async {
+    testWidgets('boutons Annuler et Repartager présents', (tester) async {
       await tester.pumpWidget(_buildDialog(onConfirm: () {}));
       await tester.tap(find.byKey(const Key('open_dialog')));
       await tester.pumpAndSettle();
@@ -103,7 +103,7 @@ void main() {
       expect(confirmCalled, false);
     });
 
-    testWidgets('clic Renvoyer → onConfirm appelé, dialog fermé', (
+    testWidgets('clic Repartager → onConfirm appelé, dialog fermé', (
       tester,
     ) async {
       var confirmCalled = false;

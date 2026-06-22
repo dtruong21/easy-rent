@@ -53,17 +53,17 @@ abstract interface class ReceiptsRepository {
   /// Lance [PostgrestException] si cross-user ou déjà annulée (ERRCODE P0002).
   Future<void> voidReceipt(String id, String reason);
 
-  /// Envoie la quittance [receiptId] par email via l'Edge Function `send-receipt`.
+  /// Marque la quittance comme partagée via la RPC `mark_receipt_as_sent`.
   ///
-  /// Retourne la quittance mise à jour avec [Receipt.sentAt] et [Receipt.sentToEmail].
+  /// Retourne la quittance mise à jour avec [Receipt.sentAt] et
+  /// [Receipt.sentToEmail] renseignés.
   ///
-  /// Exceptions typées :
-  /// - [TenantNoEmailException] si le locataire n'a pas d'email (422 tenant_no_email)
-  /// - [ReceiptInvalidForSendException] si la quittance est annulée/périmée (422 receipt_invalid)
-  /// - [PdfUnavailableException] si le PDF est introuvable (422 pdf_unavailable)
-  /// - [EmailQuotaExceededException] si le quota Resend est dépassé (429 quota_exceeded)
-  /// - [FunctionException] pour les autres erreurs HTTP
-  Future<Receipt> sendReceipt({required String receiptId});
+  /// Lance [ReceiptNotFoundException] si la quittance est introuvable,
+  /// annulée, périmée ou ne appartient pas à l'utilisateur courant (ERRCODE P0002).
+  Future<Receipt> markReceiptAsShared({
+    required String receiptId,
+    required String tenantEmail,
+  });
 }
 
 /// Implémentation Supabase du [ReceiptsRepository].
@@ -153,36 +153,16 @@ class SupabaseReceiptsRepository implements ReceiptsRepository {
   }
 
   @override
-  Future<Receipt> sendReceipt({required String receiptId}) async {
-    _log.info('sendReceipt(receiptId=$receiptId)');
-
-    // Invoke Edge Function — Db.invokeFunction injecte le schéma actif.
-    // Les erreurs HTTP sont propagées en FunctionException.
-    // mapEdgeFunctionError peut lever TenantNoEmailException,
-    // ReceiptInvalidForSendException, PdfUnavailableException,
-    // EmailQuotaExceededException (exceptions typées — doivent remonter).
-    final FunctionResponse response;
-    try {
-      response = await Db.invokeFunction(
-        'send-receipt',
-        body: {'receipt_id': receiptId},
-      );
-    } on FunctionException catch (e) {
-      // mapEdgeFunctionError peut lever TenantNoEmailException,
-      // ReceiptInvalidForSendException, PdfUnavailableException,
-      // EmailQuotaExceededException — ces exceptions typées remontent
-      // directement. Sinon, la fonction retourne un message string.
-      final msg = mapEdgeFunctionError(e); // peut throw une exception typée
-      throw ReceiptSendException(msg);
-    }
-
-    if (response.data == null) {
-      throw const ReceiptSendException(
-        'Réponse vide de l\'Edge Function send-receipt',
-      );
-    }
-
-    // Re-fetch la quittance mise à jour depuis la DB pour obtenir sentAt/sentToEmail.
+  Future<Receipt> markReceiptAsShared({
+    required String receiptId,
+    required String tenantEmail,
+  }) async {
+    _log.info('markReceiptAsShared(receiptId=$receiptId)');
+    await Db.rpc(
+      'mark_receipt_as_sent',
+      params: {'p_receipt_id': receiptId, 'p_sent_to_email': tenantEmail},
+    );
+    // Re-fetch pour obtenir les valeurs sent_at / sent_to_email mises à jour.
     final rows = await Db.from(
       'receipts',
     ).select().eq('id', receiptId).limit(1);
@@ -222,20 +202,6 @@ class ReceiptGenerationException implements Exception {
 
   @override
   String toString() => 'ReceiptGenerationException: $message';
-}
-
-/// Exception levée lors d'un échec d'envoi par email (message générique).
-///
-/// Les erreurs métier spécifiques utilisent des exceptions typées :
-/// [TenantNoEmailException], [ReceiptInvalidForSendException],
-/// [PdfUnavailableException], [EmailQuotaExceededException].
-class ReceiptSendException implements Exception {
-  const ReceiptSendException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'ReceiptSendException: $message';
 }
 
 // ---------------------------------------------------------------------------

@@ -14,16 +14,31 @@ final _log = Logger('ReceiptsListSection');
 /// Affiche la liste des quittances triées par [period_start DESC].
 /// Inclut les quittances annulées avec badge "Annulée" pour traçabilité.
 ///
-/// [tenantId] est transmis à chaque [ReceiptListTile] pour afficher le bouton
-/// "Modifier" dans le SnackBar [tenantNoEmail].
+/// Pour activer le bouton de partage, passer [tenantEmail], [tenantFirstName],
+/// [propertyAddress] et [landlordFullName].
 class ReceiptsListSection extends ConsumerWidget {
-  const ReceiptsListSection({super.key, required this.leaseId, this.tenantId});
+  const ReceiptsListSection({
+    super.key,
+    required this.leaseId,
+    this.tenantEmail,
+    this.tenantFirstName = '',
+    this.propertyAddress = '',
+    this.landlordFullName = '',
+  });
 
   final String leaseId;
 
-  /// Identifiant du locataire — transmis aux tiles pour la navigation
-  /// "Modifier la fiche" en cas d'absence d'email.
-  final String? tenantId;
+  /// Email du locataire — nécessaire pour activer le bouton de partage.
+  final String? tenantEmail;
+
+  /// Prénom du locataire — pour le corps du message de partage.
+  final String tenantFirstName;
+
+  /// Adresse du logement — pour le corps du message de partage.
+  final String propertyAddress;
+
+  /// Nom complet du bailleur — pour la signature du message de partage.
+  final String landlordFullName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,7 +69,10 @@ class ReceiptsListSection extends ConsumerWidget {
                 return _ReceiptsList(
                   receipts: receipts,
                   leaseId: leaseId,
-                  tenantId: tenantId,
+                  tenantEmail: tenantEmail,
+                  tenantFirstName: tenantFirstName,
+                  propertyAddress: propertyAddress,
+                  landlordFullName: landlordFullName,
                 );
               },
             ),
@@ -69,12 +87,18 @@ class _ReceiptsList extends StatelessWidget {
   const _ReceiptsList({
     required this.receipts,
     required this.leaseId,
-    this.tenantId,
+    this.tenantEmail,
+    this.tenantFirstName = '',
+    this.propertyAddress = '',
+    this.landlordFullName = '',
   });
 
   final List<Receipt> receipts;
   final String leaseId;
-  final String? tenantId;
+  final String? tenantEmail;
+  final String tenantFirstName;
+  final String propertyAddress;
+  final String landlordFullName;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +109,10 @@ class _ReceiptsList extends StatelessWidget {
           ReceiptListTile(
             receipt: receipt,
             leaseId: leaseId,
-            tenantId: tenantId,
+            tenantEmail: tenantEmail,
+            tenantFirstName: tenantFirstName,
+            propertyAddress: propertyAddress,
+            landlordFullName: landlordFullName,
           ),
         const SizedBox(height: 8),
         Align(

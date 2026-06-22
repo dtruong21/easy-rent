@@ -27,9 +27,10 @@ La vraie sécurité repose sur :
 | Clé | Format | Où elle DOIT vivre |
 |---|---|---|
 | Supabase Secret | `sb_secret_*` ou `service_role` | Supabase Edge Functions secrets uniquement |
-| Resend API Key | `re_*` | Supabase Edge Functions secrets |
 | Firebase Admin SDK | service-account.json | GitHub Actions secrets (CI uniquement) |
 | GitHub PAT | `ghp_*` | macOS Keychain / GitHub Actions |
+
+**Note (FEAT-008 pivot 2026-06-22)** : `RESEND_API_KEY` a été éliminé. Le partage de quittances utilise Web Share API natif côté client (zéro secret backend email).
 
 **Test simple** : si la clé peut donner un accès admin/bypass-RLS, elle est **secrète**. Sinon elle est **publique**.
 
@@ -38,7 +39,7 @@ La vraie sécurité repose sur :
 ### Développement local
 - `dart-defines.json` (gitignoré) → publishable keys uniquement
 - `~/.ssh/id_ed25519` → clé SSH GitHub
-- Pour les secrets : `supabase secrets set RESEND_API_KEY=re_...` (stocké côté Supabase, jamais sur disque)
+- Pour les secrets : `supabase secrets set <VAR>=<VAL>` (stocké côté Supabase, jamais sur disque)
 
 ### CI (GitHub Actions)
 - `Settings → Secrets and variables → Actions` :
@@ -49,8 +50,7 @@ La vraie sécurité repose sur :
 
 ### Production (runtime)
 - Frontend : aucune clé secrète, seulement publishable embarquée au build
-- Edge Functions : `supabase secrets set` côté Supabase
-- Resend, Stripe, etc. : Edge Functions uniquement
+- Edge Functions : `supabase secrets set` côté Supabase (pour services externes si utilisés)
 
 ## 🔄 Rotation des clés
 
@@ -74,10 +74,6 @@ La vraie sécurité repose sur :
 3. Re-deploy les Edge Functions concernées
 4. Surveiller les logs : ancien key continue de fonctionner 1h en grace period
 
-**Resend** :
-1. resend.com → API Keys → Revoke la clé fuitée
-2. Créer une nouvelle clé
-3. `supabase secrets set RESEND_API_KEY=<new>`
 
 **Clé SSH GitHub** :
 1. github.com/settings/keys → Delete la clé
