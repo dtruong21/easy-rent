@@ -61,10 +61,13 @@ class WebShareServiceImpl implements WebShareService {
 
     try {
       await web.window.navigator.share(shareData).toDart;
-    } on web.DOMException catch (e) {
-      if (e.name == 'AbortError') throw const ShareAbortedException();
-      throw ShareReceiptException(e.message);
     } catch (e) {
+      final js = e as JSAny?;
+      if (js != null && js.isA<web.DOMException>()) {
+        final dom = js as web.DOMException;
+        if (dom.name == 'AbortError') throw const ShareAbortedException();
+        throw ShareReceiptException(dom.message);
+      }
       throw ShareReceiptException(e.toString());
     }
   }
