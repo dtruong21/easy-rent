@@ -1,5 +1,6 @@
 import 'package:easyrent/features/properties/application/property_form_controller.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
+import 'package:easyrent/features/properties/domain/heating_type.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_form_state.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
@@ -33,6 +34,18 @@ class _FakePropertyRepository implements PropertyRepository {
     required String address,
     required PropertyType type,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator = false,
+    bool furnished = false,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
   }) async {
     if (createError != null) throw createError!;
     createdProperty = _makeProperty(
@@ -40,6 +53,8 @@ class _FakePropertyRepository implements PropertyRepository {
       address: address,
       type: type,
       surfaceM2: surfaceM2,
+      postalCode: postalCode,
+      city: city,
     );
     return createdProperty!;
   }
@@ -65,6 +80,8 @@ class _FakePropertyRepository implements PropertyRepository {
     String address = '1 rue test',
     PropertyType type = PropertyType.appartement,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
   }) => Property(
     id: id,
     landlordId: 'landlord-id',
@@ -72,6 +89,8 @@ class _FakePropertyRepository implements PropertyRepository {
     address: address,
     type: type,
     surfaceM2: surfaceM2,
+    postalCode: postalCode,
+    city: city,
     createdAt: DateTime(2024),
     updatedAt: DateTime(2024),
   );
@@ -119,9 +138,11 @@ Widget _buildForm({
 void main() {
   group('PropertyFormPage — smoke tests', () {
     // -----------------------------------------------------------------------
-    // Mode création — champs présents
+    // Mode création — champs présents (section 1 visible directement)
     // -----------------------------------------------------------------------
-    testWidgets('mode création — les 4 champs sont présents', (tester) async {
+    testWidgets('mode création — les champs de la section 1 sont présents', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildForm());
       await tester.pumpAndSettle();
 
@@ -129,6 +150,8 @@ void main() {
       expect(find.byKey(const Key('field_address')), findsOneWidget);
       expect(find.byKey(const Key('field_type')), findsOneWidget);
       expect(find.byKey(const Key('field_surface')), findsOneWidget);
+      expect(find.byKey(const Key('field_postal_code')), findsOneWidget);
+      expect(find.byKey(const Key('field_city')), findsOneWidget);
     });
 
     testWidgets('mode création — titre "Nouveau bien"', (tester) async {
@@ -147,6 +170,20 @@ void main() {
       expect(find.text('Créer le bien'), findsOneWidget);
     });
 
+    testWidgets(
+      'sections ExpansionTile Caractéristiques et DPE/GES présentes',
+      (tester) async {
+        await tester.pumpWidget(_buildForm());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('section_caracteristiques')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('section_dpe')), findsOneWidget);
+      },
+    );
+
     // -----------------------------------------------------------------------
     // Validation — erreurs inline sur soumission incomplète
     // -----------------------------------------------------------------------
@@ -156,7 +193,8 @@ void main() {
         await tester.pumpWidget(_buildForm());
         await tester.pumpAndSettle();
 
-        // Effacer le nom (vide par défaut) puis taper sur Submit.
+        // Scroller jusqu'au bouton avant de tapper (formulaire plus long).
+        await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
         await tester.tap(find.byKey(const Key('btn_submit_form')));
         await tester.pumpAndSettle();
 
@@ -170,8 +208,9 @@ void main() {
       await tester.pumpWidget(_buildForm());
       await tester.pumpAndSettle();
 
-      // Remplir le nom mais pas l'adresse.
       await tester.enterText(find.byKey(const Key('field_name')), 'Mon appart');
+      // Scroller jusqu'au bouton avant de tapper (formulaire plus long).
+      await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
       await tester.tap(find.byKey(const Key('btn_submit_form')));
       await tester.pumpAndSettle();
 
@@ -181,7 +220,9 @@ void main() {
     // -----------------------------------------------------------------------
     // Mode édition — champs pré-remplis
     // -----------------------------------------------------------------------
-    testWidgets('mode édition — champs pré-remplis', (tester) async {
+    testWidgets('mode édition — champs pré-remplis (section 1)', (
+      tester,
+    ) async {
       final property = Property(
         id: 'id-1',
         landlordId: 'landlord-1',
@@ -189,6 +230,8 @@ void main() {
         address: '5 rue Mercière, 69001 Lyon',
         type: PropertyType.appartement,
         surfaceM2: 42.5,
+        postalCode: '69001',
+        city: 'Lyon',
         createdAt: DateTime(2024),
         updatedAt: DateTime(2024),
       );
@@ -216,6 +259,29 @@ void main() {
 
       expect(find.text('Modifier le bien'), findsOneWidget);
     });
+
+    testWidgets(
+      'backward compat — bien sans nouveaux champs charge sans erreur',
+      (tester) async {
+        // Bien "legacy" sans aucun des nouveaux champs.
+        final legacy = Property(
+          id: 'legacy-id',
+          landlordId: 'landlord-1',
+          name: 'Bien sans DPE',
+          address: '1 ancienne rue',
+          type: PropertyType.maison,
+          createdAt: DateTime(2023),
+          updatedAt: DateTime(2023),
+        );
+
+        await tester.pumpWidget(_buildForm(initial: legacy));
+        await tester.pumpAndSettle();
+
+        // La page doit être rendue sans exception.
+        expect(find.text('Modifier le bien'), findsOneWidget);
+        expect(find.byKey(const Key('btn_submit_form')), findsOneWidget);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // État submitting — bouton désactivé

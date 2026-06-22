@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/property_repository.dart';
+import '../domain/heating_type.dart';
 import '../domain/property.dart';
 import '../domain/property_form_state.dart';
 import '../domain/property_type.dart';
@@ -33,6 +34,18 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
     required String address,
     required PropertyType type,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator = false,
+    bool furnished = false,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
   }) async {
     state = const PropertyFormState.submitting();
 
@@ -47,6 +60,18 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
           address: address,
           type: type,
           surfaceM2: surfaceM2,
+          postalCode: postalCode,
+          city: city,
+          rooms: rooms,
+          bedrooms: bedrooms,
+          floor: floor,
+          hasElevator: hasElevator,
+          furnished: furnished,
+          heatingType: heatingType,
+          dpeLetter: dpeLetter,
+          dpeValueKwhM2Year: dpeValueKwhM2Year,
+          gesLetter: gesLetter,
+          constructionYear: constructionYear,
         );
         _log.info('property created id=${result.id}');
       } else {
@@ -56,6 +81,18 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
           address: address,
           type: type,
           surfaceM2: surfaceM2,
+          postalCode: postalCode,
+          city: city,
+          rooms: rooms,
+          bedrooms: bedrooms,
+          floor: floor,
+          hasElevator: hasElevator,
+          furnished: furnished,
+          heatingType: heatingType,
+          dpeLetter: dpeLetter,
+          dpeValueKwhM2Year: dpeValueKwhM2Year,
+          gesLetter: gesLetter,
+          constructionYear: constructionYear,
         );
         result = await repo.update(updated);
         _log.info('property updated id=${result.id}');

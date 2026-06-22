@@ -11,6 +11,7 @@ import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
+import 'package:easyrent/features/properties/domain/heating_type.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
@@ -119,6 +120,18 @@ class _FakePropertyRepo implements PropertyRepository {
     required String address,
     required PropertyType type,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator = false,
+    bool furnished = false,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
   }) async => throw UnimplementedError();
   @override
   Future<Property> update(Property property) async =>
