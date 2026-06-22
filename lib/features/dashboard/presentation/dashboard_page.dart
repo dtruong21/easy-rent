@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../auth/application/auth_controller.dart';
+import '../../auth/application/login_controller.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../pwa/application/install_prompt_controller.dart';
 import '../../pwa/presentation/install_prompt_banner.dart';
@@ -81,7 +81,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
             icon: const Icon(Icons.logout),
             tooltip: 'Déconnexion',
             onPressed: () =>
-                ref.read(authControllerProvider.notifier).signOut(),
+                ref.read(loginControllerProvider.notifier).signOut(),
           ),
         ],
       ),

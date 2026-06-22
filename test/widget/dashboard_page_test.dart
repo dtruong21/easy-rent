@@ -82,7 +82,23 @@ class _FakeAuthRepo implements AuthRepository {
   Session? get currentSession => null;
 
   @override
-  Future<void> sendMagicLink(String email) async {}
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  Future<void> signUpWithPassword({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {}
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
 
   @override
   Future<void> signOut() async {}

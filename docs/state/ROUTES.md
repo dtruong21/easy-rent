@@ -1,13 +1,16 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-06-22 (FEAT-010 Section A — dashboard refonte, `/` route refondée)
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-06-22 (FEAT-011 — pivot auth magic link → email + password, 4 routes publiques refactorisées/créées)
 
 ## Routes go_router
 
 | Path | Widget | Feature | Auth requise | Statut |
 |---|---|---|---|---|
 | `/` | `DashboardPage` | dashboard | ✅ oui | ✅ refondée FEAT-010 (4 KPI cards, barchart 6 mois, activité récente, onboarding, install prompt PWA) |
-| `/login` | `LoginPage` | auth | ❌ non (redirect si authentifié) | ✅ implémentée (magic link PKCE) |
+| `/login` | `LoginPage` | auth | ❌ non (redirect `/` si authentifié) | ✅ refactorisée FEAT-011 (email + password) |
+| `/signup` | `SignupPage` | auth | ❌ non (redirect `/` si authentifié) | ✅ nouvelle FEAT-011 (email + full_name + password confirmation) |
+| `/forgot-password` | `ForgotPasswordPage` | auth | ❌ non | ✅ nouvelle FEAT-011 (demande reset link par email) |
+| `/reset-password` | `ResetPasswordPage` | auth | ❌ non (token validation backend) | ✅ nouvelle FEAT-011 (nouveau password avec token, redirect `/login` post-reset) |
 | `/privacy` | `PrivacyPage` | privacy | ❌ non (public) | 🟢 enrichie FEAT-010 (RGPD + mentions légales + export/effacement GDPR) |
 | `/properties` | `PropertiesListPage` | properties | ✅ oui | ✅ implémentée (FEAT-003) |
 | `/properties/new` | `PropertyFormPage` | properties | ✅ oui | ✅ implémentée (CREATE form) |
@@ -37,10 +40,14 @@ Dans [`lib/core/router/app_router.dart`](../../lib/core/router/app_router.dart) 
 
 ## Authentification
 
-- **Type** : Magic link via email (PKCE implicit flow)
+- **Type** : Email + Password (Supabase Auth native)
+- **Politique password** : 8 chars min + 1 lettre + 1 chiffre (Supabase `letters_digits` validator)
+- **Confirmation email** : Obligatoire (Supabase SMTP template FR)
 - **Fournisseur** : Supabase Auth native
 - **Provider** : `authRepositoryProvider` (Riverpod, voir `lib/features/auth/data/auth_repository.dart`)
 - **État de session** : `isAuthenticatedProvider` (getter simplifié du state d'auth)
+- **Controllers** : `loginControllerProvider`, `signupControllerProvider`, `forgotPasswordControllerProvider`, `resetPasswordControllerProvider` (Riverpod StateNotifier)
+- **Pivot FEAT-011 2026-06-22** : Remplace magic link (FEAT-001) par password classique pour stabilité MVP
 
 ## Navigation principale
 

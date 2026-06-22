@@ -1,6 +1,6 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-22 (FEAT-009 ✅ + FEAT-010 ✅ — FEAT-010 ne modifie pas le schéma, Flutter+infra seulement)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-22 (FEAT-011 ✅ — migration `20260622130000_feat011_handle_new_user_fullname.sql` adapte trigger `handle_new_user()` pour pivot email+password, capture `full_name` depuis auth metadata)
 
 ## Tables
 
@@ -330,8 +330,10 @@
 **`public.handle_new_user()`** — Trigger AFTER INSERT ON `auth.users`, SECURITY DEFINER, SET search_path = public
 
 - Insère une ligne dans `public.landlords` ET `dev.landlords` à chaque signup
+- Extrait `full_name` de `raw_user_meta_data->>'full_name'` (FEAT-011 pivot 2026-06-22)
 - Idempotent (ON CONFLICT DO NOTHING)
-- FEAT-001
+- Migration : `20260622130000_feat011_handle_new_user_fullname.sql`
+- FEAT-001 (création), FEAT-011 (refactor signature pour password auth)
 
 **`public.set_updated_at()`** — Trigger BEFORE UPDATE, maintient `updated_at = now()`
 

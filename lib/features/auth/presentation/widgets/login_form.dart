@@ -4,17 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/email_validator.dart';
-import '../../application/auth_controller.dart';
-import '../../domain/login_form_state.dart';
+import '../../application/login_controller.dart';
+import 'password_field.dart';
 
-/// Formulaire de connexion par magic link.
-///
-/// Règles d'activation du bouton :
-/// - Adresse email valide
-/// - Case de consentement RGPD cochée
-///
-/// Lorsque le state est [LoginFormState.error], le message s'affiche
-/// sous le champ email.
+/// Formulaire de connexion email + mot de passe.
 class LoginForm extends ConsumerStatefulWidget {
   const LoginForm({super.key});
 
@@ -24,28 +17,41 @@ class LoginForm extends ConsumerStatefulWidget {
 
 class _LoginFormState extends ConsumerState<LoginForm> {
   final _emailController = TextEditingController();
-  bool _rgpdConsent = false;
-  bool _emailTouched = false;
+  final _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild quand le mot de passe change pour activer/désactiver le bouton.
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() => setState(() {});
 
   @override
   void dispose() {
+    _passwordController.removeListener(_onPasswordChanged);
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  bool get _emailValid => EmailValidator.isValid(_emailController.text);
-  bool get _canSubmit => _emailValid && _rgpdConsent;
+  bool get _canSubmit =>
+      EmailValidator.isValid(_emailController.text) &&
+      _passwordController.text.isNotEmpty;
 
   Future<void> _submit() async {
-    setState(() => _emailTouched = true);
     await ref
-        .read(authControllerProvider.notifier)
-        .sendMagicLink(email: _emailController.text, rgpdConsent: _rgpdConsent);
+        .read(loginControllerProvider.notifier)
+        .signIn(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    final formState = ref.watch(authControllerProvider);
+    final formState = ref.watch(loginControllerProvider);
     final isSubmitting = formState.maybeWhen(
       submitting: () => true,
       orElse: () => false,
@@ -54,114 +60,108 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       error: (msg) => msg,
       orElse: () => null,
     );
-    final showInlineError =
-        _emailTouched && !_emailValid && errorMessage == null;
+    final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Champ email
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          autocorrect: false,
-          autofillHints: const [AutofillHints.email],
-          enabled: !isSubmitting,
-          decoration: InputDecoration(
-            labelText: 'Adresse email',
-            hintText: 'vous@exemple.fr',
-            errorText: showInlineError ? 'Adresse email invalide' : null,
-            border: const OutlineInputBorder(),
-          ),
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (_) => _canSubmit ? _submit() : null,
-        ),
-
-        // Message d'erreur retourné par Supabase
-        if (errorMessage != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            errorMessage,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.error,
-              fontSize: 13,
+    return AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            autofillHints: const [AutofillHints.username, AutofillHints.email],
+            enabled: !isSubmitting,
+            decoration: const InputDecoration(
+              labelText: 'Adresse email',
+              hintText: 'vous@exemple.fr',
+              border: OutlineInputBorder(),
             ),
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _canSubmit ? _submit() : null,
           ),
+          const SizedBox(height: 16),
+          PasswordField(
+            controller: _passwordController,
+            labelText: 'Mot de passe',
+            autofillHints: const [AutofillHints.password],
+            enabled: !isSubmitting,
+            onSubmitted: _canSubmit ? _submit : null,
+          ),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              errorMessage,
+              style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
+            child: isSubmitting
+                ? SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  )
+                : const Text('Se connecter'),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => context.go('/forgot-password'),
+            child: const Text('Mot de passe oublié ?'),
+          ),
+          TextButton(
+            onPressed: () => context.go('/signup'),
+            child: const Text('Créer un compte'),
+          ),
+          const SizedBox(height: 16),
+          _PrivacyLink(),
         ],
-
-        const SizedBox(height: 16),
-
-        // Case RGPD
-        _RgpdCheckbox(
-          value: _rgpdConsent,
-          enabled: !isSubmitting,
-          onChanged: (v) => setState(() => _rgpdConsent = v ?? false),
-        ),
-
-        const SizedBox(height: 24),
-
-        // Bouton de soumission
-        FilledButton(
-          onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
-          child: isSubmitting
-              ? SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                )
-              : const Text('Recevoir mon lien de connexion'),
-        ),
-      ],
+      ),
     );
   }
 }
 
-/// Case à cocher RGPD avec lien cliquable vers [/privacy].
-class _RgpdCheckbox extends StatelessWidget {
-  const _RgpdCheckbox({
-    required this.value,
-    required this.enabled,
-    required this.onChanged,
-  });
+class _PrivacyLink extends StatefulWidget {
+  @override
+  State<_PrivacyLink> createState() => _PrivacyLinkState();
+}
 
-  final bool value;
-  final bool enabled;
-  final ValueChanged<bool?> onChanged;
+class _PrivacyLinkState extends State<_PrivacyLink> {
+  // Stocké en champ pour être disposé proprement et éviter les memory leaks.
+  final _recognizer = TapGestureRecognizer();
+
+  @override
+  void dispose() {
+    _recognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Checkbox(value: value, onChanged: enabled ? onChanged : null),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: RichText(
-              text: TextSpan(
-                style: Theme.of(context).textTheme.bodyMedium,
-                children: [
-                  const TextSpan(text: "J'accepte la "),
-                  TextSpan(
-                    text: 'politique de confidentialité',
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => context.go('/privacy'),
-                  ),
-                ],
+    _recognizer.onTap = () => context.go('/privacy');
+    return Center(
+      child: RichText(
+        text: TextSpan(
+          style: Theme.of(context).textTheme.bodySmall,
+          children: [
+            TextSpan(
+              text: 'Politique de confidentialité',
+              style: TextStyle(
+                color: colorScheme.primary,
+                decoration: TextDecoration.underline,
               ),
+              recognizer: _recognizer,
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

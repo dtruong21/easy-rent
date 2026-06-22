@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'widgets/login_form.dart';
+import '../application/signup_controller.dart';
+import 'widgets/signup_confirmation_sent_view.dart';
+import 'widgets/signup_form.dart';
 
-/// Page de connexion par email et mot de passe.
-class LoginPage extends StatelessWidget {
-  const LoginPage({super.key});
+/// Page de création de compte (self-service).
+class SignupPage extends ConsumerWidget {
+  const SignupPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pageState = ref.watch(signupControllerProvider);
+    final showConfirmation = pageState.maybeWhen(
+      awaitingConfirmation: () => true,
+      orElse: () => false,
+    );
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -26,12 +35,15 @@ class LoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Connectez-vous pour gérer vos locations',
+                    'Créez votre compte bailleur',
                     style: Theme.of(context).textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
-                  const LoginForm(),
+                  if (showConfirmation)
+                    const SignupConfirmationSentView()
+                  else
+                    const SignupForm(),
                 ],
               ),
             ),

@@ -1,5 +1,7 @@
 # Plan — [FEAT-001] Authentification magic link
 
+> **Pivot 2026-06-22 — Auth password classique** : FEAT-001 (magic link) a été remplacée par FEAT-011 (email + password). Voir [`docs/plans/FEAT-011-auth-password.md`](FEAT-011-auth-password.md). Ce document reste conservé pour historique.
+>
 > Statut : **plan technique** (aucun code écrit). À valider par `product-owner` (voir Questions critiques) avant implémentation.
 
 ## Summary

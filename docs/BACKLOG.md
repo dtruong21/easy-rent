@@ -14,7 +14,7 @@ Ordonnées par dépendance. FEAT-003 et FEAT-004 sont parallélisables une fois 
 
 | Ordre | ID | Titre | Dépend de | Story |
 |---|---|---|---|---|
-| 1 | FEAT-001 | Authentification magic link | — | [`backlog/001-auth-magic-link.md`](backlog/001-auth-magic-link.md) |
+| 1 | FEAT-011 | Authentification email + password (pivot FEAT-001) | — | ✅ Implémentée 2026-06-22, voir `docs/plans/FEAT-011-auth-password.md` |
 | 2 | FEAT-002 | Modèle de données & RLS (`landlords`, `properties`, `tenants`, `leases`) | FEAT-001 | [`backlog/002-data-model-rls.md`](backlog/002-data-model-rls.md) |
 | 3 | FEAT-003 | CRUD biens immobiliers | FEAT-002 | [`backlog/003-crud-properties.md`](backlog/003-crud-properties.md) |
 | 3 | FEAT-004 | CRUD locataires | FEAT-002 | [`backlog/004-crud-tenants.md`](backlog/004-crud-tenants.md) |
@@ -28,23 +28,28 @@ FEAT-001 (auth)
                     └── FEAT-005 (leases)
 ```
 
-### Suite MVP non encore détaillée en stories (cf. `docs/ROADMAP.md`)
+### Suite MVP — Complétée 2026-06-22
 
-- Navigation principale (drawer + routes)
-- FEAT-008 — Envoyer quittance par email (Resend / Edge Function)
-- FEAT-009 — Upload & stockage de documents (Supabase Storage)
-- FEAT-010 — Dashboard + polish PWA + déploiement prod → [`backlog/010-dashboard-pwa-prod-setup.md`](backlog/010-dashboard-pwa-prod-setup.md)
+- ✅ Navigation principale (drawer + routes)
+- ✅ FEAT-008 — Partager quittance par email (Web Share API native) → `docs/plans/FEAT-008-email-quittance.md`
+- ✅ FEAT-009 — Upload & stockage de documents (Supabase Storage) → `docs/plans/FEAT-009-documents-storage.md`
+- ✅ FEAT-010 — Dashboard + polish PWA + déploiement prod → [`backlog/010-dashboard-pwa-prod-setup.md`](backlog/010-dashboard-pwa-prod-setup.md)
 
 ### Stories détaillées (P0 — à implémenter)
 
-| Ordre | ID | Titre | Dépend de | Story |
+| Ordre | ID | Titre | Dépend de | Status |
 |---|---|---|---|---|
-| 6 | FEAT-006 | Enregistrer un paiement de loyer | FEAT-005 | [`backlog/006-payment-record.md`](backlog/006-payment-record.md) |
-| 7 | FEAT-007 | Générer une quittance PDF de loyer (loi 6 juillet 1989) | FEAT-006 | [`backlog/007-quittance-pdf.md`](backlog/007-quittance-pdf.md) |
-| 8 | FEAT-008 | Partager une quittance par email (Web Share API native) | FEAT-007 | [`backlog/008-email-quittance.md`](backlog/008-email-quittance.md) |
-| 9 | FEAT-009 | Upload & stockage de documents (Supabase Storage) | FEAT-005 | [`backlog/009-documents-storage.md`](backlog/009-documents-storage.md) |
+| 6 | FEAT-006 | Enregistrer un paiement de loyer | FEAT-005 | ✅ Done |
+| 7 | FEAT-007 | Générer une quittance PDF de loyer (loi 6 juillet 1989) | FEAT-006 | ✅ Done |
+| 8 | FEAT-008 | Partager une quittance par email (Web Share API native) | FEAT-007 | ✅ Done (pivot 2026-06-22) |
+| 9 | FEAT-009 | Upload & stockage de documents (Supabase Storage) | FEAT-005 | ✅ Done |
+| 10 | FEAT-010 | Dashboard + PWA polish + Prod setup | FEAT-009 | ✅ Done |
+| 11 | FEAT-011 | Auth email + password (pivot FEAT-001) | — | ✅ Done |
 
-> À détailler en stories lors du prochain `/discover` une fois la chaîne FEAT-001→005 entamée.
+**Post-MVP (FEAT-012+)** :
+- FEAT-012 : Password change endpoint + profil utilisateur
+- FEAT-013 : Email rappels automatiques de paiement (cron Edge Function)
+- FEAT-014 : Export comptable (CSV / FEC)
 
 ## Dette technique / risques identifiés (scout 2026-05-27)
 

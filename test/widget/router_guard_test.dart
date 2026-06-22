@@ -20,7 +20,58 @@ class _UnauthenticatedRepo implements AuthRepository {
   Session? get currentSession => null;
 
   @override
-  Future<void> sendMagicLink(String email) async {}
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  Future<void> signUpWithPassword({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {}
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
+
+  @override
+  Future<void> signOut() async {}
+}
+
+class _PasswordRecoveryRepo implements AuthRepository {
+  final _session = _FakeSession();
+
+  @override
+  Stream<AuthState> get authStateChanges =>
+      // Émet un event passwordRecovery avec une session temporaire, comme
+      // Supabase le fait quand l'utilisateur clique le lien de reset password.
+      Stream.value(AuthState(AuthChangeEvent.passwordRecovery, _session));
+
+  @override
+  Session? get currentSession => _session;
+
+  @override
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  Future<void> signUpWithPassword({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {}
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
 
   @override
   Future<void> signOut() async {}
@@ -37,7 +88,23 @@ class _AuthenticatedRepo implements AuthRepository {
   Session? get currentSession => _session;
 
   @override
-  Future<void> sendMagicLink(String email) async {}
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  Future<void> signUpWithPassword({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {}
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
 
   @override
   Future<void> signOut() async {}
@@ -66,6 +133,7 @@ class _FakeSession extends Session {
 Widget _buildApp({
   required AuthRepository repo,
   required bool isAuthenticated,
+  bool isInPasswordRecovery = false,
   String? initialLocation,
 }) {
   return ProviderScope(
@@ -74,6 +142,7 @@ Widget _buildApp({
       // On surcharge isAuthenticatedProvider directement pour un contrôle
       // synchrone du redirect (évite la course avec le StreamProvider).
       isAuthenticatedProvider.overrideWithValue(isAuthenticated),
+      isInPasswordRecoveryProvider.overrideWithValue(isInPasswordRecovery),
     ],
     child: Consumer(
       builder: (context, ref, _) {
@@ -109,7 +178,7 @@ void main() {
 
       // La LoginPage affiche "EasyRent" et le champ email.
       expect(find.text('EasyRent'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(2));
     });
 
     testWidgets('utilisateur non authentifié tentant /login reste sur /login', (
@@ -125,7 +194,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('EasyRent'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(2));
     });
 
     // -----------------------------------------------------------------------
@@ -186,5 +255,70 @@ void main() {
 
       expect(find.text('Politique de confidentialité'), findsWidgets);
     });
+
+    // -----------------------------------------------------------------------
+    // passwordRecovery : session temporaire → forcé vers /reset-password
+    //
+    // Supabase émet AuthChangeEvent.passwordRecovery avec session != null
+    // quand l'utilisateur clique le lien de reset password. Sans garde,
+    // isAuthed=true enverrait l'utilisateur vers / sans changer son password.
+    // -----------------------------------------------------------------------
+    testWidgets(
+      'en mode passwordRecovery, naviguer vers /login redirige vers /reset-password',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            repo: _PasswordRecoveryRepo(),
+            // isAuthed = true car Supabase émet une session temporaire lors
+            // du passwordRecovery — c'est précisément le cas problématique.
+            isAuthenticated: true,
+            isInPasswordRecovery: true,
+            initialLocation: '/login',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // La ResetPasswordPage doit être affichée, pas la LoginPage.
+        // "Nouveau mot de passe" est le titre de ResetPasswordPage.
+        expect(find.text('Nouveau mot de passe'), findsWidgets);
+        // La LoginPage ne doit PAS être affichée.
+        expect(find.text('Se connecter'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'en mode passwordRecovery, naviguer vers / redirige vers /reset-password',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            repo: _PasswordRecoveryRepo(),
+            isAuthenticated: true,
+            isInPasswordRecovery: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // La ResetPasswordPage doit être affichée, pas le Dashboard.
+        expect(find.text('Nouveau mot de passe'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'en mode passwordRecovery, /reset-password reste sur /reset-password',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            repo: _PasswordRecoveryRepo(),
+            isAuthenticated: true,
+            isInPasswordRecovery: true,
+            initialLocation: '/reset-password',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pas de boucle redirect — la page est rendue normalement.
+        expect(find.text('Nouveau mot de passe'), findsWidgets);
+      },
+    );
   });
 }

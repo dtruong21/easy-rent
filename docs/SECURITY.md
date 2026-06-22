@@ -32,6 +32,8 @@ La vraie sécurité repose sur :
 
 **Note (FEAT-008 pivot 2026-06-22)** : `RESEND_API_KEY` a été éliminé. Le partage de quittances utilise Web Share API natif côté client (zéro secret backend email).
 
+**Note (FEAT-011 pivot 2026-06-22)** : Auth magic link (FEAT-001) remplacée par email + password classique. Voir Section "Politique mot de passe" ci-dessous.
+
 **Test simple** : si la clé peut donner un accès admin/bypass-RLS, elle est **secrète**. Sinon elle est **publique**.
 
 ## 📁 Stockage des clés par environnement
@@ -107,6 +109,31 @@ Depuis FEAT-002, un flag de session custom `app.allow_deleted_at_change` est uti
 5. ✅ Toute nouvelle RPC qui touche `set_config()` requiert une revue explicite par `security-auditor` avant merge.
 
 **Hardening prévu en P1** : remplacer le flag par un mécanisme intransférable (ex: `pg_trigger_depth() > 0` testé dans une fonction SECURITY DEFINER de niveau supérieur), afin de retirer toute surface d'attaque future. Tracké dans `docs/BACKLOG.md` (dette technique post-FEAT-002).
+
+## 🔐 Politique mot de passe (FEAT-011 pivot 2026-06-22)
+
+**Authentification** : Email + password classique (remplace magic link FEAT-001).
+
+**Hachage** : Bcrypt côté Supabase. Jamais en clair côté client, jamais stocké en localStorage.
+
+**Validation** (Supabase built-in `letters_digits`) :
+- Longueur minimale : 8 caractères
+- Complexité : au moins 1 lettre + 1 chiffre
+- Pas d'autres restrictions (majuscules, caractères spéciaux optionnels)
+
+**Transport** : HTTPS exclusif. Tous les formulaires password utilisant TLS 1.3+.
+
+**Rate limiting** : Supabase built-in 3 tentatives/minute. Pas de throttling custom côté client.
+
+**Session recovery** : PKCE implicit flow via `supabase_flutter` 2.x. Session persiste dans localStorage (survit au refresh navigateur, perdue à fermeture). Acceptable pour MVP ; audit RGPD post-MVP pour conformité « pas de remember me ».
+
+**Reset password** :
+- Email de reset avec lien signé (token expiry 1h)
+- Redirect `/reset-password?token=<jwt>`
+- Validation backend : vérification token JWT + création nouvelle session
+- SnackBar confirmation post-reset
+
+**No password change** (MVP) : Utilisateur connecté ne peut pas changer password. À ajouter FEAT-012. Workaround : "Mot de passe oublié?" → reset via email.
 
 ## ✅ Checklist avant chaque deploy
 
