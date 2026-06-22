@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-22 (FEAT-010 — ajoute fl_chart, shared_preferences, web)
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `supabase/functions/` + `firebase.json`. **Dernière sync** : 2026-06-22 (FEAT-011 — pivot auth password classique, aucune nouvelle dépendance ; supabase_flutter 2.12.4 utilisé pour session PKCE recovery)
 
 ## Flutter (pubspec.yaml)
 

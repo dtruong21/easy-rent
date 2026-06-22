@@ -14,7 +14,8 @@
 
 | ID | Nom | Statut | Notes |
 |---|---|---|---|
-| FEAT-001 | Auth propriétaire (signup, login, magic link) | ✅ done | PR#1, merge 8d91219, staging validée 2026-05-27 |
+| FEAT-001 | Auth propriétaire (magic link) | 🔄 Refactorisée 2026-06-22 | Remplacée par FEAT-011 (email + password classique). Voir plan pivot. |
+| FEAT-011 | Auth propriétaire (email + password) | ✅ done | PR#??, merge 2026-06-22, tests 1093/1093, flux signup/login/forgot/reset complets |
 | FEAT-002 | Modèle de données + RLS exhaustive (properties, tenants, leases) | ✅ done | PR#2, merge 6b28bbb, backend pur, 77 RLS tests |
 | FEAT-003 | CRUD UI propriétés (list, detail, form) | ✅ done | PR#3, merge c1b0571, 16 fichiers Dart, 4 routes GoRouter, 56 tests |
 | FEAT-004 | CRUD UI locataires (list, detail, form) | ✅ done | PR#4, merge 911ca5c, 15 fichiers Dart, 4 routes GoRouter, 80+ tests |
@@ -27,6 +28,49 @@
 | (bootstrap) | Projet Flutter Web + Riverpod + go_router + Supabase init | ✅ done | Squelette + infra multi-env |
 
 ## Détails par feature
+
+### FEAT-011 : Auth email + password (Pivot FEAT-001)
+
+**Status** : ✅ DONE (mergée develop 2026-06-22, branche `feature/feat-011-auth-password`)
+
+**Pivot justification** : Remplacement magic link (FEAT-001) par password classique pour stabilité MVP + UX utilisateurs français.
+
+**Architecture** :
+
+- **4 controllers** (Riverpod StateNotifier) : login, signup, forgot-password, reset-password
+- **AuthRepository refactor** : `signIn()`, `signUp()`, `resetPassword()`, `confirmPasswordReset()`
+- **PasswordValidator** : policy 8 chars + 1 lettre + 1 chiffre (Supabase `letters_digits`)
+- **AuthErrorMapper** : conversion erreurs Supabase → messages UI localisés FR
+
+**Routes publiques** (4 nouvelles) :
+- `/login` : formulaire email + password (refactorisé FEAT-001)
+- `/signup` : formulaire email + full_name + password × 2
+- `/forgot-password` : demande reset link par email
+- `/reset-password?token=<token>` : nouveau password (code validé backend)
+
+**SQL** : `20260622130000_feat011_handle_new_user_fullname.sql`
+- Adapt trigger `handle_new_user()` : extrait `full_name` de `raw_user_meta_data`
+- Supabase config (manuel post-merge) : enable "Confirm email", password validator, templates FR
+
+**Fichiers créés/modifiés/supprimés** :
+- 22 fichiers Dart créés (pages, widgets, controllers, validators, mappers)
+- 10 fichiers modifiés (router, main, privacy, l10n)
+- 4 fichiers supprimés (magic link widgets, OTP controller)
+
+**Tests** : 1093/1093 passing (refactors FEAT-001–010 inclus, 7 nouveaux fichiers test)
+
+**Décisions** :
+- Email confirmation obligatoire (Supabase policy)
+- Signup auto-provisioning : trigger SQL crée landlord sur confirmation
+- Reset password : redirect `/reset-password?token=...` + snackbar confirmation
+- Session recovery : PKCE + supabase_flutter 2.x built-in
+
+**Limites** :
+- Token reset expire 1h (Supabase default)
+- No password change endpoint (FEAT-012)
+- Rate limiting Supabase built-in 3/min
+
+---
 
 ### FEAT-010 : Dashboard + Polish PWA + Prod setup
 

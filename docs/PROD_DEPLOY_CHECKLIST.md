@@ -23,13 +23,32 @@ Aller dans GitHub → Settings → Environments → `production`.
 
 ---
 
-## B. Supabase Auth — Configuration URL
+## B. Supabase Auth — Configuration URL & Email Templates
 
-- [ ] Site URL configuré : `https://easy-rent-54cd4.web.app`
-- [ ] Redirect Allow-List configurée : `https://easy-rent-54cd4.web.app/**`
+> Aller dans Supabase Dashboard → Authentication → URL Configuration.
+> Sans cela, les confirmations email et liens reset password ne fonctionneront pas en prod.
 
-> Aller dans Dashboard Supabase → Authentication → URL Configuration.
-> Sans cela, les magic links ne fonctionneront pas en prod.
+- [ ] **Site URL** configuré : `https://easy-rent-54cd4.web.app`
+- [ ] **Redirect Allow-List** configurée avec :
+  - [ ] `https://easy-rent-54cd4.web.app/**`
+  - [ ] `https://easy-rent-54cd4--staging-*.web.app/**`
+  - [ ] `https://easyrent-staging.web.app/**` (si staging dédié configuré)
+  - [ ] `http://localhost:*/**` (dev local Flutter Web)
+
+### Email Templates (FEAT-011)
+
+Aller dans Supabase Dashboard → Authentication → Email Templates.
+
+- [ ] **Template "Confirm signup"** : coller le HTML de `supabase/templates/confirmation.html`, sujet `Confirmez votre adresse email — EasyRent`
+- [ ] **Template "Reset Password"** : coller le HTML de `supabase/templates/recovery.html`, sujet `Réinitialisation de votre mot de passe — EasyRent`
+
+### Settings Auth (FEAT-011)
+
+Vérifier que les flags suivants correspondent à `supabase/config.toml` :
+
+- [ ] `Minimum password length` = 8
+- [ ] `Password requirements` = Letters and digits
+- [ ] `Enable email confirmations` = ON
 
 ---
 
@@ -57,8 +76,12 @@ Ouvrir `https://easy-rent-54cd4.web.app` dans Chrome.
 
 - [ ] La page de login s'affiche correctement (pas de page blanche)
 - [ ] Cliquer "Politique de confidentialité" → page `/privacy` complète s'affiche sans login
-- [ ] Demander un magic link avec un email réel → email reçu en moins de 30s
-- [ ] Cliquer le lien email → redirect vers dashboard, session active, pas d'erreur
+- [ ] **Signup** : créer un compte (email réel + password 8 chars + lettre + chiffre + RGPD coché) → écran "Vérifiez votre boîte mail" affiché
+- [ ] Email de confirmation reçu en moins de 30s (sujet FR "Confirmez votre adresse email — EasyRent")
+- [ ] Cliquer le lien email → redirect vers app authentifiée, session active, dashboard visible
+- [ ] **Login** : logout + re-login avec email + password → connexion OK
+- [ ] **Mauvais password** : tentative avec password incorrect → message "Email ou mot de passe incorrect" + email conservé
+- [ ] **Reset password** : `/forgot-password` → email reset reçu → cliquer lien → page `/reset-password` → définir nouveau password → redirect `/login` + snackbar succès → login avec nouveau password OK
 - [ ] Dashboard affiche l'onboarding "Premiers pas" (3 étapes visibles)
 - [ ] Cliquer étape 1 → page `/properties/new` → créer un bien → retour dashboard OK
 - [ ] Cliquer étape 2 → page `/tenants/new` → créer un locataire → retour dashboard OK

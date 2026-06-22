@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-22T12:00:00Z
-- **Commit ref** : `643789c` (Merge pull request #23 from dtruong21/feature/dashboard-pwa-prod-setup)
-- **Branche** : `develop` (FEAT-008 pivot en branche `feature/feat-008-web-share-pivot`)
-- **Phase projet** : FEAT-001–010 implémentées. FEAT-001–009 ✅ mergés. FEAT-010 ✅ mergée 2026-06-22. **FEAT-008 refactorisée 2026-06-22 (pivot Web Share API)**. FEAT-011–012 en backlog.
+- **Dernière mise à jour** : 2026-06-22T18:30:00Z
+- **Commit ref** : `feature/feat-011-auth-password` (en cours de merge ou mergé — pivot FEAT-001 → FEAT-011)
+- **Branche** : `develop` (après merge FEAT-011)
+- **Phase projet** : FEAT-001–010 ✅ complets. **FEAT-011 ✅ mergée 2026-06-22 (pivot auth magic link → email + password classique)**. FEAT-008 refactorisée (Web Share API native). FEAT-012+ en backlog post-MVP.
 
 ## Pointeurs
 
@@ -44,7 +44,7 @@
 | Frontend | Flutter Web 3.x + Dart 3.11+ |
 | State | Riverpod 2.6.0 |
 | Navigation | GoRouter 14.6.0 + GoRouterRefreshStream (custom) |
-| Auth | Supabase Auth (magic link via PKCE) |
+| Auth | Supabase Auth (email + password, session PKCE recovery) — **pivot FEAT-011 2026-06-22** |
 | Backend | Supabase (Postgres + Auth + Storage) |
 | PDF | pdf + printing packages |
 | Build | build_runner + freezed + json_serializable |
@@ -164,10 +164,35 @@
 - **✅ Aucun dépendance non déclarée** : pubspec.yaml à jour (ajoute web, shared_preferences, fl_chart pour FEAT-010)
 - **✅ Firestore CSP fixed** : fonts.gstatic.com dans firebase.json
 
+## Actions manuelles post-merge FEAT-011
+
+⚠️ **Supabase Studio configuration** (requises pour la prod) :
+
+1. **Authentication → URL Configuration**
+   - Site URL : `https://easy-rent-54cd4.web.app`
+   - Redirect URLs (ajouter/mettre à jour) :
+     ```
+     https://easy-rent-54cd4.web.app/**
+     https://easyrent-staging.web.app/**
+     http://localhost:*/**
+     ```
+
+2. **Authentication → Email Provider**
+   - Enable "Confirm email" checkbox
+   - Password validation : ensure `letters_digits` validator active (8 chars + 1 letter + 1 digit)
+   - Custom SMTP (si Resend réintroduit) : domaine vérifié
+
+3. **Authentication → Email Templates**
+   - Confirmation Template : copier contenu de `supabase/templates/confirmation.html`
+   - Recovery (Reset) Template : copier contenu de `supabase/templates/recovery.html`
+
+See `docs/plans/FEAT-011-auth-password.md` Section "Configuration Supabase Studio" for details.
+
 ## Prochaines étapes
 
-- **Prod go-live** : ✅ FEAT-008 pivot = zéro blocker backend email. Déploiement web immédiat possible.
-- **FEAT-011 (P1)** : Email récurrents / rappels paiements (cron Edge Function)
-- **FEAT-012 (P1)** : Analytics avancées, export comptable
+- **Prod go-live** : ✅ FEAT-011 auth password complète. Déploiement web immédiat possible (aucun blocker backend email).
+- **FEAT-012 (P1)** : Password change endpoint + multi-facteur TOTP
+- **FEAT-013 (P1)** : Email récurrents / rappels paiements (cron Edge Function)
+- **FEAT-014 (P1)** : Analytics avancées, export comptable
 - **Dashboard vision** : Charts Stripe/Brex post-MVP (amorce architecturale en KpiCard.child)
-- **Documentation post-pivot** : Voir `docs/plans/FEAT-008-email-quittance.md` pour détails complets pivot Web Share API
+- **Documentation** : Voir `docs/plans/FEAT-008-email-quittance.md` pour détails pivot Web Share API ; `docs/plans/FEAT-011-auth-password.md` pour pivot auth
