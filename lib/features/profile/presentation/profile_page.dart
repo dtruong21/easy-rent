@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../application/landlord_profile_provider.dart';
 import '../application/profile_form_controller.dart';
 import '../domain/landlord_profile.dart';
@@ -113,7 +114,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mon profil')),
+      appBar: AppAppBar(title: 'Mon profil', fallbackRoute: '/'),
       body: _buildBody(isSubmitting: isSubmitting, errorMessage: errorMessage),
     );
   }

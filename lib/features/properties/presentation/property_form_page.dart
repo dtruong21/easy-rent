@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/surface_validator.dart';
 import '../application/property_detail_provider.dart';
 import '../application/property_form_controller.dart';
@@ -112,8 +113,9 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isCreating ? 'Nouveau bien' : 'Modifier le bien'),
+      appBar: AppAppBar(
+        title: isCreating ? 'Nouveau bien' : 'Modifier le bien',
+        fallbackRoute: '/properties',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -173,7 +175,10 @@ class PropertyEditPage extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Modifier le bien')),
+        appBar: AppAppBar(
+          title: 'Modifier le bien',
+          fallbackRoute: '/properties',
+        ),
         body: Center(
           child: Text(
             'Bien introuvable.',

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../application/properties_list_provider.dart';
@@ -50,9 +51,9 @@ class _PropertyDetailContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(property.name),
-        leading: BackButton(onPressed: () => context.go('/properties')),
+      appBar: AppAppBar(
+        title: property.name,
+        fallbackRoute: '/properties',
         actions: [
           IconButton(
             key: const Key('btn_edit_property'),
@@ -290,10 +291,7 @@ class _NotFoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fiche bien'),
-        leading: BackButton(onPressed: () => context.go('/properties')),
-      ),
+      appBar: AppAppBar(title: 'Fiche bien', fallbackRoute: '/properties'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

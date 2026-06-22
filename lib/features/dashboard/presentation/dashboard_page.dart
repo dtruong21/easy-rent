@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
 import '../../auth/application/login_controller.dart';
 import '../../profile/application/landlord_profile_provider.dart';
@@ -70,8 +71,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         .firstOrNull;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EasyRent'),
+      appBar: AppAppBar(
+        title: 'EasyRent',
+        showBackButton: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
