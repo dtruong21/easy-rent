@@ -11,6 +11,7 @@ import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
+import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,6 +153,10 @@ class _FakeTenantRepo implements TenantRepository {
 
   @override
   Future<void> archive(String id) async {}
+
+  @override
+  Future<List<TenantListItem>> listWithActiveLeases() async =>
+      tenants.map((t) => TenantListItem(tenant: t)).toList();
 
   @override
   Future<List<Map<String, dynamic>>> listLeasesForTenant(

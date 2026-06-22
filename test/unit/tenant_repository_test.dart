@@ -10,6 +10,7 @@ library;
 
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
+import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,11 @@ class _InMemoryTenantRepository implements TenantRepository {
   Future<void> archive(String id) async {
     lastArchivedId = id;
     _tenants.removeWhere((t) => t.id == id);
+  }
+
+  @override
+  Future<List<TenantListItem>> listWithActiveLeases() async {
+    return _tenants.map((t) => TenantListItem(tenant: t)).toList();
   }
 
   @override

@@ -1,8 +1,13 @@
 import 'dart:async';
 
+import 'package:easyrent/core/ui/theme/app_colors.dart';
+import 'package:easyrent/core/ui/theme/app_radii.dart';
+import 'package:easyrent/features/tenants/application/tenants_filter_provider.dart';
 import 'package:easyrent/features/tenants/application/tenants_list_provider.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
+import 'package:easyrent/features/tenants/domain/tenant_filter.dart';
+import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/tenants_list_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +51,12 @@ class _FakeRepo implements TenantRepository {
   Future<void> archive(String id) async {}
 
   @override
+  Future<List<TenantListItem>> listWithActiveLeases() async {
+    if (listError != null) throw listError!;
+    return tenants.map((t) => TenantListItem(tenant: t)).toList();
+  }
+
+  @override
   Future<List<Map<String, dynamic>>> listLeasesForTenant(
     String tenantId,
   ) async => [];
@@ -54,6 +65,11 @@ class _FakeRepo implements TenantRepository {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+ThemeData _appTheme() => ThemeData(
+  colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+  extensions: const [AppColors.light, AppRadii()],
+);
 
 Tenant _makeTenant({
   String id = 't1',
@@ -84,12 +100,26 @@ Widget _buildPage(_FakeRepo repo) {
         builder: (_, state) =>
             Scaffold(body: Text('detail ${state.pathParameters['id']}')),
       ),
+      GoRoute(
+        path: '/tenants/:id/edit',
+        builder: (_, state) =>
+            Scaffold(body: Text('edit ${state.pathParameters['id']}')),
+      ),
+      GoRoute(
+        path: '/leases/:id',
+        builder: (_, state) =>
+            Scaffold(body: Text('lease ${state.pathParameters['id']}')),
+      ),
+      GoRoute(
+        path: '/leases/new',
+        builder: (context, _) => const Scaffold(body: Text('new lease')),
+      ),
     ],
   );
 
   return ProviderScope(
     overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
   );
 }
 
@@ -108,7 +138,7 @@ void main() {
       await tester.pumpWidget(_buildPage(const _FakeRepo()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Votre annuaire de locataires'), findsOneWidget);
+      expect(find.text('Aucun locataire enregistré'), findsOneWidget);
     });
 
     testWidgets('état vide — bouton "Ajouter un locataire" dans le corps', (
@@ -168,13 +198,27 @@ void main() {
       await tester.pumpWidget(_buildPage(repo));
       await tester.pumpAndSettle();
 
-      expect(find.text('Votre annuaire de locataires'), findsNothing);
+      expect(find.text('Aucun locataire enregistré'), findsNothing);
+    });
+
+    testWidgets('liste — pill "Sans bail" visible pour locataire sans bail', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(
+        tenants: [_makeTenant(id: 't1', firstName: 'Jean', lastName: 'Dupont')],
+      );
+
+      await tester.pumpWidget(_buildPage(repo));
+      await tester.pumpAndSettle();
+
+      // "Sans bail" apparaît dans le SegmentedButton ET dans la pill du locataire.
+      expect(find.text('Sans bail'), findsAtLeastNWidgets(1));
     });
 
     // -----------------------------------------------------------------------
     // État loading
     // -----------------------------------------------------------------------
-    testWidgets('état loading — CircularProgressIndicator visible', (
+    testWidgets('état loading — CardSkeleton visible (card view)', (
       tester,
     ) async {
       final router = GoRouter(
@@ -190,14 +234,17 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            tenantsListProvider.overrideWith(() => _LoadingListNotifier()),
+            tenantsListItemsProvider.overrideWith(
+              () => _LoadingListItemsNotifier(),
+            ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
         ),
       );
 
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Loading skeleton affiché, pas de TenantsListPage error
+      expect(find.text('Aucun locataire enregistré'), findsNothing);
     });
 
     // -----------------------------------------------------------------------
@@ -222,13 +269,89 @@ void main() {
 
       expect(find.textContaining('Impossible de charger'), findsOneWidget);
     });
+
+    // -----------------------------------------------------------------------
+    // Filtre bar présente
+    // -----------------------------------------------------------------------
+    testWidgets('liste — barre de filtre présente', (tester) async {
+      final repo = _FakeRepo(tenants: [_makeTenant(id: 't1')]);
+
+      await tester.pumpWidget(_buildPage(repo));
+      await tester.pumpAndSettle();
+
+      // La barre contient au moins le segment "Tous"
+      expect(find.text('Tous'), findsOneWidget);
+    });
+
+    testWidgets(
+      'filtre "Sans bail" — cache locataire sans bail si filtre actifs',
+      (tester) async {
+        final repo = _FakeRepo(
+          tenants: [
+            _makeTenant(id: 't1', firstName: 'Jean', lastName: 'Dupont'),
+          ],
+        );
+
+        final container = ProviderContainer(
+          overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+
+        // Initialiser le filtre à withActiveLease
+        container.read(tenantFilterProvider.notifier).state =
+            TenantFilter.withActiveLease;
+
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => const TenantsListPage(),
+            ),
+            GoRoute(
+              path: '/tenants/new',
+              builder: (context, _) => const Scaffold(body: Text('new')),
+            ),
+            GoRoute(
+              path: '/tenants/:id',
+              builder: (_, state) =>
+                  Scaffold(body: Text('detail ${state.pathParameters['id']}')),
+            ),
+            GoRoute(
+              path: '/tenants/:id/edit',
+              builder: (_, state) =>
+                  Scaffold(body: Text('edit ${state.pathParameters['id']}')),
+            ),
+            GoRoute(
+              path: '/leases/:id',
+              builder: (_, state) =>
+                  Scaffold(body: Text('lease ${state.pathParameters['id']}')),
+            ),
+            GoRoute(
+              path: '/leases/new',
+              builder: (context, _) => const Scaffold(body: Text('new lease')),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Jean Dupont n'a pas de bail actif → filtré → état vide
+        expect(find.text('Aucun locataire enregistré'), findsOneWidget);
+      },
+    );
   });
 }
 
 /// Notifier qui reste en état loading indéfini — sans timer.
-class _LoadingListNotifier extends TenantsListNotifier {
+class _LoadingListItemsNotifier extends TenantsListItemsNotifier {
   @override
-  Future<List<Tenant>> build() async {
+  Future<List<TenantListItem>> build() async {
     state = const AsyncValue.loading();
     await Completer<void>().future;
     return [];

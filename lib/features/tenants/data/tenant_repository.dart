@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 
 import '../../../core/db.dart';
 import '../domain/tenant.dart';
+import '../domain/tenant_list_item.dart';
 
 export '../../../core/utils/postgrest_error_mapper.dart' show mapPostgrestError;
 
@@ -57,6 +58,16 @@ abstract interface class TenantRepository {
   /// Si le locataire n'appartient pas au user courant, la RPC ne fait rien (0 row affected)
   /// — considéré comme succès silencieux.
   Future<void> archive(String id);
+
+  /// Liste les locataires avec jointure sur leurs baux actifs.
+  ///
+  /// Retourne des [TenantListItem] enrichis : bien occupé, période, loyer.
+  /// Utilisé pour la vue cards/table Phase 3.
+  ///
+  /// Filtrage client-side : `status='active' AND deleted_at IS NULL`.
+  /// Si plusieurs baux actifs, on prend le plus récent par `start_date`.
+  /// Limité à 200 locataires (même garde-fou que [list]).
+  Future<List<TenantListItem>> listWithActiveLeases();
 
   /// Retourne les baux liés au locataire [tenantId] (non-archivés).
   ///
@@ -155,6 +166,24 @@ class SupabaseTenantRepository implements TenantRepository {
     // `tr_01_prevent_protected_columns_change_tenants` (ERRCODE 42501).
     // On passe OBLIGATOIREMENT par la RPC SECURITY DEFINER.
     await Db.rpc('soft_delete_tenant', params: {'p_id': id});
+  }
+
+  @override
+  Future<List<TenantListItem>> listWithActiveLeases() async {
+    _log.info('listWithActiveLeases()');
+    // Jointure sur la table leases via la FK leases_tenant_id_fkey.
+    // On récupère tous les baux (filtre status='active' appliqué côté client
+    // dans TenantListItem.fromJson pour éviter un filtrage PostgREST sur la
+    // jointure qui masquerait les locataires sans bail).
+    const leaseSelect =
+        'id, status, deleted_at, start_date, end_date, rent_amount_cents, '
+        'property:properties(id, name)';
+    final rows = await Db.from('tenants')
+        .select('*, leases:leases!leases_tenant_id_fkey($leaseSelect)')
+        .order('last_name', ascending: true)
+        .order('first_name', ascending: true)
+        .limit(200);
+    return rows.map((r) => TenantListItem.fromJson(r)).toList();
   }
 
   @override

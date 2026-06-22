@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/ui/breakpoints.dart';
+import '../../../core/ui/cards/card_empty_state.dart';
+import '../../../core/ui/cards/view_mode.dart';
+import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/utils/postgrest_error_mapper.dart';
-import '../application/tenants_list_provider.dart';
-import '../domain/tenant.dart';
-import 'widgets/tenant_card.dart';
+import '../application/tenants_filter_provider.dart';
+import 'widgets/tenants_card_view.dart';
+import 'widgets/tenants_filter_bar.dart';
+import 'widgets/tenants_table_view.dart';
 
 /// Liste des locataires du landlord courant.
 ///
@@ -15,12 +20,17 @@ import 'widgets/tenant_card.dart';
 /// - État vide : "Aucun locataire enregistré" + bouton "Ajouter un locataire".
 /// - Triés par `last_name ASC, first_name ASC`.
 /// - Bandeau si la limite de 200 locataires est atteinte.
+/// - Toggle Card/Tableau (masqué sur mobile).
+/// - Filtre par statut (SegmentedButton sur desktop, Dropdown sur mobile).
 class TenantsListPage extends ConsumerWidget {
   const TenantsListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncTenants = ref.watch(tenantsListProvider);
+    final asyncTenants = ref.watch(filteredTenantsProvider);
+    final viewMode = context.isMobile
+        ? ViewMode.card
+        : ref.watch(viewModeProvider('tenants'));
 
     return Scaffold(
       appBar: AppBar(
@@ -33,100 +43,97 @@ class TenantsListPage extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Ajouter un locataire'),
       ),
-      body: asyncTenants.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(
-          message: e is PostgrestException
-              ? mapPostgrestError(e)
-              : 'Erreur de chargement',
-          onRetry: () => ref.invalidate(tenantsListProvider),
-        ),
-        data: (tenants) => _TenantsList(tenants: tenants),
-      ),
-    );
-  }
-}
-
-class _TenantsList extends StatelessWidget {
-  const _TenantsList({required this.tenants});
-
-  final List<Tenant> tenants;
-
-  @override
-  Widget build(BuildContext context) {
-    if (tenants.isEmpty) {
-      return const _EmptyState();
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 96),
-      itemCount: tenants.length + (tenants.length >= 200 ? 1 : 0),
-      itemBuilder: (context, index) {
-        // Bandeau limite 200
-        if (index == tenants.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'Limite de 200 locataires atteinte. Contactez le support pour augmenter cette limite.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-          );
-        }
-        final tenant = tenants[index];
-        return TenantCard(
-          key: ValueKey(tenant.id),
-          tenant: tenant,
-          onTap: () => context.push('/tenants/${tenant.id}'),
-        );
-      },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.people_outline,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Votre annuaire de locataires',
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Vos locataires apparaîtront ici.\nAjoutez-en un dès que vous êtes prêt.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const TenantsFilterBar(),
+          Expanded(
+            child: asyncTenants.when(
+              loading: () => viewMode == ViewMode.table
+                  ? TenantsTableView.loading()
+                  : TenantsCardView.loading(),
+              error: (e, _) => _ErrorView(
+                message: e is PostgrestException
+                    ? mapPostgrestError(e)
+                    : 'Erreur de chargement',
+                onRetry: () => ref.invalidate(filteredTenantsProvider),
               ),
-              textAlign: TextAlign.center,
+              data: (tenants) {
+                if (tenants.isEmpty) {
+                  return CardEmptyState(
+                    icon: Icons.people_outline,
+                    title: 'Aucun locataire enregistré',
+                    message:
+                        'Ajoutez votre premier locataire pour démarrer.\n'
+                        "Vous pourrez ensuite l'associer à un bien via un bail.",
+                    action: FilledButton.icon(
+                      key: const Key('btn_add_tenant_empty'),
+                      onPressed: () => context.push('/tenants/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Ajouter un locataire'),
+                    ),
+                  );
+                }
+
+                // Bandeau limite 200 — affiché dans les deux vues via ce wrapper.
+                final atLimit = tenants.length >= 200;
+
+                if (viewMode == ViewMode.table) {
+                  return _WithLimitBanner(
+                    atLimit: atLimit,
+                    child: TenantsTableView(tenants: tenants),
+                  );
+                }
+
+                return _WithLimitBanner(
+                  atLimit: atLimit,
+                  child: TenantsCardView(tenants: tenants),
+                );
+              },
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              key: const Key('btn_add_tenant_empty'),
-              onPressed: () => context.push('/tenants/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('Ajouter un locataire'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Bandeau limite 200
+// ---------------------------------------------------------------------------
+
+class _WithLimitBanner extends StatelessWidget {
+  const _WithLimitBanner({required this.child, required this.atLimit});
+
+  final Widget child;
+  final bool atLimit;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!atLimit) return child;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Text(
+            'Limite de 200 locataires atteinte. Contactez le support pour augmenter cette limite.',
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Error view
+// ---------------------------------------------------------------------------
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message, required this.onRetry});
