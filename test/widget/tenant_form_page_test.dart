@@ -2,6 +2,7 @@ import 'package:easyrent/features/tenants/application/tenant_form_controller.dar
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_form_state.dart';
+import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/tenant_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,6 +52,9 @@ class _FakeTenantRepository implements TenantRepository {
 
   @override
   Future<void> archive(String id) async {}
+
+  @override
+  Future<List<TenantListItem>> listWithActiveLeases() async => [];
 
   @override
   Future<List<Map<String, dynamic>>> listLeasesForTenant(
