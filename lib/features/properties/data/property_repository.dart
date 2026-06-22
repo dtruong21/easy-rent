@@ -1,7 +1,9 @@
+// ignore_for_file: use_null_aware_elements
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/db.dart';
+import '../domain/heating_type.dart';
 import '../domain/property.dart';
 import '../domain/property_list_item.dart';
 import '../domain/property_type.dart';
@@ -45,11 +47,23 @@ abstract interface class PropertyRepository {
     required String address,
     required PropertyType type,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator,
+    bool furnished,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
   });
 
   /// Met à jour les champs métier d'un bien existant.
   ///
-  /// Seuls `name`, `address`, `type`, `surface_m2` sont inclus dans le payload.
+  /// Tous les champs métier (y compris les nouveaux) sont inclus dans le payload.
   /// Le trigger `tr_02_set_updated_at` mettra à jour `updated_at` automatiquement.
   /// Le trigger `tr_01_prevent_protected_columns_change` bloque toute modification
   /// de `deleted_at` ou `created_at`.
@@ -116,15 +130,40 @@ class SupabasePropertyRepository implements PropertyRepository {
     required String address,
     required PropertyType type,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator = false,
+    bool furnished = false,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
   }) async {
     _log.info('create(type=${type.sqlValue})');
     // Ne PAS inclure landlord_id : la RLS WITH CHECK le fixe à auth.uid().
     // Ne PAS inclure created_at / updated_at / deleted_at : gérés par triggers.
+    // Omettre proprement les champs null pour éviter d'écraser les DEFAULT SQL.
     final payload = <String, dynamic>{
       'name': name.trim(),
       'address': address.trim(),
       'type': type.sqlValue,
-      'surface_m2': surfaceM2,
+      if (surfaceM2 != null) 'surface_m2': surfaceM2,
+      if (postalCode != null) 'postal_code': postalCode.trim(),
+      if (city != null) 'city': city.trim(),
+      if (rooms != null) 'rooms': rooms,
+      if (bedrooms != null) 'bedrooms': bedrooms,
+      if (floor != null) 'floor': floor,
+      'has_elevator': hasElevator,
+      'furnished': furnished,
+      if (heatingType != null) 'heating_type': heatingType.sqlValue,
+      if (dpeLetter != null) 'dpe_letter': dpeLetter,
+      if (dpeValueKwhM2Year != null) 'dpe_value_kwh_m2_year': dpeValueKwhM2Year,
+      if (gesLetter != null) 'ges_letter': gesLetter,
+      if (constructionYear != null) 'construction_year': constructionYear,
     };
     final rows = await Db.from('properties').insert(payload).select();
     return Property.fromJson(rows.first);
@@ -139,6 +178,18 @@ class SupabasePropertyRepository implements PropertyRepository {
       'address': property.address.trim(),
       'type': property.type.sqlValue,
       'surface_m2': property.surfaceM2,
+      'postal_code': property.postalCode,
+      'city': property.city,
+      'rooms': property.rooms,
+      'bedrooms': property.bedrooms,
+      'floor': property.floor,
+      'has_elevator': property.hasElevator,
+      'furnished': property.furnished,
+      'heating_type': property.heatingType?.sqlValue,
+      'dpe_letter': property.dpeLetter,
+      'dpe_value_kwh_m2_year': property.dpeValueKwhM2Year,
+      'ges_letter': property.gesLetter,
+      'construction_year': property.constructionYear,
     };
     final rows = await Db.from(
       'properties',

@@ -2,6 +2,7 @@ import 'package:easyrent/features/properties/application/property_form_controlle
 import 'package:easyrent/features/properties/application/properties_list_provider.dart';
 import 'package:easyrent/features/properties/application/property_detail_provider.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
+import 'package:easyrent/features/properties/domain/heating_type.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_form_state.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
@@ -26,6 +27,18 @@ class _FakeRepo implements PropertyRepository {
     required String address,
     required PropertyType type,
     double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator = false,
+    bool furnished = false,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
   }) async {
     if (createError != null) throw createError!;
     _storedProperty = Property(
@@ -35,6 +48,18 @@ class _FakeRepo implements PropertyRepository {
       address: address,
       type: type,
       surfaceM2: surfaceM2,
+      postalCode: postalCode,
+      city: city,
+      rooms: rooms,
+      bedrooms: bedrooms,
+      floor: floor,
+      hasElevator: hasElevator,
+      furnished: furnished,
+      heatingType: heatingType,
+      dpeLetter: dpeLetter,
+      dpeValueKwhM2Year: dpeValueKwhM2Year,
+      gesLetter: gesLetter,
+      constructionYear: constructionYear,
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
     );
@@ -151,12 +176,44 @@ void main() {
       expect(_successProperty(states[2])!.name, 'Appart Paris');
     });
 
+    test('création avec nouveaux champs — succès', () async {
+      final repo = _FakeRepo();
+      final container = _makeContainer(repo);
+      addTearDown(container.dispose);
+
+      await container
+          .read(propertyFormControllerProvider.notifier)
+          .submit(
+            name: 'Maison chauffée',
+            address: '1 impasse',
+            type: PropertyType.maison,
+            postalCode: '75001',
+            city: 'Paris',
+            rooms: 4,
+            bedrooms: 2,
+            floor: 0,
+            hasElevator: false,
+            furnished: true,
+            heatingType: HeatingType.gas,
+            dpeLetter: 'C',
+            dpeValueKwhM2Year: 180,
+            gesLetter: 'B',
+            constructionYear: 1990,
+          );
+
+      final state = container.read(propertyFormControllerProvider);
+      expect(_isSuccess(state), isTrue);
+      final p = _successProperty(state)!;
+      expect(p.heatingType, HeatingType.gas);
+      expect(p.furnished, isTrue);
+      expect(p.constructionYear, 1990);
+    });
+
     test('création — invalide la liste après succès', () async {
       final repo = _FakeRepo();
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
-      // Démarrer le provider liste.
       await container.read(propertiesListProvider.future);
 
       await container
@@ -167,7 +224,6 @@ void main() {
             type: PropertyType.studio,
           );
 
-      // Après invalidation, le provider liste reste accessible.
       expect(() => container.read(propertiesListProvider), returnsNormally);
     });
 
@@ -216,7 +272,6 @@ void main() {
             type: PropertyType.appartement,
           );
 
-      // Le provider détail doit être accessible (invalidé mais pas en erreur).
       expect(
         () => container.read(propertyDetailProvider(initial.id)),
         returnsNormally,
