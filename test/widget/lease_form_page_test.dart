@@ -7,6 +7,7 @@ import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/presentation/lease_form_page.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
+import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
@@ -119,6 +120,10 @@ class _FakePropertyRepo implements PropertyRepository {
 
   @override
   Future<void> archive(String id) async {}
+
+  @override
+  Future<List<PropertyListItem>> listWithLeases() async =>
+      properties.map((p) => PropertyListItem(property: p)).toList();
 }
 
 class _FakeTenantRepo implements TenantRepository {

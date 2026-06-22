@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 
 import '../../../core/db.dart';
 import '../domain/property.dart';
+import '../domain/property_list_item.dart';
 import '../domain/property_type.dart';
 
 export '../../../core/utils/postgrest_error_mapper.dart' show mapPostgrestError;
@@ -19,6 +20,15 @@ abstract interface class PropertyRepository {
   /// Limité à 200 lignes (garde-fou — cible utilisateur : 1-20 biens).
   /// RLS filtre automatiquement par `auth.uid()` et `deleted_at IS NULL`.
   Future<List<Property>> list();
+
+  /// Liste les biens avec jointure sur les baux actifs.
+  ///
+  /// Retourne des [PropertyListItem] enrichis : locataire courant, loyer CC,
+  /// identifiant du bail actif. Utilisé pour la vue cards/table Phase 2.
+  ///
+  /// Filtrage client-side : `status='active' AND deleted_at IS NULL`.
+  /// Limité à 200 biens (même garde-fou que [list]).
+  Future<List<PropertyListItem>> listWithLeases();
 
   /// Retourne un bien par son [id].
   ///
@@ -71,6 +81,23 @@ class SupabasePropertyRepository implements PropertyRepository {
       'properties',
     ).select().order('created_at', ascending: false).limit(200);
     return rows.map((r) => Property.fromJson(r)).toList();
+  }
+
+  @override
+  Future<List<PropertyListItem>> listWithLeases() async {
+    _log.info('listWithLeases()');
+    // Jointure sur la table leases via la FK leases_property_id_fkey.
+    // On récupère tous les baux (filtre status='active' appliqué côté client
+    // dans PropertyListItem.fromJson pour éviter un filtrage PostgREST sur la
+    // jointure qui masquerait les biens sans bail).
+    const leaseSelect =
+        'id, rent_amount_cents, charges_amount_cents, status, deleted_at, '
+        'tenant:tenants(id, first_name, last_name)';
+    final rows = await Db.from('properties')
+        .select('*, leases:leases!leases_property_id_fkey($leaseSelect)')
+        .order('created_at', ascending: false)
+        .limit(200);
+    return rows.map((r) => PropertyListItem.fromJson(r)).toList();
   }
 
   @override

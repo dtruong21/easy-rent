@@ -2,6 +2,7 @@ import 'package:easyrent/features/properties/application/property_form_controlle
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_form_state.dart';
+import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/property_form_page.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,9 @@ class _FakePropertyRepository implements PropertyRepository {
 
   @override
   Future<void> archive(String id) async {}
+
+  @override
+  Future<List<PropertyListItem>> listWithLeases() async => [];
 
   Property _makeProperty({
     String id = 'test-id',
