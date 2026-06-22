@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../application/void_receipt_controller.dart';
 import '../../data/receipts_repository.dart';
 import '../../domain/receipt.dart';
-import 'send_receipt_button.dart';
+import 'share_receipt_button.dart';
 import 'void_receipt_dialog.dart';
 
 final _log = Logger('ReceiptListTile');
@@ -16,6 +16,7 @@ final _log = Logger('ReceiptListTile');
 /// Affiche : période, type (Quittance / Reçu), montant total.
 /// Badges : "Annulée" si [isVoided], "Périmée" si [isStale].
 /// Actions :
+/// - Bouton partager : ouvre Web Share API ou fallback download+mailto:.
 /// - Bouton télécharger : génère une URL signée et ouvre le PDF.
 /// - Bouton voider : ouvre [VoidReceiptDialog] (masqué si déjà voided).
 class ReceiptListTile extends ConsumerWidget {
@@ -23,15 +24,27 @@ class ReceiptListTile extends ConsumerWidget {
     super.key,
     required this.receipt,
     required this.leaseId,
-    this.tenantId,
+    this.tenantEmail,
+    this.tenantFirstName = '',
+    this.propertyAddress = '',
+    this.landlordFullName = '',
   });
 
   final Receipt receipt;
   final String leaseId;
 
-  /// Identifiant du locataire — transmis à [SendReceiptButton] pour la
-  /// navigation "Modifier la fiche" en cas d'absence d'email.
-  final String? tenantId;
+  /// Email du locataire — transmis à [ShareReceiptButton].
+  /// Si null ou vide, le bouton de partage est désactivé.
+  final String? tenantEmail;
+
+  /// Prénom du locataire — pour le corps du message de partage.
+  final String tenantFirstName;
+
+  /// Adresse du logement — pour le corps du message de partage.
+  final String propertyAddress;
+
+  /// Nom complet du bailleur — pour la signature du message de partage.
+  final String landlordFullName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,10 +81,13 @@ class ReceiptListTile extends ConsumerWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SendReceiptButton(
+          ShareReceiptButton(
             receipt: receipt,
             leaseId: leaseId,
-            tenantId: tenantId,
+            tenantEmail: tenantEmail,
+            tenantFirstName: tenantFirstName,
+            propertyAddress: propertyAddress,
+            landlordFullName: landlordFullName,
           ),
           IconButton(
             key: Key('btn_download_receipt_${receipt.id}'),
@@ -114,14 +130,14 @@ class ReceiptListTile extends ConsumerWidget {
       ),
     );
 
-    if (!receipt.hasBeenSent) return baseText;
+    if (!receipt.hasBeenShared) return baseText;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         baseText,
         Text(
-          'Envoyé le ${receipt.sentAtLabel} à ${receipt.maskedSentToEmail}',
+          'Partagée le ${receipt.sharedAtLabel} à ${receipt.maskedSentToEmail}',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             fontSize: 11,

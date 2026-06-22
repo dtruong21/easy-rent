@@ -16,42 +16,6 @@ class ProfileIncompleteException implements Exception {
       'ProfileIncompleteException: champs manquants = $missing';
 }
 
-/// Exception levée quand le locataire n'a pas d'adresse email (422 tenant_no_email).
-class TenantNoEmailException implements Exception {
-  const TenantNoEmailException();
-
-  @override
-  String toString() => 'TenantNoEmailException: le locataire n\'a pas d\'email';
-}
-
-/// Exception levée quand la quittance est annulée ou périmée (422 receipt_invalid).
-///
-/// Différent de [ReceiptNotFoundException] : la quittance existe mais son état
-/// interdit l'envoi (is_voided ou is_stale).
-class ReceiptInvalidForSendException implements Exception {
-  const ReceiptInvalidForSendException();
-
-  @override
-  String toString() =>
-      'ReceiptInvalidForSendException: quittance annulée ou périmée';
-}
-
-/// Exception levée quand le PDF est indisponible (422 pdf_unavailable).
-class PdfUnavailableException implements Exception {
-  const PdfUnavailableException();
-
-  @override
-  String toString() => 'PdfUnavailableException: PDF indisponible';
-}
-
-/// Exception levée quand le quota d'email Resend est dépassé (429 quota_exceeded).
-class EmailQuotaExceededException implements Exception {
-  const EmailQuotaExceededException();
-
-  @override
-  String toString() => 'EmailQuotaExceededException: quota email dépassé';
-}
-
 /// Traduit une [FunctionException] (Edge Function) en message utilisateur FR.
 ///
 /// L'Edge Function `generate-receipt` retourne des codes HTTP standard :
@@ -82,15 +46,9 @@ String mapEdgeFunctionError(FunctionException e) {
           : <String>[];
       throw ProfileIncompleteException(missing: missingList);
     }
-    // 422 autre (aucun paiement, dates incohérentes, email, PDF, etc.)
+    // 422 autre (aucun paiement, dates incohérentes, etc.)
     if (details is Map<String, dynamic> && details['error'] != null) {
       final errCode = details['error'] as String;
-      // Codes spécifiques à send-receipt — lever des exceptions typées.
-      if (errCode == 'tenant_no_email') throw const TenantNoEmailException();
-      if (errCode == 'receipt_invalid') {
-        throw const ReceiptInvalidForSendException();
-      }
-      if (errCode == 'pdf_unavailable') throw const PdfUnavailableException();
       return switch (errCode) {
         'no_payments_found' =>
           'Aucun paiement trouvé pour cette période. Vérifiez les paiements enregistrés.',
@@ -102,15 +60,6 @@ String mapEdgeFunctionError(FunctionException e) {
       };
     }
     return 'Données invalides. Vérifiez les informations et réessayez.';
-  }
-
-  // 429 quota_exceeded (Resend free tier saturé).
-  if (status == 429) {
-    if (details is Map<String, dynamic> &&
-        details['error']?.toString() == 'quota_exceeded') {
-      throw const EmailQuotaExceededException();
-    }
-    return 'Trop de requêtes. Veuillez réessayer plus tard.';
   }
 
   if (status == 401) {

@@ -102,11 +102,18 @@ extension ReceiptExtension on Receipt {
   String get periodLabel =>
       '${FrenchDate.format(periodStart)} – ${FrenchDate.format(periodEnd)}';
 
-  /// Vrai si la quittance a déjà été envoyée par email.
-  bool get hasBeenSent => sentAt != null;
+  /// Vrai si la quittance a déjà été partagée via la Web Share API.
+  bool get hasBeenShared => sentAt != null;
 
-  /// Date d'envoi formatée en FR (ex: "01/06/2026"), ou null si jamais envoyée.
-  String? get sentAtLabel => sentAt != null ? FrenchDate.format(sentAt!) : null;
+  /// Alias de [sentAt] — sémantique "partagée" pour la présentation.
+  DateTime? get sharedAt => sentAt;
+
+  /// Alias de [sentToEmail] — sémantique "partagée" pour la présentation.
+  String? get sharedToEmail => sentToEmail;
+
+  /// Date de partage formatée en FR (ex: "01/06/2026"), ou null si jamais partagée.
+  String? get sharedAtLabel =>
+      sentAt != null ? FrenchDate.format(sentAt!) : null;
 
   /// Email de destination masqué pour l'affichage RGPD
   /// (ex: "j***@example.com" — premier caractère + 3 étoiles + @domaine).

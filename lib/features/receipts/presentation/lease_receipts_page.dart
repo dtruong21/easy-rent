@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
-import '../../../features/leases/application/lease_detail_provider.dart';
+import '../../leases/application/lease_detail_provider.dart';
+import '../../profile/application/landlord_profile_provider.dart';
+import '../../properties/application/property_detail_provider.dart';
+import '../../tenants/application/tenant_detail_provider.dart';
 import '../application/lease_receipts_provider.dart';
 import '../domain/receipt.dart';
 import 'widgets/receipt_list_tile.dart';
@@ -23,12 +26,25 @@ class LeaseReceiptsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncReceipts = ref.watch(leaseReceiptsProvider(leaseId));
-    // Résoudre tenantId pour le bouton "Modifier" en cas de tenantNoEmail.
-    final tenantId = ref
-        .watch(leaseDetailProvider(leaseId))
-        .valueOrNull
-        ?.tenantId;
     final theme = Theme.of(context);
+
+    // Charger le contexte nécessaire au bouton de partage des quittances.
+    final asyncLease = ref.watch(leaseDetailProvider(leaseId));
+    final tenantId = asyncLease.valueOrNull?.tenantId;
+    final propertyId = asyncLease.valueOrNull?.propertyId;
+
+    final asyncTenant = tenantId != null
+        ? ref.watch(tenantDetailProvider(tenantId))
+        : null;
+    final asyncProperty = propertyId != null
+        ? ref.watch(propertyDetailProvider(propertyId))
+        : null;
+    final asyncProfile = ref.watch(landlordProfileProvider);
+
+    final tenantEmail = asyncTenant?.valueOrNull?.email;
+    final tenantFirstName = asyncTenant?.valueOrNull?.firstName ?? '';
+    final propertyAddress = asyncProperty?.valueOrNull?.address ?? '';
+    final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -70,7 +86,10 @@ class LeaseReceiptsPage extends ConsumerWidget {
           return _ReceiptsList(
             receipts: receipts,
             leaseId: leaseId,
-            tenantId: tenantId,
+            tenantEmail: tenantEmail,
+            tenantFirstName: tenantFirstName,
+            propertyAddress: propertyAddress,
+            landlordFullName: landlordFullName,
           );
         },
       ),
@@ -82,12 +101,18 @@ class _ReceiptsList extends StatelessWidget {
   const _ReceiptsList({
     required this.receipts,
     required this.leaseId,
-    this.tenantId,
+    this.tenantEmail,
+    this.tenantFirstName = '',
+    this.propertyAddress = '',
+    this.landlordFullName = '',
   });
 
   final List<Receipt> receipts;
   final String leaseId;
-  final String? tenantId;
+  final String? tenantEmail;
+  final String tenantFirstName;
+  final String propertyAddress;
+  final String landlordFullName;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +125,10 @@ class _ReceiptsList extends StatelessWidget {
         return ReceiptListTile(
           receipt: receipt,
           leaseId: leaseId,
-          tenantId: tenantId,
+          tenantEmail: tenantEmail,
+          tenantFirstName: tenantFirstName,
+          propertyAddress: propertyAddress,
+          landlordFullName: landlordFullName,
         );
       },
     );

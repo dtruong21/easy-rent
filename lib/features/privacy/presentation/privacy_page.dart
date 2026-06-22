@@ -109,13 +109,13 @@ class _PrivacyContent extends StatelessWidget {
               'données, authentification, stockage des fichiers. Les instances de '
               'données sont hébergées dans la région EU (Francfort). DPA disponible '
               'sur supabase.com/legal/dpa.\n\n'
-              '• Resend (Resend, Inc., États-Unis) — envoi des emails transactionnels '
-              '(quittances par email). DPA signée. Données transmises : adresse email '
-              'du locataire, contenu de la quittance.\n\n'
               '• Firebase Hosting (Google LLC, États-Unis) — hébergement statique de '
               'l\'application web. Firebase Hosting ne stocke aucune donnée personnelle '
               '(l\'application communique directement avec Supabase pour les données). '
               'DPA disponible sur firebase.google.com/terms/data-processing-terms.\n\n'
+              'Le partage des quittances utilise l\'API native du navigateur '
+              '(Web Share API). Aucune donnée du locataire ne transite par un '
+              'service tiers lors de cette opération.\n\n'
               'Aucun autre transfert hors UE non mentionné ci-dessus n\'est effectué.',
         ),
 
