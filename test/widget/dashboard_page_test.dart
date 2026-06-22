@@ -1,12 +1,14 @@
 /// Tests widget pour [DashboardPage].
 library;
 
+import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:easyrent/features/dashboard/presentation/dashboard_page.dart';
+import 'package:easyrent/features/dashboard/presentation/widgets/kpi_card.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/shortcuts_row.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
@@ -147,7 +149,10 @@ Widget _wrap({bool onboarding = false, int retards = 0}) {
       authRepositoryProvider.overrideWithValue(_FakeAuthRepo()),
       installPromptStorageProvider.overrideWith((_) => InstallPromptStorage()),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      theme: ThemeData(extensions: const [AppColors.light]),
+    ),
   );
 }
 
@@ -212,6 +217,62 @@ void main() {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.text('EasyRent'), findsOneWidget);
+    });
+  });
+
+  group('DashboardPage — empty states (CardEmptyState)', () {
+    testWidgets('barchart vide affiche texte CardEmptyState', (tester) async {
+      // Le repo retourne [] pour fetchLast6MonthsAmounts → isEmpty = true.
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      expect(find.text("Pas encore d'historique"), findsOneWidget);
+      expect(
+        find.text('Les loyers apparaîtront ici dès le 1er paiement.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('activité vide affiche texte CardEmptyState', (tester) async {
+      // Le repo retourne [] pour fetchRecentActivity → items empty.
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      expect(find.text('Aucune activité récente'), findsOneWidget);
+      expect(
+        find.text('Commencez par enregistrer un paiement.'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('DashboardPage — couleurs sémantiques KpiGrid', () {
+    testWidgets('KPI retards utilise AppColors.danger quand count > 0', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(retards: 2));
+      await tester.pumpAndSettle();
+
+      // Trouve le KpiCard retards et vérifie sa semanticColor.
+      final kpiRetards = tester.widget<KpiCard>(
+        find.byKey(const Key('kpi_retards')),
+      );
+      expect(kpiRetards.semanticColor, equals(AppColors.light.danger.solid));
+    });
+
+    testWidgets('KPI retards utilise AppColors.neutral quand count = 0', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+
+      final kpiRetards = tester.widget<KpiCard>(
+        find.byKey(const Key('kpi_retards')),
+      );
+      expect(kpiRetards.semanticColor, equals(AppColors.light.neutral.solid));
     });
   });
 }

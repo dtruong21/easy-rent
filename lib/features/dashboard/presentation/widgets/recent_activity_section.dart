@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/cards/card_empty_state.dart';
+import '../../../../core/ui/theme/app_radii.dart';
+import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/activity_item.dart';
 
 /// Section "Activité récente" du dashboard.
 ///
-/// Affiche jusqu'à 5 [ActivityItem] sous forme de tiles.
-/// Si la liste est vide → empty state.
+/// Affiche jusqu'à 5 [ActivityItem] sous forme de tiles dans un card container.
+/// Si la liste est vide → [CardEmptyState].
 class RecentActivitySection extends StatelessWidget {
   const RecentActivitySection({super.key, required this.items});
 
@@ -17,23 +20,38 @@ class RecentActivitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text('Activité récente', style: theme.textTheme.titleSmall),
-            const Spacer(),
-            // "Voir tout" désactivé en MVP — pas de page dédiée.
-            TextButton(onPressed: null, child: const Text('Voir tout')),
-          ],
-        ),
-        const SizedBox(height: 4),
-        if (items.isEmpty)
-          _EmptyState()
-        else
-          ...items.map((item) => _ActivityTile(item: item)),
-      ],
+    final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
+    final radii = theme.extension<AppRadii>() ?? const AppRadii();
+
+    return Container(
+      padding: EdgeInsets.all(spacing.cardPaddingStandard),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(radii.md),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Activité récente', style: theme.textTheme.titleSmall),
+              const Spacer(),
+              // "Voir tout" désactivé en MVP — pas de page dédiée.
+              TextButton(onPressed: null, child: const Text('Voir tout')),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (items.isEmpty)
+            const CardEmptyState(
+              icon: Icons.history,
+              title: 'Aucune activité récente',
+              message: 'Commencez par enregistrer un paiement.',
+            )
+          else
+            ...items.map((item) => _ActivityTile(item: item)),
+        ],
+      ),
     );
   }
 }
@@ -126,25 +144,6 @@ class _Tile extends StatelessWidget {
       subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
       trailing: const Icon(Icons.chevron_right, size: 16),
       onTap: onTap,
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Center(
-        child: Text(
-          'Aucune activité récente. Commencez par enregistrer un paiement.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
     );
   }
 }

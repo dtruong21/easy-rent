@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/theme/app_spacing.dart';
+
 /// Header du dashboard avec salutation et date du jour.
 ///
 /// Affiche "Bonjour, [firstName]" + date du jour formatée en français.
@@ -27,6 +29,7 @@ class DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
     final now = DateTime.now();
     final dayName = _days[now.weekday]; // weekday 1=lundi..7=dimanche
     final dateLabel = '$dayName ${now.day} ${_months[now.month]} ${now.year}';
@@ -35,7 +38,7 @@ class DashboardHeader extends StatelessWidget {
         : 'Bonjour';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.only(bottom: spacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

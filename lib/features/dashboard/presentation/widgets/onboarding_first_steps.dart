@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/theme/app_spacing.dart';
+
 /// Checklist d'onboarding "Premiers pas".
 ///
 /// Affiché à la place des KPI cards quand le bailleur n'a
@@ -13,10 +15,11 @@ class OnboardingFirstSteps extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(spacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -25,7 +28,7 @@ class OnboardingFirstSteps extends StatelessWidget {
               size: 48,
               color: theme.colorScheme.primary,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: spacing.md),
             Text('Bienvenue ! Premiers pas', style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
@@ -34,7 +37,7 @@ class OnboardingFirstSteps extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing.xl),
             _StepTile(
               stepNumber: 1,
               label: 'Ajouter un bien',

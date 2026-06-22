@@ -1,16 +1,21 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/cards/card_empty_state.dart';
+import '../../../../core/ui/theme/app_colors.dart';
+import '../../../../core/ui/theme/app_radii.dart';
+import '../../../../core/ui/theme/app_spacing.dart';
 import '../../domain/monthly_amount.dart';
 
 /// Mini-barchart 6 mois "Encaissé / Dû".
 ///
 /// Chaque mois = 2 barres côte à côte :
-/// - Encaissé : couleur `colorScheme.primary` (teal)
-/// - Dû       : couleur `colorScheme.outline` (gris)
+/// - Encaissé : [AppColors.info.solid] (bleu)
+/// - Dû       : [AppColors.neutral.surface] (gris pâle)
 ///
+/// Enveloppé dans un card container (border, radius, padding, bg surface).
 /// Hauteur : 200 px desktop, 160 px mobile (<600 px).
-/// Si toutes les données sont à zéro → empty state.
+/// Si toutes les données sont à zéro → [CardEmptyState].
 class MonthlyBarchart extends StatefulWidget {
   const MonthlyBarchart({super.key, required this.months});
 
@@ -26,37 +31,55 @@ class _MonthlyBarchartState extends State<MonthlyBarchart> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
+    final radii = theme.extension<AppRadii>() ?? const AppRadii();
+    final colors = theme.extension<AppColors>()!;
     final isEmpty = widget.months.every(
       (m) => m.encaissedCents == 0 && m.dueCents == 0,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Loyers — 6 derniers mois', style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        if (isEmpty)
-          _EmptyState()
-        else ...[
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final chartHeight = constraints.maxWidth > 600 ? 200.0 : 160.0;
-              return SizedBox(
-                height: chartHeight,
-                child: BarChart(_buildBarChart(theme)),
-              );
-            },
-          ),
+    return Container(
+      padding: EdgeInsets.all(spacing.cardPaddingStandard),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(radii.md),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Loyers — 6 derniers mois', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
-          _Legend(theme: theme),
+          if (isEmpty)
+            const CardEmptyState(
+              icon: Icons.bar_chart_outlined,
+              title: "Pas encore d'historique",
+              message: 'Les loyers apparaîtront ici dès le 1er paiement.',
+            )
+          else ...[
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final chartHeight = constraints.maxWidth > 600 ? 200.0 : 160.0;
+                return SizedBox(
+                  height: chartHeight,
+                  child: BarChart(_buildBarChart(theme, colors)),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            _Legend(
+              encaissedColor: colors.info.solid,
+              dueColor: colors.neutral.surface,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
-  BarChartData _buildBarChart(ThemeData theme) {
-    final encaissedColor = theme.colorScheme.primary;
-    final dueColor = theme.colorScheme.outlineVariant;
+  BarChartData _buildBarChart(ThemeData theme, AppColors colors) {
+    final encaissedColor = colors.info.solid;
+    final dueColor = colors.neutral.surface;
     final groups = <BarChartGroupData>[];
 
     for (int i = 0; i < widget.months.length; i++) {
@@ -223,35 +246,19 @@ String _formatCompactEuros(int cents) {
   return '${euros.toStringAsFixed(0)} €';
 }
 
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      height: 80,
-      alignment: Alignment.center,
-      child: Text(
-        "Pas encore d'historique",
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
 class _Legend extends StatelessWidget {
-  const _Legend({required this.theme});
-  final ThemeData theme;
+  const _Legend({required this.encaissedColor, required this.dueColor});
+  final Color encaissedColor;
+  final Color dueColor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _LegendChip(color: theme.colorScheme.primary, label: 'Encaissé'),
+        _LegendChip(color: encaissedColor, label: 'Encaissé'),
         const SizedBox(width: 16),
-        _LegendChip(color: theme.colorScheme.outlineVariant, label: 'Dû'),
+        _LegendChip(color: dueColor, label: 'Dû'),
       ],
     );
   }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/theme/app_radii.dart';
+import '../../../../core/ui/theme/app_spacing.dart';
+
 /// Carte KPI générique du dashboard.
 ///
 /// Affiche une métrique avec icône, label, valeur principale et un subtitle
@@ -35,6 +38,8 @@ class KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
+    final radii = theme.extension<AppRadii>() ?? const AppRadii();
     final color = semanticColor ?? theme.colorScheme.primary;
 
     return Card(
@@ -42,7 +47,7 @@ class KpiCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(spacing.cardPaddingStandard),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -50,10 +55,10 @@ class KpiCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(spacing.sm),
                     decoration: BoxDecoration(
                       color: color.withAlpha(30),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(radii.sm),
                     ),
                     child: Icon(icon, color: color, size: 20),
                   ),
@@ -66,7 +71,7 @@ class KpiCard extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: spacing.md),
               Text(
                 value,
                 style: theme.textTheme.headlineSmall?.copyWith(
