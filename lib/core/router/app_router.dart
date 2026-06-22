@@ -3,7 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_session_provider.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/reset_password_page.dart';
+import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/properties/presentation/properties_list_page.dart';
@@ -39,19 +42,52 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // en dehors du build tree). Le GoRouterRefreshStream garantit que cette
       // fonction est rappelée dès que la session change.
       final isAuthed = ref.read(isAuthenticatedProvider);
-      final goingToLogin = state.matchedLocation == '/login';
-      final goingToPrivacy = state.matchedLocation == '/privacy';
+      final isRecovery = ref.read(isInPasswordRecoveryProvider);
+      final location = state.matchedLocation;
 
-      // La page /privacy est publique — jamais redirigée.
-      if (goingToPrivacy) return null;
+      // Cas passwordRecovery : Supabase émet une session temporaire lors du
+      // clic sur le lien de reset password. Sans cette garde, isAuthed serait
+      // true et l'utilisateur serait redirigé vers / sans avoir changé son
+      // mot de passe. On force /reset-password jusqu'à ce que l'event change
+      // (userUpdated après updatePassword, ou signedOut).
+      if (isRecovery && location != '/reset-password') {
+        return '/reset-password';
+      }
 
-      if (!isAuthed && !goingToLogin) return '/login';
-      if (isAuthed && goingToLogin) return '/';
+      // Routes publiques accessibles sans session.
+      const publicRoutes = {
+        '/login',
+        '/signup',
+        '/forgot-password',
+        '/reset-password',
+        '/privacy',
+      };
+      if (publicRoutes.contains(location)) {
+        // Redirige vers / si l'utilisateur est déjà connecté et tente d'aller
+        // sur /login ou /signup (inutile de les faire remplir le formulaire).
+        // En mode recovery, isAuthed est true mais on a déjà géré ce cas
+        // au-dessus, donc ici isRecovery est toujours false.
+        if (isAuthed && (location == '/login' || location == '/signup')) {
+          return '/';
+        }
+        return null;
+      }
+
+      if (!isAuthed) return '/login';
       return null;
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const DashboardPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordPage(),
+      ),
       GoRoute(
         path: '/privacy',
         builder: (context, state) => const PrivacyPage(),

@@ -32,3 +32,21 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
     },
   );
 });
+
+/// Dérivé booléen — [true] si l'event d'auth courant est [passwordRecovery].
+///
+/// Supabase émet [AuthChangeEvent.passwordRecovery] avec une session temporaire
+/// quand l'utilisateur clique le lien de reset password. Dans cet état, la
+/// session existe mais l'utilisateur n'est PAS réellement authentifié — il doit
+/// d'abord changer son mot de passe. Ce provider permet au routeur de forcer
+/// la redirection vers `/reset-password` au lieu de laisser passer vers `/`.
+///
+/// Repasse à [false] lors de [AuthChangeEvent.userUpdated] (password changé)
+/// ou [AuthChangeEvent.signedOut].
+final isInPasswordRecoveryProvider = Provider<bool>((ref) {
+  final asyncState = ref.watch(authStateChangesProvider);
+  return asyncState.maybeWhen(
+    data: (authState) => authState.event == AuthChangeEvent.passwordRecovery,
+    orElse: () => false,
+  );
+});
