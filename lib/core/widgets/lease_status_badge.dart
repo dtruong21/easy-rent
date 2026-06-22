@@ -12,6 +12,9 @@ import '../../features/leases/domain/lease_status.dart';
 /// - `active`     → `colorScheme.primary` (bleu/violet selon le thème)
 /// - `terminated` → `colorScheme.outline` (gris)
 /// - `archived`   → `colorScheme.outline` (gris — valeur défensive)
+@Deprecated(
+  'Use StatusPill from lib/core/ui/cards/status_pill.dart — migration in Phase 1',
+)
 class LeaseStatusBadge extends StatelessWidget {
   const LeaseStatusBadge({super.key, required this.status});
 

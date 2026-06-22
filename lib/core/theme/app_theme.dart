@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../ui/theme/app_colors.dart';
+import '../ui/theme/app_radii.dart';
+import '../ui/theme/app_spacing.dart';
+
 /// Thème EasyRent — Material 3 avec seed teal.
 ///
 /// `ColorScheme.fromSeed` ne suffit pas seul : sans sous-thèmes explicites,
@@ -132,6 +136,13 @@ class AppTheme {
         labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
         hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
       ),
+
+      // Extensions de thème EasyRent (FEAT-012 Phase 0).
+      extensions: [
+        brightness == Brightness.light ? AppColors.light : AppColors.dark,
+        const AppSpacing(),
+        const AppRadii(),
+      ],
     );
   }
 }
