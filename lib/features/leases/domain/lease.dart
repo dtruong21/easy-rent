@@ -2,7 +2,9 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../payments/domain/payment_method.dart';
 import 'lease_status.dart';
+import 'lease_type.dart';
 
 part 'lease.freezed.dart';
 part 'lease.g.dart';
@@ -20,8 +22,7 @@ part 'lease.g.dart';
 /// sérialisées en `YYYY-MM-DD` côté Postgres (`date`). Les helpers
 /// `_dateFromJson` / `_dateToJson` gèrent cette conversion.
 ///
-/// Les montants [rentAmountCents] et [chargesAmountCents] sont en centimes
-/// (entiers) — jamais de `double` dans un payload.
+/// Les montants sont en centimes (entiers) — jamais de `double` dans un payload.
 @freezed
 class Lease with _$Lease {
   const factory Lease({
@@ -41,6 +42,31 @@ class Lease with _$Lease {
     DateTime? endDate,
     @JsonKey(name: 'status', fromJson: _statusFromJson, toJson: _statusToJson)
     required LeaseStatus status,
+    // --- Phase 3 enrichment fields ---
+    @JsonKey(
+      name: 'lease_type',
+      fromJson: _leaseTypeFromJson,
+      toJson: _leaseTypeToJson,
+    )
+    @Default(LeaseType.unfurnished)
+    LeaseType leaseType,
+    @JsonKey(name: 'deposit_amount_cents') int? depositAmountCents,
+    @JsonKey(name: 'payment_day') @Default(1) int paymentDay,
+    @JsonKey(
+      name: 'payment_method',
+      fromJson: _methodFromJson,
+      toJson: _methodToJson,
+    )
+    @Default(PaymentMethod.virement)
+    PaymentMethod paymentMethod,
+    @JsonKey(name: 'irl_index_value') double? irlIndexValue,
+    @JsonKey(name: 'irl_quarter_ref') String? irlQuarterRef,
+    @JsonKey(name: 'agency_fees_cents') @Default(0) int agencyFeesCents,
+    @JsonKey(name: 'solidarity_clause') @Default(false) bool solidarityClause,
+    @JsonKey(name: 'entry_inventory_done')
+    @Default(false)
+    bool entryInventoryDone,
+    // --- Timestamps ---
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
     @JsonKey(name: 'deleted_at') DateTime? deletedAt,
@@ -79,6 +105,29 @@ LeaseStatus _statusFromJson(dynamic value) =>
     LeaseStatus.fromSql(value as String);
 
 String _statusToJson(LeaseStatus status) => status.sqlValue;
+
+// ---------------------------------------------------------------------------
+// Helpers JSON privés — LeaseType
+// ---------------------------------------------------------------------------
+
+LeaseType _leaseTypeFromJson(dynamic value) =>
+    LeaseType.fromSql(value as String?);
+
+String _leaseTypeToJson(LeaseType v) => v.sqlValue;
+
+// ---------------------------------------------------------------------------
+// Helpers JSON privés — PaymentMethod
+// ---------------------------------------------------------------------------
+
+PaymentMethod _methodFromJson(dynamic value) {
+  if (value == null) return PaymentMethod.virement;
+  return PaymentMethod.values.firstWhere(
+    (e) => e.name == value as String,
+    orElse: () => PaymentMethod.virement,
+  );
+}
+
+String _methodToJson(PaymentMethod v) => v.name;
 
 // ---------------------------------------------------------------------------
 // Extension — getters calculés (non freezed pour éviter le codegen)

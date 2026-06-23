@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../payments/domain/payment_method.dart';
 import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
+import '../domain/lease_type.dart';
 import 'lease_detail_provider.dart';
 import 'leases_list_provider.dart';
 
@@ -36,6 +38,15 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
     required int chargesAmountCents,
     required DateTime startDate,
     DateTime? endDate,
+    LeaseType leaseType = LeaseType.unfurnished,
+    int? depositAmountCents,
+    int paymentDay = 1,
+    PaymentMethod paymentMethod = PaymentMethod.virement,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    int agencyFeesCents = 0,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
   }) async {
     state = const LeaseFormState.submitting();
 
@@ -52,6 +63,15 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
           chargesAmountCents: chargesAmountCents,
           startDate: startDate,
           endDate: endDate,
+          leaseType: leaseType,
+          depositAmountCents: depositAmountCents,
+          paymentDay: paymentDay,
+          paymentMethod: paymentMethod,
+          irlIndexValue: irlIndexValue,
+          irlQuarterRef: irlQuarterRef,
+          agencyFeesCents: agencyFeesCents,
+          solidarityClause: solidarityClause,
+          entryInventoryDone: entryInventoryDone,
         );
         _log.info('lease created id=${result.id}');
       } else {
@@ -63,6 +83,15 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
           chargesAmountCents: chargesAmountCents,
           startDate: startDate,
           endDate: endDate,
+          leaseType: leaseType,
+          depositAmountCents: depositAmountCents,
+          paymentDay: paymentDay,
+          paymentMethod: paymentMethod,
+          irlIndexValue: irlIndexValue,
+          irlQuarterRef: irlQuarterRef,
+          agencyFeesCents: agencyFeesCents,
+          solidarityClause: solidarityClause,
+          entryInventoryDone: entryInventoryDone,
         );
         result = await repo.update(updated);
         _log.info('lease updated id=${result.id}');

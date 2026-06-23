@@ -4,7 +4,9 @@ import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_form_state.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/leases/presentation/lease_form_page.dart';
+import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
@@ -42,6 +44,15 @@ class _FakeLeaseRepo implements LeaseRepository {
     required int chargesAmountCents,
     required DateTime startDate,
     DateTime? endDate,
+    LeaseType leaseType = LeaseType.unfurnished,
+    int? depositAmountCents,
+    int paymentDay = 1,
+    PaymentMethod paymentMethod = PaymentMethod.virement,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    int agencyFeesCents = 0,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
   }) async {
     if (createError != null) throw createError!;
     createdLease = _buildLease(
@@ -332,7 +343,10 @@ void main() {
       await tester.pumpWidget(_buildForm());
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('checkbox_open_ended')), findsOneWidget);
+      expect(
+        find.byKey(const Key('checkbox_open_ended'), skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     // -----------------------------------------------------------------------
@@ -344,10 +358,16 @@ void main() {
         await tester.pumpWidget(_buildForm());
         await tester.pumpAndSettle();
 
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_submit_lease_form')),
+        );
         await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Veuillez sélectionner un bien'), findsOneWidget);
+        expect(
+          find.text('Veuillez sélectionner un bien', skipOffstage: false),
+          findsOneWidget,
+        );
       },
     );
 
@@ -357,10 +377,16 @@ void main() {
         await tester.pumpWidget(_buildForm());
         await tester.pumpAndSettle();
 
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_submit_lease_form')),
+        );
         await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Veuillez sélectionner un locataire'), findsOneWidget);
+        expect(
+          find.text('Veuillez sélectionner un locataire', skipOffstage: false),
+          findsOneWidget,
+        );
       },
     );
 
@@ -370,10 +396,16 @@ void main() {
       await tester.pumpWidget(_buildForm());
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_submit_lease_form')),
+      );
       await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Le loyer est obligatoire'), findsOneWidget);
+      expect(
+        find.text('Le loyer est obligatoire', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     testWidgets('validation — erreur date de début si date manquante', (
@@ -382,10 +414,16 @@ void main() {
       await tester.pumpWidget(_buildForm());
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_submit_lease_form')),
+      );
       await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
       await tester.pumpAndSettle();
 
-      expect(find.text('La date de début est obligatoire'), findsOneWidget);
+      expect(
+        find.text('La date de début est obligatoire', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     // -----------------------------------------------------------------------
@@ -396,11 +434,14 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byKey(const Key('field_rent')), '-100');
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_submit_lease_form')),
+      );
       await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Le loyer doit être un montant positif'),
+        find.text('Le loyer doit être un montant positif', skipOffstage: false),
         findsOneWidget,
       );
     });
@@ -412,11 +453,17 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byKey(const Key('field_charges')), '-50');
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_submit_lease_form')),
+      );
       await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Les charges ne peuvent pas être négatives'),
+        find.text(
+          'Les charges ne peuvent pas être négatives',
+          skipOffstage: false,
+        ),
         findsOneWidget,
       );
     });
@@ -505,10 +552,14 @@ void main() {
       await tester.pumpWidget(_buildForm());
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.byKey(const Key('checkbox_open_ended')));
       await tester.tap(find.byKey(const Key('checkbox_open_ended')));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('field_end_date')), findsOneWidget);
+      expect(
+        find.byKey(const Key('field_end_date'), skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     // -----------------------------------------------------------------------

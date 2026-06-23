@@ -253,4 +253,174 @@ void main() {
       );
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Phase 3 — nouveaux validators
+  // ---------------------------------------------------------------------------
+
+  group('validateDepositCents', () {
+    test('null → null (optionnel)', () {
+      expect(LeaseFormValidators.validateDepositCents(null), isNull);
+    });
+
+    test('0 → null (zéro accepté)', () {
+      expect(LeaseFormValidators.validateDepositCents(0), isNull);
+    });
+
+    test('85000 (850 €) → null', () {
+      expect(LeaseFormValidators.validateDepositCents(85000), isNull);
+    });
+
+    test('négatif -1 → erreur', () {
+      expect(LeaseFormValidators.validateDepositCents(-1), isNotNull);
+    });
+
+    test('1000000000 (10 M €, borne max) → null', () {
+      expect(LeaseFormValidators.validateDepositCents(1000000000), isNull);
+    });
+
+    test('1000000001 (au-delà de la borne) → erreur', () {
+      expect(LeaseFormValidators.validateDepositCents(1000000001), isNotNull);
+    });
+  });
+
+  group('validatePaymentDay', () {
+    test('null → erreur', () {
+      expect(LeaseFormValidators.validatePaymentDay(null), isNotNull);
+    });
+
+    test('vide → erreur', () {
+      expect(LeaseFormValidators.validatePaymentDay(''), isNotNull);
+    });
+
+    test('"1" → null (borne basse)', () {
+      expect(LeaseFormValidators.validatePaymentDay('1'), isNull);
+    });
+
+    test('"28" → null (borne haute)', () {
+      expect(LeaseFormValidators.validatePaymentDay('28'), isNull);
+    });
+
+    test('"15" → null (milieu)', () {
+      expect(LeaseFormValidators.validatePaymentDay('15'), isNull);
+    });
+
+    test('"0" → erreur (en dessous de 1)', () {
+      expect(LeaseFormValidators.validatePaymentDay('0'), isNotNull);
+    });
+
+    test('"29" → erreur (au-delà de 28)', () {
+      expect(LeaseFormValidators.validatePaymentDay('29'), isNotNull);
+    });
+
+    test('"abc" → erreur (non numérique)', () {
+      expect(LeaseFormValidators.validatePaymentDay('abc'), isNotNull);
+    });
+  });
+
+  group('validateIrlValue', () {
+    test('null → null (optionnel)', () {
+      expect(LeaseFormValidators.validateIrlValue(null), isNull);
+    });
+
+    test('vide → null (optionnel)', () {
+      expect(LeaseFormValidators.validateIrlValue(''), isNull);
+    });
+
+    test('"142.43" → null', () {
+      expect(LeaseFormValidators.validateIrlValue('142.43'), isNull);
+    });
+
+    test('"142,43" (virgule) → null', () {
+      expect(LeaseFormValidators.validateIrlValue('142,43'), isNull);
+    });
+
+    test('"0" → erreur (doit être > 0)', () {
+      expect(LeaseFormValidators.validateIrlValue('0'), isNotNull);
+    });
+
+    test('"-10" → erreur (négatif)', () {
+      expect(LeaseFormValidators.validateIrlValue('-10'), isNotNull);
+    });
+
+    test('"9999.99" → null (sous la borne 10000)', () {
+      expect(LeaseFormValidators.validateIrlValue('9999.99'), isNull);
+    });
+
+    test('"10000" → erreur (borne exacte exclue)', () {
+      expect(LeaseFormValidators.validateIrlValue('10000'), isNotNull);
+    });
+
+    test('"abc" → erreur (non numérique)', () {
+      expect(LeaseFormValidators.validateIrlValue('abc'), isNotNull);
+    });
+  });
+
+  group('validateIrlQuarter', () {
+    test('null → null (optionnel)', () {
+      expect(LeaseFormValidators.validateIrlQuarter(null), isNull);
+    });
+
+    test('vide → null (optionnel)', () {
+      expect(LeaseFormValidators.validateIrlQuarter(''), isNull);
+    });
+
+    test('"T1-2026" → null', () {
+      expect(LeaseFormValidators.validateIrlQuarter('T1-2026'), isNull);
+    });
+
+    test('"T4-2025" → null', () {
+      expect(LeaseFormValidators.validateIrlQuarter('T4-2025'), isNull);
+    });
+
+    test('"T2-2024" → null', () {
+      expect(LeaseFormValidators.validateIrlQuarter('T2-2024'), isNull);
+    });
+
+    test('"T5-2026" → erreur (T5 invalide)', () {
+      expect(LeaseFormValidators.validateIrlQuarter('T5-2026'), isNotNull);
+    });
+
+    test('"T0-2026" → erreur (T0 invalide)', () {
+      expect(LeaseFormValidators.validateIrlQuarter('T0-2026'), isNotNull);
+    });
+
+    test('"T1-26" → erreur (année 2 chiffres)', () {
+      expect(LeaseFormValidators.validateIrlQuarter('T1-26'), isNotNull);
+    });
+
+    test('"t1-2026" → erreur (minuscule)', () {
+      expect(LeaseFormValidators.validateIrlQuarter('t1-2026'), isNotNull);
+    });
+
+    test('"Q1-2026" → erreur (format invalide)', () {
+      expect(LeaseFormValidators.validateIrlQuarter('Q1-2026'), isNotNull);
+    });
+  });
+
+  group('validateAgencyFees', () {
+    test('null → null', () {
+      expect(LeaseFormValidators.validateAgencyFees(null), isNull);
+    });
+
+    test('0 → null (zéro accepté)', () {
+      expect(LeaseFormValidators.validateAgencyFees(0), isNull);
+    });
+
+    test('50000 (500 €) → null', () {
+      expect(LeaseFormValidators.validateAgencyFees(50000), isNull);
+    });
+
+    test('négatif -1 → erreur', () {
+      expect(LeaseFormValidators.validateAgencyFees(-1), isNotNull);
+    });
+
+    test('1000000000 (borne max) → null', () {
+      expect(LeaseFormValidators.validateAgencyFees(1000000000), isNull);
+    });
+
+    test('1000000001 (au-delà) → erreur', () {
+      expect(LeaseFormValidators.validateAgencyFees(1000000001), isNotNull);
+    });
+  });
 }

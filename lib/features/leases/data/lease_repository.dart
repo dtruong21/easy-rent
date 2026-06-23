@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/db.dart';
+import '../../payments/domain/payment_method.dart';
 import '../domain/lease.dart';
 import '../domain/lease_list_item.dart';
+import '../domain/lease_type.dart';
 
 export '../../../core/utils/postgrest_error_mapper.dart' show mapPostgrestError;
 
@@ -37,6 +39,15 @@ abstract interface class LeaseRepository {
     required int chargesAmountCents,
     required DateTime startDate,
     DateTime? endDate,
+    LeaseType leaseType = LeaseType.unfurnished,
+    int? depositAmountCents,
+    int paymentDay = 1,
+    PaymentMethod paymentMethod = PaymentMethod.virement,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    int agencyFeesCents = 0,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
   });
 
   /// Met à jour les champs métier d'un bail existant.
@@ -103,6 +114,15 @@ class SupabaseLeaseRepository implements LeaseRepository {
     required int chargesAmountCents,
     required DateTime startDate,
     DateTime? endDate,
+    LeaseType leaseType = LeaseType.unfurnished,
+    int? depositAmountCents,
+    int paymentDay = 1,
+    PaymentMethod paymentMethod = PaymentMethod.virement,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    int agencyFeesCents = 0,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
   }) async {
     _log.info('create(propertyId=$propertyId, tenantId=$tenantId)');
     // Ne PAS inclure landlord_id : la RLS WITH CHECK le fixe à auth.uid().
@@ -115,6 +135,18 @@ class SupabaseLeaseRepository implements LeaseRepository {
       'charges_amount_cents': chargesAmountCents,
       'start_date': _dateToSql(startDate),
       if (endDate != null) 'end_date': _dateToSql(endDate),
+      'lease_type': leaseType.sqlValue,
+      if (depositAmountCents != null) // ignore: use_null_aware_elements
+        'deposit_amount_cents': depositAmountCents,
+      'payment_day': paymentDay,
+      'payment_method': paymentMethod.sqlValue,
+      if (irlIndexValue != null) // ignore: use_null_aware_elements
+        'irl_index_value': irlIndexValue,
+      if (irlQuarterRef != null) // ignore: use_null_aware_elements
+        'irl_quarter_ref': irlQuarterRef,
+      'agency_fees_cents': agencyFeesCents,
+      'solidarity_clause': solidarityClause,
+      'entry_inventory_done': entryInventoryDone,
     };
     final rows = await Db.from('leases').insert(payload).select();
     return Lease.fromJson(rows.first);
@@ -131,6 +163,15 @@ class SupabaseLeaseRepository implements LeaseRepository {
       'charges_amount_cents': lease.chargesAmountCents,
       'start_date': _dateToSql(lease.startDate),
       'end_date': lease.endDate != null ? _dateToSql(lease.endDate!) : null,
+      'lease_type': lease.leaseType.sqlValue,
+      'deposit_amount_cents': lease.depositAmountCents,
+      'payment_day': lease.paymentDay,
+      'payment_method': lease.paymentMethod.sqlValue,
+      'irl_index_value': lease.irlIndexValue,
+      'irl_quarter_ref': lease.irlQuarterRef,
+      'agency_fees_cents': lease.agencyFeesCents,
+      'solidarity_clause': lease.solidarityClause,
+      'entry_inventory_done': lease.entryInventoryDone,
     };
     final rows = await Db.from(
       'leases',
