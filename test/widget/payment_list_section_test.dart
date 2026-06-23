@@ -8,6 +8,7 @@ import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/payments/data/payment_repository.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
@@ -39,6 +40,15 @@ class _FakeLeaseRepo implements LeaseRepository {
     required int chargesAmountCents,
     required DateTime startDate,
     DateTime? endDate,
+    LeaseType leaseType = LeaseType.unfurnished,
+    int? depositAmountCents,
+    int paymentDay = 1,
+    PaymentMethod paymentMethod = PaymentMethod.virement,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    int agencyFeesCents = 0,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
   }) async => throw UnimplementedError();
 
   @override

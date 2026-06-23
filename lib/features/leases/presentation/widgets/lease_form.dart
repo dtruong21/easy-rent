@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/lease_form_validators.dart';
+import '../../../../core/utils/money_format.dart';
+import '../../../../features/payments/domain/payment_method.dart';
 import '../../../../features/properties/domain/property.dart';
 import '../../../../features/tenants/domain/tenant.dart';
+import '../../domain/lease_type.dart';
 
-/// Champs partagés du formulaire bail.
+/// Formulaire bail — 5 sections.
+///
+/// 1. Parties et bien (dropdowns property + tenant).
+/// 2. Loyer et charges (loyer HC, charges, dépôt de garantie, honoraires).
+/// 3. Type de bail et durée (type, helperText dynamique, dates).
+/// 4. Modalités paiement (ExpansionTile) : jour + mode.
+/// 5. IRL et clauses (ExpansionTile) : IRL, trimestre, solidarité, état des lieux.
 ///
 /// Utilisé dans [LeaseFormPage] pour la création et l'édition.
-/// La validation est déclenchée inline à la perte de focus.
 /// Utiliser un [GlobalKey<LeaseFormWidgetState>] pour appeler [validateAll].
-///
-/// Séparé de [LeaseFormPage] pour la testabilité unitaire avec des listes
-/// mockées de biens et locataires.
 class LeaseForm extends StatefulWidget {
   const LeaseForm({
     super.key,
@@ -21,10 +27,19 @@ class LeaseForm extends StatefulWidget {
     required this.tenants,
     required this.rentController,
     required this.chargesController,
+    required this.depositController,
+    required this.agencyFeesController,
+    required this.paymentDayController,
+    required this.irlValueController,
+    required this.irlQuarterController,
     this.initialPropertyId,
     this.initialTenantId,
     this.initialStartDate,
     this.initialEndDate,
+    this.initialLeaseType,
+    this.initialPaymentMethod,
+    this.initialSolidarityClause = false,
+    this.initialEntryInventoryDone = false,
     this.enabled = true,
     required this.onPropertyChanged,
     required this.onTenantChanged,
@@ -35,8 +50,19 @@ class LeaseForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final List<Property> properties;
   final List<Tenant> tenants;
+
+  // --- Section 2 controllers ---
   final TextEditingController rentController;
   final TextEditingController chargesController;
+  final TextEditingController depositController;
+  final TextEditingController agencyFeesController;
+
+  // --- Section 4 controller ---
+  final TextEditingController paymentDayController;
+
+  // --- Section 5 controllers ---
+  final TextEditingController irlValueController;
+  final TextEditingController irlQuarterController;
 
   /// ID du bien pré-sélectionné (mode édition).
   final String? initialPropertyId;
@@ -46,6 +72,10 @@ class LeaseForm extends StatefulWidget {
 
   final DateTime? initialStartDate;
   final DateTime? initialEndDate;
+  final LeaseType? initialLeaseType;
+  final PaymentMethod? initialPaymentMethod;
+  final bool initialSolidarityClause;
+  final bool initialEntryInventoryDone;
   final bool enabled;
 
   final void Function(Property?) onPropertyChanged;
@@ -63,18 +93,26 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   Tenant? _selectedTenant;
   DateTime? _startDate;
   DateTime? _endDate;
-  bool _isOpenEnded = false; // true = CDI (pas de end_date)
+  bool _isOpenEnded = false;
+  LeaseType _leaseType = LeaseType.unfurnished;
+  PaymentMethod _paymentMethod = PaymentMethod.virement;
+  bool _solidarityClause = false;
+  bool _entryInventoryDone = false;
 
   bool _propertyTouched = false;
   bool _tenantTouched = false;
   bool _rentTouched = false;
   bool _chargesTouched = false;
+  bool _depositTouched = false;
+  bool _agencyFeesTouched = false;
   bool _startDateTouched = false;
+  bool _paymentDayTouched = false;
+  bool _irlValueTouched = false;
+  bool _irlQuarterTouched = false;
 
   @override
   void initState() {
     super.initState();
-    // Pré-sélection en mode édition
     if (widget.initialPropertyId != null) {
       _selectedProperty = widget.properties
           .where((p) => p.id == widget.initialPropertyId)
@@ -88,6 +126,10 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     _startDate = widget.initialStartDate;
     _endDate = widget.initialEndDate;
     _isOpenEnded = widget.initialEndDate == null;
+    _leaseType = widget.initialLeaseType ?? LeaseType.unfurnished;
+    _paymentMethod = widget.initialPaymentMethod ?? PaymentMethod.virement;
+    _solidarityClause = widget.initialSolidarityClause;
+    _entryInventoryDone = widget.initialEntryInventoryDone;
   }
 
   Future<void> _pickStartDate() async {
@@ -123,281 +165,637 @@ class LeaseFormWidgetState extends State<LeaseForm> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Form(
       key: widget.formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // --- Bien immobilier ---
-          if (widget.properties.isEmpty)
-            _NoItemsHint(
-              message: 'Vous devez d\'abord créer un bien immobilier.',
-              route: '/properties/new',
-              buttonLabel: 'Créer un bien',
-            )
-          else
-            FormField<Property>(
-              key: const Key('field_property'),
-              initialValue: _selectedProperty,
-              validator: (_) {
-                if (!_propertyTouched) return null;
-                return LeaseFormValidators.validateProperty(_selectedProperty);
-              },
-              builder: (state) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DropdownButtonFormField<Property>(
-                    initialValue: _selectedProperty,
-                    decoration: InputDecoration(
-                      labelText: 'Bien immobilier *',
-                      border: const OutlineInputBorder(),
-                      errorText: state.errorText,
-                    ),
-                    items: widget.properties
-                        .map(
-                          (p) => DropdownMenuItem(
-                            value: p,
-                            child: Text(
-                              p.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: widget.enabled
-                        ? (p) {
-                            setState(() {
-                              _selectedProperty = p;
-                              _propertyTouched = true;
-                            });
-                            widget.onPropertyChanged(p);
-                          }
-                        : null,
-                  ),
-                ],
-              ),
-            ),
+          // ----------------------------------------------------------------
+          // Section 1 — Parties et bien
+          // ----------------------------------------------------------------
+          _SectionHeader(title: 'Parties et bien'),
+          const SizedBox(height: 12),
+          _buildPropertyField(),
           const SizedBox(height: 16),
+          _buildTenantField(),
 
-          // --- Locataire ---
-          if (widget.tenants.isEmpty)
-            _NoItemsHint(
-              message: 'Vous devez d\'abord créer un locataire.',
-              route: '/tenants/new',
-              buttonLabel: 'Créer un locataire',
-            )
-          else
-            FormField<Tenant>(
-              key: const Key('field_tenant'),
-              initialValue: _selectedTenant,
-              validator: (_) {
-                if (!_tenantTouched) return null;
-                return LeaseFormValidators.validateTenant(_selectedTenant);
-              },
-              builder: (state) => DropdownButtonFormField<Tenant>(
-                initialValue: _selectedTenant,
-                decoration: InputDecoration(
-                  labelText: 'Locataire *',
-                  border: const OutlineInputBorder(),
-                  errorText: state.errorText,
-                ),
-                items: widget.tenants
-                    .map(
-                      (t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(
-                          '${t.firstName} ${t.lastName}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: widget.enabled
-                    ? (t) {
-                        setState(() {
-                          _selectedTenant = t;
-                          _tenantTouched = true;
-                        });
-                        widget.onTenantChanged(t);
-                      }
-                    : null,
-              ),
-            ),
+          const SizedBox(height: 24),
+
+          // ----------------------------------------------------------------
+          // Section 2 — Loyer et charges
+          // ----------------------------------------------------------------
+          _SectionHeader(title: 'Loyer et charges'),
+          const SizedBox(height: 12),
+          _buildRentField(),
           const SizedBox(height: 16),
-
-          // --- Loyer HC ---
-          TextFormField(
-            key: const Key('field_rent'),
-            controller: widget.rentController,
-            enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Loyer hors charges (€) *',
-              hintText: 'Ex. : 850,00',
-              suffixText: '€',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) {
-              if (_rentTouched) setState(() {});
-            },
-            onEditingComplete: () {
-              setState(() => _rentTouched = true);
-              FocusScope.of(context).nextFocus();
-            },
-            validator: (v) {
-              if (!_rentTouched) return null;
-              return LeaseFormValidators.validateRentAmount(v);
-            },
-          ),
+          _buildChargesField(),
           const SizedBox(height: 16),
-
-          // --- Charges ---
-          TextFormField(
-            key: const Key('field_charges'),
-            controller: widget.chargesController,
-            enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Charges (€) *',
-              hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
-              suffixText: '€',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) {
-              if (_chargesTouched) setState(() {});
-            },
-            onEditingComplete: () {
-              setState(() => _chargesTouched = true);
-              FocusScope.of(context).nextFocus();
-            },
-            validator: (v) {
-              if (!_chargesTouched) return null;
-              return LeaseFormValidators.validateChargesAmount(v);
-            },
-          ),
+          _buildDepositField(),
           const SizedBox(height: 16),
+          _buildAgencyFeesField(),
 
-          // --- Date de début ---
-          FormField<DateTime>(
-            key: const Key('field_start_date'),
-            initialValue: _startDate,
-            validator: (_) {
-              if (!_startDateTouched) return null;
-              return LeaseFormValidators.validateStartDate(_startDate);
-            },
-            builder: (state) => InkWell(
-              onTap: widget.enabled ? _pickStartDate : null,
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Date de début *',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: const Icon(Icons.calendar_today_outlined),
-                  errorText: state.errorText,
-                ),
-                child: Text(
-                  _startDate != null
-                      ? FrenchDate.format(_startDate!)
-                      : 'Sélectionner une date',
-                  style: _startDate == null
-                      ? theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        )
-                      : theme.textTheme.bodyMedium,
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(height: 24),
+
+          // ----------------------------------------------------------------
+          // Section 3 — Type de bail et durée
+          // ----------------------------------------------------------------
+          _SectionHeader(title: 'Type de bail et durée'),
+          const SizedBox(height: 12),
+          _buildLeaseTypeField(),
           const SizedBox(height: 16),
-
-          // --- Toggle CDI (bail à durée indéterminée) ---
-          CheckboxListTile(
-            key: const Key('checkbox_open_ended'),
-            title: const Text('Bail à durée indéterminée (CDI)'),
-            value: _isOpenEnded,
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            onChanged: widget.enabled
-                ? (v) {
-                    setState(() {
-                      _isOpenEnded = v ?? false;
-                      if (_isOpenEnded) {
-                        _endDate = null;
-                        widget.onEndDateChanged(null);
-                      }
-                    });
-                  }
-                : null,
-          ),
-
-          // --- Date de fin (masquée si CDI) ---
+          _buildStartDateField(),
+          const SizedBox(height: 16),
+          _buildOpenEndedToggle(),
           if (!_isOpenEnded) ...[
-            FormField<DateTime>(
-              key: const Key('field_end_date'),
-              initialValue: _endDate,
-              validator: (_) {
-                return LeaseFormValidators.validateEndDate(
-                  _endDate,
-                  _startDate,
-                );
-              },
-              builder: (state) => InkWell(
-                onTap: widget.enabled ? _pickEndDate : null,
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Date de fin',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: const Icon(Icons.calendar_today_outlined),
-                    errorText: state.errorText,
-                  ),
-                  child: Text(
-                    _endDate != null
-                        ? FrenchDate.format(_endDate!)
-                        : 'Optionnelle',
-                    style: _endDate == null
-                        ? theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          )
-                        : theme.textTheme.bodyMedium,
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: 16),
+            _buildEndDateField(),
           ],
+
+          const SizedBox(height: 16),
+
+          // ----------------------------------------------------------------
+          // Section 4 — Modalités paiement (ExpansionTile)
+          // ----------------------------------------------------------------
+          _PaymentSection(
+            paymentDayController: widget.paymentDayController,
+            paymentMethod: _paymentMethod,
+            onPaymentMethodChanged: (m) =>
+                setState(() => _paymentMethod = m ?? PaymentMethod.virement),
+            enabled: widget.enabled,
+            paymentDayTouched: _paymentDayTouched,
+            onPaymentDayTouched: () =>
+                setState(() => _paymentDayTouched = true),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ----------------------------------------------------------------
+          // Section 5 — IRL et clauses (ExpansionTile)
+          // ----------------------------------------------------------------
+          _IrlClausesSection(
+            irlValueController: widget.irlValueController,
+            irlQuarterController: widget.irlQuarterController,
+            solidarityClause: _solidarityClause,
+            entryInventoryDone: _entryInventoryDone,
+            onSolidarityChanged: (v) =>
+                setState(() => _solidarityClause = v ?? false),
+            onEntryInventoryChanged: (v) =>
+                setState(() => _entryInventoryDone = v ?? false),
+            enabled: widget.enabled,
+            irlValueTouched: _irlValueTouched,
+            onIrlValueTouched: () => setState(() => _irlValueTouched = true),
+            irlQuarterTouched: _irlQuarterTouched,
+            onIrlQuarterTouched: () =>
+                setState(() => _irlQuarterTouched = true),
+          ),
         ],
       ),
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Section 1 widgets
+  // ---------------------------------------------------------------------------
+
+  Widget _buildPropertyField() {
+    if (widget.properties.isEmpty) {
+      return _NoItemsHint(
+        message: 'Vous devez d\'abord créer un bien immobilier.',
+        route: '/properties/new',
+        buttonLabel: 'Créer un bien',
+      );
+    }
+    return FormField<Property>(
+      key: const Key('field_property'),
+      initialValue: _selectedProperty,
+      validator: (_) {
+        if (!_propertyTouched) return null;
+        return LeaseFormValidators.validateProperty(_selectedProperty);
+      },
+      builder: (state) => DropdownButtonFormField<Property>(
+        initialValue: _selectedProperty,
+        decoration: InputDecoration(
+          labelText: 'Bien immobilier *',
+          border: const OutlineInputBorder(),
+          errorText: state.errorText,
+        ),
+        items: widget.properties
+            .map(
+              (p) => DropdownMenuItem(
+                value: p,
+                child: Text(p.name, overflow: TextOverflow.ellipsis),
+              ),
+            )
+            .toList(),
+        onChanged: widget.enabled
+            ? (p) {
+                setState(() {
+                  _selectedProperty = p;
+                  _propertyTouched = true;
+                });
+                widget.onPropertyChanged(p);
+              }
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildTenantField() {
+    if (widget.tenants.isEmpty) {
+      return _NoItemsHint(
+        message: 'Vous devez d\'abord créer un locataire.',
+        route: '/tenants/new',
+        buttonLabel: 'Créer un locataire',
+      );
+    }
+    return FormField<Tenant>(
+      key: const Key('field_tenant'),
+      initialValue: _selectedTenant,
+      validator: (_) {
+        if (!_tenantTouched) return null;
+        return LeaseFormValidators.validateTenant(_selectedTenant);
+      },
+      builder: (state) => DropdownButtonFormField<Tenant>(
+        initialValue: _selectedTenant,
+        decoration: InputDecoration(
+          labelText: 'Locataire *',
+          border: const OutlineInputBorder(),
+          errorText: state.errorText,
+        ),
+        items: widget.tenants
+            .map(
+              (t) => DropdownMenuItem(
+                value: t,
+                child: Text(
+                  '${t.firstName} ${t.lastName}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList(),
+        onChanged: widget.enabled
+            ? (t) {
+                setState(() {
+                  _selectedTenant = t;
+                  _tenantTouched = true;
+                });
+                widget.onTenantChanged(t);
+              }
+            : null,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section 2 widgets
+  // ---------------------------------------------------------------------------
+
+  Widget _buildRentField() => TextFormField(
+    key: const Key('field_rent'),
+    controller: widget.rentController,
+    enabled: widget.enabled,
+    decoration: const InputDecoration(
+      labelText: 'Loyer hors charges (€) *',
+      hintText: 'Ex. : 850,00',
+      suffixText: '€',
+      border: OutlineInputBorder(),
+    ),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    onChanged: (_) {
+      if (_rentTouched) setState(() {});
+    },
+    onEditingComplete: () {
+      setState(() => _rentTouched = true);
+      FocusScope.of(context).nextFocus();
+    },
+    validator: (v) {
+      if (!_rentTouched) return null;
+      return LeaseFormValidators.validateRentAmount(v);
+    },
+  );
+
+  Widget _buildChargesField() => TextFormField(
+    key: const Key('field_charges'),
+    controller: widget.chargesController,
+    enabled: widget.enabled,
+    decoration: const InputDecoration(
+      labelText: 'Charges (€) *',
+      hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
+      suffixText: '€',
+      border: OutlineInputBorder(),
+    ),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    onChanged: (_) {
+      if (_chargesTouched) setState(() {});
+    },
+    onEditingComplete: () {
+      setState(() => _chargesTouched = true);
+      FocusScope.of(context).nextFocus();
+    },
+    validator: (v) {
+      if (!_chargesTouched) return null;
+      return LeaseFormValidators.validateChargesAmount(v);
+    },
+  );
+
+  Widget _buildDepositField() => TextFormField(
+    key: const Key('field_deposit'),
+    controller: widget.depositController,
+    enabled: widget.enabled,
+    decoration: const InputDecoration(
+      labelText: 'Dépôt de garantie (€)',
+      hintText: 'Ex. : 850,00',
+      helperText: 'Optionnel',
+      suffixText: '€',
+      border: OutlineInputBorder(),
+    ),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    onChanged: (_) {
+      if (_depositTouched) setState(() {});
+    },
+    onEditingComplete: () {
+      setState(() => _depositTouched = true);
+      FocusScope.of(context).nextFocus();
+    },
+    validator: (v) {
+      if (!_depositTouched) return null;
+      if (v == null || v.trim().isEmpty) return null;
+      final cents = MoneyFormat.eurosToCents(v);
+      return LeaseFormValidators.validateDepositCents(cents);
+    },
+  );
+
+  Widget _buildAgencyFeesField() => TextFormField(
+    key: const Key('field_agency_fees'),
+    controller: widget.agencyFeesController,
+    enabled: widget.enabled,
+    decoration: const InputDecoration(
+      labelText: 'Honoraires d\'agence (€)',
+      hintText: 'Ex. : 500,00 (0 si aucun)',
+      helperText: 'Optionnel — saisir 0 si pas d\'agence',
+      suffixText: '€',
+      border: OutlineInputBorder(),
+    ),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    onChanged: (_) {
+      if (_agencyFeesTouched) setState(() {});
+    },
+    onEditingComplete: () {
+      setState(() => _agencyFeesTouched = true);
+      FocusScope.of(context).nextFocus();
+    },
+    validator: (v) {
+      if (!_agencyFeesTouched) return null;
+      if (v == null || v.trim().isEmpty) return null;
+      final cents = MoneyFormat.eurosToCents(v);
+      return LeaseFormValidators.validateAgencyFees(cents);
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Section 3 widgets
+  // ---------------------------------------------------------------------------
+
+  Widget _buildLeaseTypeField() => DropdownButtonFormField<LeaseType>(
+    key: const Key('field_lease_type'),
+    initialValue: _leaseType,
+    decoration: InputDecoration(
+      labelText: 'Type de bail *',
+      helperText: _leaseType.formHelperText,
+      border: const OutlineInputBorder(),
+    ),
+    items: LeaseType.values
+        .map((t) => DropdownMenuItem(value: t, child: Text(t.labelFr)))
+        .toList(),
+    onChanged: widget.enabled
+        ? (t) => setState(() => _leaseType = t ?? LeaseType.unfurnished)
+        : null,
+  );
+
+  Widget _buildStartDateField() {
+    final theme = Theme.of(context);
+    return FormField<DateTime>(
+      key: const Key('field_start_date'),
+      initialValue: _startDate,
+      validator: (_) {
+        if (!_startDateTouched) return null;
+        return LeaseFormValidators.validateStartDate(_startDate);
+      },
+      builder: (state) => InkWell(
+        onTap: widget.enabled ? _pickStartDate : null,
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Date de début *',
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.calendar_today_outlined),
+            errorText: state.errorText,
+          ),
+          child: Text(
+            _startDate != null
+                ? FrenchDate.format(_startDate!)
+                : 'Sélectionner une date',
+            style: _startDate == null
+                ? theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  )
+                : theme.textTheme.bodyMedium,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOpenEndedToggle() => CheckboxListTile(
+    key: const Key('checkbox_open_ended'),
+    title: const Text('Bail à durée indéterminée (CDI)'),
+    value: _isOpenEnded,
+    contentPadding: EdgeInsets.zero,
+    controlAffinity: ListTileControlAffinity.leading,
+    onChanged: widget.enabled
+        ? (v) {
+            setState(() {
+              _isOpenEnded = v ?? false;
+              if (_isOpenEnded) {
+                _endDate = null;
+                widget.onEndDateChanged(null);
+              }
+            });
+          }
+        : null,
+  );
+
+  Widget _buildEndDateField() {
+    final theme = Theme.of(context);
+    return FormField<DateTime>(
+      key: const Key('field_end_date'),
+      initialValue: _endDate,
+      validator: (_) =>
+          LeaseFormValidators.validateEndDate(_endDate, _startDate),
+      builder: (state) => InkWell(
+        onTap: widget.enabled ? _pickEndDate : null,
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Date de fin',
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.calendar_today_outlined),
+            errorText: state.errorText,
+          ),
+          child: Text(
+            _endDate != null ? FrenchDate.format(_endDate!) : 'Optionnelle',
+            style: _endDate == null
+                ? theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  )
+                : theme.textTheme.bodyMedium,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API — exposed via GlobalKey
+  // ---------------------------------------------------------------------------
+
   /// Marque tous les champs obligatoires comme "touchés" et valide le formulaire.
-  ///
-  /// Appelé par [LeaseFormPage] lors du tap sur "Soumettre".
   bool validateAll() {
     setState(() {
       _propertyTouched = true;
       _tenantTouched = true;
       _rentTouched = true;
       _chargesTouched = true;
+      _depositTouched = true;
+      _agencyFeesTouched = true;
       _startDateTouched = true;
+      _paymentDayTouched = true;
+      _irlValueTouched = true;
+      _irlQuarterTouched = true;
     });
     return widget.formKey.currentState?.validate() ?? false;
   }
 
-  /// Retourne la date de début courante.
   DateTime? get currentStartDate => _startDate;
-
-  /// Retourne la date de fin courante (null si CDI).
   DateTime? get currentEndDate => _isOpenEnded ? null : _endDate;
-
-  /// Retourne le bien sélectionné.
   Property? get selectedProperty => _selectedProperty;
-
-  /// Retourne le locataire sélectionné.
   Tenant? get selectedTenant => _selectedTenant;
+  LeaseType get currentLeaseType => _leaseType;
+  PaymentMethod get currentPaymentMethod => _paymentMethod;
+  bool get currentSolidarityClause => _solidarityClause;
+  bool get currentEntryInventoryDone => _entryInventoryDone;
 }
 
-/// Hint affiché quand la liste de biens ou locataires est vide.
+// ---------------------------------------------------------------------------
+// Section header
+// ---------------------------------------------------------------------------
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      title,
+      style: theme.textTheme.titleSmall?.copyWith(
+        color: theme.colorScheme.primary,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section 4 — Modalités paiement (ExpansionTile)
+// ---------------------------------------------------------------------------
+
+class _PaymentSection extends StatelessWidget {
+  const _PaymentSection({
+    required this.paymentDayController,
+    required this.paymentMethod,
+    required this.onPaymentMethodChanged,
+    required this.enabled,
+    required this.paymentDayTouched,
+    required this.onPaymentDayTouched,
+  });
+
+  final TextEditingController paymentDayController;
+  final PaymentMethod paymentMethod;
+  final ValueChanged<PaymentMethod?> onPaymentMethodChanged;
+  final bool enabled;
+  final bool paymentDayTouched;
+  final VoidCallback onPaymentDayTouched;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: const Key('section_payment_terms'),
+        title: const Text('Modalités paiement (optionnel)'),
+        initiallyExpanded: false,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(top: 8),
+        children: [
+          // Jour d'échéance
+          TextFormField(
+            key: const Key('field_payment_day'),
+            controller: paymentDayController,
+            enabled: enabled,
+            decoration: const InputDecoration(
+              labelText: 'Jour d\'échéance',
+              hintText: '1',
+              helperText: 'Jour du mois où le loyer est dû (1 à 28)',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onEditingComplete: () {
+              onPaymentDayTouched();
+              FocusScope.of(context).nextFocus();
+            },
+            validator: (v) {
+              if (!paymentDayTouched) return null;
+              if (v == null || v.trim().isEmpty) return null;
+              return LeaseFormValidators.validatePaymentDay(v);
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Mode de paiement
+          DropdownButtonFormField<PaymentMethod>(
+            key: const Key('field_payment_method'),
+            initialValue: paymentMethod,
+            decoration: const InputDecoration(
+              labelText: 'Mode de paiement',
+              border: OutlineInputBorder(),
+            ),
+            items: PaymentMethod.values
+                .map((m) => DropdownMenuItem(value: m, child: Text(m.label)))
+                .toList(),
+            onChanged: enabled ? onPaymentMethodChanged : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section 5 — IRL et clauses (ExpansionTile)
+// ---------------------------------------------------------------------------
+
+class _IrlClausesSection extends StatelessWidget {
+  const _IrlClausesSection({
+    required this.irlValueController,
+    required this.irlQuarterController,
+    required this.solidarityClause,
+    required this.entryInventoryDone,
+    required this.onSolidarityChanged,
+    required this.onEntryInventoryChanged,
+    required this.enabled,
+    required this.irlValueTouched,
+    required this.onIrlValueTouched,
+    required this.irlQuarterTouched,
+    required this.onIrlQuarterTouched,
+  });
+
+  final TextEditingController irlValueController;
+  final TextEditingController irlQuarterController;
+  final bool solidarityClause;
+  final bool entryInventoryDone;
+  final ValueChanged<bool?> onSolidarityChanged;
+  final ValueChanged<bool?> onEntryInventoryChanged;
+  final bool enabled;
+  final bool irlValueTouched;
+  final VoidCallback onIrlValueTouched;
+  final bool irlQuarterTouched;
+  final VoidCallback onIrlQuarterTouched;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: const Key('section_irl_clauses'),
+        title: const Text('IRL et clauses (optionnel)'),
+        initiallyExpanded: false,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(top: 8),
+        children: [
+          // Valeur IRL initiale
+          TextFormField(
+            key: const Key('field_irl_value'),
+            controller: irlValueController,
+            enabled: enabled,
+            decoration: const InputDecoration(
+              labelText: 'Valeur IRL initiale',
+              hintText: 'Ex. : 142.43',
+              helperText: 'Indice de référence des loyers (optionnel)',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onEditingComplete: () {
+              onIrlValueTouched();
+              FocusScope.of(context).nextFocus();
+            },
+            validator: (v) {
+              if (!irlValueTouched) return null;
+              return LeaseFormValidators.validateIrlValue(v);
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Trimestre IRL de référence
+          TextFormField(
+            key: const Key('field_irl_quarter'),
+            controller: irlQuarterController,
+            enabled: enabled,
+            decoration: const InputDecoration(
+              labelText: 'Trimestre IRL de référence',
+              hintText: 'T1-2026',
+              helperText: 'Format : T1-2026, T2-2026, etc.',
+              border: OutlineInputBorder(),
+            ),
+            onEditingComplete: () {
+              onIrlQuarterTouched();
+              FocusScope.of(context).nextFocus();
+            },
+            validator: (v) {
+              if (!irlQuarterTouched) return null;
+              return LeaseFormValidators.validateIrlQuarter(v);
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // Clause de solidarité
+          SwitchListTile(
+            key: const Key('switch_solidarity_clause'),
+            title: const Text('Clause de solidarité'),
+            subtitle: const Text('Solidarité entre colocataires'),
+            value: solidarityClause,
+            contentPadding: EdgeInsets.zero,
+            onChanged: enabled ? onSolidarityChanged : null,
+          ),
+
+          // État des lieux d'entrée
+          SwitchListTile(
+            key: const Key('switch_entry_inventory'),
+            title: const Text('État des lieux d\'entrée réalisé'),
+            value: entryInventoryDone,
+            contentPadding: EdgeInsets.zero,
+            onChanged: enabled ? onEntryInventoryChanged : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hint — liste vide
+// ---------------------------------------------------------------------------
+
 class _NoItemsHint extends StatelessWidget {
   const _NoItemsHint({
     required this.message,

@@ -56,4 +56,71 @@ class LeaseFormValidators {
     }
     return null;
   }
+
+  // ---------------------------------------------------------------------------
+  // Phase 3 — nouveaux validateurs
+  // ---------------------------------------------------------------------------
+
+  /// Valide le dépôt de garantie en centimes (optionnel).
+  ///
+  /// Si renseigné : doit être entre 0 et 10 milliards de centimes (100 M €).
+  static String? validateDepositCents(int? value) {
+    if (value == null) return null; // optionnel
+    if (value < 0) return 'Le dépôt de garantie ne peut pas être négatif';
+    if (value > 1000000000) {
+      return 'Montant trop élevé';
+    }
+    return null;
+  }
+
+  /// Valide le jour d'échéance (1..28).
+  ///
+  /// Accepte null ou vide → retourne erreur car le champ est requis lorsqu'il est affiché.
+  static String? validatePaymentDay(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Le jour d\'échéance est obligatoire';
+    }
+    final day = int.tryParse(value.trim());
+    if (day == null) return 'Valeur invalide';
+    if (day < 1 || day > 28) {
+      return 'Le jour doit être compris entre 1 et 28';
+    }
+    return null;
+  }
+
+  /// Valide la valeur IRL (optionnelle, décimal).
+  ///
+  /// Si renseignée : doit être un double > 0 et < 10 000.
+  static String? validateIrlValue(String? value) {
+    if (value == null || value.trim().isEmpty) return null; // optionnel
+    final v = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (v == null) return 'Valeur invalide (ex : 142.43)';
+    if (v <= 0) return 'La valeur IRL doit être positive';
+    if (v >= 10000) return 'La valeur IRL doit être inférieure à 10 000';
+    return null;
+  }
+
+  /// Valide le trimestre IRL de référence (optionnel).
+  ///
+  /// Si renseigné : doit correspondre au format `T[1-4]-YYYY` (ex : `T1-2026`).
+  static String? validateIrlQuarter(String? value) {
+    if (value == null || value.trim().isEmpty) return null; // optionnel
+    final regex = RegExp(r'^T[1-4]-\d{4}$');
+    if (!regex.hasMatch(value.trim())) {
+      return 'Format attendu : T1-2026, T2-2026, etc.';
+    }
+    return null;
+  }
+
+  /// Valide les honoraires d'agence en centimes.
+  ///
+  /// Doit être entre 0 et 10 milliards de centimes (100 M €).
+  static String? validateAgencyFees(int? value) {
+    if (value == null) return null; // 0 par défaut
+    if (value < 0) return 'Les honoraires ne peuvent pas être négatifs';
+    if (value > 1000000000) {
+      return 'Montant trop élevé';
+    }
+    return null;
+  }
 }

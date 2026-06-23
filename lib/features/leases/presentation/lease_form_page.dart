@@ -40,8 +40,19 @@ class LeaseFormPage extends ConsumerStatefulWidget {
 class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _formWidgetKey = GlobalKey<LeaseFormWidgetState>();
+
+  // Section 2 controllers
   late final TextEditingController _rentCtrl;
   late final TextEditingController _chargesCtrl;
+  late final TextEditingController _depositCtrl;
+  late final TextEditingController _agencyFeesCtrl;
+
+  // Section 4 controller
+  late final TextEditingController _paymentDayCtrl;
+
+  // Section 5 controllers
+  late final TextEditingController _irlValueCtrl;
+  late final TextEditingController _irlQuarterCtrl;
 
   @override
   void initState() {
@@ -57,12 +68,36 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           ? MoneyFormat.centsToInput(lease.chargesAmountCents)
           : '',
     );
+    _depositCtrl = TextEditingController(
+      text: lease?.depositAmountCents != null
+          ? MoneyFormat.centsToInput(lease!.depositAmountCents!)
+          : '',
+    );
+    _agencyFeesCtrl = TextEditingController(
+      text: lease != null && lease.agencyFeesCents > 0
+          ? MoneyFormat.centsToInput(lease.agencyFeesCents)
+          : '',
+    );
+    _paymentDayCtrl = TextEditingController(
+      text: lease != null ? lease.paymentDay.toString() : '1',
+    );
+    _irlValueCtrl = TextEditingController(
+      text: lease?.irlIndexValue != null
+          ? lease!.irlIndexValue!.toString()
+          : '',
+    );
+    _irlQuarterCtrl = TextEditingController(text: lease?.irlQuarterRef ?? '');
   }
 
   @override
   void dispose() {
     _rentCtrl.dispose();
     _chargesCtrl.dispose();
+    _depositCtrl.dispose();
+    _agencyFeesCtrl.dispose();
+    _paymentDayCtrl.dispose();
+    _irlValueCtrl.dispose();
+    _irlQuarterCtrl.dispose();
     super.dispose();
   }
 
@@ -70,13 +105,11 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     final formState = _formWidgetKey.currentState;
     if (formState == null || !formState.validateAll()) return;
 
-    // Lire les valeurs depuis le widget form
     final property = formState.selectedProperty;
     final tenant = formState.selectedTenant;
     final startDate = formState.currentStartDate;
     final endDate = formState.currentEndDate;
 
-    // Validation finale (propriété et locataire peuvent être null si listes vides)
     if (LeaseFormValidators.validateProperty(property) != null ||
         LeaseFormValidators.validateTenant(tenant) != null ||
         LeaseFormValidators.validateStartDate(startDate) != null) {
@@ -85,10 +118,31 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
 
     final rentCents = MoneyFormat.eurosToCents(_rentCtrl.text);
     final chargesCents = MoneyFormat.eurosToCents(_chargesCtrl.text);
-
     if (rentCents == null || chargesCents == null) return;
 
-    // Soft warning — TOCTOU race accepted (no DB constraint), see docs/plans/FEAT-005-crud-leases.md
+    // Optional money fields
+    final depositCents = _depositCtrl.text.trim().isEmpty
+        ? null
+        : MoneyFormat.eurosToCents(_depositCtrl.text);
+    final agencyFeesCents = _agencyFeesCtrl.text.trim().isEmpty
+        ? 0
+        : (MoneyFormat.eurosToCents(_agencyFeesCtrl.text) ?? 0);
+
+    // Section 4 — payment day
+    final paymentDayRaw = _paymentDayCtrl.text.trim();
+    final paymentDay = paymentDayRaw.isEmpty
+        ? 1
+        : (int.tryParse(paymentDayRaw) ?? 1);
+
+    // Section 5 — IRL
+    final irlRaw = _irlValueCtrl.text.trim();
+    final irlValue = irlRaw.isEmpty
+        ? null
+        : double.tryParse(irlRaw.replaceAll(',', '.'));
+    final irlQuarter = _irlQuarterCtrl.text.trim().isEmpty
+        ? null
+        : _irlQuarterCtrl.text.trim();
+
     bool hasActiveLease = false;
     try {
       hasActiveLease = await ref
@@ -99,13 +153,11 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           );
     } catch (e, st) {
       _log.warning('hasOtherActiveLeaseOnProperty failed', e, st);
-      // En cas d'erreur, on laisse passer (non bloquant).
     }
 
     if (!mounted) return;
 
     if (hasActiveLease) {
-      // Afficher le dialog d'avertissement — l'utilisateur peut confirmer ou annuler.
       await showDialog<void>(
         context: context,
         builder: (_) => ActiveLeaseWarningDialog(
@@ -116,6 +168,15 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
             chargesCents: chargesCents,
             startDate: startDate!,
             endDate: endDate,
+            depositAmountCents: depositCents,
+            agencyFeesCents: agencyFeesCents,
+            paymentDay: paymentDay,
+            irlIndexValue: irlValue,
+            irlQuarterRef: irlQuarter,
+            leaseType: formState.currentLeaseType,
+            paymentMethod: formState.currentPaymentMethod,
+            solidarityClause: formState.currentSolidarityClause,
+            entryInventoryDone: formState.currentEntryInventoryDone,
           ),
         ),
       );
@@ -127,6 +188,15 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
         chargesCents: chargesCents,
         startDate: startDate!,
         endDate: endDate,
+        depositAmountCents: depositCents,
+        agencyFeesCents: agencyFeesCents,
+        paymentDay: paymentDay,
+        irlIndexValue: irlValue,
+        irlQuarterRef: irlQuarter,
+        leaseType: formState.currentLeaseType,
+        paymentMethod: formState.currentPaymentMethod,
+        solidarityClause: formState.currentSolidarityClause,
+        entryInventoryDone: formState.currentEntryInventoryDone,
       );
     }
   }
@@ -138,6 +208,15 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     required int chargesCents,
     required DateTime startDate,
     DateTime? endDate,
+    int? depositAmountCents,
+    int agencyFeesCents = 0,
+    int paymentDay = 1,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    required leaseType,
+    required paymentMethod,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
   }) async {
     await ref
         .read(leaseFormControllerProvider.notifier)
@@ -149,6 +228,15 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           chargesAmountCents: chargesCents,
           startDate: startDate,
           endDate: endDate,
+          leaseType: leaseType,
+          depositAmountCents: depositAmountCents,
+          paymentDay: paymentDay,
+          paymentMethod: paymentMethod,
+          irlIndexValue: irlIndexValue,
+          irlQuarterRef: irlQuarterRef,
+          agencyFeesCents: agencyFeesCents,
+          solidarityClause: solidarityClause,
+          entryInventoryDone: entryInventoryDone,
         );
   }
 
@@ -156,7 +244,6 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
   Widget build(BuildContext context) {
     final isCreating = widget.initial == null;
 
-    // Écouter les changements d'état pour les toasts et la navigation.
     ref.listen<LeaseFormState>(leaseFormControllerProvider, (_, next) {
       next.whenOrNull(
         success: (lease) {
@@ -191,11 +278,9 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
       orElse: () => null,
     );
 
-    // Charger les listes de biens et locataires pour les dropdowns.
     final asyncProperties = ref.watch(propertiesListProvider);
     final asyncTenants = ref.watch(tenantsListProvider);
 
-    // Afficher un loader si les listes ne sont pas encore prêtes.
     if (asyncProperties.isLoading || asyncTenants.isLoading) {
       return Scaffold(
         appBar: AppAppBar(
@@ -226,10 +311,21 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               tenants: tenants,
               rentController: _rentCtrl,
               chargesController: _chargesCtrl,
+              depositController: _depositCtrl,
+              agencyFeesController: _agencyFeesCtrl,
+              paymentDayController: _paymentDayCtrl,
+              irlValueController: _irlValueCtrl,
+              irlQuarterController: _irlQuarterCtrl,
               initialPropertyId: widget.initial?.propertyId,
               initialTenantId: widget.initial?.tenantId,
               initialStartDate: widget.initial?.startDate,
               initialEndDate: widget.initial?.endDate,
+              initialLeaseType: widget.initial?.leaseType,
+              initialPaymentMethod: widget.initial?.paymentMethod,
+              initialSolidarityClause:
+                  widget.initial?.solidarityClause ?? false,
+              initialEntryInventoryDone:
+                  widget.initial?.entryInventoryDone ?? false,
               enabled: !isSubmitting,
               onPropertyChanged: (_) {},
               onTenantChanged: (_) {},
