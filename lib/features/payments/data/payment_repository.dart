@@ -38,6 +38,7 @@ abstract interface class PaymentRepository {
     required int chargesAmountCents,
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
   });
 
   /// Met à jour les champs métier d'un paiement existant.
@@ -86,6 +87,7 @@ class SupabasePaymentRepository implements PaymentRepository {
     required int chargesAmountCents,
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
   }) async {
     _log.info('create(leaseId=$leaseId)');
     // landlord_id est inclus explicitement car la policy WITH CHECK l'exige.
@@ -100,6 +102,7 @@ class SupabasePaymentRepository implements PaymentRepository {
       'charges_amount_cents': chargesAmountCents,
       'payment_method': paymentMethod.sqlValue,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (reference != null && reference.isNotEmpty) 'reference': reference,
     };
     final rows = await Db.from('payments').insert(payload).select();
     return Payment.fromJson(rows.first);
@@ -117,6 +120,7 @@ class SupabasePaymentRepository implements PaymentRepository {
       'charges_amount_cents': payment.chargesAmountCents,
       'payment_method': payment.paymentMethod.sqlValue,
       'notes': payment.notes,
+      'reference': payment.reference,
     };
     final rows = await Db.from(
       'payments',

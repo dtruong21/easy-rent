@@ -421,6 +421,7 @@ class _FakePaymentRepo implements PaymentRepository {
     required int chargesAmountCents,
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
   }) async {
     createdPayment = Payment(
       id: 'pay-new',
@@ -433,6 +434,7 @@ class _FakePaymentRepo implements PaymentRepository {
       chargesAmountCents: chargesAmountCents,
       paymentMethod: paymentMethod,
       notes: notes,
+      reference: reference,
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
     );

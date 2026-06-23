@@ -29,6 +29,7 @@ class PaymentForm extends StatefulWidget {
     this.initialPaidAt,
     this.initialPaymentMethod,
     this.initialNotes,
+    this.initialReference,
     this.enabled = true,
     required this.onPeriodStartChanged,
     required this.onPeriodEndChanged,
@@ -51,6 +52,7 @@ class PaymentForm extends StatefulWidget {
   final DateTime? initialPaidAt;
   final PaymentMethod? initialPaymentMethod;
   final String? initialNotes;
+  final String? initialReference;
   final bool enabled;
 
   final void Function(DateTime?) onPeriodStartChanged;
@@ -69,6 +71,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
   DateTime? _paidAt;
   PaymentMethod? _paymentMethod;
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _referenceController = TextEditingController();
 
   bool _periodStartTouched = false;
   bool _periodEndTouched = false;
@@ -85,11 +88,13 @@ class PaymentFormWidgetState extends State<PaymentForm> {
     _paidAt = widget.initialPaidAt;
     _paymentMethod = widget.initialPaymentMethod;
     _notesController.text = widget.initialNotes ?? '';
+    _referenceController.text = widget.initialReference ?? '';
   }
 
   @override
   void dispose() {
     _notesController.dispose();
+    _referenceController.dispose();
     super.dispose();
   }
 
@@ -268,6 +273,31 @@ class PaymentFormWidgetState extends State<PaymentForm> {
           ),
           const SizedBox(height: 16),
 
+          // --- Référence ---
+          TextFormField(
+            key: const Key('field_reference'),
+            controller: _referenceController,
+            enabled: widget.enabled,
+            decoration: const InputDecoration(
+              labelText: 'Référence (n° virement / chèque, optionnel)',
+              hintText: 'Ex. : VIR-2024-001',
+              helperText: 'Pour rapprochement comptable',
+              border: OutlineInputBorder(),
+            ),
+            maxLength: 100,
+            validator: (v) {
+              if (v == null || v.isEmpty) return null;
+              if (v.trim().isEmpty) {
+                return 'La référence ne peut pas être uniquement des espaces.';
+              }
+              if (v.length > 100) {
+                return 'La référence ne peut pas dépasser 100 caractères.';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
           // --- Début de période ---
           FormField<DateTime>(
             key: const Key('field_period_start'),
@@ -415,4 +445,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
 
   /// Retourne les notes saisies.
   String get currentNotes => _notesController.text.trim();
+
+  /// Retourne la référence saisie (n° virement / chèque).
+  String get currentReference => _referenceController.text.trim();
 }

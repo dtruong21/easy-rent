@@ -43,6 +43,7 @@ class Payment with _$Payment {
     )
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
     @JsonKey(name: 'deleted_at') DateTime? deletedAt,

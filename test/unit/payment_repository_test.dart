@@ -46,6 +46,7 @@ class _InMemoryPaymentRepository implements PaymentRepository {
     required int chargesAmountCents,
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
   }) async {
     final p = Payment(
       id: 'gen-${_payments.length + 1}',
@@ -58,6 +59,7 @@ class _InMemoryPaymentRepository implements PaymentRepository {
       chargesAmountCents: chargesAmountCents,
       paymentMethod: paymentMethod,
       notes: notes,
+      reference: reference,
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
     );

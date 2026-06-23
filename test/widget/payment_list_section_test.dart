@@ -94,6 +94,7 @@ class _FakePaymentRepo implements PaymentRepository {
     required int chargesAmountCents,
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
   }) async => throw UnimplementedError();
 
   @override

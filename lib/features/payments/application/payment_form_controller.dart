@@ -42,6 +42,7 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
     required int chargesAmountCents,
     required PaymentMethod paymentMethod,
     String? notes,
+    String? reference,
   }) async {
     state = const PaymentFormState.submitting();
 
@@ -61,6 +62,7 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
           chargesAmountCents: chargesAmountCents,
           paymentMethod: paymentMethod,
           notes: notes,
+          reference: reference,
         );
         _log.info('payment created id=${result.id}');
       } else {
@@ -73,6 +75,7 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
           chargesAmountCents: chargesAmountCents,
           paymentMethod: paymentMethod,
           notes: notes,
+          reference: reference,
         );
         result = await repo.update(updated);
         _log.info('payment updated id=${result.id}');

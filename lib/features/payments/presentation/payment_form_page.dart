@@ -94,6 +94,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     final paidAt = formState.currentPaidAt;
     final paymentMethod = formState.currentPaymentMethod;
     final notes = formState.currentNotes;
+    final reference = formState.currentReference;
 
     // Validation finale des dates et du mode de paiement.
     if (PaymentFormValidators.validatePeriodStart(periodStart) != null ||
@@ -147,6 +148,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
           chargesAmountCents: chargesCents,
           paymentMethod: paymentMethod!,
           notes: notes.isEmpty ? null : notes,
+          reference: reference.isEmpty ? null : reference,
         );
   }
 
@@ -237,6 +239,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
               initialPaidAt: widget.initial?.paidAt,
               initialPaymentMethod: widget.initial?.paymentMethod,
               initialNotes: widget.initial?.notes,
+              initialReference: widget.initial?.reference,
               enabled: !isSubmitting,
               onPeriodStartChanged: (_) {},
               onPeriodEndChanged: (_) {},
