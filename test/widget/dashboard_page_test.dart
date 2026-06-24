@@ -31,6 +31,8 @@ final _fakeProfile = LandlordProfile(
   fullName: 'Jean Test',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
+  rgpdConsentAt: DateTime(2026),
+  rgpdConsentVersion: 'v1-2026-06',
 );
 
 class _FakeProfileRepo implements ProfileRepository {

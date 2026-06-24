@@ -79,6 +79,8 @@ LandlordProfile _makeProfile({
   address: address,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
+  rgpdConsentAt: DateTime(2024),
+  rgpdConsentVersion: 'legacy-1',
 );
 
 Widget _buildPage({

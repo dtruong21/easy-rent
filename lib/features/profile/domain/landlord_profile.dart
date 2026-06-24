@@ -39,6 +39,18 @@ class LandlordProfile with _$LandlordProfile {
 
     /// Date de dernière mise à jour (trigger `tr_02_set_updated_at_landlords`).
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
+
+    /// Horodatage du consentement RGPD (accountability art. 7.1 RGPD).
+    ///
+    /// Renseigné par le trigger [handle_new_user] au moment du signup.
+    /// Jamais null après migration FEAT-016 (backfill 'legacy-1' pour l'existant).
+    @JsonKey(name: 'rgpd_consent_at') required DateTime rgpdConsentAt,
+
+    /// Version du texte de consentement RGPD présenté à l'utilisateur.
+    ///
+    /// Valeurs connues : 'v1-2026-06' (texte initial), 'legacy-1' (comptes
+    /// antérieurs à FEAT-016, consentement implicite via FEAT-001 UI).
+    @JsonKey(name: 'rgpd_consent_version') required String rgpdConsentVersion,
   }) = _LandlordProfile;
 
   factory LandlordProfile.fromJson(Map<String, dynamic> json) =>
