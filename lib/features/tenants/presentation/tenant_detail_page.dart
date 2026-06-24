@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
+import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../application/tenant_detail_provider.dart';
 import '../application/tenants_list_provider.dart';
@@ -174,12 +175,14 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Identité civile ---
             _InfoRow(
               icon: Icons.badge_outlined,
               label: 'Prénom',
@@ -205,6 +208,122 @@ class _InfoCard extends StatelessWidget {
                 value: tenant.phone!,
               ),
             ],
+            if (tenant.birthDate != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.cake_outlined,
+                label: 'Date de naissance',
+                value: FrenchDate.format(tenant.birthDate!),
+              ),
+            ],
+            if (tenant.birthPlace != null && tenant.birthPlace!.isNotEmpty) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.location_city_outlined,
+                label: 'Lieu de naissance',
+                value: tenant.birthPlace!,
+              ),
+            ],
+            if (tenant.nationality != null &&
+                tenant.nationality!.isNotEmpty) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.flag_outlined,
+                label: 'Nationalité',
+                value: tenant.nationality!,
+              ),
+            ],
+
+            // --- Situation professionnelle ---
+            if (tenant.profession != null ||
+                tenant.employer != null ||
+                tenant.monthlyIncomeCents != null ||
+                tenant.previousAddress != null) ...[
+              const Divider(height: 24),
+              Text(
+                'Situation professionnelle',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (tenant.profession != null &&
+                  tenant.profession!.isNotEmpty) ...[
+                _InfoRow(
+                  icon: Icons.work_outline,
+                  label: 'Profession',
+                  value: tenant.profession!,
+                ),
+              ],
+              if (tenant.employer != null && tenant.employer!.isNotEmpty) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.business_outlined,
+                  label: 'Employeur',
+                  value: tenant.employer!,
+                ),
+              ],
+              if (tenant.monthlyIncomeCents != null) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.euro_outlined,
+                  label: 'Revenus mensuels',
+                  value:
+                      '${MoneyFormat.formatEurosFromCents(tenant.monthlyIncomeCents!)} / mois',
+                ),
+              ],
+              if (tenant.previousAddress != null &&
+                  tenant.previousAddress!.isNotEmpty) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.home_outlined,
+                  label: 'Ancienne adresse',
+                  value: tenant.previousAddress!,
+                ),
+              ],
+            ],
+
+            // --- Garant ---
+            if (tenant.guarantorName != null ||
+                tenant.guarantorEmail != null ||
+                tenant.guarantorPhone != null) ...[
+              const Divider(height: 24),
+              Text(
+                'Garant',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (tenant.guarantorName != null &&
+                  tenant.guarantorName!.isNotEmpty) ...[
+                _InfoRow(
+                  icon: Icons.person_outline,
+                  label: 'Nom du garant',
+                  value: tenant.guarantorName!,
+                ),
+              ],
+              if (tenant.guarantorEmail != null &&
+                  tenant.guarantorEmail!.isNotEmpty) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.email_outlined,
+                  label: 'Email du garant',
+                  value: tenant.guarantorEmail!,
+                ),
+              ],
+              if (tenant.guarantorPhone != null &&
+                  tenant.guarantorPhone!.isNotEmpty) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.phone_outlined,
+                  label: 'Téléphone du garant',
+                  value: tenant.guarantorPhone!,
+                ),
+              ],
+            ],
+
+            // --- Dates ---
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today_outlined,

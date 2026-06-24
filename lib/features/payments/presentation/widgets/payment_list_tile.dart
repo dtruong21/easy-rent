@@ -35,11 +35,18 @@ class PaymentListTile extends StatelessWidget {
       payment.totalAmountCents,
     );
 
+    final subtitleParts = [
+      payment.paymentMethod.label,
+      if (payment.reference != null && payment.reference!.isNotEmpty)
+        'Réf : ${payment.reference!}',
+      amountLabel,
+    ];
+
     return ListTile(
       key: Key('payment_tile_${payment.id}'),
       title: Text(periodLabel, style: theme.textTheme.bodyMedium),
       subtitle: Text(
-        '${payment.paymentMethod.label} · $amountLabel',
+        subtitleParts.join(' · '),
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),

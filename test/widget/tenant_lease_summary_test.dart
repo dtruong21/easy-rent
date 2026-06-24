@@ -1,3 +1,4 @@
+import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/tenants/presentation/widgets/tenant_lease_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Widget _buildWidget(List<Map<String, dynamic>> leases) {
   return MaterialApp(
+    theme: AppTheme.light,
     home: Scaffold(body: TenantLeaseSummary(leases: leases)),
   );
 }

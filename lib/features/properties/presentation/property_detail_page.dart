@@ -192,6 +192,7 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -203,13 +204,35 @@ class _InfoCard extends StatelessWidget {
               label: 'Nom',
               value: property.name,
             ),
+
+            // --- Localisation ---
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.location_on_outlined,
               label: 'Adresse',
               value: property.address,
             ),
+            if (property.postalCode != null || property.city != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.place_outlined,
+                label: 'Ville',
+                value: [
+                  if (property.postalCode != null) property.postalCode!,
+                  if (property.city != null) property.city!,
+                ].join(' '),
+              ),
+            ],
+
+            // --- Caractéristiques ---
             const Divider(height: 24),
+            Text(
+              'Caractéristiques',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
             _InfoRow(
               icon: Icons.home_outlined,
               label: 'Type',
@@ -224,6 +247,101 @@ class _InfoCard extends StatelessWidget {
                     '${property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2)} m²',
               ),
             ],
+            if (property.rooms != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.grid_view_outlined,
+                label: 'Pièces',
+                value: '${property.rooms}',
+              ),
+            ],
+            if (property.bedrooms != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.bed_outlined,
+                label: 'Chambres',
+                value: '${property.bedrooms}',
+              ),
+            ],
+            if (property.floor != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.stairs_outlined,
+                label: 'Étage',
+                value: '${property.floor}',
+              ),
+            ],
+            if (property.hasElevator) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.elevator_outlined,
+                label: 'Ascenseur',
+                value: 'Oui',
+              ),
+            ],
+            if (property.furnished) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.chair_outlined,
+                label: 'Meublé',
+                value: 'Oui',
+              ),
+            ],
+            if (property.heatingType != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.thermostat_outlined,
+                label: 'Chauffage',
+                value: property.heatingType!.labelFr,
+              ),
+            ],
+            if (property.constructionYear != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.construction_outlined,
+                label: 'Année de construction',
+                value: '${property.constructionYear}',
+              ),
+            ],
+
+            // --- Performance énergétique (DPE / GES) ---
+            if (property.dpeLetter != null ||
+                property.dpeValueKwhM2Year != null ||
+                property.gesLetter != null) ...[
+              const Divider(height: 24),
+              Text(
+                'Performance énergétique (DPE / GES)',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (property.dpeLetter != null) ...[
+                _InfoRow(
+                  icon: Icons.energy_savings_leaf_outlined,
+                  label: 'Classe DPE',
+                  value: property.dpeLetter!,
+                ),
+              ],
+              if (property.dpeValueKwhM2Year != null) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.bolt_outlined,
+                  label: 'Consommation DPE',
+                  value: '${property.dpeValueKwhM2Year} kWh/m²/an',
+                ),
+              ],
+              if (property.gesLetter != null) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.cloud_outlined,
+                  label: 'Classe GES',
+                  value: property.gesLetter!,
+                ),
+              ],
+            ],
+
+            // --- Dates ---
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today_outlined,

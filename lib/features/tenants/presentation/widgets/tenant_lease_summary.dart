@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/cards/status_pill.dart';
+import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
-import '../../../../core/widgets/lease_status_badge.dart';
+import '../../../leases/domain/lease_status.dart';
 
 /// Affiche les baux liés à un locataire sous forme de liste de cards.
 ///
@@ -65,7 +67,7 @@ class _LeaseItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              LeaseStatusBadge.fromSql(status),
+              _leaseStatusPill(status),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -114,4 +116,15 @@ class _LeaseItem extends StatelessWidget {
     }
     return 'Du $start au ${FrenchDate.formatIsoString(endDate)}';
   }
+}
+
+/// Construit un [StatusPill] depuis la valeur SQL brute du statut de bail.
+StatusPill _leaseStatusPill(String sqlStatus) {
+  final status = LeaseStatus.fromSql(sqlStatus);
+  final (label, tone) = switch (status) {
+    LeaseStatus.active => ('Actif', StatusPillTone.success),
+    LeaseStatus.terminated => ('Terminé', StatusPillTone.neutral),
+    LeaseStatus.archived => ('Archivé', StatusPillTone.neutral),
+  };
+  return StatusPill(label: label, tone: tone);
 }

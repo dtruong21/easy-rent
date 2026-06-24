@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../../core/ui/cards/status_pill.dart';
+import '../../../core/ui/cards/status_pill_tone.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
-import '../../../core/widgets/lease_status_badge.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../profile/application/landlord_profile_provider.dart';
@@ -20,6 +21,7 @@ import '../application/leases_list_provider.dart';
 import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
+import '../domain/lease_status.dart';
 import 'widgets/close_lease_dialog.dart';
 
 final _log = Logger('LeaseDetailPage');
@@ -236,6 +238,11 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final (label, tone) = switch (lease.status) {
+      LeaseStatus.active => ('Actif', StatusPillTone.success),
+      LeaseStatus.terminated => ('Terminé', StatusPillTone.neutral),
+      LeaseStatus.archived => ('Archivé', StatusPillTone.neutral),
+    };
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -243,7 +250,7 @@ class _StatusCard extends StatelessWidget {
           children: [
             Text('Statut', style: theme.textTheme.titleMedium),
             const Spacer(),
-            LeaseStatusBadge(status: lease.status),
+            StatusPill(label: label, tone: tone),
           ],
         ),
       ),
@@ -259,6 +266,7 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -279,8 +287,45 @@ class _InfoCard extends StatelessWidget {
               label: 'Locataire',
               onTap: () => context.go('/tenants/${lease.tenantId}'),
             ),
-            const Divider(height: 24),
 
+            // --- Type et durée ---
+            const Divider(height: 24),
+            Text(
+              'Type et durée',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _InfoRow(
+              icon: Icons.description_outlined,
+              label: 'Type de bail',
+              value: lease.leaseType.labelFr,
+            ),
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.calendar_today_outlined,
+              label: 'Début',
+              value: FrenchDate.format(lease.startDate),
+            ),
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.event_outlined,
+              label: 'Fin',
+              value: lease.endDate != null
+                  ? FrenchDate.format(lease.endDate!)
+                  : '(CDI)',
+            ),
+
+            // --- Loyer et charges ---
+            const Divider(height: 24),
+            Text(
+              'Loyer et charges',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
             _InfoRow(
               icon: Icons.euro_outlined,
               label: 'Loyer HC',
@@ -298,23 +343,133 @@ class _InfoCard extends StatelessWidget {
               label: 'Loyer CC',
               value: MoneyFormat.formatEurosFromCents(lease.totalAmountCents),
             ),
+            if (lease.depositAmountCents != null) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.lock_outline,
+                label: 'Dépôt de garantie',
+                value: MoneyFormat.formatEurosFromCents(
+                  lease.depositAmountCents!,
+                ),
+              ),
+            ],
+            if (lease.agencyFeesCents > 0) ...[
+              const Divider(height: 24),
+              _InfoRow(
+                icon: Icons.real_estate_agent_outlined,
+                label: 'Frais d\'agence',
+                value: MoneyFormat.formatEurosFromCents(lease.agencyFeesCents),
+              ),
+            ],
+
+            // --- Modalités de paiement ---
             const Divider(height: 24),
+            Text(
+              'Modalités de paiement',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
             _InfoRow(
-              icon: Icons.calendar_today_outlined,
-              label: 'Début',
-              value: FrenchDate.format(lease.startDate),
+              icon: Icons.event_repeat_outlined,
+              label: 'Jour d\'échéance',
+              value: 'le ${lease.paymentDay} du mois',
             ),
             const Divider(height: 24),
             _InfoRow(
-              icon: Icons.event_outlined,
-              label: 'Fin',
-              value: lease.endDate != null
-                  ? FrenchDate.format(lease.endDate!)
-                  : '(CDI)',
+              icon: Icons.payment_outlined,
+              label: 'Mode de paiement',
+              value: lease.paymentMethod.label,
             ),
+
+            // --- IRL et clauses ---
+            if (lease.irlIndexValue != null ||
+                lease.irlQuarterRef != null ||
+                lease.solidarityClause ||
+                lease.entryInventoryDone) ...[
+              const Divider(height: 24),
+              Text(
+                'IRL et clauses',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (lease.irlIndexValue != null) ...[
+                _InfoRow(
+                  icon: Icons.trending_up_outlined,
+                  label: 'Indice IRL',
+                  value: '${lease.irlIndexValue}',
+                ),
+              ],
+              if (lease.irlQuarterRef != null &&
+                  lease.irlQuarterRef!.isNotEmpty) ...[
+                const Divider(height: 24),
+                _InfoRow(
+                  icon: Icons.date_range_outlined,
+                  label: 'Trimestre IRL',
+                  value: lease.irlQuarterRef!,
+                ),
+              ],
+              if (lease.solidarityClause) ...[
+                const Divider(height: 24),
+                _BadgeRow(
+                  icon: Icons.handshake_outlined,
+                  label: 'Clause solidarité',
+                  badge: StatusPill(
+                    label: 'Solidarité',
+                    tone: StatusPillTone.info,
+                  ),
+                ),
+              ],
+              if (lease.entryInventoryDone) ...[
+                const Divider(height: 24),
+                _BadgeRow(
+                  icon: Icons.checklist_outlined,
+                  label: 'État des lieux',
+                  badge: StatusPill(
+                    label: 'État des lieux fait',
+                    tone: StatusPillTone.success,
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Ligne avec un badge [StatusPill] à droite.
+class _BadgeRow extends StatelessWidget {
+  const _BadgeRow({
+    required this.icon,
+    required this.label,
+    required this.badge,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const Spacer(),
+        badge,
+      ],
     );
   }
 }
