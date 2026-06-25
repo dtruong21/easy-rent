@@ -4,6 +4,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _log = Logger('AuthRepository');
 
+/// Version actuelle du texte de consentement RGPD présenté à l'utilisateur.
+///
+/// Format : 'vN-YYYY-MM' — à incrémenter à chaque mise à jour
+/// du texte de politique de confidentialité ou des finalités de traitement.
+/// Cette valeur est transmise dans raw_user_meta_data au signup et persistée
+/// dans landlords.rgpd_consent_version via le trigger handle_new_user.
+const String _rgpdConsentVersion = 'v1-2026-06';
+
 /// Contrat public : les widgets et providers consomment cette interface,
 /// jamais l'implémentation directement (facilite les mocks dans les tests).
 abstract interface class AuthRepository {
@@ -79,7 +87,12 @@ class SupabaseAuthRepository implements AuthRepository {
     await _client.auth.signUp(
       email: email,
       password: password,
-      data: {'full_name': fullName},
+      data: {
+        'full_name': fullName,
+        // Consentement RGPD — persisté dans landlords.rgpd_consent_version
+        // via le trigger handle_new_user() (accountability art. 7.1 RGPD).
+        'rgpd_consent_version': _rgpdConsentVersion,
+      },
       emailRedirectTo: emailRedirectTo,
     );
   }
