@@ -1,20 +1,22 @@
 # Schéma Postgres — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-22 (FEAT-011 ✅ — migration `20260622130000_feat011_handle_new_user_fullname.sql` adapte trigger `handle_new_user()` pour pivot email+password, capture `full_name` depuis auth metadata)
+> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-25 (FEAT-016 ✅ — migrations 20260622220000–20260623020000 complètent enrichissement FR + RGPD persistence)
 
 ## Tables
 
 ### `landlords` (public + dev)
 
-**Migration source** : `20260527081533_feat001_landlords_auth.sql` (création), `20260528120000_feat002_data_model.sql` (extension)
+**Migration source** : `20260527081533_feat001_landlords_auth.sql` (création), `20260528120000_feat002_data_model.sql` (extension), `20260623020000_feat016_rgpd_consent.sql` (FEAT-016 RGPD persistence)
 
 | Colonne | Type | Contraintes |
 |---|---|---|
 | `id` | `uuid` | PRIMARY KEY, FK → `auth.users(id)` ON DELETE NO ACTION |
 | `email` | `text` | NOT NULL |
-| `full_name` | `text` | NULL — rempli dans les paramètres (FEAT-003+) |
+| `full_name` | `text` | NOT NULL — rempli par trigger `handle_new_user()` depuis `raw_user_meta_data` ou fallback `email` (FEAT-011) |
 | `phone` | `text` | NULL |
 | `address` | `text` | NULL |
+| `rgpd_consent_at` | `timestamptz` | NOT NULL — timestamp acceptation RGPD (FEAT-016 backfill=created_at pour comptes existants, légacy='legacy-1') |
+| `rgpd_consent_version` | `text` | NOT NULL — version texte RGPD acceptée (FEAT-016, ex: 'v1-2026-06' ou 'legacy-1') |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() (trigger `tr_02_set_updated_at_landlords`) |
 | `deleted_at` | `timestamptz` | NULL — soft-delete. Modifiable uniquement via `soft_delete_landlord()` RPC |
@@ -38,16 +40,29 @@
 
 ### `properties` (public + dev)
 
-**Migration source** : `20260528120000_feat002_data_model.sql`
+**Migration source** : `20260528120000_feat002_data_model.sql` (FEAT-002), `20260622220000_feat014_phase1_property_enrichment.sql` (FEAT-014 Phase 1)
 
 | Colonne | Type | Contraintes |
 |---|---|---|
 | `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT |
+| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT, DEFAULT auth.uid() (RLS) |
 | `name` | `text` | NOT NULL, CHECK length > 0 |
 | `address` | `text` | NOT NULL, CHECK length > 0 |
 | `type` | `text` | NOT NULL, CHECK IN ('appartement', 'maison', 'studio', 'autre') |
 | `surface_m2` | `numeric(6,2)` | NULL, CHECK > 0 (si renseigné) |
+| **FEAT-014 Phase 1** | | |
+| `rooms` | `smallint` | NULL, CHECK > 0 AND <= 50 |
+| `bedrooms` | `smallint` | NULL, CHECK >= 0 AND <= 50 |
+| `floor` | `smallint` | NULL, CHECK BETWEEN -5 AND 200 |
+| `has_elevator` | `boolean` | NOT NULL DEFAULT false |
+| `furnished` | `boolean` | NOT NULL DEFAULT false |
+| `heating_type` | `text` | NULL, CHECK IN ('electric', 'gas', 'collective', 'fuel', 'wood', 'heat_pump', 'other') |
+| `dpe_letter` | `text` | NULL, CHECK matches regex '^[A-G]$' (diagnostic performance énergétique) |
+| `dpe_value_kwh_m2_year` | `integer` | NULL, CHECK > 0 AND < 2000 (DPE valeur numérique) |
+| `ges_letter` | `text` | NULL, CHECK matches regex '^[A-G]$' (gaz effet serre) |
+| `construction_year` | `smallint` | NULL, CHECK BETWEEN 1700 AND current_year+1 |
+| `postal_code` | `text` | NULL, CHECK matches regex '^\d{5}$' (FR only) |
+| `city` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_property()` |
@@ -68,16 +83,27 @@
 
 ### `tenants` (public + dev)
 
-**Migration source** : `20260528120000_feat002_data_model.sql`
+**Migration source** : `20260528120000_feat002_data_model.sql` (FEAT-002), `20260622230000_feat014_phase2_tenant_enrichment.sql` (FEAT-014 Phase 2)
 
 | Colonne | Type | Contraintes |
 |---|---|---|
 | `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT |
+| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT, DEFAULT auth.uid() (RLS) |
 | `first_name` | `text` | NOT NULL, CHECK length > 0 |
 | `last_name` | `text` | NOT NULL, CHECK length > 0 |
 | `email` | `text` | NOT NULL, CHECK regex `^[^@\s]+@[^@\s]+\.[^@\s]+$` |
 | `phone` | `text` | NULL |
+| **FEAT-014 Phase 2** | | |
+| `birth_date` | `date` | NULL, CHECK BETWEEN 1900-01-01 AND (today - 18 years) |
+| `birth_place` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
+| `nationality` | `text` | NULL, CHECK char_length BETWEEN 1 AND 60 |
+| `profession` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
+| `employer` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
+| `monthly_income_cents` | `bigint` | NULL, CHECK >= 0 AND <= 10000000000 (en centimes) |
+| `previous_address` | `text` | NULL, CHECK char_length BETWEEN 1 AND 300 |
+| `guarantor_name` | `text` | NULL, CHECK char_length BETWEEN 1 AND 200 |
+| `guarantor_email` | `text` | NULL, CHECK regex `^[^@\s]+@[^@\s]+\.[^@\s]+$` |
+| `guarantor_phone` | `text` | NULL, CHECK char_length BETWEEN 1 AND 30 |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_tenant()` |
@@ -98,12 +124,12 @@
 
 ### `leases` (public + dev)
 
-**Migration source** : `20260528120000_feat002_data_model.sql`
+**Migration source** : `20260528120000_feat002_data_model.sql` (FEAT-002), `20260623000000_feat014_phase3_lease_enrichment.sql` (FEAT-014 Phase 3)
 
 | Colonne | Type | Contraintes |
 |---|---|---|
 | `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
+| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS), DEFAULT auth.uid() |
 | `property_id` | `uuid` | FK → `properties(id)` ON DELETE RESTRICT |
 | `tenant_id` | `uuid` | FK → `tenants(id)` ON DELETE RESTRICT |
 | `rent_amount_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes, ex: 85000 = 850,00€) |
@@ -111,6 +137,16 @@
 | `start_date` | `date` | NOT NULL |
 | `end_date` | `date` | NULL (= CDI), CHECK end_date > start_date (si renseigné) |
 | `status` | `text` | NOT NULL DEFAULT 'active', CHECK IN ('active', 'terminated', 'archived') |
+| **FEAT-014 Phase 3** | | |
+| `lease_type` | `text` | NOT NULL DEFAULT 'unfurnished', CHECK IN ('unfurnished', 'furnished', 'mobility', 'student') |
+| `deposit_amount_cents` | `bigint` | NULL, CHECK >= 0 AND <= 10000000000 (dépôt de garantie) |
+| `payment_day` | `smallint` | NOT NULL DEFAULT 1, CHECK BETWEEN 1 AND 28 (jour échéance mensuelle) |
+| `payment_method` | `text` | NOT NULL DEFAULT 'virement', CHECK IN ('virement', 'cheque', 'especes', 'prelevement', 'autre') |
+| `irl_index_value` | `numeric(8,2)` | NULL, CHECK > 0 AND < 10000 (indice révision loyer) |
+| `irl_quarter_ref` | `text` | NULL, CHECK matches regex '^T[1-4]-\d{4}$' (ex: 'T1-2026') |
+| `agency_fees_cents` | `bigint` | NOT NULL DEFAULT 0, CHECK >= 0 AND <= 10000000000 (honoraires agence) |
+| `solidarity_clause` | `boolean` | NOT NULL DEFAULT false (colocataires solidaires) |
+| `entry_inventory_done` | `boolean` | NOT NULL DEFAULT false (état des lieux d'entrée effectué) |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_lease()` |
@@ -239,13 +275,13 @@
 
 ### `payments` (public + dev)
 
-**Migration source** : `20260531102202_feat006_payments.sql` (890 lignes)
+**Migration source** : `20260531102202_feat006_payments.sql` (FEAT-006), `20260623010000_feat014_phase4_payment_reference.sql` (FEAT-014 Phase 4)
 
 | Colonne | Type | Contraintes |
 |---|---|---|
 | `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
 | `lease_id` | `uuid` | FK → `leases(id)` ON DELETE RESTRICT |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
+| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS), DEFAULT auth.uid() |
 | `period_start` | `date` | NOT NULL, CHECK BETWEEN 1900-01-01..2100-12-31 |
 | `period_end` | `date` | NOT NULL, CHECK > period_start AND BETWEEN 1900-01-01..2100-12-31 |
 | `paid_at` | `date` | NOT NULL (autorisée futur), CHECK BETWEEN 1900-01-01..2100-12-31 |
@@ -253,6 +289,8 @@
 | `charges_amount_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 (en centimes) |
 | `payment_method` | `text` | NOT NULL, CHECK IN ('virement', 'cheque', 'especes', 'prelevement', 'autre') |
 | `notes` | `text` | NULL, CHECK length <= 500 |
+| **FEAT-014 Phase 4** | | |
+| `reference` | `text` | NULL (numéro de chèque, virement, etc.) |
 | `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
 | `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_payment()` |
@@ -330,10 +368,12 @@
 **`public.handle_new_user()`** — Trigger AFTER INSERT ON `auth.users`, SECURITY DEFINER, SET search_path = public
 
 - Insère une ligne dans `public.landlords` ET `dev.landlords` à chaque signup
-- Extrait `full_name` de `raw_user_meta_data->>'full_name'` (FEAT-011 pivot 2026-06-22)
+- Extrait `full_name` de `raw_user_meta_data->>'full_name'` (FEAT-011 pivot 2026-06-22), fallback `NEW.email` si absent
+- Lit `rgpd_consent_version` de `raw_user_meta_data` (FEAT-016), fallback 'legacy-1' pour creations admin/Studio
+- Définit `rgpd_consent_at = now()` au signup
 - Idempotent (ON CONFLICT DO NOTHING)
-- Migration : `20260622130000_feat011_handle_new_user_fullname.sql`
-- FEAT-001 (création), FEAT-011 (refactor signature pour password auth)
+- Migrations : `20260622130000_feat011_handle_new_user_fullname.sql`, `20260623020000_feat016_rgpd_consent.sql`
+- FEAT-001 (création), FEAT-011 (refactor pour password auth), FEAT-016 (RGPD persistence)
 
 **`public.set_updated_at()`** — Trigger BEFORE UPDATE, maintient `updated_at = now()`
 

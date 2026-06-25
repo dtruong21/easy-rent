@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-22T18:30:00Z
-- **Commit ref** : `feature/feat-011-auth-password` (en cours de merge ou mergé — pivot FEAT-001 → FEAT-011)
-- **Branche** : `develop` (après merge FEAT-011)
-- **Phase projet** : FEAT-001–010 ✅ complets. **FEAT-011 ✅ mergée 2026-06-22 (pivot auth magic link → email + password classique)**. FEAT-008 refactorisée (Web Share API native). FEAT-012+ en backlog post-MVP.
+- **Dernière mise à jour** : 2026-06-25T20:00:00Z
+- **Commit ref** : `a1fefec` (chore: Property.deletedAt + typed lease_form_page params + PaymentMethod sqlValue alignment)
+- **Branche** : `chore/cleanup-tech-debt-and-docs-refresh-v2` (rebased sur develop)
+- **Phase projet** : FEAT-001–016 ✅ mergées. MVP complet + FEAT-012/013/014/015/016 en production.
 
 ## Pointeurs
 
@@ -51,148 +51,67 @@
 | Hosting | Firebase Hosting (staging ✅, prod ready) |
 | CI/CD | GitHub Actions (ci.yml + deploy.yml + migrate-prod.yml) |
 
-## Changements majeurs FEAT-010 (Complétée 2026-06-22)
+## Changements récents (2026-06-23 — 2026-06-25)
 
-**Status** : ✅ DONE (mergée develop commit 643789c)
+### FEAT-012 — Cards system (5 phases — Phase 0 ✅)
+**Status** : ✅ DONE — toutes phases mergées (commits 2b7506b–9fdf647)
 
-1. **Dashboard refonte** (Section A) :
-   - 4 KPI cards : loyers mois encaissé/dû, retards (locataires 35j sans paiement), renouvellements 30j, documents en attente
-   - Mini-barchart 6 mois (encaissé vs dû, `fl_chart` v0.69.0)
-   - Activité récente (top 5 paiements/quittances/documents par date DESC)
-   - Onboarding « Premiers pas » (affiché si 0 bien + 0 locataire + 0 bail)
-   - 18 fichiers Dart, 7 nouveaux tests widget (69 assertions)
+Refonte UI pages list (Properties, Tenants, Leases, Receipts) + dashboard polish :
+- Phase 1 (FEAT-012 Phase 0+1) : Leases en cards `LeaseCard` avec badges status
+- Phase 2 : Properties en cards `PropertyCard` avec address + type
+- Phase 3 : Tenants en cards `TenantCard` avec nom + email + phone
+- Phase 4 : Receipts timeline `ReceiptCard` avec PDF + share buttons
+- Phase 5 : Dashboard polish design tokens (color, spacing, typography)
 
-2. **PWA Polish** (Section B) :
-   - `manifest.json` complètement rempli (name, description, background_color #0F766E, icons 192+512 + maskable)
-   - Icônes placeholder « ER » générées via script ImageMagick (192/512 px)
-   - Install prompt JS interop via `web` package (beforeinstallprompt + matchMedia)
-   - Dismiss persisté via `shared_preferences` (1 semaine avant ré-affichage)
-   - `web/index.html` : manifest ref + background color cohérente
-   - 7 fichiers Dart (pwa feature), 2 nouvelles dépendances (shared_preferences 2.3.5, web 1.1.0)
+**Foundation** : `lib/core/ui/cards/` (EntityCard, StatusBadge, CardGrid)
 
-3. **Prod setup** (Section C) :
-   - `.github/workflows/migrate-prod.yml` (nouvelle) : workflow_dispatch + input confirm=yes/no → `supabase db push`
-   - `.github/workflows/deploy.yml` (modifié) : +31 lignes, build staging + prod branche, firebase deploy avec `--only hosting:staging` vs `--only hosting:prod`
-   - `docs/PROD_DEPLOY_CHECKLIST.md` (nouvelle) : 117 lignes, 22 étapes, déploiement + rollback
-   - `docs/RUNBOOK_PROD_DEPLOY.md` (nouvelle) : 183 lignes, procédure step-by-step avec commands exactes
-   - `dart-defines.prod.example.json` (nouvelle) : template variables Firebase projet prod
-   - `/privacy` page enrichie avec RGPD + export/effacement GDPR (190+ lignes)
-   - `firebase.json` (modifié) : CSP étendue (fonts.gstatic.com) + cache strategy SW
+### FEAT-013 — UX modernization (2 phases — ✅)
+**Status** : ✅ DONE (commits 0e20c80, ae5fdf1)
 
-4. **Tests ajoutés** :
-   - 69 nouveaux tests (dashboard: 27 unit + 42 widget)
-   - Integration test router_guard (4 assertions, pas de changement)
+- Phase 1 : AppAppBar standardisé + page transitions smooth (AppTransition enum)
+- Phase 2 : Palette color modern indigo (replace teal) + Material 3 defaults
 
-3. **Suppression Edge Function** : `supabase/functions/send-receipt/` (Resend) a été supprimée
-   - Plus de dépendance backend email, plus de secret API key
-   - RPC `mark_receipt_as_sent` inchangée — appelée côté client APRÈS partage réussi
+**Files** : `lib/core/ui/app_bar/app_app_bar.dart`, `lib/core/router/transitions.dart`
 
-4. **Décisions FEAT-010** :
-   - KPI "Documents en attente" = count(category='autre' AND deleted_at IS NULL) — proxy MVP
-   - "Retards" = locataires sans paiement depuis 35j (simplification MVP)
-   - Activité récente = UNION payments + receipts + documents (5 items top)
-   - Onboarding = affiché seulement si count(properties) + count(tenants) + count(leases) = 0
+### FEAT-014 — Forms enrichment FR (4 phases — ✅)
+**Status** : ✅ DONE (commits 4de7554–5f9cdfa — Phase 1–4 complets)
 
-5. **Décisions FEAT-008 pivot** :
-   - Partage natif Web Share API = intention utilisateur (pas preuve serveur d'envoi)
-   - RPC `mark_receipt_as_sent` appelée asynchrone APRÈS succès du picker
-   - Idempotence : 2e partage écrase `sent_at` (marque le dernier partage)
-   - Zéro secret backend = go-live sans attente domaine Resend
+32 colonnes enrichies pour conformité location FR (DPE, étage, garant, IRL, dépôt de garantie, etc.)
 
-6. **Incohérences détectées** :
-   - Aucune — state entièrement cohérent avec code (643789c)
+| Phase | Table | Colonnes ajoutées | Migration |
+|---|---|---|---|
+| 1 | properties | rooms, bedrooms, floor, has_elevator, furnished, heating_type, dpe_letter, dpe_value_kwh_m2_year, ges_letter, construction_year, postal_code, city (12 total) | 20260622220000 |
+| 2 | tenants | birth_date, birth_place, nationality, profession, employer, monthly_income_cents, previous_address, guarantor_name, guarantor_email, guarantor_phone (10 total) | 20260622230000 |
+| 3 | leases | lease_type, deposit_amount_cents, payment_day, payment_method, irl_index_value, irl_quarter_ref, agency_fees_cents, solidarity_clause, entry_inventory_done (9 total) | 20260623000000 |
+| 4 | payments | reference (1 total) | 20260623010000 |
 
-## Changements majeurs FEAT-009 (Complétée)
+### FEAT-015 — Detail pages enrichment
+**Status** : ✅ DONE (commit 6959a9e)
 
-**Status** : ✅ DONE (mergée develop 2026-06-17, commit 57c8164)
+Rendre visibles les champs FEAT-014 sur pages détail (PropertyDetailPage, TenantDetailPage, LeaseDetailPage). Finalisation StatusBadge migration (UI unifiée pour lease status).
 
-1. **Migration SQL** : `supabase/migrations/20260602100520_feat009_documents.sql` (588 lignes)
-   - Table `public.documents` / `dev.documents` (12 colonnes + 4 index + 2 policies RLS)
-   - Enum `document_category` (bail_signe, etat_des_lieux, attestation_assurance, quittance_scannee, autre)
-   - Bucket Storage privé `documents/` (chemins `{schema}/{landlord_id}/{document_id}.{ext}`)
-   - RPC `soft_delete_document()` SECURITY DEFINER (retourne storage_path + hard_deleted)
-   - Triggers : ownership check, protect immutable columns, legal_hold auto-calc
+### FEAT-016 — RGPD consent persistence
+**Status** : ✅ DONE (commit e82d113 — migration 20260623020000)
 
-2. **15 fichiers Dart** : `lib/features/documents/`
-   - Domain : `document.dart` (freezed), `document_category.dart`, `document_upload_state.dart`
-   - Data : `document_repository.dart` (CRUD, Storage)
-   - Application : providers (list, form controllers)
-   - Presentation : upload form, list, preview, delete dialog
+Persistance consentement RGPD (accountability art. 7.1) :
+- Colonnes : `landlords.rgpd_consent_at` (timestamptz NOT NULL), `landlords.rgpd_consent_version` (text NOT NULL)
+- Backfill : comptes legacy = 'legacy-1', version = created_at
+- Trigger `handle_new_user()` : lit `rgpd_consent_version` depuis raw_user_meta_data, fallback 'legacy-1'
 
-3. **Nouvelles routes GoRouter** :
-   - `/documents` (non implémentée — route juste déclarée)
+## Audit incohérences (2026-06-25)
 
-4. **RLS exhaustive** : 2 policies sur documents + 1 bucket Storage policy
+À la date 2026-06-25 (après merge FEAT-016, branche develop à 5f9cdfa) :
 
-## Changements majeurs FEAT-008 (Refactorisée — Pivot 2026-06-22)
-
-**Status** : ✅ REFACTORED (pivot Web Share API native, branche `feature/feat-008-web-share-pivot`)
-
-**Pivot justification** : Élimination dépendance Resend → zéro secret backend, pas de domaine DNS, meilleure UX native
-
-1. **Web Share Service** (Flutter + Dart, native système)
-   - JS interop `navigator.share()` + fallback `mailto://`
-   - Récupère PDF depuis Storage, partage natif (Mail/Gmail/WhatsApp/etc.)
-   - Zéro secret backend requis, zéro serveur email
-
-2. **5 fichiers Dart** : `lib/features/receipts/` (Web Share natif)
-   - Service : `web_share_service.dart` (JS interop)
-   - Controller : `share_receipt_controller.dart` (StateNotifier)
-   - State : `share_receipt_state.dart` (sealed freezed)
-   - Widgets : `share_receipt_button.dart`, `confirm_resend_dialog.dart`
-   - Tests : 3 fichiers (~25 tests)
-
-## État de la base de code
-
-- Code matches state — 100% synchronisé (643789c)
-- 177 fichiers Dart, ~7000+ lignes de code métier
-- 1074 tests (69 nouveaux FEAT-010), tous passing
-- RLS validée : payments (31 tests), receipts (en cours), documents (en cours)
-- 3 Edge Functions : generate-receipt ✅, send-receipt 🚧 (secrets attente), _shared (utils)
-- Dashboard : refonte complète, 4 KPI + mini-chart + activité
-- PWA : manifest complet, icônes, install prompt, offline-first
-- Prod : migrate-prod workflow + checklist + runbook prêts
-- Backlog : FEAT-011 (email récurrents), FEAT-012 (analytics avancées), P1 features (charges récupérables, crédits, etc.)
-
-## Audit incohérences
-
-À la date 2026-06-22 (après merge FEAT-010) :
-
-- **✅ Aucune migration sans code correspondant** : toutes les 9 migrations ont des composants Dart ou RPC
-- **✅ Aucune route sans feature** : 26 routes, 11 features implémentées
-- **✅ Aucune table sans RLS** : landlords, properties, tenants, leases, payments, receipts, documents — 100% RLS
-- **✅ Aucun dépendance non déclarée** : pubspec.yaml à jour (ajoute web, shared_preferences, fl_chart pour FEAT-010)
+- **✅ Migrations cohérentes** : 16 fichiers SQL, toutes appliquées remote (fixtures visibles en Studio)
+- **✅ Aucune route sans feature** : 18 routes GoRouter, 11 features implémentées
+- **✅ Aucune table sans RLS** : landlords, properties, tenants, leases, payments, receipts, documents — 100% RLS + DEFAULT auth.uid() sur FK
+- **✅ Aucune dépendance non déclarée** : pubspec.yaml à jour (Riverpod 2.6.0, GoRouter 14.6.0, freezed 2.5.7)
 - **✅ Firestore CSP fixed** : fonts.gstatic.com dans firebase.json
+- **✅ Edge Functions** : uniquement `generate-receipt` + `_shared` (send-receipt supprimée FEAT-008 pivot)
 
-## Actions manuelles post-merge FEAT-011
+## Prochaines étapes (priorité)
 
-⚠️ **Supabase Studio configuration** (requises pour la prod) :
-
-1. **Authentication → URL Configuration**
-   - Site URL : `https://easy-rent-54cd4.web.app`
-   - Redirect URLs (ajouter/mettre à jour) :
-     ```
-     https://easy-rent-54cd4.web.app/**
-     https://easyrent-staging.web.app/**
-     http://localhost:*/**
-     ```
-
-2. **Authentication → Email Provider**
-   - Enable "Confirm email" checkbox
-   - Password validation : ensure `letters_digits` validator active (8 chars + 1 letter + 1 digit)
-   - Custom SMTP (si Resend réintroduit) : domaine vérifié
-
-3. **Authentication → Email Templates**
-   - Confirmation Template : copier contenu de `supabase/templates/confirmation.html`
-   - Recovery (Reset) Template : copier contenu de `supabase/templates/recovery.html`
-
-See `docs/plans/FEAT-011-auth-password.md` Section "Configuration Supabase Studio" for details.
-
-## Prochaines étapes
-
-- **Prod go-live** : ✅ FEAT-011 auth password complète. Déploiement web immédiat possible (aucun blocker backend email).
-- **FEAT-012 (P1)** : Password change endpoint + multi-facteur TOTP
-- **FEAT-013 (P1)** : Email récurrents / rappels paiements (cron Edge Function)
-- **FEAT-014 (P1)** : Analytics avancées, export comptable
-- **Dashboard vision** : Charts Stripe/Brex post-MVP (amorce architecturale en KpiCard.child)
-- **Documentation** : Voir `docs/plans/FEAT-008-email-quittance.md` pour détails pivot Web Share API ; `docs/plans/FEAT-011-auth-password.md` pour pivot auth
+- **Dépendances P2 backlog** : Riverpod 3.x, GoRouter 17.x, freezed 3.x (breaking changes — attendre sprint)
+- **FEAT-012 Phase 1.5** : LeaseCard polish (dénormalisation loyer+charges dans la carte)
+- **Staging dédié** : préparation déploiement channel staging (actuellement sur main)
+- **Analytics avancées** (P1 post-MVP) : export comptable, vision Stripe/Brex (architecturale)
