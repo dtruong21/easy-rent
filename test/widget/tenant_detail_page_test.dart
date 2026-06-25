@@ -1,3 +1,4 @@
+import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
@@ -112,7 +113,7 @@ Widget _buildDetailPage({required String tenantId, required _FakeRepo repo}) {
 
   return ProviderScope(
     overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
   );
 }
 

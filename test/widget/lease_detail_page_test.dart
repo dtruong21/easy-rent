@@ -1,3 +1,4 @@
+import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
@@ -172,7 +173,7 @@ Widget _buildDetailPage({
         paymentRepo ?? _FakePaymentRepo(),
       ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
   );
 }
 
