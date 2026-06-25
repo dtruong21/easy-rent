@@ -11,8 +11,10 @@ import '../../../features/tenants/application/tenants_list_provider.dart';
 import '../application/lease_detail_provider.dart';
 import '../application/lease_form_controller.dart';
 import '../data/lease_repository.dart';
+import '../../payments/domain/payment_method.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
+import '../domain/lease_type.dart';
 import 'widgets/active_lease_warning_dialog.dart';
 import 'widgets/lease_form.dart';
 
@@ -213,8 +215,8 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     int paymentDay = 1,
     double? irlIndexValue,
     String? irlQuarterRef,
-    required leaseType,
-    required paymentMethod,
+    required LeaseType leaseType,
+    required PaymentMethod paymentMethod,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
   }) async {

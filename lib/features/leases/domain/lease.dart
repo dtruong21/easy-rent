@@ -121,13 +121,10 @@ String _leaseTypeToJson(LeaseType v) => v.sqlValue;
 
 PaymentMethod _methodFromJson(dynamic value) {
   if (value == null) return PaymentMethod.virement;
-  return PaymentMethod.values.firstWhere(
-    (e) => e.name == value as String,
-    orElse: () => PaymentMethod.virement,
-  );
+  return PaymentMethod.fromSql(value as String);
 }
 
-String _methodToJson(PaymentMethod v) => v.name;
+String _methodToJson(PaymentMethod v) => v.sqlValue;
 
 // ---------------------------------------------------------------------------
 // Extension — getters calculés (non freezed pour éviter le codegen)

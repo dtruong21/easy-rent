@@ -53,6 +53,7 @@ class Property with _$Property {
     @JsonKey(name: 'construction_year') int? constructionYear,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
+    @JsonKey(name: 'deleted_at') DateTime? deletedAt,
   }) = _Property;
 
   factory Property.fromJson(Map<String, dynamic> json) =>
