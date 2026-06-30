@@ -75,44 +75,13 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             --dart-define=SUPABASE_SCHEMA=${{ needs.determine-env.outputs.schema }}
 
-      # CI deploy via firebase-tools CLI direct (au lieu de
-      # FirebaseExtended/action-hosting-deploy@v0) car cette action a un bug
-      # de retry race documenté : lors d'un "premature close" réseau sur le
-      # POST /channels/:id/releases, le retry interne resoumet la même version
-      # qui a déjà été commit côté serveur → 400 FAILED_PRECONDITION. Le code
-      # est en réalité déployé mais le step CI ressort en failure (faux négatif
-      # observé 3× consécutivement). Diagnostic complet : workflow wf_eb506d7f-620.
-      # Solution : CLI direct sans retry interne — un seul POST, soit ça
-      # passe, soit on relance le job.
-      - name: Install firebase-tools
-        run: npm install -g firebase-tools@13
-
-      - name: Write Firebase service account credentials
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
-
-      - name: Deploy to Firebase Hosting (CLI direct)
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
-        run: |
-          if [ "$FIREBASE_CHANNEL" = "live" ]; then
-            firebase deploy --only hosting \
-              --project "$FIREBASE_PROJECT_ID" \
-              --non-interactive
-          else
-            firebase hosting:channel:deploy "$FIREBASE_CHANNEL" \
-              --project "$FIREBASE_PROJECT_ID" \
-              --expires 7d \
-              --non-interactive
-          fi
-
-      - name: Cleanup credentials
-        if: always()
-        run: rm -f "$RUNNER_TEMP/firebase-sa.json"
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          channelId: ${{ needs.determine-env.outputs.firebase_channel }}
 
   # FEAT-010 (D5) : Les migrations prod sont désactivées ici.
   # Utiliser le workflow dédié `.github/workflows/migrate-prod.yml`
