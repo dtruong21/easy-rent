@@ -113,10 +113,20 @@ jobs:
           # On parse les logs du run courant. La signature ciblée vient de
           # firebase-tools (Firebase Hosting REST API) — assez précise pour
           # qu'aucune autre erreur n'y matche par accident.
-          LOGS=$(gh run view "${{ github.run_id }}" \
+          # `gh run view --log` renvoie 0 octet sur un run encore in-progress
+          # (l'endpoint sous-jacent ne sert le zip d'archives qu'après fin du run).
+          # On passe par l'endpoint per-job qui, lui, expose les logs des steps
+          # déjà terminées même quand le job parent tourne encore.
+          JOB_ID=$(gh run view "${{ github.run_id }}" \
             --repo "${{ github.repository }}" \
-            --log 2>/dev/null || true)
-          echo "Fetched $(echo -n "$LOGS" | wc -c) bytes of run log."
+            --json jobs \
+            --jq '.jobs[] | select(.name | startswith("Build & Deploy")) | .databaseId')
+          if [ -z "$JOB_ID" ]; then
+            echo "::error::Tolerance step could not locate the deploy job ID."
+            exit 1
+          fi
+          LOGS=$(gh api "repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs" 2>/dev/null || true)
+          echo "Fetched $(echo -n "$LOGS" | wc -c) bytes of job log."
           # Phrase exclusive à l'erreur Firebase Hosting REST API quand on tente
           # de release une version déjà active sur le channel. Aucune autre
           # erreur n'utilise cette tournure exacte.
