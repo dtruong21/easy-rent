@@ -48,6 +48,15 @@ jobs:
     needs: determine-env
     runs-on: ubuntu-latest
     environment: ${{ needs.determine-env.outputs.env_name }}
+    # `actions: read` est requis par la tolerance step qui interroge l'API
+    # `/repos/.../actions/jobs/{id}/logs` pour détecter le bug retry race de
+    # firebase-tools. Sans ça : HTTP 403 « Resource not accessible by integration ».
+    # `contents: read` couvre le checkout. `pull-requests: write` permet à
+    # action-hosting-deploy@v0 de commenter les preview URLs sur les PRs.
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
