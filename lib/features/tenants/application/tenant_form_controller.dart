@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../data/tenant_repository.dart';
 import '../domain/tenant.dart';
@@ -124,9 +125,14 @@ class TenantFormController extends StateNotifier<TenantFormState> {
       _ref.invalidate(tenantsListProvider);
 
       state = TenantFormState.success(tenant: result);
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de submit', e, st);
-      state = TenantFormState.error(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning('FirebaseFunctionsException submit (code=${e.code})', e, st);
+      state = TenantFormState.error(message: _mapFunctionsError(e));
+    } on FirebaseException catch (e, st) {
+      _log.warning('FirebaseException submit (code=${e.code})', e, st);
+      state = const TenantFormState.error(
+        message: 'Erreur de sauvegarde. Vérifiez votre connexion et réessayez.',
+      );
     } on TenantNotFoundException catch (notFound, st) {
       _log.warning('TenantNotFoundException lors de submit', notFound, st);
       state = const TenantFormState.error(
@@ -142,6 +148,21 @@ class TenantFormController extends StateNotifier<TenantFormState> {
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const TenantFormState.idle();
+
+  String _mapFunctionsError(FirebaseFunctionsException e) {
+    final code = e.code;
+    final msg = e.message ?? '';
+    if (msg.contains('tenant_has_active_leases')) {
+      return 'Ce locataire a des baux actifs — résiliez-les avant d\'archiver.';
+    }
+    if (code == 'permission-denied' || code == 'unauthenticated') {
+      return 'Action non autorisée.';
+    }
+    if (code == 'unavailable' || code == 'deadline-exceeded') {
+      return 'Service temporairement indisponible. Réessayez.';
+    }
+    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+  }
 }
 
 /// Provider autoDispose du contrôleur de formulaire locataire.

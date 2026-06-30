@@ -1,6 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/property_repository.dart';
 import '../domain/heating_type.dart';
@@ -144,9 +145,14 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
       _ref.invalidate(propertiesListProvider);
 
       state = PropertyFormState.success(property: result);
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de submit', e, st);
-      state = PropertyFormState.error(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning('FirebaseFunctionsException submit (code=${e.code})', e, st);
+      state = PropertyFormState.error(message: _mapFunctionsError(e));
+    } on FirebaseException catch (e, st) {
+      _log.warning('FirebaseException submit (code=${e.code})', e, st);
+      state = const PropertyFormState.error(
+        message: 'Erreur de sauvegarde. Vérifiez votre connexion et réessayez.',
+      );
     } on PropertyNotFoundException catch (notFound, st) {
       _log.warning('PropertyNotFoundException lors de submit', notFound, st);
       state = const PropertyFormState.error(
@@ -162,6 +168,26 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const PropertyFormState.idle();
+}
+
+/// Mappe les codes d'erreur des Callables Firebase vers des messages
+/// utilisateur en français (équivalent de l'ancien `mapPostgrestError`).
+String _mapFunctionsError(FirebaseFunctionsException e) {
+  // Les messages métier ("property_has_active_leases", etc.) sont
+  // renvoyés en `e.message`. Les codes "permission-denied",
+  // "failed-precondition" matchent les HttpsError côté CF.
+  final code = e.code;
+  final msg = e.message ?? '';
+  if (msg.contains('property_has_active_leases')) {
+    return 'Ce bien a des baux actifs — résiliez-les avant d\'archiver.';
+  }
+  if (code == 'permission-denied' || code == 'unauthenticated') {
+    return 'Action non autorisée.';
+  }
+  if (code == 'unavailable' || code == 'deadline-exceeded') {
+    return 'Service temporairement indisponible. Réessayez.';
+  }
+  return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
 }
 
 /// Provider autoDispose du contrôleur de formulaire bien.

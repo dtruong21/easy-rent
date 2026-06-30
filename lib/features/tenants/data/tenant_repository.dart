@@ -1,36 +1,24 @@
-// ignore_for_file: use_null_aware_elements
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
-import '../../../core/db.dart';
+import '../../../core/firestore_helpers.dart';
+import '../../../core/utils/french_date.dart';
 import '../domain/tenant.dart';
 import '../domain/tenant_list_item.dart';
-
-export '../../../core/utils/postgrest_error_mapper.dart' show mapPostgrestError;
 
 final _log = Logger('TenantRepository');
 
 /// Contrat public du repository locataires.
-///
-/// Les providers et widgets consomment cette interface, jamais l'implémentation
-/// directe — facilite les mocks dans les tests.
 abstract interface class TenantRepository {
-  /// Liste tous les locataires du landlord courant, triés `last_name ASC, first_name ASC`.
-  ///
-  /// Limité à 200 lignes (garde-fou — cible utilisateur : 1-50 locataires).
-  /// RLS filtre automatiquement par `auth.uid()` et `deleted_at IS NULL`.
+  /// Liste tous les locataires du landlord courant, triés `lastName ASC, firstName ASC`.
   Future<List<Tenant>> list();
 
   /// Retourne un locataire par son [id].
-  ///
-  /// Lance [TenantNotFoundException] si la RLS renvoie 0 ligne
-  /// (locataire archivé, non possédé, ou id inconnu).
   Future<Tenant> getById(String id);
 
-  /// Crée un nouveau locataire.
-  ///
-  /// Ne pas inclure `landlord_id` dans les champs — la RLS (`tenants_insert_own`)
-  /// le gère côté serveur. Ne pas inclure `created_at`, `updated_at`, `deleted_at`.
   Future<Tenant> create({
     required String firstName,
     required String lastName,
@@ -48,70 +36,70 @@ abstract interface class TenantRepository {
     String? guarantorPhone,
   });
 
-  /// Met à jour les champs métier d'un locataire existant.
-  ///
-  /// Seuls `first_name`, `last_name`, `email`, `phone` sont inclus dans le payload.
-  /// Le trigger `tr_02_set_updated_at` mettra à jour `updated_at` automatiquement.
-  /// Le trigger `tr_01_prevent_protected_columns_change` bloque toute modification
-  /// de `deleted_at` ou `created_at`.
   Future<Tenant> update(Tenant tenant);
 
-  /// Compte les baux actifs liés au locataire [tenantId].
-  ///
-  /// Utilisé avant archivage pour afficher un avertissement renforcé si > 0.
   Future<int> countActiveLeases(String tenantId);
 
-  /// Archive (soft-delete) le locataire [id] via la RPC `soft_delete_tenant`.
-  ///
-  /// L'UPDATE direct sur `deleted_at` est INTERDIT (trigger `tr_01_prevent_protected_columns_change`
-  /// lèverait ERRCODE 42501). On doit obligatoirement passer par cette RPC SECURITY DEFINER.
-  ///
-  /// Si le locataire n'appartient pas au user courant, la RPC ne fait rien (0 row affected)
-  /// — considéré comme succès silencieux.
   Future<void> archive(String id);
 
-  /// Liste les locataires avec jointure sur leurs baux actifs.
+  /// Liste les locataires enrichis avec leur bail actif.
   ///
-  /// Retourne des [TenantListItem] enrichis : bien occupé, période, loyer.
-  /// Utilisé pour la vue cards/table Phase 3.
-  ///
-  /// Filtrage client-side : `status='active' AND deleted_at IS NULL`.
-  /// Si plusieurs baux actifs, on prend le plus récent par `start_date`.
-  /// Limité à 200 locataires (même garde-fou que [list]).
+  /// 2 queries parallèles (tenants + leases actifs), jointure côté client.
+  /// Les leases ont déjà les denorms propertyName/Address.
   Future<List<TenantListItem>> listWithActiveLeases();
 
-  /// Retourne les baux liés au locataire [tenantId] (non-archivés).
-  ///
-  /// Retourne une liste de `Map<String, dynamic>` bruts —  le modèle `Lease` typé
-  /// sera introduit en FEAT-005. À refactorer alors.
-  ///
-  /// Ordre : status DESC (active d'abord), start_date DESC.
+  /// Liste les baux non-archivés d'un locataire (modèle Map brut — sera
+  /// remplacé par Lease typé en Phase 3c lors de la migration LeaseRepo).
   Future<List<Map<String, dynamic>>> listLeasesForTenant(String tenantId);
 }
 
-/// Implémentation Supabase du [TenantRepository].
-class SupabaseTenantRepository implements TenantRepository {
-  const SupabaseTenantRepository();
+class FirestoreTenantRepository implements TenantRepository {
+  FirestoreTenantRepository(this._firestore, this._auth, this._functions);
+
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+  final FirebaseFunctions _functions;
+
+  String get _uid {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Not authenticated — tenant operations require auth');
+    }
+    return uid;
+  }
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _firestore.collection('tenants');
 
   @override
   Future<List<Tenant>> list() async {
     _log.info('list()');
-    final rows = await Db.from('tenants')
-        .select()
-        .order('last_name', ascending: true)
-        .order('first_name', ascending: true)
-        .limit(200);
-    return rows.map((r) => Tenant.fromJson(r)).toList();
+    final qs = await _col
+        .where('landlordId', isEqualTo: _uid)
+        .where('deletedAt', isEqualTo: null)
+        .orderBy('lastName')
+        .limit(200)
+        .get();
+    return qs.docs
+        .map(
+          (d) =>
+              Tenant.fromJson(firestoreDocToSnakeJson(d.data(), docId: d.id)),
+        )
+        .toList();
   }
 
   @override
   Future<Tenant> getById(String id) async {
     _log.info('getById($id)');
-    final rows = await Db.from('tenants').select().eq('id', id).limit(1);
-    if (rows.isEmpty) {
+    final snap = await _col.doc(id).get();
+    final data = snap.data();
+    if (!snap.exists || data == null || data['deletedAt'] != null) {
       throw TenantNotFoundException(id);
     }
-    return Tenant.fromJson(rows.first);
+    if (data['landlordId'] != _uid) {
+      throw TenantNotFoundException(id);
+    }
+    return Tenant.fromJson(firestoreDocToSnakeJson(data, docId: snap.id));
   }
 
   @override
@@ -132,131 +120,166 @@ class SupabaseTenantRepository implements TenantRepository {
     String? guarantorPhone,
   }) async {
     _log.info('create()');
-    // Ne PAS inclure landlord_id : la RLS WITH CHECK le fixe à auth.uid().
-    // Ne PAS inclure created_at / updated_at / deleted_at : gérés par triggers.
-    // Ne pas logger email/firstName/lastName (PII).
-    // birth_date sérialisée en ISO YYYY-MM-DD.
+    final uid = _uid;
+    final docRef = _col.doc();
+    final now = FieldValue.serverTimestamp();
     final payload = <String, dynamic>{
-      'first_name': firstName.trim(),
-      'last_name': lastName.trim(),
+      'id': docRef.id,
+      'landlordId': uid,
+      'firstName': firstName.trim(),
+      'lastName': lastName.trim(),
       'email': email.trim(),
-      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
-      if (birthDate != null)
-        'birth_date':
-            '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
-      if (birthPlace != null && birthPlace.trim().isNotEmpty)
-        'birth_place': birthPlace.trim(),
-      if (nationality != null && nationality.trim().isNotEmpty)
-        'nationality': nationality.trim(),
-      if (profession != null && profession.trim().isNotEmpty)
-        'profession': profession.trim(),
-      if (employer != null && employer.trim().isNotEmpty)
-        'employer': employer.trim(),
-      if (monthlyIncomeCents != null)
-        'monthly_income_cents': monthlyIncomeCents,
-      if (previousAddress != null && previousAddress.trim().isNotEmpty)
-        'previous_address': previousAddress.trim(),
-      if (guarantorName != null && guarantorName.trim().isNotEmpty)
-        'guarantor_name': guarantorName.trim(),
-      if (guarantorEmail != null && guarantorEmail.trim().isNotEmpty)
-        'guarantor_email': guarantorEmail.trim(),
-      if (guarantorPhone != null && guarantorPhone.trim().isNotEmpty)
-        'guarantor_phone': guarantorPhone.trim(),
+      'phone': _orNull(phone),
+      'birthDate': birthDate == null
+          ? null
+          : Timestamp.fromDate(birthDate.toUtc()),
+      'birthPlace': _orNull(birthPlace),
+      'nationality': _orNull(nationality),
+      'profession': _orNull(profession),
+      'employer': _orNull(employer),
+      'monthlyIncomeCents': monthlyIncomeCents,
+      'previousAddress': _orNull(previousAddress),
+      'guarantorName': _orNull(guarantorName),
+      'guarantorEmail': _orNull(guarantorEmail),
+      'guarantorPhone': _orNull(guarantorPhone),
+      'createdAt': now,
+      'updatedAt': now,
+      'deletedAt': null,
+      'activeLeaseCount': 0,
     };
-    final rows = await Db.from('tenants').insert(payload).select();
-    return Tenant.fromJson(rows.first);
+    await docRef.set(payload);
+    final saved = await docRef.get();
+    return Tenant.fromJson(
+      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
+    );
   }
 
   @override
   Future<Tenant> update(Tenant tenant) async {
     _log.info('update(id=${tenant.id})');
-    // Seuls les champs métier — JAMAIS created_at, updated_at, deleted_at.
-    // Ne pas logger email/firstName/lastName (PII).
-    // birth_date sérialisée en ISO YYYY-MM-DD (null efface la valeur existante).
-    final bd = tenant.birthDate;
+    final birthDate = tenant.birthDate;
     final payload = <String, dynamic>{
-      'first_name': tenant.firstName.trim(),
-      'last_name': tenant.lastName.trim(),
+      'firstName': tenant.firstName.trim(),
+      'lastName': tenant.lastName.trim(),
       'email': tenant.email.trim(),
-      'phone': tenant.phone?.trim().isEmpty == true
+      'phone': _orNull(tenant.phone),
+      'birthDate': birthDate == null
           ? null
-          : tenant.phone?.trim(),
-      'birth_date': bd == null
-          ? null
-          : '${bd.year.toString().padLeft(4, '0')}-${bd.month.toString().padLeft(2, '0')}-${bd.day.toString().padLeft(2, '0')}',
-      'birth_place': tenant.birthPlace?.trim().isEmpty == true
-          ? null
-          : tenant.birthPlace?.trim(),
-      'nationality': tenant.nationality?.trim().isEmpty == true
-          ? null
-          : tenant.nationality?.trim(),
-      'profession': tenant.profession?.trim().isEmpty == true
-          ? null
-          : tenant.profession?.trim(),
-      'employer': tenant.employer?.trim().isEmpty == true
-          ? null
-          : tenant.employer?.trim(),
-      'monthly_income_cents': tenant.monthlyIncomeCents,
-      'previous_address': tenant.previousAddress?.trim().isEmpty == true
-          ? null
-          : tenant.previousAddress?.trim(),
-      'guarantor_name': tenant.guarantorName?.trim().isEmpty == true
-          ? null
-          : tenant.guarantorName?.trim(),
-      'guarantor_email': tenant.guarantorEmail?.trim().isEmpty == true
-          ? null
-          : tenant.guarantorEmail?.trim(),
-      'guarantor_phone': tenant.guarantorPhone?.trim().isEmpty == true
-          ? null
-          : tenant.guarantorPhone?.trim(),
+          : Timestamp.fromDate(birthDate.toUtc()),
+      'birthPlace': _orNull(tenant.birthPlace),
+      'nationality': _orNull(tenant.nationality),
+      'profession': _orNull(tenant.profession),
+      'employer': _orNull(tenant.employer),
+      'monthlyIncomeCents': tenant.monthlyIncomeCents,
+      'previousAddress': _orNull(tenant.previousAddress),
+      'guarantorName': _orNull(tenant.guarantorName),
+      'guarantorEmail': _orNull(tenant.guarantorEmail),
+      'guarantorPhone': _orNull(tenant.guarantorPhone),
+      'updatedAt': FieldValue.serverTimestamp(),
     };
-    final rows = await Db.from(
-      'tenants',
-    ).update(payload).eq('id', tenant.id).select();
-    if (rows.isEmpty) {
+    final ref = _col.doc(tenant.id);
+    await ref.update(payload);
+    final saved = await ref.get();
+    if (!saved.exists) {
       throw TenantNotFoundException(tenant.id);
     }
-    return Tenant.fromJson(rows.first);
+    return Tenant.fromJson(
+      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
+    );
   }
 
   @override
   Future<int> countActiveLeases(String tenantId) async {
     _log.info('countActiveLeases($tenantId)');
-    final rows = await Db.from('leases')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active')
-        .filter('deleted_at', 'is', null)
-        .limit(1);
-    // Retourne 0 ou 1 — seul "y en a-t-il au moins un" est consommé par l'UI.
-    return rows.length;
+    final snap = await _col.doc(tenantId).get();
+    if (!snap.exists) return 0;
+    final count = snap.data()?['activeLeaseCount'];
+    return count is int ? count : 0;
   }
 
   @override
   Future<void> archive(String id) async {
     _log.info('archive($id)');
-    // L'UPDATE direct sur deleted_at est bloqué par le trigger
-    // `tr_01_prevent_protected_columns_change_tenants` (ERRCODE 42501).
-    // On passe OBLIGATOIREMENT par la RPC SECURITY DEFINER.
-    await Db.rpc('soft_delete_tenant', params: {'p_id': id});
+    final callable = _functions.httpsCallable(
+      'softDeleteEntity',
+      options: HttpsCallableOptions(timeout: const Duration(seconds: 15)),
+    );
+    await callable.call(<String, dynamic>{'collection': 'tenants', 'id': id});
   }
 
   @override
   Future<List<TenantListItem>> listWithActiveLeases() async {
     _log.info('listWithActiveLeases()');
-    // Jointure sur la table leases via la FK leases_tenant_id_fkey.
-    // On récupère tous les baux (filtre status='active' appliqué côté client
-    // dans TenantListItem.fromJson pour éviter un filtrage PostgREST sur la
-    // jointure qui masquerait les locataires sans bail).
-    const leaseSelect =
-        'id, status, deleted_at, start_date, end_date, rent_amount_cents, '
-        'property:properties(id, name)';
-    final rows = await Db.from('tenants')
-        .select('*, leases:leases!leases_tenant_id_fkey($leaseSelect)')
-        .order('last_name', ascending: true)
-        .order('first_name', ascending: true)
-        .limit(200);
-    return rows.map((r) => TenantListItem.fromJson(r)).toList();
+    final uid = _uid;
+    final tenantsQs = _col
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isEqualTo: null)
+        .orderBy('lastName')
+        .limit(200)
+        .get();
+    final leasesQs = _firestore
+        .collection('leases')
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isEqualTo: null)
+        .where('status', isEqualTo: 'active')
+        .get();
+
+    final results = await Future.wait([tenantsQs, leasesQs]);
+    final tenantDocs = results[0].docs;
+    final leaseDocs = results[1].docs;
+
+    // Index par tenantId — si plusieurs actifs, garde celui au startDate le plus récent.
+    final activeByTenantId = <String, Map<String, dynamic>>{};
+    for (final lease in leaseDocs) {
+      final data = lease.data();
+      final tenantId = data['tenantId'] as String?;
+      if (tenantId == null) continue;
+      final existing = activeByTenantId[tenantId];
+      if (existing == null) {
+        activeByTenantId[tenantId] = {...data, 'id': lease.id};
+        continue;
+      }
+      final newStart =
+          (data['startDate'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+      final oldStart =
+          (existing['startDate'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+      if (newStart > oldStart) {
+        activeByTenantId[tenantId] = {...data, 'id': lease.id};
+      }
+    }
+
+    return tenantDocs.map((doc) {
+      final tenant = Tenant.fromJson(
+        firestoreDocToSnakeJson(doc.data(), docId: doc.id),
+      );
+      final lease = activeByTenantId[doc.id];
+      if (lease == null) return TenantListItem(tenant: tenant);
+
+      final startDate = lease['startDate'] as Timestamp?;
+      final endDate = lease['endDate'] as Timestamp?;
+      String? periodLabel;
+      if (startDate != null) {
+        final startStr = FrenchDate.formatIsoString(
+          startDate.toDate().toUtc().toIso8601String(),
+        );
+        if (endDate == null) {
+          periodLabel = 'Depuis $startStr';
+        } else {
+          final endStr = FrenchDate.formatIsoString(
+            endDate.toDate().toUtc().toIso8601String(),
+          );
+          periodLabel = '$startStr → $endStr';
+        }
+      }
+
+      return TenantListItem(
+        tenant: tenant,
+        activeLeaseId: lease['id'] as String?,
+        currentPropertyName: lease['propertyName'] as String?,
+        activeLeasePeriodLabel: periodLabel,
+        activeLeaseRentCents: lease['rentAmountCents'] as int?,
+      );
+    }).toList();
   }
 
   @override
@@ -264,32 +287,53 @@ class SupabaseTenantRepository implements TenantRepository {
     String tenantId,
   ) async {
     _log.info('listLeasesForTenant($tenantId)');
-    // SELECT minimal pour l'affichage — sera remplacé par le modèle Lease en FEAT-005.
-    // Tri par status ASCENDING : active (a) → archived (a) → terminated (t),
-    // donc les baux actifs apparaissent en premier, puis archivés, puis résiliés.
-    final rows = await Db.from('leases')
-        .select(
-          'id, property_id, start_date, end_date, status, rent_amount_cents',
-        )
-        .eq('tenant_id', tenantId)
-        .filter('deleted_at', 'is', null)
-        .order('status', ascending: true)
-        .order('start_date', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+    final qs = await _firestore
+        .collection('leases')
+        .where('landlordId', isEqualTo: _uid)
+        .where('tenantId', isEqualTo: tenantId)
+        .where('deletedAt', isEqualTo: null)
+        .orderBy('startDate', descending: true)
+        .get();
+
+    return qs.docs.map((d) {
+      final raw = d.data();
+      // Aligne le format avec ce que les consommateurs attendaient
+      // (snake_case + ISO strings).
+      return {
+        'id': d.id,
+        'property_id': raw['propertyId'],
+        'start_date': (raw['startDate'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+        'end_date': (raw['endDate'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+        'status': raw['status'],
+        'rent_amount_cents': raw['rentAmountCents'],
+      };
+    }).toList();
   }
 }
 
-/// Exception levée quand un locataire est introuvable (RLS ou archivage).
+String? _orNull(String? s) {
+  if (s == null) return null;
+  final t = s.trim();
+  return t.isEmpty ? null : t;
+}
+
 class TenantNotFoundException implements Exception {
   const TenantNotFoundException(this.id);
-
   final String id;
-
   @override
   String toString() => 'TenantNotFoundException: locataire $id introuvable';
 }
 
-/// Provider exposant le repository locataires.
 final tenantRepositoryProvider = Provider<TenantRepository>((ref) {
-  return const SupabaseTenantRepository();
+  return FirestoreTenantRepository(
+    FirebaseFirestore.instance,
+    FirebaseAuth.instance,
+    FirebaseFunctions.instanceFor(region: 'europe-west1'),
+  );
 });

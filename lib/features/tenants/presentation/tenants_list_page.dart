@@ -1,14 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
-import '../../../core/utils/postgrest_error_mapper.dart';
 import '../application/tenants_filter_provider.dart';
 import 'widgets/tenants_card_view.dart';
 import 'widgets/tenants_filter_bar.dart';
@@ -51,8 +50,8 @@ class TenantsListPage extends ConsumerWidget {
                   ? TenantsTableView.loading()
                   : TenantsCardView.loading(),
               error: (e, _) => _ErrorView(
-                message: e is PostgrestException
-                    ? mapPostgrestError(e)
+                message: e is FirebaseException
+                    ? 'Erreur Firestore : ${e.message ?? e.code}'
                     : 'Erreur de chargement',
                 onRetry: () => ref.invalidate(filteredTenantsProvider),
               ),

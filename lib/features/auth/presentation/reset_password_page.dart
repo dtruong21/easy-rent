@@ -121,4 +121,3 @@ class _InvalidLinkView extends StatelessWidget {
     );
   }
 }
-
