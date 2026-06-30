@@ -3,10 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-import '../../../core/utils/postgrest_error_mapper.dart';
-import '../../../core/utils/storage_error_mapper.dart';
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
 import '../domain/document_category.dart';
@@ -139,17 +138,13 @@ class UploadDocumentsController extends StateNotifier<UploadDocumentsState> {
           filename: f.filename,
           document: uploaded,
         );
-      } on PostgrestException catch (e, st) {
-        _log.warning('PostgrestException uploading ${f.filename}', e, st);
+      } on FirebaseException catch (e, st) {
+        _log.warning('FirebaseException uploading ${f.filename}', e, st);
         current[i] = UploadFileStatus.error(
           filename: f.filename,
-          message: mapPostgrestError(e),
-        );
-      } on StorageException catch (e, st) {
-        _log.warning('StorageException uploading ${f.filename}', e, st);
-        current[i] = UploadFileStatus.error(
-          filename: f.filename,
-          message: mapStorageError(e),
+          message: e.plugin == 'firebase_storage'
+              ? "Erreur lors de l'upload. Réessayez."
+              : 'Erreur. Vérifiez votre connexion et réessayez.',
         );
       } catch (e, st) {
         _log.severe('Erreur inattendue uploading ${f.filename}', e, st);

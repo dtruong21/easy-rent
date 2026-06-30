@@ -1,41 +1,27 @@
-/// Variables d'environnement injectées via `--dart-define-from-file`.
+/// Variables d'environnement EasyRent.
 ///
-/// Exemple :
-/// ```
-/// flutter run --dart-define-from-file=dart-defines.json
+/// Post FEAT-019 (migration Firebase) : on conserve uniquement
+/// `APP_ENV` pour distinguer prod / dev (le projet Firebase reste le même,
+/// la séparation se fait via `(default)` vs `dev` Firestore database).
+///
+/// Valeurs Firebase (apiKey, projectId, etc.) sont dans
+/// `lib/firebase_options.dart` (publiques par design).
+///
+/// Injecter via `--dart-define-from-file=dart-defines.json` :
+/// ```json
+/// { "APP_ENV": "prod" }
 /// ```
 class Env {
   const Env._();
 
-  static const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: '',
+  static const String appEnv = String.fromEnvironment(
+    'APP_ENV',
+    defaultValue: 'dev',
   );
 
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: '',
-  );
+  /// `true` si on tourne en environnement de prod.
+  static bool get isProd => appEnv == 'prod';
 
-  /// Schéma Postgres utilisé par le client : `public` (PROD) ou `dev` (DEV).
-  /// Voir docs/ENVIRONMENTS.md pour la stratégie multi-env.
-  static const String supabaseSchema = String.fromEnvironment(
-    'SUPABASE_SCHEMA',
-    defaultValue: 'public',
-  );
-
-  /// Préfixe utilisé pour les chemins Storage : `prod` ou `dev`.
-  /// Dérivé du schéma pour cohérence.
-  static String get storageEnvPrefix =>
-      supabaseSchema == 'public' ? 'prod' : 'dev';
-
-  /// Vrai si on tourne en environnement de prod.
-  static bool get isProd => supabaseSchema == 'public';
-
-  /// Vrai si on tourne en environnement de dev/staging.
+  /// `true` si on tourne en environnement de dev/staging.
   static bool get isDev => !isProd;
-
-  /// Vrai si toutes les variables critiques sont configurées.
-  static bool get isConfigured =>
-      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }

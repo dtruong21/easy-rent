@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/money_format.dart';
@@ -123,7 +123,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     }
 
     // Récupérer l'id du landlord courant pour l'INSERT.
-    final landlordId = Supabase.instance.client.auth.currentUser?.id;
+    final landlordId = FirebaseAuth.instance.currentUser?.uid;
     if (landlordId == null) {
       _log.warning('currentUser null lors de submit — session expirée ?');
       ScaffoldMessenger.of(context).showSnackBar(

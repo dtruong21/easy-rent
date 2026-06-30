@@ -10,10 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Supabase (à retirer après finalisation FEAT-019)
-  supabase_flutter: ^2.12.4
-
-  # Firebase (FEAT-019 — migration en cours)
+  # Firebase (FEAT-019 — migration achevée)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4

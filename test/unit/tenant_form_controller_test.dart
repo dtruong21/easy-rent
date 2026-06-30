@@ -7,7 +7,7 @@ import 'package:easyrent/features/tenants/domain/tenant_form_state.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository
@@ -244,32 +244,33 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Erreur PostgrestException
+    // Erreur FirebaseFunctionsException
     // -----------------------------------------------------------------------
-    test('PostgrestException → état error avec message traduit FR', () async {
-      final repo = _FakeRepo()
-        ..createError = PostgrestException(
-          code: '23514',
-          message: 'check_violation',
-          details: '',
-          hint: '',
-        );
-      final container = _makeContainer(repo);
-      addTearDown(container.dispose);
-
-      await container
-          .read(tenantFormControllerProvider.notifier)
-          .submit(
-            firstName: 'Jean',
-            lastName: 'Dupont',
-            email: 'jean@test.com',
+    test(
+      'FirebaseFunctionsException → état error avec message traduit FR',
+      () async {
+        final repo = _FakeRepo()
+          ..createError = FirebaseFunctionsException(
+            code: '23514',
+            message: 'check_violation',
           );
+        final container = _makeContainer(repo);
+        addTearDown(container.dispose);
 
-      final state = container.read(tenantFormControllerProvider);
-      expect(_isError(state), isTrue);
-      expect(_errorMessage(state), isNotNull);
-      expect(_errorMessage(state)!, isNotEmpty);
-    });
+        await container
+            .read(tenantFormControllerProvider.notifier)
+            .submit(
+              firstName: 'Jean',
+              lastName: 'Dupont',
+              email: 'jean@test.com',
+            );
+
+        final state = container.read(tenantFormControllerProvider);
+        expect(_isError(state), isTrue);
+        expect(_errorMessage(state), isNotNull);
+        expect(_errorMessage(state)!, isNotEmpty);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Erreur générique

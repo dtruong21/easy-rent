@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../core/utils/postgrest_error_mapper.dart';
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
 import '../domain/document_category.dart';
@@ -74,9 +73,11 @@ class UpdateDocumentCategoryController
 
       _log.info('category updated id=$docId category=${newCategory.sqlValue}');
       state = UpdateCategorySuccess(document: doc);
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de updateCategory', e, st);
-      state = UpdateCategoryError(message: mapPostgrestError(e));
+    } on FirebaseException catch (e, st) {
+      _log.warning('FirebaseException lors de updateCategory', e, st);
+      state = UpdateCategoryError(
+        message: "Erreur. Vérifiez votre connexion et réessayez.",
+      );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de updateCategory', e, st);
       state = const UpdateCategoryError(

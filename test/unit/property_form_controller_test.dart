@@ -9,7 +9,7 @@ import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository
@@ -292,32 +292,33 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Erreur PostgrestException
+    // Erreur FirebaseFunctionsException
     // -----------------------------------------------------------------------
-    test('PostgrestException → état error avec message traduit FR', () async {
-      final repo = _FakeRepo()
-        ..createError = PostgrestException(
-          code: '23514',
-          message: 'check_violation on surface',
-          details: '',
-          hint: '',
-        );
-      final container = _makeContainer(repo);
-      addTearDown(container.dispose);
-
-      await container
-          .read(propertyFormControllerProvider.notifier)
-          .submit(
-            name: 'Test',
-            address: 'Adresse',
-            type: PropertyType.appartement,
+    test(
+      'FirebaseFunctionsException → état error avec message traduit FR',
+      () async {
+        final repo = _FakeRepo()
+          ..createError = FirebaseFunctionsException(
+            code: '23514',
+            message: 'check_violation on surface',
           );
+        final container = _makeContainer(repo);
+        addTearDown(container.dispose);
 
-      final state = container.read(propertyFormControllerProvider);
-      expect(_isError(state), isTrue);
-      expect(_errorMessage(state), isNotNull);
-      expect(_errorMessage(state)!, isNotEmpty);
-    });
+        await container
+            .read(propertyFormControllerProvider.notifier)
+            .submit(
+              name: 'Test',
+              address: 'Adresse',
+              type: PropertyType.appartement,
+            );
+
+        final state = container.read(propertyFormControllerProvider);
+        expect(_isError(state), isTrue);
+        expect(_errorMessage(state), isNotNull);
+        expect(_errorMessage(state)!, isNotEmpty);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Erreur générique

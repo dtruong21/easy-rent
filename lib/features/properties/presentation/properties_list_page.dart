@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/ui/breakpoints.dart';
-import '../../../core/utils/postgrest_error_mapper.dart';
 import '../application/properties_filter_provider.dart';
 import 'widgets/properties_card_view.dart';
 import 'widgets/properties_filter_bar.dart';
@@ -51,8 +50,8 @@ class PropertiesListPage extends ConsumerWidget {
                   ? PropertiesTableView.loading()
                   : PropertiesCardView.loading(),
               error: (e, _) => _ErrorView(
-                message: e is PostgrestException
-                    ? mapPostgrestError(e)
+                message: e is FirebaseException
+                    ? ("Erreur. Vérifiez votre connexion et réessayez.")
                     : 'Erreur de chargement',
                 onRetry: () => ref.invalidate(filteredPropertiesProvider),
               ),

@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../core/utils/postgrest_error_mapper.dart';
 import '../data/documents_repository.dart';
 import 'documents_quota_provider.dart';
 import 'lease_documents_provider.dart';
@@ -72,9 +71,11 @@ class DeleteDocumentController extends StateNotifier<DeleteDocumentState> {
 
       _log.info('document deleted id=$docId hardDeleted=${result.hardDeleted}');
       state = DeleteSuccess(hardDeleted: result.hardDeleted);
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors du soft-delete', e, st);
-      state = DeleteError(message: mapPostgrestError(e));
+    } on FirebaseException catch (e, st) {
+      _log.warning('FirebaseException lors du soft-delete', e, st);
+      state = DeleteError(
+        message: "Erreur. Vérifiez votre connexion et réessayez.",
+      );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors du soft-delete', e, st);
       state = const DeleteError(message: 'Suppression impossible. Réessayez.');
