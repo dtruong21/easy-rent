@@ -2,17 +2,201 @@ rules_version = '2';
 
 // EasyRent — Firestore security rules.
 //
-// FEAT-019 Phase 0 : DENY ALL par défaut. Les rules par collection
-// (landlords, properties, tenants, leases, payments, receipts) seront
-// ajoutées en Phase 1 en suivant le principe "owner-only" :
-//   allow read, write: if request.auth != null
-//                      && request.auth.uid == resource.data.landlord_id;
+// FEAT-019 — Migration Supabase RLS → Firestore Security Rules.
+// Référence : docs/plans/FEAT-019-firestore-rules.md
 //
-// Référence : docs/SECURITY.md + docs/state/SCHEMA.md.
+// Stratégie 3 couches :
+//   1. Rules (ce fichier)         — ownership self + immutabilité de base + soft-delete filter
+//   2. Callable Cloud Functions   — toutes les mutations cross-entity (lease, payment, receipt,
+//                                   document), soft-delete (qui touche deletedAt), generate/void
+//                                   receipt, mark sent.
+//   3. Triggers Firestore         — setUpdatedAt, recomputeReceiptStale, denorm propagation.
+//
+// Convention : les rules bloquent tout par défaut. Chaque collection liste explicitement
+// les opérations autorisées. Quand `if false`, la seule voie d'accès est une Callable
+// Cloud Function avec Admin SDK (qui bypasse les rules).
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default: deny everything until per-collection rules are written.
+
+    // ====================================================================
+    // Helpers
+    // ====================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(landlordId) {
+      return isSignedIn() && request.auth.uid == landlordId;
+    }
+
+    function isActive(rsc) {
+      return rsc.data.deletedAt == null;
+    }
+
+    // Garde-fou commun aux update : landlordId, createdAt, deletedAt jamais touchés
+    // côté client (les soft-delete et transferts éventuels passent par Callable).
+    function preservesImmutables(rsc) {
+      return request.resource.data.landlordId == rsc.data.landlordId
+        && request.resource.data.createdAt == rsc.data.createdAt
+        && request.resource.data.deletedAt == rsc.data.deletedAt;
+    }
+
+    // ====================================================================
+    // landlords/{uid}   — docId = Firebase Auth UID
+    // ====================================================================
+    match /landlords/{uid} {
+      allow get: if isOwner(uid) && isActive(resource);
+      allow list: if false; // chaque user ne voit que son propre doc
+
+      // CREATE via Cloud Function `handleNewUser` (beforeUserCreated) uniquement.
+      allow create: if false;
+
+      // UPDATE : profil propre. RGPD consent versionné et identifiants immuables.
+      allow update: if isOwner(uid)
+        && isActive(resource)
+        && request.resource.data.id == resource.data.id
+        && preservesImmutables(resource)
+        && request.resource.data.rgpdConsentAt == resource.data.rgpdConsentAt
+        && request.resource.data.rgpdConsentVersion == resource.data.rgpdConsentVersion;
+
+      // Soft-delete via Callable `softDeleteLandlord`.
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // properties/{id}   — CRUD direct (pas de cross-entity)
+    // ====================================================================
+    match /properties/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn(); // filtré par .where('landlordId', '==', uid)
+
+      allow create: if isSignedIn()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.deletedAt == null
+        && request.resource.data.id == id
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.address is string
+        && request.resource.data.type in ['appartement', 'maison', 'studio', 'autre']
+        // activeLeaseCount maintenu par CF — doit valoir 0 à la création
+        && request.resource.data.activeLeaseCount == 0;
+
+      allow update: if isOwner(resource.data.landlordId)
+        && isActive(resource)
+        && preservesImmutables(resource)
+        // activeLeaseCount n'est jamais touché par le client (denorm CF only).
+        && request.resource.data.activeLeaseCount == resource.data.activeLeaseCount;
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // tenants/{id}   — CRUD direct
+    // ====================================================================
+    match /tenants/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.deletedAt == null
+        && request.resource.data.id == id
+        && request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && request.resource.data.lastName is string
+        && request.resource.data.lastName.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.activeLeaseCount == 0;
+
+      allow update: if isOwner(resource.data.landlordId)
+        && isActive(resource)
+        && preservesImmutables(resource)
+        && request.resource.data.activeLeaseCount == resource.data.activeLeaseCount;
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // leases/{id}   — CROSS-ENTITY → CF exclusive
+    //
+    // Création/modification doivent valider que propertyId et tenantId
+    // appartiennent au même landlord (auth.uid). Impossible dans les rules
+    // (2× get() coûteux + impossible de checker que les denorms sont les bonnes).
+    // ====================================================================
+    match /leases/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      // Tout passe par Callable `createLease`, `updateLease`, `softDeleteLease`.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // payments/{id}   — CROSS-ENTITY (lease.landlordId) → CF exclusive
+    // ====================================================================
+    match /payments/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // receipts/{id}   — IMMUABLES (loi 6 juillet 1989) → CF exclusive
+    //
+    // Pas de soft-delete (rétention légale 5 ans). Pas de filtrage isActive
+    // en read : les receipts voided restent lisibles pour audit.
+    // ====================================================================
+    match /receipts/{id} {
+      allow get: if isOwner(resource.data.landlordId);
+      allow list: if isSignedIn();
+
+      // generateReceipt / voidReceipt / markReceiptAsSent en Callable.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // documents/{id}   — CF exclusive (legalHold dérivé de category)
+    // ====================================================================
+    match /documents/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      // createDocument calcule legalHold côté serveur depuis category.
+      // softDeleteDocument refuse si legalHold == true.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // investment_scenarios/{id}   — CRUD direct (pas de cross-entity)
+    // ====================================================================
+    match /investment_scenarios/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.deletedAt == null
+        && request.resource.data.id == id
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.schemaVersion is int
+        && request.resource.data.schemaVersion > 0
+        && request.resource.data.scenarioJson is map;
+
+      allow update: if isOwner(resource.data.landlordId)
+        && isActive(resource)
+        && preservesImmutables(resource);
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // Fallback — tout le reste bloqué
+    // ====================================================================
     match /{document=**} {
       allow read, write: if false;
     }
