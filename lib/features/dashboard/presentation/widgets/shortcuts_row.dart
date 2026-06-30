@@ -36,6 +36,12 @@ class ShortcutsRow extends StatelessWidget {
           label: 'Baux',
           route: '/leases',
         ),
+        _ShortcutCard(
+          key: Key('shortcut_simulator'),
+          icon: Icons.calculate_outlined,
+          label: 'Simulateur',
+          route: '/simulator',
+        ),
       ],
     );
   }
