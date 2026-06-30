@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../data/profile_repository.dart';
 import '../domain/profile_form_state.dart';
@@ -39,9 +39,11 @@ class ProfileFormController extends StateNotifier<ProfileFormState> {
       _ref.invalidate(landlordProfileProvider);
 
       state = const ProfileFormState.success();
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de update profil', e, st);
-      state = ProfileFormState.error(message: mapPostgrestError(e));
+    } on FirebaseException catch (e, st) {
+      _log.warning('FirebaseException lors de update profil', e, st);
+      state = const ProfileFormState.error(
+        message: 'Erreur lors de la sauvegarde du profil. Réessayez.',
+      );
     } on ProfileNotFoundException catch (e, st) {
       _log.warning('ProfileNotFoundException lors de update', e, st);
       state = const ProfileFormState.error(

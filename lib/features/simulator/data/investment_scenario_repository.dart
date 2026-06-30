@@ -1,30 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
-import '../../../core/db.dart';
+import '../../../core/firestore_helpers.dart';
 import '../domain/investment_scenario.dart';
 
 final _log = Logger('InvestmentScenarioRepository');
 
-/// Contrat public du repository scénarios d'investissement (FEAT-018).
-///
-/// Les providers et widgets consomment cette interface, jamais l'implémentation
-/// directe — facilite les mocks dans les tests.
 abstract interface class InvestmentScenarioRepository {
-  /// Liste les scénarios du landlord courant, triés `created_at DESC`.
-  ///
-  /// Exclut les soft-deleted (`deleted_at IS NULL`).
-  /// Limité à 200 lignes (garde-fou).
   Future<List<InvestmentScenario>> list();
 
-  /// Retourne un scénario par son [id].
-  ///
-  /// Lance [InvestmentScenarioNotFoundException] si la RLS renvoie 0 ligne.
   Future<InvestmentScenario> getById(String id);
 
-  /// Crée un nouveau scénario.
-  ///
-  /// Ne pas inclure `landlord_id` : DEFAULT auth.uid() géré côté serveur.
   Future<InvestmentScenario> create({
     required String name,
     required int purchasePriceCents,
@@ -42,39 +31,66 @@ abstract interface class InvestmentScenarioRepository {
     String? notes,
   });
 
-  /// Met à jour tous les champs métier d'un scénario existant.
   Future<InvestmentScenario> update(InvestmentScenario scenario);
 
-  /// Soft-delete : positionne `deleted_at = now()` sur le scénario [id].
   Future<void> softDelete(String id);
 }
 
-/// Implémentation Supabase du [InvestmentScenarioRepository].
-class SupabaseInvestmentScenarioRepository
+class FirestoreInvestmentScenarioRepository
     implements InvestmentScenarioRepository {
-  const SupabaseInvestmentScenarioRepository();
+  FirestoreInvestmentScenarioRepository(
+    this._firestore,
+    this._auth,
+    this._functions,
+  );
+
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+  final FirebaseFunctions _functions;
+
+  String get _uid {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Not authenticated — scenario operations require auth');
+    }
+    return uid;
+  }
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _firestore.collection('investment_scenarios');
 
   @override
   Future<List<InvestmentScenario>> list() async {
     _log.info('list()');
-    final rows = await Db.from('investment_scenarios')
-        .select()
-        .filter('deleted_at', 'is', null)
-        .order('created_at', ascending: false)
-        .limit(200);
-    return rows.map((r) => InvestmentScenario.fromJson(r)).toList();
+    final qs = await _col
+        .where('landlordId', isEqualTo: _uid)
+        .where('deletedAt', isEqualTo: null)
+        .orderBy('updatedAt', descending: true)
+        .limit(200)
+        .get();
+    return qs.docs
+        .map(
+          (d) => InvestmentScenario.fromJson(
+            firestoreDocToSnakeJson(d.data(), docId: d.id),
+          ),
+        )
+        .toList();
   }
 
   @override
   Future<InvestmentScenario> getById(String id) async {
     _log.info('getById($id)');
-    final rows = await Db.from(
-      'investment_scenarios',
-    ).select().eq('id', id).filter('deleted_at', 'is', null).limit(1);
-    if (rows.isEmpty) {
+    final snap = await _col.doc(id).get();
+    final data = snap.data();
+    if (!snap.exists || data == null || data['deletedAt'] != null) {
       throw InvestmentScenarioNotFoundException(id);
     }
-    return InvestmentScenario.fromJson(rows.first);
+    if (data['landlordId'] != _uid) {
+      throw InvestmentScenarioNotFoundException(id);
+    }
+    return InvestmentScenario.fromJson(
+      firestoreDocToSnakeJson(data, docId: snap.id),
+    );
   }
 
   @override
@@ -95,24 +111,58 @@ class SupabaseInvestmentScenarioRepository
     String? notes,
   }) async {
     _log.info('create(name=$name)');
-    final payload = <String, dynamic>{
-      'name': name.trim(),
-      'purchase_price_cents': purchasePriceCents,
-      'notary_fees_cents': notaryFeesCents,
-      'works_initial_cents': worksInitialCents,
-      'is_new_property': isNewProperty,
-      'down_payment_cents': downPaymentCents,
-      'loan_principal_cents': loanPrincipalCents,
-      'loan_rate_bps': loanRateBps,
-      'loan_duration_months': loanDurationMonths,
-      'monthly_rent_hc_cents': monthlyRentHcCents,
-      'property_tax_annual_cents': propertyTaxAnnualCents,
-      'insurance_pno_annual_cents': insurancePnoAnnualCents,
-      'condo_fees_non_recoverable_cents': condoFeesNonRecoverableCents,
-      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    final uid = _uid;
+    final docRef = _col.doc();
+    final now = FieldValue.serverTimestamp();
+
+    // scenario_json est un map JSON arbitraire — on encode tous les
+    // paramètres financiers dedans pour rester aligné avec le schéma
+    // Firestore (cf. docs/plans/FEAT-019-firestore-data-model.md §1.8).
+    final scenarioJson = <String, dynamic>{
+      'purchasePriceCents': purchasePriceCents,
+      'notaryFeesCents': notaryFeesCents,
+      'worksInitialCents': worksInitialCents,
+      'isNewProperty': isNewProperty,
+      'downPaymentCents': downPaymentCents,
+      'loanPrincipalCents': loanPrincipalCents,
+      'loanRateBps': loanRateBps,
+      'loanDurationMonths': loanDurationMonths,
+      'monthlyRentHcCents': monthlyRentHcCents,
+      'propertyTaxAnnualCents': propertyTaxAnnualCents,
+      'insurancePnoAnnualCents': insurancePnoAnnualCents,
+      'condoFeesNonRecoverableCents': condoFeesNonRecoverableCents,
     };
-    final rows = await Db.from('investment_scenarios').insert(payload).select();
-    return InvestmentScenario.fromJson(rows.first);
+
+    final payload = <String, dynamic>{
+      'id': docRef.id,
+      'landlordId': uid,
+      'name': name.trim(),
+      'scenarioJson': scenarioJson,
+      'schemaVersion': 1,
+      'notes': notes?.trim(),
+      // Champs scénario expandés en root (compat freezed Model qui les
+      // attend en top-level snake_case).
+      'purchasePriceCents': purchasePriceCents,
+      'notaryFeesCents': notaryFeesCents,
+      'worksInitialCents': worksInitialCents,
+      'isNewProperty': isNewProperty,
+      'downPaymentCents': downPaymentCents,
+      'loanPrincipalCents': loanPrincipalCents,
+      'loanRateBps': loanRateBps,
+      'loanDurationMonths': loanDurationMonths,
+      'monthlyRentHcCents': monthlyRentHcCents,
+      'propertyTaxAnnualCents': propertyTaxAnnualCents,
+      'insurancePnoAnnualCents': insurancePnoAnnualCents,
+      'condoFeesNonRecoverableCents': condoFeesNonRecoverableCents,
+      'createdAt': now,
+      'updatedAt': now,
+      'deletedAt': null,
+    };
+    await docRef.set(payload);
+    final saved = await docRef.get();
+    return InvestmentScenario.fromJson(
+      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
+    );
   }
 
   @override
@@ -120,65 +170,79 @@ class SupabaseInvestmentScenarioRepository
     _log.info('update(id=${scenario.id})');
     final payload = <String, dynamic>{
       'name': scenario.name.trim(),
-      'purchase_price_cents': scenario.purchasePriceCents,
-      'notary_fees_cents': scenario.notaryFeesCents,
-      'works_initial_cents': scenario.worksInitialCents,
-      'is_new_property': scenario.isNewProperty,
-      'down_payment_cents': scenario.downPaymentCents,
-      'loan_principal_cents': scenario.loanPrincipalCents,
-      'loan_rate_bps': scenario.loanRateBps,
-      'loan_duration_months': scenario.loanDurationMonths,
-      'monthly_rent_hc_cents': scenario.monthlyRentHcCents,
-      'property_tax_annual_cents': scenario.propertyTaxAnnualCents,
-      'insurance_pno_annual_cents': scenario.insurancePnoAnnualCents,
-      'condo_fees_non_recoverable_cents': scenario.condoFeesNonRecoverableCents,
       'notes': scenario.notes,
+      'purchasePriceCents': scenario.purchasePriceCents,
+      'notaryFeesCents': scenario.notaryFeesCents,
+      'worksInitialCents': scenario.worksInitialCents,
+      'isNewProperty': scenario.isNewProperty,
+      'downPaymentCents': scenario.downPaymentCents,
+      'loanPrincipalCents': scenario.loanPrincipalCents,
+      'loanRateBps': scenario.loanRateBps,
+      'loanDurationMonths': scenario.loanDurationMonths,
+      'monthlyRentHcCents': scenario.monthlyRentHcCents,
+      'propertyTaxAnnualCents': scenario.propertyTaxAnnualCents,
+      'insurancePnoAnnualCents': scenario.insurancePnoAnnualCents,
+      'condoFeesNonRecoverableCents': scenario.condoFeesNonRecoverableCents,
+      'scenarioJson': <String, dynamic>{
+        'purchasePriceCents': scenario.purchasePriceCents,
+        'notaryFeesCents': scenario.notaryFeesCents,
+        'worksInitialCents': scenario.worksInitialCents,
+        'isNewProperty': scenario.isNewProperty,
+        'downPaymentCents': scenario.downPaymentCents,
+        'loanPrincipalCents': scenario.loanPrincipalCents,
+        'loanRateBps': scenario.loanRateBps,
+        'loanDurationMonths': scenario.loanDurationMonths,
+        'monthlyRentHcCents': scenario.monthlyRentHcCents,
+        'propertyTaxAnnualCents': scenario.propertyTaxAnnualCents,
+        'insurancePnoAnnualCents': scenario.insurancePnoAnnualCents,
+        'condoFeesNonRecoverableCents': scenario.condoFeesNonRecoverableCents,
+      },
+      'updatedAt': FieldValue.serverTimestamp(),
     };
-    final rows = await Db.from(
-      'investment_scenarios',
-    ).update(payload).eq('id', scenario.id).select();
-    if (rows.isEmpty) {
+    final ref = _col.doc(scenario.id);
+    await ref.update(payload);
+    final saved = await ref.get();
+    if (!saved.exists) {
       throw InvestmentScenarioNotFoundException(scenario.id);
     }
-    return InvestmentScenario.fromJson(rows.first);
+    return InvestmentScenario.fromJson(
+      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
+    );
   }
 
   @override
   Future<void> softDelete(String id) async {
     _log.info('softDelete($id)');
-    await Db.from(
-      'investment_scenarios',
-    ).update({'deleted_at': DateTime.now().toIso8601String()}).eq('id', id);
+    await _functions.httpsCallable('softDeleteEntity').call(<String, dynamic>{
+      'collection': 'investment_scenarios',
+      'id': id,
+    });
   }
 }
 
-/// Exception levée quand un scénario est introuvable (RLS ou soft-deleted).
 class InvestmentScenarioNotFoundException implements Exception {
   const InvestmentScenarioNotFoundException(this.id);
-
   final String id;
-
   @override
   String toString() =>
       'InvestmentScenarioNotFoundException: scénario $id introuvable';
 }
 
-/// Provider exposant le repository scénarios d'investissement.
 final investmentScenarioRepositoryProvider =
     Provider<InvestmentScenarioRepository>(
-      (ref) => const SupabaseInvestmentScenarioRepository(),
+      (ref) => FirestoreInvestmentScenarioRepository(
+        FirebaseFirestore.instance,
+        FirebaseAuth.instance,
+        FirebaseFunctions.instanceFor(region: 'europe-west1'),
+      ),
     );
 
-/// AsyncNotifier gérant la liste des scénarios du landlord courant.
-///
-/// Expose `investmentScenariosListProvider` via [AsyncNotifierProvider].
 class InvestmentScenariosListNotifier
     extends AsyncNotifier<List<InvestmentScenario>> {
   @override
   Future<List<InvestmentScenario>> build() =>
       ref.read(investmentScenarioRepositoryProvider).list();
 
-  /// Recharge la liste depuis Supabase.
   Future<void> reload() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
@@ -186,14 +250,12 @@ class InvestmentScenariosListNotifier
     );
   }
 
-  /// Supprime un scénario et recharge la liste.
   Future<void> delete(String id) async {
     await ref.read(investmentScenarioRepositoryProvider).softDelete(id);
     await reload();
   }
 }
 
-/// Provider de la liste des scénarios d'investissement.
 final investmentScenariosListProvider =
     AsyncNotifierProvider<
       InvestmentScenariosListNotifier,
