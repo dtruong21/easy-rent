@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// EasyRent — Firebase Storage rules.
+//
+// 2 dossiers gérés :
+//   - receipts/{landlordId}/{receiptId}.pdf  → écriture CF-only (generateReceipt)
+//                                              lecture via signed URL (callable)
+//   - documents/{landlordId}/...             → upload direct par le propriétaire
+//                                              (les Storage Rules contrôlent)
+//                                              lecture via signed URL (callable)
+//
+// Toutes les lectures front passent par signed URL court-terme (5 min) →
+// pas de besoin d'`allow read` pour les clients normaux. Les CF (Admin SDK)
+// bypassent les rules.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================================
+    // receipts/{landlordId}/{receiptId}.pdf
+    // ============================================================
+    match /receipts/{landlordId}/{file=**} {
+      // Le client lit via signed URL → pas de read direct nécessaire.
+      // L'écriture passe exclusivement par la Cloud Function (Admin SDK).
+      allow read, write: if false;
+    }
+
+    // ============================================================
+    // documents/{landlordId}/...
+    // ============================================================
+    match /documents/{landlordId}/{file=**} {
+      allow read: if false; // download via signed URL côté callable
+      allow create: if request.auth != null
+        && request.auth.uid == landlordId
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches(
+          'application/pdf|image/jpeg|image/png|image/webp',
+        );
+      // Pas de update/delete client : la suppression passe par
+      // softDeleteEntity côté Firestore ; le fichier Storage peut
+      // être nettoyé via lifecycle rule plus tard.
+      allow update, delete: if false;
+    }
+
+    // Tout le reste interdit.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

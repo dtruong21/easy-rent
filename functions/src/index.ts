@@ -47,7 +47,13 @@ export {
   createPayment,
   updatePayment,
 } from "./callable/lease_payment";
-
-// Placeholder Phase 2 :
-// export {generateReceipt, voidReceipt, markReceiptAsSent} from "./callable/receipts";
-// export {createDocument} from "./callable/documents";
+export {
+  generateReceipt,
+  getReceiptPdfUrl,
+  voidReceipt,
+  markReceiptAsSent,
+} from "./callable/receipts";
+export {
+  createDocument,
+  getDocumentDownloadUrl,
+} from "./callable/documents";
