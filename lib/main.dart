@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
@@ -7,6 +8,7 @@ import 'core/config/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +49,11 @@ Future<void> main() async {
     runApp(const _EnvErrorApp());
     return;
   }
+
+  // Initialise Firebase (FEAT-019). Tourne en parallèle de Supabase pendant
+  // toute la phase de migration — le data layer continue d'utiliser Supabase
+  // jusqu'à ce que chaque feature soit migrée vers Firestore.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await Supabase.initialize(
     url: Env.supabaseUrl,

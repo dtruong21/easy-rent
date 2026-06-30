@@ -48,8 +48,11 @@ for file in $FILES; do
   esac
 
   # Skip les fichiers de doc qui peuvent légitimement mentionner les patterns
+  # + lib/firebase_options.dart : la Firebase Web apiKey (AIza…) est PUBLIQUE
+  #   par design (équivalent du anon key Supabase) ; sécurité via Rules + App Check.
   case "$file" in
     docs/SECURITY.md|scripts/check-secrets.sh|scripts/install-hooks.sh|*.example.*|*.md.tmpl) continue ;;
+    lib/firebase_options.dart) continue ;;
   esac
 
   for pattern in "${PATTERNS[@]}"; do
