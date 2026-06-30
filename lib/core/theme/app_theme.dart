@@ -33,6 +33,81 @@ class AppTheme {
   static const Color oliveSoft = Color(0xFFB5B89D);
   static const Color oxblood = Color(0xFF9A3B2F);
 
+  // --- Extensions Baillan (brand polish, 30 juin 2026) ----------------------
+  //
+  // Ces 8 jetons étendent la palette papier+encre+olive pour couvrir les
+  // intentions sémantiques manquantes (états métier, interaction, comptabilité,
+  // archive). Chacun a été choisi pour s'harmoniser avec l'encre chaude et
+  // l'olive sourd — aucun vert fluo, aucun orange Slack.
+  //
+  // Pour le mapping vers les usages métier (Acquitté / Échu / Consigné /
+  // Archivé), voir les alias sémantiques plus bas, et la table d'usage dans
+  // docs/state/DESIGN_TOKENS.md.
+
+  /// Vert wagon de sceau notarial — état "Acquitté" (quittance émise et payée).
+  /// Distinct chromatiquement du primary olive (plus froid, plus profond) pour
+  /// éviter la confusion action/état. Contraste 7.92:1 sur paper (AAA).
+  static const Color sealGreen = Color(0xFF2E5339);
+
+  /// Ocre tampon administratif — état "Échu imminent" (paiement dû <7j) ou
+  /// brouillon non signé. Évoque l'encre brunie d'un timbre fiscal. Contraste
+  /// 5.92:1 sur paper (AA).
+  static const Color ochre = Color(0xFF7E5612);
+
+  /// Encre d'encrier — état "Consigné" / mention légale (loi 1989, RGPD).
+  /// Seule entorse au "pas de bleu" : bleu d'encrier presque noir, pas un bleu
+  /// SaaS. Contraste 10.86:1 sur paper (AAA).
+  static const Color indigoInk = Color(0xFF2A3656);
+
+  /// Papier vergé saturé — surface "Archivé" / zone documents conservés.
+  /// Texture distincte de paperDeep sans introduire une nouvelle teinte.
+  /// Non utilisable pour texte (le texte ink reste à >13:1).
+  static const Color kraft = Color(0xFFE4D9BD);
+
+  /// Pierre — état "Disabled" / placeholder de champ vide. Délibérément sous
+  /// le seuil WCAG (2.28:1 sur paper) — c'est exactement le bon ratio pour
+  /// un disabled. Séparé d'inkMuted, qui reste un texte secondaire AA lisible.
+  static const Color stone = Color(0xFFA8A39A);
+
+  /// Olive profond — hover / pressed du primary olive. À utiliser à la place
+  /// des opacity overlays Material 3 (qui produisent un olive grisé pâteux).
+  /// Contraste 10.07:1 sur paper.
+  static const Color oliveDeep = Color(0xFF34401F);
+
+  /// Bordure renforcée — card sélectionnée / focus ring outline. rule
+  /// (#E8E2D3, 1.18:1) est invisible sur paper ; ruleStrong (~3:1) distingue
+  /// une card focus sans recourir à l'olive (réservé au primary).
+  static const Color ruleStrong = Color(0xFFC9C1AB);
+
+  /// Brun encre — montants débiteurs en comptabilité (charges, sorties).
+  /// Sépare sémantiquement "charge mensuelle" (neutre comptable) de "erreur
+  /// système" (oxblood). Évite de dramatiser une opération normale. Contraste
+  /// >8.5:1 sur paper.
+  static const Color amountNegative = Color(0xFF6E3A1F);
+
+  // --- Alias sémantiques métier (vocabulaire Baillan) -----------------------
+  //
+  // Pointent vers les jetons techniques ci-dessus, mais nommés depuis le
+  // vocabulaire du bailliage. Un dev qui code "paiement confirmé" doit
+  // écrire AppTheme.acquitte — pas sealGreen, pas Colors.green. Ces alias
+  // sont la VOIX éditoriale du design system ("Acquitté", "Échu",
+  // "Bailliage", "Tenir registre") portée jusqu'au code.
+
+  /// État "Acquitté" — quittance émise, payée, signée. Alias de [sealGreen].
+  static const Color acquitte = sealGreen;
+
+  /// État "Échu" — échéance imminente (<7j) ou dépassée non encore régularisée.
+  /// Alias de [ochre]. Distinct de [oxblood] qui reste pour "annulé / retard >30j".
+  static const Color echu = ochre;
+
+  /// État "Consigné" — mention légale, document archivé neutre, notification
+  /// système non urgente. Alias de [indigoInk].
+  static const Color consigne = indigoInk;
+
+  /// Surface "Archivé" — bloc historique, pièces conservées, anciennes
+  /// quittances. Alias de [kraft].
+  static const Color archive = kraft;
+
   // --- Typographie ----------------------------------------------------------
   /// Sérif éditorial pour la marque, les montants, les titres de quittance.
   /// Cochin est natif sur macOS/iOS, Palatino l'est sur Windows, et le

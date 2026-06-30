@@ -1,5 +1,5 @@
 name: easyrent
-description: "Baillan. — Votre bailliage, tenu au jour le jour. (FEAT-020 : rebrand EasyRent → Baillan ; package name interne conservé pour éviter de casser ~200 imports `package:easyrent/...`)"
+description: "Baillan. — Tenir registre. En cas de doute, sortez le registre. (FEAT-020 : rebrand EasyRent → Baillan ; package name interne conservé pour éviter de casser ~200 imports `package:easyrent/...`)"
 publish_to: 'none'
 version: 0.1.0+1
 

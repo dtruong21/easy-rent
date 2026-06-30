@@ -19,6 +19,7 @@
 | Dépendances (pubspec, Deno imports, CLI tools, hosting CSP) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
 | Edge Functions déployées et planifiées | [`FUNCTIONS.md`](FUNCTIONS.md) |
 | Material 3 theme config + dark mode fixes | [`THEME.md`](THEME.md) |
+| Design tokens (couleurs sémantiques métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) |
 
 ## Comment l'utiliser
 
