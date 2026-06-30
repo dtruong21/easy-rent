@@ -11,6 +11,7 @@
 /// - reset → idle
 library;
 
+import 'dart:typed_data';
 import 'package:easyrent/features/receipts/application/share_receipt_controller.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/data/web_share_service_bridge.dart';
@@ -64,6 +65,9 @@ class _FakeRepo implements ReceiptsRepository {
 
   @override
   Future<void> voidReceipt(String id, String reason) async {}
+
+  @override
+  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
 }
 
 // ---------------------------------------------------------------------------

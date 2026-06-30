@@ -1,33 +1,19 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/utils/edge_function_error_mapper.dart';
 import '../data/receipts_repository.dart';
 import '../domain/receipt_generation_state.dart';
 import 'lease_receipts_provider.dart';
 
 final _log = Logger('GenerateReceiptController');
 
-/// Contrôle le flow de génération d'une quittance.
-///
-/// Transitions d'état :
-/// idle → submitting → success(result) | error(msg) | profileIncomplete(missing)
-///
-/// Sur succès : invalide [leaseReceiptsProvider(leaseId)] pour rafraîchir la
-/// liste des quittances.
-///
-/// Utilise [autoDispose] pour réinitialiser l'état entre deux usages du bouton.
 class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
   GenerateReceiptController(this._ref)
     : super(const ReceiptGenerationState.idle());
 
   final Ref _ref;
 
-  /// Génère une quittance depuis un paiement individuel.
-  ///
-  /// [paymentId] : identifiant du paiement source.
-  /// [leaseId] : bail parent — requis pour l'invalidation du cache.
   Future<void> submitFromPayment({
     required String paymentId,
     required String leaseId,
@@ -35,10 +21,6 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
     await _generate(paymentIds: [paymentId], leaseId: leaseId);
   }
 
-  /// Génère une quittance depuis une période (mode lease+période).
-  ///
-  /// [leaseId] : bail concerné.
-  /// [periodStart], [periodEnd] : bornes de la période.
   Future<void> submitFromPeriod({
     required String leaseId,
     required DateTime periodStart,
@@ -51,12 +33,7 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
     );
   }
 
-  /// Remet le controller à l'état idle (ex. : après fermeture du dialog).
   void reset() => state = const ReceiptGenerationState.idle();
-
-  // ---------------------------------------------------------------------------
-  // Implémentation interne
-  // ---------------------------------------------------------------------------
 
   Future<void> _generate({
     List<String>? paymentIds,
@@ -75,7 +52,6 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
         periodEnd: periodEnd,
       );
 
-      // Invalider la liste pour afficher la nouvelle quittance.
       _ref.invalidate(leaseReceiptsProvider(leaseId));
 
       _log.info('receipt generated id=${result.receiptId}');
@@ -83,15 +59,20 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
     } on ProfileIncompleteException catch (e, st) {
       _log.warning('Profil incomplet lors de la génération', e, st);
       state = ReceiptGenerationState.profileIncomplete(missing: e.missing);
-    } on FunctionException catch (e, st) {
-      _log.warning('FunctionException lors de la génération', e, st);
-      // mapEdgeFunctionError peut relancer ProfileIncompleteException.
-      try {
-        final msg = mapEdgeFunctionError(e);
-        state = ReceiptGenerationState.error(message: msg);
-      } on ProfileIncompleteException catch (pie, _) {
-        state = ReceiptGenerationState.profileIncomplete(missing: pie.missing);
-      }
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning(
+        'FirebaseFunctionsException génération (code=${e.code})',
+        e,
+        st,
+      );
+      final msg = switch (e.code) {
+        'permission-denied' || 'unauthenticated' => 'Action non autorisée.',
+        'failed-precondition' =>
+          'Aucun paiement trouvé pour cette période ou bail invalide.',
+        'not-found' => 'Bail ou paiements introuvables.',
+        _ => 'Erreur lors de la génération du PDF. Veuillez réessayer.',
+      };
+      state = ReceiptGenerationState.error(message: msg);
     } on ReceiptGenerationException catch (e, st) {
       _log.warning('ReceiptGenerationException', e, st);
       state = const ReceiptGenerationState.error(
@@ -106,9 +87,6 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
   }
 }
 
-/// Provider autoDispose du contrôleur de génération de quittance.
-///
-/// [autoDispose] garantit un state propre entre deux ouvertures du bouton.
 final generateReceiptControllerProvider =
     StateNotifierProvider.autoDispose<
       GenerateReceiptController,

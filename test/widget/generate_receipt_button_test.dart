@@ -4,9 +4,9 @@
 /// profileIncomplete (dialog profil), état submitting (spinner).
 library;
 
+import 'dart:typed_data';
 import 'dart:async';
 
-import 'package:easyrent/core/utils/edge_function_error_mapper.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
@@ -60,6 +60,9 @@ class _FakeReceiptsRepo implements ReceiptsRepository {
     required String receiptId,
     required String tenantEmail,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
 }
 
 // ---------------------------------------------------------------------------
@@ -226,4 +229,7 @@ class _ControlledRepo implements ReceiptsRepository {
     required String receiptId,
     required String tenantEmail,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
 }

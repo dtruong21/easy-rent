@@ -3,6 +3,7 @@
 /// Couvre : 0 / 3 items, header année, couleur marqueur, squelette.
 library;
 
+import 'dart:typed_data';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
@@ -40,6 +41,9 @@ class _FakeRepo implements ReceiptsRepository {
     required String receiptId,
     required String tenantEmail,
   }) async => throw UnimplementedError();
+
+  @override
+  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
 }
 
 // ---------------------------------------------------------------------------

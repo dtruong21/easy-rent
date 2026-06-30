@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../data/payment_repository.dart';
 import '../domain/payment.dart';
@@ -87,9 +87,9 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       _ref.invalidate(leasePaymentsProvider(leaseId));
 
       state = PaymentFormState.success(payment: result);
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de submit', e, st);
-      state = PaymentFormState.error(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning('FirebaseException lors de submit', e, st);
+      state = PaymentFormState.error(message: _mapFirebaseError(e));
     } on PaymentNotFoundException catch (notFound, st) {
       _log.warning('PaymentNotFoundException lors de submit', notFound, st);
       state = const PaymentFormState.error(
@@ -123,9 +123,9 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       _ref.invalidate(paymentDetailProvider(paymentId));
       // Archive n'a pas de payload — on retombe sur idle.
       state = const PaymentFormState.idle();
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de archive', e, st);
-      state = PaymentFormState.error(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning('FirebaseException lors de archive', e, st);
+      state = PaymentFormState.error(message: _mapFirebaseError(e));
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de archive', e, st);
       state = const PaymentFormState.error(
@@ -136,6 +136,20 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const PaymentFormState.idle();
+
+  String _mapFirebaseError(FirebaseFunctionsException e) {
+    final code = e.code;
+    if (code == 'permission-denied' || code == 'unauthenticated') {
+      return 'Action non autorisée.';
+    }
+    if (code == 'failed-precondition') {
+      return 'Opération impossible — vérifiez l\'état du paiement.';
+    }
+    if (code == 'unavailable' || code == 'deadline-exceeded') {
+      return 'Service temporairement indisponible. Réessayez.';
+    }
+    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+  }
 }
 
 /// Provider autoDispose du contrôleur de formulaire paiement.

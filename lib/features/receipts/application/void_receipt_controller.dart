@@ -1,6 +1,6 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/receipts_repository.dart';
 import 'lease_receipts_provider.dart';
@@ -12,22 +12,18 @@ sealed class VoidReceiptState {
   const VoidReceiptState();
 }
 
-/// Au repos — prêt à recevoir une action.
 final class VoidReceiptIdle extends VoidReceiptState {
   const VoidReceiptIdle();
 }
 
-/// Annulation en cours — bouton désactivé.
 final class VoidReceiptSubmitting extends VoidReceiptState {
   const VoidReceiptSubmitting();
 }
 
-/// Annulation réussie.
 final class VoidReceiptSuccess extends VoidReceiptState {
   const VoidReceiptSuccess();
 }
 
-/// Erreur lors de l'annulation.
 final class VoidReceiptError extends VoidReceiptState {
   const VoidReceiptError({required this.message});
   final String message;
@@ -35,16 +31,12 @@ final class VoidReceiptError extends VoidReceiptState {
 
 /// Contrôle le flow d'annulation d'une quittance.
 ///
-/// Appelle la RPC `void_receipt` via [ReceiptsRepository.voidReceipt].
-/// Sur succès : invalide [leaseReceiptsProvider(leaseId)] pour rafraîchir la liste.
+/// Appelle la Callable `voidReceipt` via [ReceiptsRepository.voidReceipt].
 class VoidReceiptController extends StateNotifier<VoidReceiptState> {
   VoidReceiptController(this._ref) : super(const VoidReceiptIdle());
 
   final Ref _ref;
 
-  /// Annule la quittance [receiptId] avec le motif [reason].
-  ///
-  /// [leaseId] : requis pour invalider le cache liste après succès.
   Future<void> voidReceipt({
     required String receiptId,
     required String reason,
@@ -60,9 +52,20 @@ class VoidReceiptController extends StateNotifier<VoidReceiptState> {
       _ref.invalidate(leaseReceiptsProvider(leaseId));
       _log.info('receipt voided id=$receiptId');
       state = const VoidReceiptSuccess();
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de void_receipt', e, st);
-      state = VoidReceiptError(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning(
+        'FirebaseFunctionsException voidReceipt (code=${e.code})',
+        e,
+        st,
+      );
+      final msg = switch (e.code) {
+        'permission-denied' || 'unauthenticated' => 'Action non autorisée.',
+        'not-found' => 'Quittance introuvable.',
+        'failed-precondition' =>
+          'La quittance est déjà annulée ou ne peut pas être annulée.',
+        _ => 'Erreur lors de l\'annulation. Veuillez réessayer.',
+      };
+      state = VoidReceiptError(message: msg);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de void_receipt', e, st);
       state = const VoidReceiptError(
@@ -71,11 +74,9 @@ class VoidReceiptController extends StateNotifier<VoidReceiptState> {
     }
   }
 
-  /// Remet le controller à l'état idle.
   void reset() => state = const VoidReceiptIdle();
 }
 
-/// Provider autoDispose du contrôleur d'annulation de quittance.
 final voidReceiptControllerProvider =
     StateNotifierProvider.autoDispose<VoidReceiptController, VoidReceiptState>(
       (ref) => VoidReceiptController(ref),

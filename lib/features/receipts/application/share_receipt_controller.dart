@@ -125,7 +125,7 @@ class ShareReceiptController extends StateNotifier<ShareReceiptState> {
       if (webShare.canShareFiles()) {
         // --- Branche Web Share API ---
         // Récupère les bytes du PDF depuis l'URL signée.
-        final signedUrl = await repo.signedUrl(receipt.pdfPath);
+        final signedUrl = await repo.signedUrl(receipt.id);
         final pdfBytes = await webShare.fetchBytes(signedUrl);
 
         // Partage via Web Share API. Lance ShareAbortedException si annulé.
@@ -143,7 +143,7 @@ class ShareReceiptController extends StateNotifier<ShareReceiptState> {
       } else {
         // --- Branche fallback download + mailto: ---
         // 1. Téléchargement du PDF (ouvre dans un nouvel onglet / déclenche DL).
-        final signedUrl = await repo.signedUrl(receipt.pdfPath);
+        final signedUrl = await repo.signedUrl(receipt.id);
         final downloadUri = Uri.parse(signedUrl);
         await launchUrl(downloadUri, mode: LaunchMode.externalApplication);
 

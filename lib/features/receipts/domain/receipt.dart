@@ -42,7 +42,7 @@ class Receipt with _$Receipt {
       toJson: _documentTypeToJson,
     )
     required DocumentType documentType,
-    @JsonKey(name: 'pdf_path') required String pdfPath,
+    @JsonKey(name: 'pdf_path') String? pdfPath,
     @JsonKey(name: 'is_voided') required bool isVoided,
     @JsonKey(name: 'voided_at') DateTime? voidedAt,
     @JsonKey(name: 'voided_reason') String? voidedReason,

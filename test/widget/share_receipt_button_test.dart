@@ -12,6 +12,7 @@
 /// - erreur → SnackBar avec message
 library;
 
+import 'dart:typed_data';
 import 'dart:async';
 
 import 'package:easyrent/features/receipts/application/share_receipt_controller.dart';
@@ -69,6 +70,9 @@ class _FakeRepo implements ReceiptsRepository {
 
   @override
   Future<void> voidReceipt(String id, String reason) async {}
+
+  @override
+  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
 }
 
 // ---------------------------------------------------------------------------

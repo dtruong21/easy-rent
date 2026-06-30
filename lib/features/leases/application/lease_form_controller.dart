@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../payments/domain/payment_method.dart';
 import '../data/lease_repository.dart';
@@ -103,9 +103,9 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
       _ref.invalidate(leasesListProvider);
 
       state = LeaseFormState.success(lease: result);
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de submit', e, st);
-      state = LeaseFormState.error(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning('FirebaseException lors de submit', e, st);
+      state = LeaseFormState.error(message: _mapFirebaseError(e));
     } on LeaseNotFoundException catch (notFound, st) {
       _log.warning('LeaseNotFoundException lors de submit', notFound, st);
       state = const LeaseFormState.error(
@@ -145,9 +145,9 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
         st,
       );
       state = const LeaseFormState.error(message: 'Ce bail est déjà clôturé.');
-    } on PostgrestException catch (e, st) {
-      _log.warning('PostgrestException lors de close', e, st);
-      state = LeaseFormState.error(message: mapPostgrestError(e));
+    } on FirebaseFunctionsException catch (e, st) {
+      _log.warning('FirebaseException lors de close', e, st);
+      state = LeaseFormState.error(message: _mapFirebaseError(e));
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de close', e, st);
       state = const LeaseFormState.error(
@@ -158,6 +158,29 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const LeaseFormState.idle();
+
+  String _mapFirebaseError(FirebaseFunctionsException e) {
+    final code = e.code;
+    final msg = e.message ?? '';
+    if (msg.contains('property not owned') ||
+        msg.contains('tenant not owned')) {
+      return 'Le bien ou le locataire ne vous appartient pas.';
+    }
+    if (msg.contains('property is deleted') ||
+        msg.contains('tenant is deleted')) {
+      return 'Le bien ou le locataire a été archivé.';
+    }
+    if (code == 'permission-denied' || code == 'unauthenticated') {
+      return 'Action non autorisée.';
+    }
+    if (code == 'failed-precondition') {
+      return 'Opération impossible — vérifiez l\'état du bail.';
+    }
+    if (code == 'unavailable' || code == 'deadline-exceeded') {
+      return 'Service temporairement indisponible. Réessayez.';
+    }
+    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+  }
 }
 
 /// Provider autoDispose du contrôleur de formulaire bail.

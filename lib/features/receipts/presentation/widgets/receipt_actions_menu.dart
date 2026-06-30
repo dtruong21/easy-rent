@@ -162,7 +162,7 @@ class _DesktopActionsRow extends ConsumerWidget {
   Future<void> _openPdf(BuildContext context, WidgetRef ref) async {
     try {
       final repo = ref.read(receiptsRepositoryProvider);
-      final url = await repo.signedUrl(receipt.pdfPath);
+      final url = await repo.signedUrl(receipt.id);
       final uri = Uri.parse(url);
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
@@ -338,7 +338,7 @@ class _MobileActionsMenu extends ConsumerWidget {
   ) async {
     try {
       final repo = ref.read(receiptsRepositoryProvider);
-      final url = await repo.signedUrl(receipt.pdfPath);
+      final url = await repo.signedUrl(receipt.id);
       final uri = Uri.parse(url);
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {

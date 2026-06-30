@@ -7,7 +7,7 @@
 /// exceptions (ProfileIncompleteException, ReceiptNotFoundException).
 library;
 
-import 'package:easyrent/core/utils/edge_function_error_mapper.dart';
+import 'dart:typed_data';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
@@ -112,6 +112,9 @@ class _InMemoryReceiptsRepository implements ReceiptsRepository {
     );
     return _receipts[idx];
   }
+
+  @override
+  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
 }
 
 // ---------------------------------------------------------------------------
