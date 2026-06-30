@@ -83,6 +83,13 @@ FEAT-001 (auth)
 - **RGPD self-service** (P1) : export des données + droit à l'effacement (Edge Function qui anonymise plutôt qu'efface, conforme rétention 5 ans + RPC `soft_delete_*` cascade enfants).
 - **`soft_delete_landlord` ne cascade pas vers properties/tenants/leases** : aujourd'hui un landlord soft-deleted laisse ses enfants visibles (deleted_at=NULL). Conforme RGPD rétention, mais incohérent UX si restauration future. À documenter ou à ajuster en P1.
 
+## Post-MVP immédiat (P1 — prochaine itération)
+
+| ID | Titre | Dépend de | Story | Effort |
+|---|---|---|---|---|
+| FEAT-017 | Rentabilité portfolio — rendement brut/net + cash-flow | FEAT-003, FEAT-005, FEAT-006, FEAT-010, FEAT-014 | [`backlog/017-portfolio-rentability.md`](backlog/017-portfolio-rentability.md) | L (3 phases ~5-7j) |
+| FEAT-018 | Simulateur d'investissement locatif (page `/simulator`, scénarios sauvegardables, comparaison 3 scénarios) | FEAT-002, FEAT-011 | [`backlog/018-investment-simulator.md`](backlog/018-investment-simulator.md) | L (4 sprints ~5-7j) |
+
 ## Plus tard (P1, P2)
 
 Voir [`docs/ROADMAP.md`](ROADMAP.md) — charges récupérables, crédits, régularisation annuelle, état des lieux digital, rappels automatiques, export comptable (FEC), multi-utilisateurs, notifications push PWA, OCR, intégration bancaire.

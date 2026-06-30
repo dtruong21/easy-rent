@@ -46,6 +46,20 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
     int? dpeValueKwhM2Year,
     String? gesLetter,
     int? constructionYear,
+    // FEAT-017 — Financement & acquisition
+    int? purchasePriceCents,
+    DateTime? purchaseDate,
+    int? notaryFeesCents,
+    bool isNewProperty = false,
+    int? propertyTaxAnnualCents,
+    int? insurancePnoAnnualCents,
+    int? condoFeesNonRecoverableCents,
+    int? loanPrincipalCents,
+    int? loanRateBps,
+    int? loanInsuranceBps,
+    int? loanDurationMonths,
+    DateTime? loanStartDate,
+    int? loanMonthlyPaymentOverrideCents,
   }) async {
     state = const PropertyFormState.submitting();
 
@@ -72,6 +86,19 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
           dpeValueKwhM2Year: dpeValueKwhM2Year,
           gesLetter: gesLetter,
           constructionYear: constructionYear,
+          purchasePriceCents: purchasePriceCents,
+          purchaseDate: purchaseDate,
+          notaryFeesCents: notaryFeesCents,
+          isNewProperty: isNewProperty,
+          propertyTaxAnnualCents: propertyTaxAnnualCents,
+          insurancePnoAnnualCents: insurancePnoAnnualCents,
+          condoFeesNonRecoverableCents: condoFeesNonRecoverableCents,
+          loanPrincipalCents: loanPrincipalCents,
+          loanRateBps: loanRateBps,
+          loanInsuranceBps: loanInsuranceBps,
+          loanDurationMonths: loanDurationMonths,
+          loanStartDate: loanStartDate,
+          loanMonthlyPaymentOverrideCents: loanMonthlyPaymentOverrideCents,
         );
         _log.info('property created id=${result.id}');
       } else {
@@ -93,6 +120,19 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
           dpeValueKwhM2Year: dpeValueKwhM2Year,
           gesLetter: gesLetter,
           constructionYear: constructionYear,
+          purchasePriceCents: purchasePriceCents,
+          purchaseDate: purchaseDate,
+          notaryFeesCents: notaryFeesCents,
+          isNewProperty: isNewProperty,
+          propertyTaxAnnualCents: propertyTaxAnnualCents,
+          insurancePnoAnnualCents: insurancePnoAnnualCents,
+          condoFeesNonRecoverableCents: condoFeesNonRecoverableCents,
+          loanPrincipalCents: loanPrincipalCents,
+          loanRateBps: loanRateBps,
+          loanInsuranceBps: loanInsuranceBps,
+          loanDurationMonths: loanDurationMonths,
+          loanStartDate: loanStartDate,
+          loanMonthlyPaymentOverrideCents: loanMonthlyPaymentOverrideCents,
         );
         result = await repo.update(updated);
         _log.info('property updated id=${result.id}');

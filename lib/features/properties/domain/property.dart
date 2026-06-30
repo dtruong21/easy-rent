@@ -51,6 +51,22 @@ class Property with _$Property {
     @JsonKey(name: 'dpe_value_kwh_m2_year') int? dpeValueKwhM2Year,
     @JsonKey(name: 'ges_letter') String? gesLetter,
     @JsonKey(name: 'construction_year') int? constructionYear,
+    // --- FEAT-017 : Financement & acquisition ---
+    @JsonKey(name: 'purchase_price_cents') int? purchasePriceCents,
+    @JsonKey(name: 'purchase_date') DateTime? purchaseDate,
+    @JsonKey(name: 'notary_fees_cents') int? notaryFeesCents,
+    @JsonKey(name: 'is_new_property') @Default(false) bool isNewProperty,
+    @JsonKey(name: 'property_tax_annual_cents') int? propertyTaxAnnualCents,
+    @JsonKey(name: 'insurance_pno_annual_cents') int? insurancePnoAnnualCents,
+    @JsonKey(name: 'condo_fees_non_recoverable_cents')
+    int? condoFeesNonRecoverableCents,
+    @JsonKey(name: 'loan_principal_cents') int? loanPrincipalCents,
+    @JsonKey(name: 'loan_rate_bps') int? loanRateBps,
+    @JsonKey(name: 'loan_insurance_bps') int? loanInsuranceBps,
+    @JsonKey(name: 'loan_duration_months') int? loanDurationMonths,
+    @JsonKey(name: 'loan_start_date') DateTime? loanStartDate,
+    @JsonKey(name: 'loan_monthly_payment_override_cents')
+    int? loanMonthlyPaymentOverrideCents,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
     @JsonKey(name: 'deleted_at') DateTime? deletedAt,
