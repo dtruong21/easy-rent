@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../application/signup_controller.dart';
+import 'google_sign_in_button.dart';
+import 'or_divider.dart';
 import 'password_field.dart';
 
 /// Formulaire de création de compte.
@@ -22,6 +24,12 @@ class _SignupFormState extends ConsumerState<SignupForm> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _rgpdConsent = false;
+
+  // Marque quel bouton a déclenché la dernière requête. Le controller
+  // `signupControllerProvider` partage un état `submitting` unique entre
+  // email/password et Google ; ce flag évite que les deux boutons spinnent
+  // simultanément. Voir _LoginFormState pour le même pattern.
+  bool _googleClickedLast = false;
 
   @override
   void initState() {
@@ -51,6 +59,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
       _rgpdConsent;
 
   Future<void> _submit() async {
+    setState(() => _googleClickedLast = false);
     await ref
         .read(signupControllerProvider.notifier)
         .signUp(
@@ -62,6 +71,13 @@ class _SignupFormState extends ConsumerState<SignupForm> {
         );
   }
 
+  Future<void> _submitGoogle() async {
+    setState(() => _googleClickedLast = true);
+    await ref
+        .read(signupControllerProvider.notifier)
+        .signUpWithGoogle(rgpdConsent: _rgpdConsent);
+  }
+
   @override
   Widget build(BuildContext context) {
     final formState = ref.watch(signupControllerProvider);
@@ -70,7 +86,12 @@ class _SignupFormState extends ConsumerState<SignupForm> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg, ctaRoute, ctaLabel) => msg,
+      orElse: () => null,
+    );
+    final errorCta = formState.maybeWhen(
+      error: (msg, ctaRoute, ctaLabel) =>
+          (ctaRoute != null && ctaLabel != null) ? (ctaRoute, ctaLabel) : null,
       orElse: () => null,
     );
     final theme = Theme.of(context);
@@ -139,6 +160,15 @@ class _SignupFormState extends ConsumerState<SignupForm> {
               errorMessage,
               style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
             ),
+            if (errorCta != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  key: const Key('signup_error_cta_button'),
+                  onPressed: () => context.go(errorCta.$1),
+                  child: Text(errorCta.$2),
+                ),
+              ),
           ],
           const SizedBox(height: 16),
           _RgpdCheckbox(
@@ -149,7 +179,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
           const SizedBox(height: 24),
           FilledButton(
             onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
-            child: isSubmitting
+            child: (isSubmitting && !_googleClickedLast)
                 ? SizedBox(
                     height: 18,
                     width: 18,
@@ -160,6 +190,21 @@ class _SignupFormState extends ConsumerState<SignupForm> {
                   )
                 : const Text('Créer mon compte'),
           ),
+          const OrDivider(),
+          GoogleSignInButton(
+            onPressed: (_rgpdConsent && !isSubmitting) ? _submitGoogle : null,
+            isLoading: isSubmitting && _googleClickedLast,
+          ),
+          if (!_rgpdConsent)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Cochez la case ci-dessus pour activer la connexion Google',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => context.go('/login'),

@@ -12,8 +12,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 class _FakeAuthRepository implements AuthRepository {
   bool signInCalled = false;
   bool signOutCalled = false;
+  bool signInWithGoogleCalled = false;
   String? lastEmail;
   Exception? signInError;
+  Exception? signInWithGoogleError;
 
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
@@ -37,6 +39,15 @@ class _FakeAuthRepository implements AuthRepository {
     required String password,
     required String fullName,
   }) async {}
+
+  @override
+  Future<void> signInWithGoogle() async {
+    signInWithGoogleCalled = true;
+    if (signInWithGoogleError != null) throw signInWithGoogleError!;
+  }
+
+  @override
+  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {}
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {}
@@ -74,10 +85,10 @@ LoginController _makeController(_FakeAuthRepository repo) {
 }
 
 bool _isError(LoginPageState s) =>
-    s.maybeWhen(error: (_) => true, orElse: () => false);
+    s.maybeWhen(error: (m, c, l) => true, orElse: () => false);
 
 String _errorMsg(LoginPageState s) =>
-    s.maybeWhen(error: (m) => m, orElse: () => '');
+    s.maybeWhen(error: (m, c, l) => m, orElse: () => '');
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -175,6 +186,94 @@ void main() {
           ..signInError = Exception('network error');
         final ctrl = _makeController(repo);
         await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
+        expect(
+          _errorMsg(ctrl.state),
+          'Une erreur est survenue. Veuillez réessayer.',
+        );
+      });
+    });
+
+    group('signInWithGoogle', () {
+      test('happy path → submitting puis idle, repo appelé', () async {
+        final repo = _FakeAuthRepository();
+        final container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+
+        final states = <LoginPageState>[];
+        container.listen<LoginPageState>(
+          loginControllerProvider,
+          (_, next) => states.add(next),
+          fireImmediately: true,
+        );
+
+        await container
+            .read(loginControllerProvider.notifier)
+            .signInWithGoogle();
+
+        expect(repo.signInWithGoogleCalled, isTrue);
+        expect(states.first, const LoginPageState.idle());
+        expect(
+          states[1].maybeWhen(submitting: () => true, orElse: () => false),
+          isTrue,
+        );
+        expect(states.last, const LoginPageState.idle());
+      });
+
+      test(
+        'newUserOnLogin → état error avec CTA /signup et label "Créer un compte"',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signInWithGoogleError = FirebaseAuthException(
+              code: 'baillan/google-new-user-on-login',
+              message: 'no associated landlord',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signInWithGoogle();
+
+          final state = ctrl.state;
+          expect(_isError(state), isTrue);
+          final cta = state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => (null, null),
+          );
+          expect(cta.$1, '/signup');
+          expect(cta.$2, 'Créer un compte');
+          expect(
+            _errorMsg(state).startsWith('Aucun compte Baillan associé'),
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'account-exists-with-different-credential → error SANS CTA (pas un cas /login)',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signInWithGoogleError = FirebaseAuthException(
+              code: 'account-exists-with-different-credential',
+              message: 'conflict',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signInWithGoogle();
+
+          final cta = ctrl.state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => ('NOT_ERROR', 'NOT_ERROR'),
+          );
+          // Pas de CTA spécifique sur /login pour ce code — l'utilisateur
+          // doit utiliser son mot de passe email/password.
+          expect(cta.$1, isNull);
+          expect(cta.$2, isNull);
+        },
+      );
+
+      test('exception générique → message fallback français', () async {
+        final repo = _FakeAuthRepository()
+          ..signInWithGoogleError = Exception('boom');
+        final ctrl = _makeController(repo);
+        await ctrl.signInWithGoogle();
         expect(
           _errorMsg(ctrl.state),
           'Une erreur est survenue. Veuillez réessayer.',

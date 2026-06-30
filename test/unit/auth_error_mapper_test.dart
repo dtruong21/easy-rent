@@ -98,4 +98,77 @@ void main() {
       );
     });
   });
+
+  group('AuthErrorMapper.fromException (Google sign-in codes)', () {
+    FirebaseAuthException e(String code, [String message = '']) =>
+        FirebaseAuthException(code: code, message: message);
+
+    test('popup-closed-by-user → connexion annulée', () {
+      expect(
+        AuthErrorMapper.fromException(e('popup-closed-by-user')),
+        'Connexion Google annulée.',
+      );
+    });
+
+    test('popup-blocked → message popup bloquée', () {
+      expect(
+        AuthErrorMapper.fromException(e('popup-blocked')),
+        contains('bloqué la fenêtre Google'),
+      );
+    });
+
+    test('account-exists-with-different-credential → message FR', () {
+      expect(
+        AuthErrorMapper.fromException(
+          e('account-exists-with-different-credential'),
+        ),
+        contains('Un compte existe déjà avec cet email mais via une autre'),
+      );
+    });
+
+    test('cancelled-popup-request → message fenêtre déjà ouverte', () {
+      expect(
+        AuthErrorMapper.fromException(e('cancelled-popup-request')),
+        'Une autre fenêtre Google est déjà ouverte.',
+      );
+    });
+
+    test('web-storage-unsupported → message cookies tiers', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-storage-unsupported')),
+        contains('cookies tiers'),
+      );
+    });
+
+    test('baillan/google-new-user-on-login → invitation à signup', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/google-new-user-on-login')),
+        contains('Aucun compte Baillan associé'),
+      );
+    });
+
+    test(
+      'baillan/rgpd-consent-declined → message consentement obligatoire',
+      () {
+        expect(
+          AuthErrorMapper.fromException(e('baillan/rgpd-consent-declined')),
+          'Vous devez accepter la politique de confidentialité.',
+        );
+      },
+    );
+
+    test('baillan/popup-blocked → message popup bloquée', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/popup-blocked')),
+        contains('bloqué la fenêtre Google'),
+      );
+    });
+
+    test('baillan/popup-closed → connexion annulée', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/popup-closed')),
+        'Connexion Google annulée.',
+      );
+    });
+  });
 }

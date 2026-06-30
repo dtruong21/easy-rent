@@ -40,6 +40,12 @@ class _NoOpRepo implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> signInWithGoogle() async {}
+
+  @override
+  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
   Future<void> sendPasswordResetEmail(String email) async {}
 
   @override

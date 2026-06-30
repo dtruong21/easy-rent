@@ -7,5 +7,13 @@ part 'login_page_state.freezed.dart';
 sealed class LoginPageState with _$LoginPageState {
   const factory LoginPageState.idle() = _Idle;
   const factory LoginPageState.submitting() = _Submitting;
-  const factory LoginPageState.error({required String message}) = _Error;
+
+  /// [ctaRoute] / [ctaLabel] : action de rebond optionnelle affichée sous le
+  /// message d'erreur (ex. "Créer un compte" → /signup quand un Google
+  /// inconnu de Baillan tente de se connecter).
+  const factory LoginPageState.error({
+    required String message,
+    String? ctaRoute,
+    String? ctaLabel,
+  }) = _Error;
 }
