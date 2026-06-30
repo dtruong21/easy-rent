@@ -1,8 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'google_auth_exception.dart';
+
 /// Traduit les [FirebaseAuthException] en messages utilisateur français.
 ///
 /// Codes Firebase : https://firebase.google.com/docs/auth/admin/errors
+/// Codes Baillan (préfixe `baillan/`) : voir [GoogleAuthErrorCode].
 class AuthErrorMapper {
   const AuthErrorMapper._();
 
@@ -39,6 +42,38 @@ class AuthErrorMapper {
       case 'operation-not-allowed':
         return 'Méthode d\'authentification non activée. '
             'Contactez le support.';
+
+      case 'popup-closed-by-user':
+        return 'Connexion Google annulée.';
+
+      case 'popup-blocked':
+        return 'Votre navigateur a bloqué la fenêtre Google. '
+            'Autorisez les pop-ups pour ce site et réessayez.';
+
+      case 'account-exists-with-different-credential':
+        return 'Un compte existe déjà avec cet email mais via une autre '
+            'méthode. Connectez-vous d\'abord avec votre mot de passe.';
+
+      case 'cancelled-popup-request':
+        return 'Une autre fenêtre Google est déjà ouverte.';
+
+      case 'web-storage-unsupported':
+        return 'Votre navigateur bloque les cookies tiers nécessaires à '
+            'Google. Activez-les ou utilisez le formulaire email.';
+
+      case GoogleAuthErrorCode.newUserOnLogin:
+        return 'Aucun compte Baillan associé à ce Google. '
+            'Veuillez d\'abord créer un compte.';
+
+      case GoogleAuthErrorCode.consentDeclined:
+        return 'Vous devez accepter la politique de confidentialité.';
+
+      case GoogleAuthErrorCode.popupBlocked:
+        return 'Votre navigateur a bloqué la fenêtre Google. '
+            'Autorisez les pop-ups pour ce site et réessayez.';
+
+      case GoogleAuthErrorCode.popupClosed:
+        return 'Connexion Google annulée.';
 
       default:
         return 'Une erreur est survenue. Veuillez réessayer.';

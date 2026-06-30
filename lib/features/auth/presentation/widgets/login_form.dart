@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/email_validator.dart';
 import '../../application/login_controller.dart';
+import 'google_sign_in_button.dart';
+import 'or_divider.dart';
 import 'password_field.dart';
 
 /// Formulaire de connexion email + mot de passe.
@@ -18,6 +20,13 @@ class LoginForm extends ConsumerStatefulWidget {
 class _LoginFormState extends ConsumerState<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Marque quel bouton a déclenché la dernière requête de connexion. Le
+  // controller `loginControllerProvider` partage un état `submitting` unique
+  // entre l'email/password et Google ; sans ce flag, les deux boutons
+  // afficheraient un spinner simultané — perturbe l'UX et suggère que les
+  // deux flows s'exécutent en parallèle.
+  bool _googleClickedLast = false;
 
   @override
   void initState() {
@@ -41,12 +50,18 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       _passwordController.text.isNotEmpty;
 
   Future<void> _submit() async {
+    setState(() => _googleClickedLast = false);
     await ref
         .read(loginControllerProvider.notifier)
         .signIn(
           email: _emailController.text,
           password: _passwordController.text,
         );
+  }
+
+  Future<void> _submitGoogle() async {
+    setState(() => _googleClickedLast = true);
+    await ref.read(loginControllerProvider.notifier).signInWithGoogle();
   }
 
   @override
@@ -57,7 +72,12 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg, ctaRoute, ctaLabel) => msg,
+      orElse: () => null,
+    );
+    final errorCta = formState.maybeWhen(
+      error: (msg, ctaRoute, ctaLabel) =>
+          (ctaRoute != null && ctaLabel != null) ? (ctaRoute, ctaLabel) : null,
       orElse: () => null,
     );
     final theme = Theme.of(context);
@@ -95,11 +115,20 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               errorMessage,
               style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
             ),
+            if (errorCta != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  key: const Key('login_error_cta_button'),
+                  onPressed: () => context.go(errorCta.$1),
+                  child: Text(errorCta.$2),
+                ),
+              ),
           ],
           const SizedBox(height: 24),
           FilledButton(
             onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
-            child: isSubmitting
+            child: (isSubmitting && !_googleClickedLast)
                 ? SizedBox(
                     height: 18,
                     width: 18,
@@ -109,6 +138,11 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                     ),
                   )
                 : const Text('Se connecter'),
+          ),
+          const OrDivider(),
+          GoogleSignInButton(
+            onPressed: isSubmitting ? null : _submitGoogle,
+            isLoading: isSubmitting && _googleClickedLast,
           ),
           const SizedBox(height: 12),
           TextButton(

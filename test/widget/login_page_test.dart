@@ -39,6 +39,12 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> signInWithGoogle() async {}
+
+  @override
+  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
   Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
@@ -164,6 +170,10 @@ void main() {
       );
       await tester.pump();
 
+      // Seul le bouton dont la requête est en cours affiche le spinner ;
+      // sans clic prélable, `_googleClickedLast` est false donc c'est le
+      // FilledButton email/password qui spin. L'autre bouton est désactivé
+      // mais ne spin pas.
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 

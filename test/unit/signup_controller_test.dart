@@ -11,9 +11,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   bool signUpCalled = false;
+  bool signUpWithGoogleCalled = false;
+  bool? lastGoogleRgpdConsent;
   String? lastEmail;
   String? lastFullName;
   Exception? signUpError;
+  Exception? signUpWithGoogleError;
 
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
@@ -37,6 +40,16 @@ class _FakeAuthRepository implements AuthRepository {
     lastEmail = email;
     lastFullName = fullName;
     if (signUpError != null) throw signUpError!;
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {}
+
+  @override
+  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {
+    signUpWithGoogleCalled = true;
+    lastGoogleRgpdConsent = rgpdConsent;
+    if (signUpWithGoogleError != null) throw signUpWithGoogleError!;
   }
 
   @override
@@ -68,10 +81,10 @@ SignupController _makeController(_FakeAuthRepository repo) {
 }
 
 bool _isError(SignupPageState s) =>
-    s.maybeWhen(error: (_) => true, orElse: () => false);
+    s.maybeWhen(error: (m, c, l) => true, orElse: () => false);
 
 String _errorMsg(SignupPageState s) =>
-    s.maybeWhen(error: (m) => m, orElse: () => '');
+    s.maybeWhen(error: (m, c, l) => m, orElse: () => '');
 
 const _validSignup = (
   fullName: 'Jean Dupont',
@@ -248,6 +261,107 @@ void main() {
           confirmPassword: _validSignup.confirmPassword,
           rgpdConsent: true,
         );
+        expect(
+          _errorMsg(ctrl.state),
+          'Une erreur est survenue. Veuillez réessayer.',
+        );
+      });
+    });
+
+    group('signUpWithGoogle', () {
+      test(
+        'rgpdConsent=false → error SANS appel repo (defense en profondeur)',
+        () async {
+          final repo = _FakeAuthRepository();
+          final ctrl = _makeController(repo);
+          await ctrl.signUpWithGoogle(rgpdConsent: false);
+          expect(repo.signUpWithGoogleCalled, isFalse);
+          expect(_isError(ctrl.state), isTrue);
+          expect(
+            _errorMsg(ctrl.state),
+            'Vous devez accepter la politique de confidentialité',
+          );
+        },
+      );
+
+      test(
+        'happy path rgpdConsent=true → submitting puis idle, repo appelé',
+        () async {
+          final repo = _FakeAuthRepository();
+          final container = ProviderContainer(
+            overrides: [authRepositoryProvider.overrideWithValue(repo)],
+          );
+          addTearDown(container.dispose);
+
+          final states = <SignupPageState>[];
+          container.listen<SignupPageState>(
+            signupControllerProvider,
+            (_, next) => states.add(next),
+            fireImmediately: true,
+          );
+
+          await container
+              .read(signupControllerProvider.notifier)
+              .signUpWithGoogle(rgpdConsent: true);
+
+          expect(repo.signUpWithGoogleCalled, isTrue);
+          expect(repo.lastGoogleRgpdConsent, isTrue);
+          expect(states.first, const SignupPageState.idle());
+          expect(
+            states[1].maybeWhen(submitting: () => true, orElse: () => false),
+            isTrue,
+          );
+          expect(states.last, const SignupPageState.idle());
+        },
+      );
+
+      test(
+        'account-exists-with-different-credential → error avec CTA /login et label "Se connecter"',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signUpWithGoogleError = FirebaseAuthException(
+              code: 'account-exists-with-different-credential',
+              message: 'conflict',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signUpWithGoogle(rgpdConsent: true);
+
+          final cta = ctrl.state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => (null, null),
+          );
+          expect(cta.$1, '/login');
+          expect(cta.$2, 'Se connecter');
+          expect(_errorMsg(ctrl.state), contains('Un compte existe déjà'));
+        },
+      );
+
+      test(
+        'consentDeclined relayé depuis le repo → error, pas de CTA',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signUpWithGoogleError = FirebaseAuthException(
+              code: 'baillan/google-rgpd-consent-declined',
+              message: 'consent declined at repo layer',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signUpWithGoogle(rgpdConsent: true);
+
+          expect(_isError(ctrl.state), isTrue);
+          final cta = ctrl.state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => ('NOT', 'NOT'),
+          );
+          expect(cta.$1, isNull);
+          expect(cta.$2, isNull);
+        },
+      );
+
+      test('exception générique → message fallback français', () async {
+        final repo = _FakeAuthRepository()
+          ..signUpWithGoogleError = Exception('boom');
+        final ctrl = _makeController(repo);
+        await ctrl.signUpWithGoogle(rgpdConsent: true);
         expect(
           _errorMsg(ctrl.state),
           'Une erreur est survenue. Veuillez réessayer.',
