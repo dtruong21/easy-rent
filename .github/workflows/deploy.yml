@@ -116,7 +116,11 @@ jobs:
           LOGS=$(gh run view "${{ github.run_id }}" \
             --repo "${{ github.repository }}" \
             --log 2>/dev/null || true)
-          if echo "$LOGS" | grep -qE 'FAILED_PRECONDITION.{0,200}is the current active version'; then
+          echo "Fetched $(echo -n "$LOGS" | wc -c) bytes of run log."
+          # Phrase exclusive à l'erreur Firebase Hosting REST API quand on tente
+          # de release une version déjà active sur le channel. Aucune autre
+          # erreur n'utilise cette tournure exacte.
+          if echo "$LOGS" | grep -qF "is the current active version"; then
             echo "::warning::Firebase retry-race detected (known upstream bug). Content WAS deployed — treating job as success."
             exit 0
           else
