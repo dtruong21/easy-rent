@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// AppBar réutilisable EasyRent.
+/// AppBar réutilisable Baillan.
 ///
 /// Gère automatiquement le bouton retour selon le contexte :
 /// - Si [leading] fourni → override total

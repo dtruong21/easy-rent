@@ -68,7 +68,7 @@ void main() {
       await tester.pumpWidget(_buildApp(const LoginPage()));
       await tester.pump();
 
-      expect(find.text('EasyRent'), findsOneWidget);
+      expect(find.text('Baillan.'), findsOneWidget);
       expect(
         find.text('Connectez-vous pour gérer vos locations'),
         findsOneWidget,

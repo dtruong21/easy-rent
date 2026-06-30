@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Breakpoints responsive de l'application EasyRent.
+/// Breakpoints responsive de l'application Baillan.
 abstract class Breakpoints {
   const Breakpoints._();
 

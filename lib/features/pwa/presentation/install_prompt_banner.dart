@@ -91,7 +91,7 @@ class _BannerCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Installez EasyRent',
+                      'Installez Baillan.',
                       style: theme.textTheme.titleSmall,
                     ),
                     Text(subtitle, style: theme.textTheme.bodySmall),

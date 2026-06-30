@@ -1,4 +1,4 @@
-// Firebase configuration EasyRent (FEAT-019).
+// Firebase configuration Baillan. (FEAT-019).
 //
 // Généré manuellement à partir de `firebase apps:sdkconfig WEB` car
 // `flutterfire configure` est interactif. À régénérer si on ajoute des

@@ -260,9 +260,9 @@ Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
                   pw.SizedBox(height: 4),
                   pw.Center(
                     child: pw.Text(
-                      'Document genere par EasyRent  -  Ref : '
+                      'Ref. BAI-'
                       '${d.receiptId.substring(0, d.receiptId.length < 8 ? d.receiptId.length : 8).toUpperCase()}'
-                      '  -  ${FrenchDate.format(d.generatedAt)}',
+                      '  -  Emis par Baillan.  -  Loi du 6 juillet 1989',
                       style: const pw.TextStyle(
                         fontSize: 8,
                         color: PdfColor.fromInt(0xFF999999),

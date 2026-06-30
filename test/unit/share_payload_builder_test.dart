@@ -134,9 +134,9 @@ void main() {
       expect(payload.body, contains('Dupont François'));
     });
 
-    test('contient la signature EasyRent', () {
+    test('contient la signature Baillan.', () {
       final payload = _build();
-      expect(payload.body, contains('EasyRent'));
+      expect(payload.body, contains('Baillan.'));
     });
 
     test('contient la mention "ci-joint"', () {

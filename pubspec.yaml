@@ -1,5 +1,5 @@
 name: easyrent
-description: "EasyRent — outil de gestion locative PWA"
+description: "Baillan. — Votre bailliage, tenu au jour le jour. (FEAT-020 : rebrand EasyRent → Baillan ; package name interne conservé pour éviter de casser ~200 imports `package:easyrent/...`)"
 publish_to: 'none'
 version: 0.1.0+1
 

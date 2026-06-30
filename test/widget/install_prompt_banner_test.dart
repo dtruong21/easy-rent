@@ -48,7 +48,7 @@ void main() {
     testWidgets('rien n\'est affiché si état hidden', (tester) async {
       await tester.pumpWidget(_wrap(const InstallPromptState.hidden()));
       await tester.pumpAndSettle();
-      expect(find.text('Installez EasyRent'), findsNothing);
+      expect(find.text('Installez Baillan.'), findsNothing);
       expect(find.byType(Card), findsNothing);
     });
   });
@@ -57,7 +57,7 @@ void main() {
     testWidgets('affiche le banner natif', (tester) async {
       await tester.pumpWidget(_wrap(const InstallPromptState.visibleNative()));
       await tester.pump();
-      expect(find.text('Installez EasyRent'), findsOneWidget);
+      expect(find.text('Installez Baillan.'), findsOneWidget);
       expect(find.text('Installer'), findsOneWidget);
     });
 
@@ -104,7 +104,7 @@ void main() {
     testWidgets('affiche les instructions iOS', (tester) async {
       await tester.pumpWidget(_wrap(const InstallPromptState.visibleIos()));
       await tester.pump();
-      expect(find.text('Installez EasyRent'), findsOneWidget);
+      expect(find.text('Installez Baillan.'), findsOneWidget);
       expect(find.text('OK, compris'), findsOneWidget);
     });
   });

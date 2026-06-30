@@ -14,7 +14,7 @@ import 'package:go_router/go_router.dart';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Thème avec extensions EasyRent (AppColors + AppRadii).
+/// Thème avec extensions Baillan. (AppColors + AppRadii).
 ThemeData _appTheme() => ThemeData(
   colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
   extensions: const [AppColors.light, AppRadii()],

@@ -18,26 +18,28 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="EasyRent — Outil de gestion locative pour propriétaires : quittances, loyers, locataires, documents.">
+  <meta name="description" content="Baillan. — Votre bailliage, tenu au jour le jour. Outil pour bailleurs : quittances, loyers, locataires, documents.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#4F46E5">
+  <meta name="theme-color" content="#1B1A17">
 
   <!-- iOS PWA -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="EasyRent">
+  <meta name="apple-mobile-web-app-title" content="Baillan">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
+  <!-- Favicon — SVG inline + fallback PNG. Le SVG fait office d'icône
+       Baillan jusqu'à régénération des PNGs (icon B paraphe sur fond ink). -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFCMUExNyIgcng9IjgiLz48dGV4dCB4PSI1MCIgeT0iNzQiIGZvbnQtZmFtaWx5PSdDb2NoaW4sIFBhbGF0aW5vIExpbm90eXBlLCBQYWxhdGlubywgc2VyaWYnIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSI4NCIgZmlsbD0iI0Y3RjRFRCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QjwvdGV4dD48cGF0aCBkPSJNIDIyIDg0IFEgNTAgOTggNzggODQiIHN0cm9rZT0iI0I1Qjg5RCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=" />
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>EasyRent</title>
+  <title>Baillan.</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    /* Couleur de fond cohérente avec le theme_color du manifest pendant le chargement Flutter */
+    /* Fond papier cohérent avec le splash screen Baillan pendant le chargement Flutter */
     body {
-      background: #4F46E5;
+      background: #F7F4ED;
       margin: 0;
     }
   </style>

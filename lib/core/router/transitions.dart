@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Transitions de navigation pour EasyRent.
+/// Transitions de navigation pour Baillan.
 ///
 /// Sur mobile (non-web) : toujours [MaterialPage] (transitions natives OS).
 /// Sur Web :

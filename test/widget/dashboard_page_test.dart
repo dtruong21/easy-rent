@@ -222,10 +222,10 @@ void main() {
   });
 
   group('DashboardPage — AppBar', () {
-    testWidgets('affiche "EasyRent" dans l\'AppBar', (tester) async {
+    testWidgets('affiche "Baillan." dans l\'AppBar', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
-      expect(find.text('EasyRent'), findsOneWidget);
+      expect(find.text('Baillan.'), findsOneWidget);
     });
   });
 

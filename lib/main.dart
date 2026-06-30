@@ -30,17 +30,17 @@ Future<void> main() async {
   // avant runApp, pour ne pas le rater (émis très tôt par le navigateur).
   InstallPromptJsBridge.captureDeferred();
 
-  runApp(const ProviderScope(child: EasyRentApp()));
+  runApp(const ProviderScope(child: BaillanApp()));
 }
 
-class EasyRentApp extends ConsumerWidget {
-  const EasyRentApp({super.key});
+class BaillanApp extends ConsumerWidget {
+  const BaillanApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
-      title: 'EasyRent',
+      title: 'Baillan.',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       routerConfig: router,

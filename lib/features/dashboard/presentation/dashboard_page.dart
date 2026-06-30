@@ -19,7 +19,7 @@ import 'widgets/portfolio_yield_section.dart';
 import 'widgets/recent_activity_section.dart';
 import 'widgets/shortcuts_row.dart';
 
-/// Dashboard principal — cockpit du bailleur EasyRent.
+/// Dashboard principal — cockpit du bailleur Baillan.
 ///
 /// Composition :
 /// - [InstallPromptBanner] (conditionnel, en haut)
@@ -73,7 +73,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: 'EasyRent',
+        title: 'Baillan.',
         showBackButton: false,
         actions: [
           IconButton(

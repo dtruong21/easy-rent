@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-/// Extension de thème Material 3 pour les rayons de bordure EasyRent.
+/// Extension de thème Material 3 pour les rayons de bordure Baillan.
 ///
 /// Accès : `Theme.of(context).extension<AppRadii>()!`.
 @immutable

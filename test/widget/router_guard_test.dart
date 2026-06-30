@@ -84,7 +84,7 @@ void main() {
       await tester.pumpWidget(_buildApp(isAuthenticated: false));
       await tester.pumpAndSettle();
 
-      expect(find.text('EasyRent'), findsOneWidget);
+      expect(find.text('Baillan.'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2));
     });
 
@@ -96,7 +96,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('EasyRent'), findsOneWidget);
+      expect(find.text('Baillan.'), findsOneWidget);
       expect(find.byType(TextField), findsNWidgets(2));
     });
 
@@ -109,7 +109,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(TextField), findsNothing);
-        expect(find.text('EasyRent'), findsWidgets);
+        expect(find.text('Baillan.'), findsWidgets);
       },
     );
 

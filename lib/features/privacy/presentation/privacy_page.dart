@@ -56,12 +56,12 @@ class _PrivacyContent extends StatelessWidget {
         const _Section(
           title: '1. Responsable du traitement',
           body:
-              'EasyRent est un outil B2B de gestion locative. Chaque bailleur '
-              'utilisant EasyRent est responsable du traitement des données '
+              'Baillan. est un outil B2B de gestion locative. Chaque bailleur '
+              'utilisant Baillan. est responsable du traitement des données '
               'personnelles de ses locataires en qualité de responsable de '
               'traitement au sens du RGPD (art. 4§7).\n\n'
               'Pour toute question relative à vos données personnelles, '
-              'contactez le bailleur titulaire du compte EasyRent dont vous '
+              'contactez le bailleur titulaire du compte Baillan. dont vous '
               'dépendez. Ses coordonnées vous ont été fournies à la signature '
               'du bail.',
         ),
@@ -70,7 +70,7 @@ class _PrivacyContent extends StatelessWidget {
         const _Section(
           title: '2. Données collectées',
           body:
-              'Les catégories de données suivantes sont traitées via EasyRent :\n\n'
+              'Les catégories de données suivantes sont traitées via Baillan. :\n\n'
               '• Compte bailleur : adresse email (authentification), nom complet, '
               'téléphone, adresse postale.\n\n'
               '• Locataires : prénom, nom, adresse email, numéro de téléphone.\n\n'
@@ -90,7 +90,7 @@ class _PrivacyContent extends StatelessWidget {
         const _Section(
           title: '3. Base légale (RGPD art. 6.1.b)',
           body:
-              'Les traitements effectués via EasyRent sont fondés sur l\'exécution '
+              'Les traitements effectués via Baillan. sont fondés sur l\'exécution '
               'du contrat de bail (art. 6.1.b du RGPD) : les données des locataires '
               'sont nécessaires à la gestion du contrat de location, au calcul des '
               'loyers et charges, et à la délivrance des quittances.\n\n'
@@ -167,7 +167,7 @@ class _PrivacyContent extends StatelessWidget {
         const _Section(
           title: '7. Cookies et traceurs',
           body:
-              'EasyRent n\'utilise aucun cookie tiers de tracking ou d\'analyse '
+              'Baillan. n\'utilise aucun cookie tiers de tracking ou d\'analyse '
               'comportementale.\n\n'
               'Seuls les cookies fonctionnels suivants sont utilisés :\n\n'
               '• Session d\'authentification Firebase (stockée dans '
@@ -214,7 +214,7 @@ class _PrivacyContent extends StatelessWidget {
 
         const SizedBox(height: 32),
         Text(
-          'EasyRent — Gestion locative simplifiée',
+          'Baillan. — Gestion locative simplifiée',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             fontStyle: FontStyle.italic,

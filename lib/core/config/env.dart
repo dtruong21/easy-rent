@@ -1,4 +1,4 @@
-/// Variables d'environnement EasyRent.
+/// Variables d'environnement Baillan.
 ///
 /// Post FEAT-019 (migration Firebase) : on conserve uniquement
 /// `APP_ENV` pour distinguer prod / dev (le projet Firebase reste le même,

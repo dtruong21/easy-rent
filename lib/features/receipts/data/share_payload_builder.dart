@@ -52,7 +52,7 @@ abstract final class SharePayloadBuilder {
         'Cordialement,\n'
         '$landlordFullName\n\n'
         '---\n'
-        'Document généré par EasyRent.';
+        'Émis par Baillan.';
 
     final filename = 'quittance_${_slugify(monthYear)}.pdf';
 

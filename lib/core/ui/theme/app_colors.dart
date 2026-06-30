@@ -32,7 +32,7 @@ class StatusColorSet {
   }
 }
 
-/// Extension de thème Material 3 pour la palette de statuts EasyRent.
+/// Extension de thème Material 3 pour la palette de statuts Baillan.
 ///
 /// 5 tones × 4 couleurs, déclinés light / dark.
 /// Accès : `Theme.of(context).extension<AppColors>()!.statusFor(tone)`.
