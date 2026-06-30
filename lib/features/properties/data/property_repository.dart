@@ -59,6 +59,20 @@ abstract interface class PropertyRepository {
     int? dpeValueKwhM2Year,
     String? gesLetter,
     int? constructionYear,
+    // FEAT-017 — Financement & acquisition
+    int? purchasePriceCents,
+    DateTime? purchaseDate,
+    int? notaryFeesCents,
+    bool isNewProperty,
+    int? propertyTaxAnnualCents,
+    int? insurancePnoAnnualCents,
+    int? condoFeesNonRecoverableCents,
+    int? loanPrincipalCents,
+    int? loanRateBps,
+    int? loanInsuranceBps,
+    int? loanDurationMonths,
+    DateTime? loanStartDate,
+    int? loanMonthlyPaymentOverrideCents,
   });
 
   /// Met à jour les champs métier d'un bien existant.
@@ -142,6 +156,19 @@ class SupabasePropertyRepository implements PropertyRepository {
     int? dpeValueKwhM2Year,
     String? gesLetter,
     int? constructionYear,
+    int? purchasePriceCents,
+    DateTime? purchaseDate,
+    int? notaryFeesCents,
+    bool isNewProperty = false,
+    int? propertyTaxAnnualCents,
+    int? insurancePnoAnnualCents,
+    int? condoFeesNonRecoverableCents,
+    int? loanPrincipalCents,
+    int? loanRateBps,
+    int? loanInsuranceBps,
+    int? loanDurationMonths,
+    DateTime? loanStartDate,
+    int? loanMonthlyPaymentOverrideCents,
   }) async {
     _log.info('create(type=${type.sqlValue})');
     // Ne PAS inclure landlord_id : la RLS WITH CHECK le fixe à auth.uid().
@@ -164,6 +191,29 @@ class SupabasePropertyRepository implements PropertyRepository {
       if (dpeValueKwhM2Year != null) 'dpe_value_kwh_m2_year': dpeValueKwhM2Year,
       if (gesLetter != null) 'ges_letter': gesLetter,
       if (constructionYear != null) 'construction_year': constructionYear,
+      // FEAT-017 — Financement & acquisition
+      if (purchasePriceCents != null)
+        'purchase_price_cents': purchasePriceCents,
+      if (purchaseDate != null)
+        'purchase_date': purchaseDate.toIso8601String().substring(0, 10),
+      if (notaryFeesCents != null) 'notary_fees_cents': notaryFeesCents,
+      'is_new_property': isNewProperty,
+      if (propertyTaxAnnualCents != null)
+        'property_tax_annual_cents': propertyTaxAnnualCents,
+      if (insurancePnoAnnualCents != null)
+        'insurance_pno_annual_cents': insurancePnoAnnualCents,
+      if (condoFeesNonRecoverableCents != null)
+        'condo_fees_non_recoverable_cents': condoFeesNonRecoverableCents,
+      if (loanPrincipalCents != null)
+        'loan_principal_cents': loanPrincipalCents,
+      if (loanRateBps != null) 'loan_rate_bps': loanRateBps,
+      if (loanInsuranceBps != null) 'loan_insurance_bps': loanInsuranceBps,
+      if (loanDurationMonths != null)
+        'loan_duration_months': loanDurationMonths,
+      if (loanStartDate != null)
+        'loan_start_date': loanStartDate.toIso8601String().substring(0, 10),
+      if (loanMonthlyPaymentOverrideCents != null)
+        'loan_monthly_payment_override_cents': loanMonthlyPaymentOverrideCents,
     };
     final rows = await Db.from('properties').insert(payload).select();
     return Property.fromJson(rows.first);
@@ -190,6 +240,27 @@ class SupabasePropertyRepository implements PropertyRepository {
       'dpe_value_kwh_m2_year': property.dpeValueKwhM2Year,
       'ges_letter': property.gesLetter,
       'construction_year': property.constructionYear,
+      // FEAT-017 — Financement & acquisition
+      'purchase_price_cents': property.purchasePriceCents,
+      'purchase_date': property.purchaseDate?.toIso8601String().substring(
+        0,
+        10,
+      ),
+      'notary_fees_cents': property.notaryFeesCents,
+      'is_new_property': property.isNewProperty,
+      'property_tax_annual_cents': property.propertyTaxAnnualCents,
+      'insurance_pno_annual_cents': property.insurancePnoAnnualCents,
+      'condo_fees_non_recoverable_cents': property.condoFeesNonRecoverableCents,
+      'loan_principal_cents': property.loanPrincipalCents,
+      'loan_rate_bps': property.loanRateBps,
+      'loan_insurance_bps': property.loanInsuranceBps,
+      'loan_duration_months': property.loanDurationMonths,
+      'loan_start_date': property.loanStartDate?.toIso8601String().substring(
+        0,
+        10,
+      ),
+      'loan_monthly_payment_override_cents':
+          property.loanMonthlyPaymentOverrideCents,
     };
     final rows = await Db.from(
       'properties',

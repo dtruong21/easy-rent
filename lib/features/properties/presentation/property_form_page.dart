@@ -57,6 +57,21 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
   String? _selectedDpeLetter;
   String? _selectedGesLetter;
 
+  // Section FEAT-017 — Financement & acquisition
+  late final TextEditingController _purchasePriceCtrl;
+  late final TextEditingController _notaryFeesCtrl;
+  late final TextEditingController _propertyTaxCtrl;
+  late final TextEditingController _insurancePnoCtrl;
+  late final TextEditingController _condoFeesCtrl;
+  late final TextEditingController _loanPrincipalCtrl;
+  late final TextEditingController _loanRateCtrl;
+  late final TextEditingController _loanInsuranceRateCtrl;
+  late final TextEditingController _loanDurationCtrl;
+  late final TextEditingController _loanPaymentOverrideCtrl;
+  bool _isNewProperty = false;
+  DateTime? _purchaseDate;
+  DateTime? _loanStartDate;
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +112,61 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
     );
     _selectedDpeLetter = p?.dpeLetter;
     _selectedGesLetter = p?.gesLetter;
+
+    // Section FEAT-017 — Financement & acquisition
+    _purchasePriceCtrl = TextEditingController(
+      text: p?.purchasePriceCents != null
+          ? (p!.purchasePriceCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _notaryFeesCtrl = TextEditingController(
+      text: p?.notaryFeesCents != null
+          ? (p!.notaryFeesCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _propertyTaxCtrl = TextEditingController(
+      text: p?.propertyTaxAnnualCents != null
+          ? (p!.propertyTaxAnnualCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _insurancePnoCtrl = TextEditingController(
+      text: p?.insurancePnoAnnualCents != null
+          ? (p!.insurancePnoAnnualCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _condoFeesCtrl = TextEditingController(
+      text: p?.condoFeesNonRecoverableCents != null
+          ? (p!.condoFeesNonRecoverableCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _loanPrincipalCtrl = TextEditingController(
+      text: p?.loanPrincipalCents != null
+          ? (p!.loanPrincipalCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _loanRateCtrl = TextEditingController(
+      text: p?.loanRateBps != null
+          ? (p!.loanRateBps! / 100).toStringAsFixed(2)
+          : '',
+    );
+    _loanInsuranceRateCtrl = TextEditingController(
+      text: p?.loanInsuranceBps != null
+          ? (p!.loanInsuranceBps! / 100).toStringAsFixed(2)
+          : '',
+    );
+    _loanDurationCtrl = TextEditingController(
+      text: p?.loanDurationMonths != null
+          ? p!.loanDurationMonths.toString()
+          : '',
+    );
+    _loanPaymentOverrideCtrl = TextEditingController(
+      text: p?.loanMonthlyPaymentOverrideCents != null
+          ? (p!.loanMonthlyPaymentOverrideCents! / 100).toStringAsFixed(0)
+          : '',
+    );
+    _isNewProperty = p?.isNewProperty ?? false;
+    _purchaseDate = p?.purchaseDate;
+    _loanStartDate = p?.loanStartDate;
   }
 
   @override
@@ -111,6 +181,16 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
     _floorCtrl.dispose();
     _constructionYearCtrl.dispose();
     _dpeValueCtrl.dispose();
+    _purchasePriceCtrl.dispose();
+    _notaryFeesCtrl.dispose();
+    _propertyTaxCtrl.dispose();
+    _insurancePnoCtrl.dispose();
+    _condoFeesCtrl.dispose();
+    _loanPrincipalCtrl.dispose();
+    _loanRateCtrl.dispose();
+    _loanInsuranceRateCtrl.dispose();
+    _loanDurationCtrl.dispose();
+    _loanPaymentOverrideCtrl.dispose();
     super.dispose();
   }
 
@@ -128,6 +208,9 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
         ? null
         : _postalCodeCtrl.text.trim();
     final city = _cityCtrl.text.trim().isEmpty ? null : _cityCtrl.text.trim();
+
+    // FEAT-017 — extraction champs financement depuis formState widget.
+    final financial = formState.extractFinancialData();
 
     await ref
         .read(propertyFormControllerProvider.notifier)
@@ -149,6 +232,21 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
           dpeValueKwhM2Year: dpeValue,
           gesLetter: _selectedGesLetter,
           constructionYear: constructionYear,
+          purchasePriceCents: financial['purchasePriceCents'] as int?,
+          purchaseDate: financial['purchaseDate'] as DateTime?,
+          notaryFeesCents: financial['notaryFeesCents'] as int?,
+          isNewProperty: financial['isNewProperty'] as bool? ?? false,
+          propertyTaxAnnualCents: financial['propertyTaxAnnualCents'] as int?,
+          insurancePnoAnnualCents: financial['insurancePnoAnnualCents'] as int?,
+          condoFeesNonRecoverableCents:
+              financial['condoFeesNonRecoverableCents'] as int?,
+          loanPrincipalCents: financial['loanPrincipalCents'] as int?,
+          loanRateBps: financial['loanRateBps'] as int?,
+          loanInsuranceBps: financial['loanInsuranceBps'] as int?,
+          loanDurationMonths: financial['loanDurationMonths'] as int?,
+          loanStartDate: financial['loanStartDate'] as DateTime?,
+          loanMonthlyPaymentOverrideCents:
+              financial['loanMonthlyPaymentOverrideCents'] as int?,
         );
   }
 
@@ -221,6 +319,23 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
               selectedGesLetter: _selectedGesLetter,
               onGesLetterChanged: (l) => setState(() => _selectedGesLetter = l),
               enabled: !isSubmitting,
+              // FEAT-017 — Financement & acquisition
+              purchasePriceController: _purchasePriceCtrl,
+              notaryFeesController: _notaryFeesCtrl,
+              propertyTaxController: _propertyTaxCtrl,
+              insurancePnoController: _insurancePnoCtrl,
+              condoFeesController: _condoFeesCtrl,
+              loanPrincipalController: _loanPrincipalCtrl,
+              loanRateController: _loanRateCtrl,
+              loanInsuranceRateController: _loanInsuranceRateCtrl,
+              loanDurationController: _loanDurationCtrl,
+              loanPaymentOverrideController: _loanPaymentOverrideCtrl,
+              isNewProperty: _isNewProperty,
+              onIsNewPropertyChanged: (v) => setState(() => _isNewProperty = v),
+              purchaseDate: _purchaseDate,
+              onPurchaseDateChanged: (d) => setState(() => _purchaseDate = d),
+              loanStartDate: _loanStartDate,
+              onLoanStartDateChanged: (d) => setState(() => _loanStartDate = d),
             ),
             if (errorMessage != null) ...[
               const SizedBox(height: 16),

@@ -15,6 +15,7 @@ import 'widgets/dashboard_header.dart';
 import 'widgets/kpi_grid.dart';
 import 'widgets/monthly_barchart.dart';
 import 'widgets/onboarding_first_steps.dart';
+import 'widgets/portfolio_yield_section.dart';
 import 'widgets/recent_activity_section.dart';
 import 'widgets/shortcuts_row.dart';
 
@@ -195,6 +196,8 @@ class _DataView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         KpiGrid(snapshot: snapshot),
+        SizedBox(height: spacing.xl),
+        const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
         MonthlyBarchart(months: snapshot.monthly),
         SizedBox(height: spacing.xl),

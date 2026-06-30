@@ -10,6 +10,7 @@ import '../application/properties_list_provider.dart';
 import '../application/property_detail_provider.dart';
 import '../data/property_repository.dart';
 import '../domain/property.dart';
+import 'widgets/property_profitability_card.dart';
 
 final _log = Logger('PropertyDetailPage');
 
@@ -69,6 +70,10 @@ class _PropertyDetailContent extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _InfoCard(property: property),
+            const SizedBox(height: 24),
+
+            // Section rentabilité (FEAT-017)
+            PropertyProfitabilityCard(propertyId: property.id),
             const SizedBox(height: 24),
 
             // Section baux — stub V1

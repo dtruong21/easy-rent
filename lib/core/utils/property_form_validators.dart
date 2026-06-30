@@ -106,4 +106,88 @@ class PropertyFormValidators {
     }
     return null;
   }
+
+  // ---------------------------------------------------------------------------
+  // FEAT-017 — Validateurs Financement & acquisition
+  // ---------------------------------------------------------------------------
+
+  /// Valide le prix d'achat (> 0 et < 1G€ = 100_000_000_000 centimes).
+  /// Champ optionnel : retourne [null] si vide.
+  static String? validatePurchasePrice(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final n = int.tryParse(value.trim().replaceAll(' ', ''));
+    if (n == null || n <= 0) {
+      return "Le prix d'achat doit être un nombre entier positif";
+    }
+    // Limite à 1 milliard d'euros (100 000 000 000 centimes).
+    if (n > 100000000000) {
+      return "Le prix d'achat ne peut pas dépasser 1 milliard d'euros";
+    }
+    return null;
+  }
+
+  /// Valide les frais de notaire (>= 0). Champ optionnel : retourne [null] si vide.
+  static String? validateNotaryFees(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final n = int.tryParse(value.trim().replaceAll(' ', ''));
+    if (n == null || n < 0) {
+      return 'Les frais de notaire doivent être un nombre positif ou nul';
+    }
+    return null;
+  }
+
+  /// Valide un montant annuel en euros (>= 0). Champ optionnel : retourne [null] si vide.
+  static String? validateAnnualAmount(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final n = int.tryParse(value.trim().replaceAll(' ', ''));
+    if (n == null || n < 0) {
+      return 'Le montant doit être un nombre positif ou nul';
+    }
+    return null;
+  }
+
+  /// Valide le taux nominal du prêt (0..30 % = 0..3000 bps).
+  /// Saisie en pourcentage (ex. "3.5" pour 3,5 %).
+  /// Champ optionnel : retourne [null] si vide.
+  static String? validateLoanRate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final d = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (d == null || d < 0 || d > 30) {
+      return 'Taux invalide (0 % à 30 %)';
+    }
+    return null;
+  }
+
+  /// Valide la durée du prêt en mois (12..360).
+  /// Champ optionnel : retourne [null] si vide.
+  static String? validateLoanDuration(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final n = int.tryParse(value.trim());
+    if (n == null || n < 12 || n > 360) {
+      return 'Durée invalide (12 à 360 mois)';
+    }
+    return null;
+  }
+
+  /// Valide le taux d'assurance emprunteur (0..2 % = 0..200 bps).
+  /// Saisie en pourcentage (ex. "0.30").
+  /// Champ optionnel : retourne [null] si vide.
+  static String? validateInsuranceRate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final d = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (d == null || d < 0 || d > 2) {
+      return "Taux d'assurance invalide (0 % à 2 %)";
+    }
+    return null;
+  }
+
+  /// Valide le capital emprunté (> 0). Champ optionnel : retourne [null] si vide.
+  static String? validateLoanPrincipal(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final n = int.tryParse(value.trim().replaceAll(' ', ''));
+    if (n == null || n <= 0) {
+      return 'Le capital emprunté doit être un nombre entier positif';
+    }
+    return null;
+  }
 }

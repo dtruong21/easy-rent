@@ -153,6 +153,19 @@ class _FakePropertyRepo implements PropertyRepository {
     int? dpeValueKwhM2Year,
     String? gesLetter,
     int? constructionYear,
+    int? purchasePriceCents,
+    DateTime? purchaseDate,
+    int? notaryFeesCents,
+    bool isNewProperty = false,
+    int? propertyTaxAnnualCents,
+    int? insurancePnoAnnualCents,
+    int? condoFeesNonRecoverableCents,
+    int? loanPrincipalCents,
+    int? loanRateBps,
+    int? loanInsuranceBps,
+    int? loanDurationMonths,
+    DateTime? loanStartDate,
+    int? loanMonthlyPaymentOverrideCents,
   }) async => throw UnimplementedError();
   @override
   Future<Property> update(Property property) async =>
