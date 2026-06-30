@@ -2,28 +2,18 @@ rules_version = '2';
 
 // EasyRent — Firebase Storage rules.
 //
-// 2 dossiers gérés :
-//   - receipts/{landlordId}/{receiptId}.pdf  → écriture CF-only (generateReceipt)
-//                                              lecture via signed URL (callable)
-//   - documents/{landlordId}/...             → upload direct par le propriétaire
-//                                              (les Storage Rules contrôlent)
-//                                              lecture via signed URL (callable)
+// **Décision FEAT-019** : Storage utilisé UNIQUEMENT pour les fichiers
+// utilisateur (documents — bail signé, état des lieux, attestations).
+// Les quittances PDF sont générées côté client via le package `pdf`
+// Dart à partir du doc Firestore receipts/{id} (preuve légale loi 1989).
 //
-// Toutes les lectures front passent par signed URL court-terme (5 min) →
-// pas de besoin d'`allow read` pour les clients normaux. Les CF (Admin SDK)
-// bypassent les rules.
+// 1 dossier géré :
+//   - documents/{landlordId}/...  → upload direct par le propriétaire
+//                                   download via signed URL (callable
+//                                   getDocumentDownloadUrl)
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // ============================================================
-    // receipts/{landlordId}/{receiptId}.pdf
-    // ============================================================
-    match /receipts/{landlordId}/{file=**} {
-      // Le client lit via signed URL → pas de read direct nécessaire.
-      // L'écriture passe exclusivement par la Cloud Function (Admin SDK).
-      allow read, write: if false;
-    }
 
     // ============================================================
     // documents/{landlordId}/...

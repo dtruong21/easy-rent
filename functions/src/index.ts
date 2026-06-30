@@ -49,7 +49,6 @@ export {
 } from "./callable/lease_payment";
 export {
   generateReceipt,
-  getReceiptPdfUrl,
   voidReceipt,
   markReceiptAsSent,
 } from "./callable/receipts";

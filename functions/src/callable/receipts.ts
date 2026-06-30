@@ -1,27 +1,27 @@
 /**
  * generateReceipt / voidReceipt / markReceiptAsSent — callables.
  *
- * Réplique de l'Edge Function Supabase `generate-receipt` + des RPC
- * `void_receipt()` et `mark_receipt_as_sent()`. Garde la même surface API
- * et les mêmes invariants loi 6 juillet 1989 :
+ * Réplique des RPC Postgres `generate_receipt()`, `void_receipt()` et
+ * `mark_receipt_as_sent()` + invariants loi 6 juillet 1989 :
  *   - receipt immutable une fois créé (Rules `update,delete: if false`)
  *   - voiding non destructif (flags `isVoided` + `voidedAt` + `voidedReason`)
  *   - sent_at idempotent — overwrite autorisé sur un même email
  *
- * Cost-minimisation :
- *   - memory: 256 MiB (pdf-lib pure JS, ~30 MiB peak)
- *   - concurrency: 80 (multiplexing pour amortir le cold start)
- *   - PDF stocké dans le bucket Firebase Storage par défaut, path
- *     `receipts/{landlordId}/{receiptId}.pdf` — règles Storage interdisent
- *     la lecture par d'autres landlords.
+ * Décision FEAT-019 (refonte) : **pas de PDF côté serveur, pas de Storage
+ * pour les receipts**. Le client Flutter génère le PDF via le package
+ * `pdf` Dart à partir des champs immuables stockés ici (denorm complet
+ * landlord/tenant/property/totals/period). Le doc Firestore est la preuve
+ * légale loi 1989 — le PDF n'est qu'une présentation visuelle.
+ *
+ * Bénéfices : pas de cold start pdf-lib, pas de bandwidth Functions,
+ * pas de signed URL à gérer. Storage reste utilisé uniquement pour
+ * la feature documents (bail signé, état des lieux).
  */
 
 import * as admin from "firebase-admin";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {computeDocumentType, generateReceiptPdf} from "../pdf/layout";
-import type {DocumentType} from "../pdf/layout";
 import {
   asBag,
   dataOrFail,
@@ -31,7 +31,16 @@ import {
   requireString,
 } from "../utils/callable_helpers";
 
-const PDF_URL_EXPIRY_SECONDS = 5 * 60; // 5 minutes
+type DocumentType = "quittance" | "recu";
+
+function computeDocumentType(
+  totalCents: number,
+  leaseRentCents: number,
+  leaseChargesCents: number,
+): DocumentType {
+  const due = leaseRentCents + leaseChargesCents;
+  return totalCents >= due ? "quittance" : "recu";
+}
 
 interface LeaseShape {
   landlordId: string;
@@ -69,10 +78,7 @@ function asLease(data: Record<string, unknown>): LeaseShape {
   };
 }
 
-function asPayment(
-  id: string,
-  data: Record<string, unknown>,
-): PaymentShape {
+function asPayment(id: string, data: Record<string, unknown>): PaymentShape {
   return {
     id,
     landlordId: String(data.landlordId ?? ""),
@@ -86,15 +92,11 @@ function asPayment(
   };
 }
 
-function isoDateUtc(ts: admin.firestore.Timestamp): string {
-  return ts.toDate().toISOString().slice(0, 10);
-}
-
 // ============================================================================
-// generateReceipt
+// generateReceipt — crée le doc Firestore immuable (PDF généré côté client)
 // ============================================================================
 export const generateReceipt = onCall(
-  {region: "europe-west1", memory: "256MiB", concurrency: 80},
+  {region: "europe-west1"},
   async (request) => {
     const uid = requireAuthUid(request);
     const data = asBag(request.data);
@@ -133,7 +135,7 @@ export const generateReceipt = onCall(
 
     const db = admin.firestore();
 
-    // 1. Load landlord (for legal fields fullName + address)
+    // 1. Load landlord (legal fields fullName + address required)
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
     const landlordData = dataOrFail(landlordSnap, "landlord not found");
     const landlordFullName = String(landlordData.fullName ?? "").trim();
@@ -159,7 +161,7 @@ export const generateReceipt = onCall(
       throw new HttpsError("failed-precondition", "lease is deleted");
     }
 
-    // 3. Resolve payments (mode 1 ids OR mode 2 period range)
+    // 3. Resolve payments
     let paymentDocs: PaymentShape[] = [];
     if (explicitPaymentIds !== null) {
       const refs = explicitPaymentIds.map((pid) => db.doc(`payments/${pid}`));
@@ -231,79 +233,40 @@ export const generateReceipt = onCall(
       }
     }
     const totalCents = rentCents + chargesCents;
-
     const documentType: DocumentType = computeDocumentType(
       totalCents,
       lease.rentAmountCents,
       lease.chargesAmountCents,
     );
 
-    // 5. Generate PDF
+    // 5. Write the receipt doc (legal record — immutable post-create per Rules)
     const receiptRef = db.collection("receipts").doc();
     const receiptId = receiptRef.id;
-    const generatedAt = new Date();
-
-    let pdfBytes: Uint8Array;
-    try {
-      pdfBytes = await generateReceiptPdf({
-        receiptId,
-        documentType,
-        landlordFullName,
-        landlordAddress,
-        tenantFirstName: lease.tenantFirstName,
-        tenantLastName: lease.tenantLastName,
-        propertyAddress: lease.propertyAddress,
-        periodStart: isoDateUtc(earliestStart),
-        periodEnd: isoDateUtc(latestEnd),
-        rentCents,
-        chargesCents,
-        totalCents,
-        lastPaidAt: new Date(lastPaidAtMs).toISOString(),
-        generatedAt,
-      });
-    } catch (err) {
-      logger.error("generateReceiptPdf failed", {uid, receiptId, err});
-      throw new HttpsError("internal", "pdf_generation_failed");
-    }
-
-    // 6. Upload to Storage
-    const pdfPath = `receipts/${uid}/${receiptId}.pdf`;
-    const bucket = admin.storage().bucket();
-    try {
-      await bucket.file(pdfPath).save(Buffer.from(pdfBytes), {
-        contentType: "application/pdf",
-        resumable: false,
-        metadata: {
-          metadata: {landlordId: uid, receiptId, documentType},
-        },
-      });
-    } catch (err) {
-      logger.error("storage upload failed", {uid, pdfPath, err});
-      throw new HttpsError("internal", "storage_upload_failed");
-    }
-
-    // 7. Write receipt doc
     const paymentIds = paymentDocs.map((p) => p.id);
-    const generatedAtTs = admin.firestore.Timestamp.fromDate(generatedAt);
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
     try {
       await receiptRef.set({
         id: receiptId,
         landlordId: uid,
         leaseId,
         paymentIds,
+        // Snapshot complet (loi 1989 — jamais re-synchronisé même si les
+        // entités sources sont modifiées par la suite).
         propertyName: lease.propertyName,
         propertyAddress: lease.propertyAddress,
         landlordFullName,
+        landlordAddress,
         tenantFullName: `${lease.tenantFirstName} ${lease.tenantLastName}`,
         periodStart: earliestStart,
         periodEnd: latestEnd,
+        lastPaidAt: admin.firestore.Timestamp.fromMillis(lastPaidAtMs),
         rentCents,
         chargesCents,
         totalCents,
         documentType,
-        pdfPath,
-        generatedAt: generatedAtTs,
-        createdAt: generatedAtTs,
+        generatedAt: now,
+        createdAt: now,
         isVoided: false,
         voidedAt: null,
         voidedReason: null,
@@ -312,68 +275,21 @@ export const generateReceipt = onCall(
         sentToEmail: null,
       });
     } catch (err) {
-      logger.error("[orphan-pdf] receipt doc write failed", {
-        uid,
-        pdfPath,
-        err,
-      });
+      logger.error("receipt write failed", {uid, receiptId, err});
       throw new HttpsError("internal", "receipt_persist_failed");
     }
 
-    // 8. Signed URL for immediate download
-    const [pdfUrl] = await bucket.file(pdfPath).getSignedUrl({
-      action: "read",
-      expires: Date.now() + PDF_URL_EXPIRY_SECONDS * 1000,
+    logger.info("receipt generated", {
+      uid,
+      receiptId,
+      documentType,
+      totalCents,
     });
-    const pdfUrlExpiresAt = new Date(
-      Date.now() + PDF_URL_EXPIRY_SECONDS * 1000,
-    ).toISOString();
-
-    logger.info("receipt generated", {uid, receiptId, documentType, totalCents});
 
     return {
       receiptId,
       documentType,
       totalCents,
-      pdfUrl,
-      pdfUrlExpiresAt,
-      periodStart: isoDateUtc(earliestStart),
-      periodEnd: isoDateUtc(latestEnd),
-    };
-  },
-);
-
-// ============================================================================
-// getReceiptPdfUrl — rafraîchit l'URL signée pour un receipt existant
-// ============================================================================
-export const getReceiptPdfUrl = onCall(
-  {region: "europe-west1"},
-  async (request) => {
-    const uid = requireAuthUid(request);
-    const data = asBag(request.data);
-    const receiptId = requireString(data.receiptId, "receiptId");
-
-    const db = admin.firestore();
-    const ref = db.doc(`receipts/${receiptId}`);
-    const snap = await ref.get();
-    const r = dataOrFail(snap, "receipt not found");
-    if (r.landlordId !== uid) {
-      throw new HttpsError("permission-denied", "not owner");
-    }
-    const pdfPath = String(r.pdfPath ?? "");
-    if (!pdfPath) {
-      throw new HttpsError("internal", "receipt has no pdfPath");
-    }
-
-    const [pdfUrl] = await admin.storage().bucket().file(pdfPath).getSignedUrl({
-      action: "read",
-      expires: Date.now() + PDF_URL_EXPIRY_SECONDS * 1000,
-    });
-    return {
-      pdfUrl,
-      pdfUrlExpiresAt: new Date(
-        Date.now() + PDF_URL_EXPIRY_SECONDS * 1000,
-      ).toISOString(),
     };
   },
 );
