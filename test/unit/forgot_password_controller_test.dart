@@ -3,7 +3,7 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/forgot_password_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository
@@ -15,10 +15,10 @@ class _FakeAuthRepository implements AuthRepository {
   Exception? sendError;
 
   @override
-  Stream<AuthState> get authStateChanges => const Stream.empty();
+  Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
-  Session? get currentSession => null;
+  User? get currentUser => null;
 
   @override
   Future<void> signInWithPassword({
@@ -41,7 +41,14 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> updatePassword(String newPassword) async {}
+  Future<String> verifyPasswordResetCode(String code) async =>
+      'test@example.com';
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -134,14 +141,14 @@ void main() {
       });
     });
 
-    group('sendResetEmail — erreurs Supabase (OWASP anti-énumération)', () {
+    group('sendResetEmail — erreurs Firebase (OWASP anti-énumération)', () {
       test(
         'rate limit → état error (exception au comportement anti-énumération)',
         () async {
           final repo = _FakeAuthRepository()
-            ..sendError = AuthException(
-              'Email rate limit exceeded',
-              code: 'over_email_send_rate_limit',
+            ..sendError = FirebaseAuthException(
+              code: 'too-many-requests',
+              message: 'Email rate limit exceeded',
             );
           final ctrl = _makeController(repo);
           await ctrl.sendResetEmail('user@exemple.fr');
@@ -154,9 +161,9 @@ void main() {
         'user_not_found → emailSent quand même (OWASP: pas de fuite compte)',
         () async {
           final repo = _FakeAuthRepository()
-            ..sendError = AuthException(
-              'User not found',
+            ..sendError = FirebaseAuthException(
               code: 'user_not_found',
+              message: 'User not found',
             );
           final ctrl = _makeController(repo);
           await ctrl.sendResetEmail('user@exemple.fr');
@@ -169,7 +176,10 @@ void main() {
         'AuthException inconnue → emailSent (OWASP: anti-énumération)',
         () async {
           final repo = _FakeAuthRepository()
-            ..sendError = AuthException('some supabase error');
+            ..sendError = FirebaseAuthException(
+              code: 'unknown',
+              message: 'some supabase error',
+            );
           final ctrl = _makeController(repo);
           await ctrl.sendResetEmail('user@exemple.fr');
           expect(_isEmailSent(ctrl.state), isTrue);

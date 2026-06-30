@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repo
@@ -14,10 +14,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   @override
-  Stream<AuthState> get authStateChanges => const Stream.empty();
+  Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
-  Session? get currentSession => null;
+  User? get currentUser => null;
 
   @override
   Future<void> signInWithPassword({
@@ -36,7 +36,14 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
-  Future<void> updatePassword(String newPassword) async {}
+  Future<String> verifyPasswordResetCode(String code) async =>
+      'test@example.com';
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {}
 
   @override
   Future<void> signOut() async {}

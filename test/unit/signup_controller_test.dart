@@ -1,41 +1,25 @@
 import 'package:easyrent/features/auth/application/signup_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/signup_page_state.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository
 // ---------------------------------------------------------------------------
-
-class _FakeSession extends Session {
-  _FakeSession()
-    : super(
-        accessToken: 'fake-token',
-        tokenType: 'bearer',
-        user: const User(
-          id: '00000000-0000-0000-0000-000000000001',
-          appMetadata: {},
-          userMetadata: {},
-          aud: 'authenticated',
-          createdAt: '2026-01-01T00:00:00Z',
-        ),
-      );
-}
 
 class _FakeAuthRepository implements AuthRepository {
   bool signUpCalled = false;
   String? lastEmail;
   String? lastFullName;
   Exception? signUpError;
-  Session? sessionAfterSignUp;
 
   @override
-  Stream<AuthState> get authStateChanges => const Stream.empty();
+  Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
-  Session? get currentSession => sessionAfterSignUp;
+  User? get currentUser => null;
 
   @override
   Future<void> signInWithPassword({
@@ -59,7 +43,14 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
-  Future<void> updatePassword(String newPassword) async {}
+  Future<String> verifyPasswordResetCode(String code) async =>
+      'test@example.com';
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -78,9 +69,6 @@ SignupController _makeController(_FakeAuthRepository repo) {
 
 bool _isError(SignupPageState s) =>
     s.maybeWhen(error: (_) => true, orElse: () => false);
-
-bool _isAwaiting(SignupPageState s) =>
-    s.maybeWhen(awaitingConfirmation: () => true, orElse: () => false);
 
 String _errorMsg(SignupPageState s) =>
     s.maybeWhen(error: (m) => m, orElse: () => '');
@@ -105,8 +93,8 @@ void main() {
     });
 
     group('signUp — chemin nominal', () {
-      test('session active après signup (MVP) → idle', () async {
-        final repo = _FakeAuthRepository()..sessionAfterSignUp = _FakeSession();
+      test('signup réussi → idle (Firebase auto-signe)', () async {
+        final repo = _FakeAuthRepository();
         final container = ProviderContainer(
           overrides: [authRepositoryProvider.overrideWithValue(repo)],
         );
@@ -139,22 +127,6 @@ void main() {
         expect(repo.lastEmail, _validSignup.email);
         expect(repo.lastFullName, _validSignup.fullName);
       });
-
-      test(
-        'session null après signup (email confirmation activée) → awaitingConfirmation',
-        () async {
-          final repo = _FakeAuthRepository();
-          final ctrl = _makeController(repo);
-          await ctrl.signUp(
-            fullName: _validSignup.fullName,
-            email: _validSignup.email,
-            password: _validSignup.password,
-            confirmPassword: _validSignup.confirmPassword,
-            rgpdConsent: _validSignup.rgpdConsent,
-          );
-          expect(_isAwaiting(ctrl.state), isTrue);
-        },
-      );
 
       test('trimme email et fullName', () async {
         final repo = _FakeAuthRepository();
@@ -246,12 +218,12 @@ void main() {
       });
     });
 
-    group('signUp — erreurs Supabase', () {
-      test('user_already_exists → message français', () async {
+    group('signUp — erreurs Firebase', () {
+      test('email-already-in-use → message français', () async {
         final repo = _FakeAuthRepository()
-          ..signUpError = AuthException(
-            'User already registered',
-            code: 'user_already_exists',
+          ..signUpError = FirebaseAuthException(
+            code: 'email-already-in-use',
+            message: 'The email address is already in use by another account.',
           );
         final ctrl = _makeController(repo);
         await ctrl.signUp(

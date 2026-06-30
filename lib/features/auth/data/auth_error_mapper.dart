@@ -1,50 +1,47 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-/// Traduit les [AuthException] Supabase en messages utilisateur français.
+/// Traduit les [FirebaseAuthException] en messages utilisateur français.
 ///
-/// Priorité : code Supabase (stable) > contenu du message (fragile, fallback).
+/// Codes Firebase : https://firebase.google.com/docs/auth/admin/errors
 class AuthErrorMapper {
   const AuthErrorMapper._();
 
-  static String fromException(AuthException e) {
-    final code = e.code ?? '';
-    final message = e.message.toLowerCase();
+  static String fromException(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-credential':
+      case 'invalid-email':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Email ou mot de passe incorrect.';
 
-    if (code == 'invalid_credentials' ||
-        message.contains('invalid login credentials') ||
-        message.contains('invalid login')) {
-      return 'Email ou mot de passe incorrect.';
+      case 'user-disabled':
+        return 'Ce compte a été désactivé.';
+
+      case 'email-already-in-use':
+        return 'Un compte existe déjà avec cet email. '
+            'Connectez-vous ou réinitialisez votre mot de passe.';
+
+      case 'weak-password':
+        return 'Mot de passe trop faible '
+            '(6 caractères min côté Firebase, 8 + 1 lettre + 1 chiffre côté app).';
+
+      case 'too-many-requests':
+        return 'Trop de demandes. Réessayez dans quelques minutes.';
+
+      case 'expired-action-code':
+      case 'invalid-action-code':
+        return 'Lien de réinitialisation expiré ou invalide. '
+            'Demandez-en un nouveau.';
+
+      case 'network-request-failed':
+        return 'Connexion impossible. Vérifiez votre accès internet.';
+
+      case 'operation-not-allowed':
+        return 'Méthode d\'authentification non activée. '
+            'Contactez le support.';
+
+      default:
+        return 'Une erreur est survenue. Veuillez réessayer.';
     }
-    if (code == 'email_not_confirmed' ||
-        message.contains('email not confirmed')) {
-      return 'Vérifiez votre email puis cliquez sur le lien de confirmation '
-          'avant de vous connecter.';
-    }
-    if (code == 'user_already_exists' ||
-        code == 'email_taken' ||
-        code == 'email_exists' ||
-        message.contains('already registered') ||
-        message.contains('user already registered')) {
-      return 'Un compte existe déjà avec cet email. '
-          'Connectez-vous ou réinitialisez votre mot de passe.';
-    }
-    if (code == 'weak_password' ||
-        message.contains('weak password') ||
-        message.contains('password is too weak') ||
-        message.contains('too weak')) {
-      return 'Mot de passe trop faible '
-          '(8 caractères min, 1 lettre + 1 chiffre).';
-    }
-    if (code == 'over_email_send_rate_limit' ||
-        code == 'rate_limit_exceeded' ||
-        message.contains('rate limit')) {
-      return 'Trop de demandes. Réessayez dans quelques minutes.';
-    }
-    if (code == 'otp_expired' ||
-        code == 'flow_state_expired' ||
-        message.contains('expired')) {
-      return 'Lien de réinitialisation expiré. Demandez-en un nouveau.';
-    }
-    return 'Une erreur est survenue. Veuillez réessayer.';
   }
 }

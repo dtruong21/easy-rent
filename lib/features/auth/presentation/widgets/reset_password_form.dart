@@ -9,10 +9,12 @@ import 'password_field.dart';
 
 /// Formulaire de réinitialisation du mot de passe.
 ///
-/// Ce widget est monté uniquement si une session recovery est active.
-/// Le parent [ResetPasswordPage] gère la vérification de session.
+/// Ce widget est monté uniquement si le `oobCode` reçu en URL est valide
+/// (le parent [ResetPasswordPage] a déjà appelé `verifyPasswordResetCode`).
 class ResetPasswordForm extends ConsumerStatefulWidget {
-  const ResetPasswordForm({super.key});
+  const ResetPasswordForm({super.key, required this.oobCode});
+
+  final String oobCode;
 
   @override
   ConsumerState<ResetPasswordForm> createState() => _ResetPasswordFormState();
@@ -47,7 +49,8 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
   Future<void> _submit() async {
     await ref
         .read(resetPasswordControllerProvider.notifier)
-        .updatePassword(
+        .confirmReset(
+          oobCode: widget.oobCode,
           newPassword: _passwordController.text,
           confirmPassword: _confirmController.text,
         );
@@ -66,7 +69,6 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
     );
     final theme = Theme.of(context);
 
-    // Déclenche la navigation après succès depuis le build tree.
     ref.listen<ResetPasswordState>(resetPasswordControllerProvider, (_, next) {
       next.maybeWhen(
         success: () {

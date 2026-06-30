@@ -49,8 +49,20 @@ service cloud.firestore {
       allow get: if isOwner(uid) && isActive(resource);
       allow list: if false; // chaque user ne voit que son propre doc
 
-      // CREATE via Cloud Function `handleNewUser` (beforeUserCreated) uniquement.
-      allow create: if false;
+      // CREATE : autorisé côté client juste après createUserWithEmailAndPassword,
+      // avec consent RGPD obligatoire dans le même write (atomicité art. 7.1).
+      // Identity Platform `beforeUserCreated` peut fournir une seconde couche
+      // (defense-in-depth) si activé — `set({merge:true})` rend les 2 chemins
+      // idempotents. Si IP désactivée, c'est ce chemin qui crée le doc.
+      allow create: if isOwner(uid)
+        && request.resource.data.id == uid
+        && request.resource.data.email is string
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() > 0
+        && request.resource.data.rgpdConsentVersion is string
+        && request.resource.data.rgpdConsentVersion.size() > 0
+        && request.resource.data.rgpdConsentAt is timestamp
+        && request.resource.data.deletedAt == null;
 
       // UPDATE : profil propre. RGPD consent versionné et identifiants immuables.
       allow update: if isOwner(uid)

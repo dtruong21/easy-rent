@@ -40,23 +40,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: refreshStream,
     redirect: (context, state) {
-      // currentSession est mis à jour synchroniquement par le SDK Supabase
-      // AVANT l'émission du stream. Le StreamProvider, lui, propage la
-      // nouvelle valeur en microtask suivante — race avec GoRouterRefreshStream
-      // qui peut déclencher le redirect avant cette propagation. On lit donc
-      // directement la session du repo pour éviter ce race au signup.
-      final isAuthed = ref.read(authRepositoryProvider).currentSession != null;
-      final isRecovery = ref.read(isInPasswordRecoveryProvider);
+      // isAuthenticatedProvider expose le user FirebaseAuth (data du
+      // StreamProvider, fallback sur currentUser en cache sur loading/error).
+      // Override possible en test via override(isAuthenticatedProvider, ...).
+      final isAuthed = ref.read(isAuthenticatedProvider);
       final location = state.matchedLocation;
-
-      // Cas passwordRecovery : Supabase émet une session temporaire lors du
-      // clic sur le lien de reset password. Sans cette garde, isAuthed serait
-      // true et l'utilisateur serait redirigé vers / sans avoir changé son
-      // mot de passe. On force /reset-password jusqu'à ce que l'event change
-      // (userUpdated après updatePassword, ou signedOut).
-      if (isRecovery && location != '/reset-password') {
-        return '/reset-password';
-      }
 
       // Routes publiques accessibles sans session.
       const publicRoutes = {
@@ -67,10 +55,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/privacy',
       };
       if (publicRoutes.contains(location)) {
-        // Redirige vers / si l'utilisateur est déjà connecté et tente d'aller
-        // sur /login ou /signup (inutile de les faire remplir le formulaire).
-        // En mode recovery, isAuthed est true mais on a déjà géré ce cas
-        // au-dessus, donc ici isRecovery est toujours false.
+        // Si déjà connecté, /login et /signup redirigent vers /.
+        // /reset-password reste accessible même connecté (cas où l'utilisateur
+        // clique son lien email après avoir réauthentifié manuellement).
         if (isAuthed && (location == '/login' || location == '/signup')) {
           return '/';
         }

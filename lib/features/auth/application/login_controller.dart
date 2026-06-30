@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/email_validator.dart';
 import '../data/auth_error_mapper.dart';
@@ -30,11 +30,11 @@ class LoginController extends StateNotifier<LoginPageState> {
         email: email.trim(),
         password: password,
       );
-      // Succès : la session Supabase déclenche GoRouter via GoRouterRefreshStream
+      // Succès : authStateChanges déclenche GoRouter via GoRouterRefreshStream
       // → redirect vers /. Pas besoin de changer le state ici.
       state = const LoginPageState.idle();
-    } on AuthException catch (e, st) {
-      _log.warning('AuthException signIn', e, st);
+    } on FirebaseAuthException catch (e, st) {
+      _log.warning('FirebaseAuthException signIn (code=${e.code})', e, st);
       state = LoginPageState.error(message: AuthErrorMapper.fromException(e));
     } catch (e, st) {
       _log.severe('Erreur inattendue signIn', e, st);

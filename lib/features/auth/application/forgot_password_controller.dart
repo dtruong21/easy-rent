@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/email_validator.dart';
 import '../data/auth_error_mapper.dart';
@@ -28,16 +28,16 @@ class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
       await _repository.sendPasswordResetEmail(email.trim());
       state = const ForgotPasswordState.emailSent();
       _log.info('Email de réinitialisation envoyé');
-    } on AuthException catch (e, st) {
-      _log.warning('AuthException forgotPassword', e, st);
-      // OWASP: éviter énumération users — on affiche toujours emailSent sauf
-      // pour rate limit (l'utilisateur a le droit de savoir qu'il envoie trop
-      // de requêtes, et ce n'est pas une fuite d'existence de compte).
-      final isRateLimit =
-          e.code == 'over_email_send_rate_limit' ||
-          e.code == 'rate_limit_exceeded' ||
-          e.message.toLowerCase().contains('rate limit');
-      if (isRateLimit) {
+    } on FirebaseAuthException catch (e, st) {
+      _log.warning(
+        'FirebaseAuthException forgotPassword (code=${e.code})',
+        e,
+        st,
+      );
+      // OWASP: éviter énumération users — on affiche emailSent sauf pour
+      // rate limit (utilisateur a le droit de savoir qu'il sature, ce n'est
+      // pas une fuite d'existence de compte).
+      if (e.code == 'too-many-requests') {
         state = ForgotPasswordState.error(
           message: AuthErrorMapper.fromException(e),
         );
@@ -46,8 +46,7 @@ class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
       }
     } catch (e, st) {
       _log.severe('Erreur inattendue forgotPassword', e, st);
-      // OWASP: éviter énumération users — même pour les erreurs inattendues,
-      // on affiche emailSent pour ne pas révéler l'existence d'un compte.
+      // OWASP: éviter énumération users — emailSent même sur erreur inattendue.
       state = const ForgotPasswordState.emailSent();
     }
   }

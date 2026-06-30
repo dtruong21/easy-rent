@@ -3,7 +3,7 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/login_page_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository
@@ -16,10 +16,10 @@ class _FakeAuthRepository implements AuthRepository {
   Exception? signInError;
 
   @override
-  Stream<AuthState> get authStateChanges => const Stream.empty();
+  Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
-  Session? get currentSession => null;
+  User? get currentUser => null;
 
   @override
   Future<void> signInWithPassword({
@@ -42,7 +42,14 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
-  Future<void> updatePassword(String newPassword) async {}
+  Future<String> verifyPasswordResetCode(String code) async =>
+      'test@example.com';
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {}
 
   @override
   Future<void> signOut() async {
@@ -140,12 +147,12 @@ void main() {
       });
     });
 
-    group('signIn — erreurs Supabase', () {
+    group('signIn — erreurs Firebase', () {
       test('invalid_credentials → message français', () async {
         final repo = _FakeAuthRepository()
-          ..signInError = AuthException(
-            'Invalid login credentials',
-            code: 'invalid_credentials',
+          ..signInError = FirebaseAuthException(
+            code: 'invalid-credential',
+            message: 'Invalid login credentials',
           );
         final ctrl = _makeController(repo);
         await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
@@ -154,13 +161,13 @@ void main() {
 
       test('email_not_confirmed → message français', () async {
         final repo = _FakeAuthRepository()
-          ..signInError = AuthException(
-            'Email not confirmed',
-            code: 'email_not_confirmed',
+          ..signInError = FirebaseAuthException(
+            code: 'invalid-credential',
+            message: 'Email not confirmed',
           );
         final ctrl = _makeController(repo);
         await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
-        expect(_errorMsg(ctrl.state), contains('Vérifiez votre email'));
+        expect(_errorMsg(ctrl.state), 'Email ou mot de passe incorrect.');
       });
 
       test('exception inconnue → message générique', () async {

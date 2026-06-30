@@ -1,36 +1,40 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _log = Logger('AuthRepository');
 
 /// Version actuelle du texte de consentement RGPD présenté à l'utilisateur.
 ///
-/// Format : 'vN-YYYY-MM' — à incrémenter à chaque mise à jour
-/// du texte de politique de confidentialité ou des finalités de traitement.
-/// Cette valeur est transmise dans raw_user_meta_data au signup et persistée
-/// dans landlords.rgpd_consent_version via le trigger handle_new_user.
-const String _rgpdConsentVersion = 'v1-2026-06';
+/// Format : 'vN-YYYY-MM' — à incrémenter à chaque mise à jour du texte de
+/// politique de confidentialité ou des finalités de traitement. Persisté
+/// dans landlords.rgpdConsentVersion (champ immuable post-création).
+/// **Doit rester synchronisé avec functions/src/auth/handle_new_user.ts**.
+const String rgpdConsentVersion = 'v1-2026-06';
 
-/// Contrat public : les widgets et providers consomment cette interface,
-/// jamais l'implémentation directement (facilite les mocks dans les tests).
+/// Contrat public — les widgets / providers consomment cette interface,
+/// jamais l'implémentation directement (mocks faciles en test).
 abstract interface class AuthRepository {
-  /// Flux d'événements d'authentification Supabase (login, logout, refresh…).
-  Stream<AuthState> get authStateChanges;
+  /// Flux d'événements d'authentification Firebase Auth.
+  Stream<User?> get authStateChanges;
 
-  /// Session active, ou [null] si non authentifié.
-  Session? get currentSession;
+  /// Utilisateur courant, ou [null] si non authentifié.
+  User? get currentUser;
 
-  /// Connecte l'utilisateur via email + mot de passe.
+  /// Connecte avec email + mot de passe.
   Future<void> signInWithPassword({
     required String email,
     required String password,
   });
 
-  /// Crée un compte et envoie un email de confirmation.
+  /// Crée un compte et :
+  /// 1. Provisionne Firebase Auth user + displayName
+  /// 2. Écrit landlords/{uid} avec consent RGPD horodaté (atomicité art. 7.1)
   ///
-  /// [fullName] est transmis dans les métadonnées utilisateur pour que
-  /// le trigger Supabase `handle_new_user` alimente la table `landlords`.
+  /// Si Identity Platform `beforeUserCreated` est activé, la Cloud Function
+  /// crée déjà le doc landlords ; le `set({merge:true})` client garantit
+  /// l'idempotence sans casser le flow quand IP est désactivé.
   Future<void> signUpWithPassword({
     required String email,
     required String password,
@@ -38,29 +42,33 @@ abstract interface class AuthRepository {
   });
 
   /// Envoie un email de réinitialisation de mot de passe.
-  ///
-  /// [redirectTo] est dérivé dynamiquement de [Uri.base.origin] pour
-  /// fonctionner sans config en dev local, staging et prod.
   Future<void> sendPasswordResetEmail(String email);
 
-  /// Met à jour le mot de passe de la session courante (flow reset password).
-  Future<void> updatePassword(String newPassword);
+  /// Confirme le reset password avec l'oobCode reçu dans l'email.
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  });
 
-  /// Révoque la session courante côté Supabase.
+  /// Vérifie qu'un oobCode est valide et retourne l'email associé.
+  Future<String> verifyPasswordResetCode(String code);
+
+  /// Révoque la session Firebase.
   Future<void> signOut();
 }
 
-/// Implémentation concrète s'appuyant sur [SupabaseClient].
-class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this._client);
+/// Implémentation s'appuyant sur [FirebaseAuth] + [FirebaseFirestore].
+class FirebaseAuthRepository implements AuthRepository {
+  FirebaseAuthRepository(this._auth, this._firestore);
 
-  final SupabaseClient _client;
-
-  @override
-  Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
   @override
-  Session? get currentSession => _client.auth.currentSession;
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  @override
+  User? get currentUser => _auth.currentUser;
 
   @override
   Future<void> signInWithPassword({
@@ -68,7 +76,7 @@ class SupabaseAuthRepository implements AuthRepository {
     required String password,
   }) async {
     _log.info('signInWithPassword requested');
-    await _client.auth.signInWithPassword(email: email, password: password);
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   @override
@@ -77,49 +85,78 @@ class SupabaseAuthRepository implements AuthRepository {
     required String password,
     required String fullName,
   }) async {
-    // emailRedirectTo est dérivé dynamiquement de Uri.base.origin pour
-    // fonctionner sans config en dev local, staging et prod automatiquement —
-    // symétrique à ce qui est fait dans sendPasswordResetEmail.
-    final emailRedirectTo = '${Uri.base.origin}/login';
-    _log.info(
-      'signUpWithPassword requested (emailRedirectTo: $emailRedirectTo)',
-    );
-    await _client.auth.signUp(
+    _log.info('signUpWithPassword requested');
+    final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
-      data: {
-        'full_name': fullName,
-        // Consentement RGPD — persisté dans landlords.rgpd_consent_version
-        // via le trigger handle_new_user() (accountability art. 7.1 RGPD).
-        'rgpd_consent_version': _rgpdConsentVersion,
-      },
-      emailRedirectTo: emailRedirectTo,
     );
+    final user = cred.user;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-user',
+        message: 'createUserWithEmailAndPassword returned null user',
+      );
+    }
+
+    // Met à jour le profil Firebase Auth (displayName).
+    await user.updateDisplayName(fullName);
+
+    // Provisionne le doc landlords/{uid} avec consent RGPD horodaté.
+    // Idempotent (`set({merge:true})`) — coexiste avec handleNewUser CF si
+    // Identity Platform est activé.
+    final now = FieldValue.serverTimestamp();
+    await _firestore.doc('landlords/${user.uid}').set({
+      'id': user.uid,
+      'email': email,
+      'fullName': fullName,
+      'phone': null,
+      'address': null,
+      'rgpdConsentAt': now,
+      'rgpdConsentVersion': rgpdConsentVersion,
+      'createdAt': now,
+      'updatedAt': now,
+      'deletedAt': null,
+    }, SetOptions(merge: true));
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
-    // redirectTo est calculé à l'exécution → fonctionne sans config en
-    // dev local (localhost:XXXX), staging et prod automatiquement.
-    final redirectTo = '${Uri.base.origin}/reset-password';
-    _log.info('sendPasswordResetEmail requested (redirectTo: $redirectTo)');
-    await _client.auth.resetPasswordForEmail(email, redirectTo: redirectTo);
+    final origin = Uri.base.origin;
+    _log.info('sendPasswordResetEmail requested (origin: $origin)');
+    await _auth.sendPasswordResetEmail(
+      email: email,
+      actionCodeSettings: ActionCodeSettings(
+        url: '$origin/reset-password',
+        handleCodeInApp: true,
+      ),
+    );
   }
 
   @override
-  Future<void> updatePassword(String newPassword) async {
-    _log.info('updatePassword requested');
-    await _client.auth.updateUser(UserAttributes(password: newPassword));
+  Future<String> verifyPasswordResetCode(String code) async {
+    return await _auth.verifyPasswordResetCode(code);
+  }
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {
+    _log.info('confirmPasswordReset');
+    await _auth.confirmPasswordReset(code: code, newPassword: newPassword);
   }
 
   @override
   Future<void> signOut() async {
     _log.info('signOut');
-    await _client.auth.signOut();
+    await _auth.signOut();
   }
 }
 
 /// Provider exposant le repository d'authentification.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return SupabaseAuthRepository(Supabase.instance.client);
+  return FirebaseAuthRepository(
+    FirebaseAuth.instance,
+    FirebaseFirestore.instance,
+  );
 });

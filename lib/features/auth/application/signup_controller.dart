@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/email_validator.dart';
 import '../../../core/utils/password_validator.dart';
@@ -55,15 +55,12 @@ class SignupController extends StateNotifier<SignupPageState> {
         password: password,
         fullName: fullName.trim(),
       );
-      if (_repository.currentSession != null) {
-        state = const SignupPageState.idle();
-        _log.info('Signup réussi — session active');
-      } else {
-        state = const SignupPageState.awaitingConfirmation();
-        _log.info('Signup réussi — email de confirmation envoyé');
-      }
-    } on AuthException catch (e, st) {
-      _log.warning('AuthException signup', e, st);
+      // Firebase Auth signe l'utilisateur immédiatement après création — pas
+      // de step "email confirmation" obligatoire par défaut.
+      state = const SignupPageState.idle();
+      _log.info('Signup réussi — session active');
+    } on FirebaseAuthException catch (e, st) {
+      _log.warning('FirebaseAuthException signup (code=${e.code})', e, st);
       state = SignupPageState.error(message: AuthErrorMapper.fromException(e));
     } catch (e, st) {
       _log.severe('Erreur inattendue signup', e, st);

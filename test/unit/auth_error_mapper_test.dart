@@ -1,129 +1,99 @@
 import 'package:easyrent/features/auth/data/auth_error_mapper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
-  group('AuthErrorMapper.fromException', () {
-    AuthException e(String message, {String? code}) =>
-        AuthException(message, code: code);
+  group('AuthErrorMapper.fromException (Firebase codes)', () {
+    FirebaseAuthException e(String code, [String message = '']) =>
+        FirebaseAuthException(code: code, message: message);
 
-    test('invalid_credentials code → message email/mdp incorrect', () {
+    test('invalid-credential → email/mdp incorrect', () {
       expect(
-        AuthErrorMapper.fromException(e('', code: 'invalid_credentials')),
+        AuthErrorMapper.fromException(e('invalid-credential')),
         'Email ou mot de passe incorrect.',
       );
     });
 
-    test('message "invalid login credentials" → email/mdp incorrect', () {
+    test('wrong-password → email/mdp incorrect', () {
       expect(
-        AuthErrorMapper.fromException(e('Invalid login credentials')),
+        AuthErrorMapper.fromException(e('wrong-password')),
         'Email ou mot de passe incorrect.',
       );
     });
 
-    test('email_not_confirmed code → vérifier email', () {
+    test('user-not-found → email/mdp incorrect (anti-énumération)', () {
       expect(
-        AuthErrorMapper.fromException(e('', code: 'email_not_confirmed')),
-        contains('Vérifiez votre email'),
+        AuthErrorMapper.fromException(e('user-not-found')),
+        'Email ou mot de passe incorrect.',
       );
     });
 
-    test('message "email not confirmed" → vérifier email', () {
+    test('invalid-email → email/mdp incorrect', () {
       expect(
-        AuthErrorMapper.fromException(e('Email not confirmed')),
-        contains('Vérifiez votre email'),
+        AuthErrorMapper.fromException(e('invalid-email')),
+        'Email ou mot de passe incorrect.',
       );
     });
 
-    test('user_already_exists code → compte déjà existant', () {
+    test('user-disabled → compte désactivé', () {
       expect(
-        AuthErrorMapper.fromException(e('', code: 'user_already_exists')),
+        AuthErrorMapper.fromException(e('user-disabled')),
+        contains('désactivé'),
+      );
+    });
+
+    test('email-already-in-use → compte déjà existant', () {
+      expect(
+        AuthErrorMapper.fromException(e('email-already-in-use')),
         contains('Un compte existe déjà'),
       );
     });
 
-    test('email_taken code → compte déjà existant', () {
+    test('weak-password → mot de passe faible', () {
       expect(
-        AuthErrorMapper.fromException(e('', code: 'email_taken')),
-        contains('Un compte existe déjà'),
-      );
-    });
-
-    test('email_exists code → compte déjà existant', () {
-      expect(
-        AuthErrorMapper.fromException(e('', code: 'email_exists')),
-        contains('Un compte existe déjà'),
-      );
-    });
-
-    test('message "already registered" → compte déjà existant', () {
-      expect(
-        AuthErrorMapper.fromException(e('User already registered')),
-        contains('Un compte existe déjà'),
-      );
-    });
-
-    test('weak_password code → mot de passe faible', () {
-      expect(
-        AuthErrorMapper.fromException(e('', code: 'weak_password')),
+        AuthErrorMapper.fromException(e('weak-password')),
         contains('Mot de passe trop faible'),
       );
     });
 
-    test('message "weak password" → mot de passe faible', () {
+    test('too-many-requests → trop de demandes', () {
       expect(
-        AuthErrorMapper.fromException(e('Password is too weak')),
-        contains('Mot de passe trop faible'),
-      );
-    });
-
-    test('over_email_send_rate_limit code → trop de demandes', () {
-      expect(
-        AuthErrorMapper.fromException(
-          e('', code: 'over_email_send_rate_limit'),
-        ),
+        AuthErrorMapper.fromException(e('too-many-requests')),
         contains('Trop de demandes'),
       );
     });
 
-    test('message "rate limit" → trop de demandes', () {
+    test('expired-action-code → lien expiré', () {
       expect(
-        AuthErrorMapper.fromException(e('Email rate limit exceeded')),
-        contains('Trop de demandes'),
-      );
-    });
-
-    test('otp_expired code → lien expiré', () {
-      expect(
-        AuthErrorMapper.fromException(e('', code: 'otp_expired')),
+        AuthErrorMapper.fromException(e('expired-action-code')),
         contains('expiré'),
       );
     });
 
-    test('flow_state_expired code → lien expiré', () {
+    test('invalid-action-code → lien expiré', () {
       expect(
-        AuthErrorMapper.fromException(e('', code: 'flow_state_expired')),
+        AuthErrorMapper.fromException(e('invalid-action-code')),
         contains('expiré'),
       );
     });
 
-    test('message "expired" → lien expiré', () {
+    test('network-request-failed → connexion impossible', () {
       expect(
-        AuthErrorMapper.fromException(e('Token has expired')),
-        contains('expiré'),
+        AuthErrorMapper.fromException(e('network-request-failed')),
+        contains('Connexion impossible'),
       );
     });
 
-    test('erreur inconnue → message générique', () {
+    test('operation-not-allowed → méthode non activée', () {
       expect(
-        AuthErrorMapper.fromException(e('some unknown error')),
-        'Une erreur est survenue. Veuillez réessayer.',
+        AuthErrorMapper.fromException(e('operation-not-allowed')),
+        contains('non activée'),
       );
     });
 
     test('code inconnu → message générique', () {
       expect(
-        AuthErrorMapper.fromException(e('', code: 'unknown_code_xyz')),
+        AuthErrorMapper.fromException(e('unknown_code_xyz')),
         'Une erreur est survenue. Veuillez réessayer.',
       );
     });

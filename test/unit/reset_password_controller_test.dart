@@ -1,23 +1,29 @@
 import 'package:easyrent/features/auth/application/reset_password_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/reset_password_state.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ---------------------------------------------------------------------------
-// Fake repository
+// Fake repository (Firebase)
+//
+// Le nouveau flow est `confirmReset(oobCode, newPassword, confirmPassword)`
+// qui appelle confirmPasswordReset côté repo. La validation
+// password+confirm reste inchangée, on ne couvre que les chemins du
+// controller (pas FirebaseAuth lui-même).
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
-  bool updatePasswordCalled = false;
-  Exception? updateError;
+  bool confirmResetCalled = false;
+  String? lastCode;
+  Exception? confirmError;
 
   @override
-  Stream<AuthState> get authStateChanges => const Stream.empty();
+  Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
-  Session? get currentSession => null;
+  User? get currentUser => null;
 
   @override
   Future<void> signInWithPassword({
@@ -36,18 +42,22 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> sendPasswordResetEmail(String email) async {}
 
   @override
-  Future<void> updatePassword(String newPassword) async {
-    updatePasswordCalled = true;
-    if (updateError != null) throw updateError!;
+  Future<String> verifyPasswordResetCode(String code) async =>
+      'test@example.com';
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {
+    confirmResetCalled = true;
+    lastCode = code;
+    if (confirmError != null) throw confirmError!;
   }
 
   @override
   Future<void> signOut() async {}
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 ResetPasswordController _makeController(_FakeAuthRepository repo) {
   final container = ProviderContainer(
@@ -65,9 +75,7 @@ bool _isSuccess(ResetPasswordState s) =>
 String _errorMsg(ResetPasswordState s) =>
     s.maybeWhen(error: (m) => m, orElse: () => '');
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+const _validCode = 'oob-1234';
 
 void main() {
   group('ResetPasswordController', () {
@@ -76,7 +84,7 @@ void main() {
       expect(ctrl.state, const ResetPasswordState.idle());
     });
 
-    group('updatePassword — chemin nominal', () {
+    group('confirmReset — chemin nominal', () {
       test('transitions idle → submitting → success', () async {
         final repo = _FakeAuthRepository();
         final container = ProviderContainer(
@@ -93,7 +101,8 @@ void main() {
 
         await container
             .read(resetPasswordControllerProvider.notifier)
-            .updatePassword(
+            .confirmReset(
+              oobCode: _validCode,
               newPassword: 'Password1',
               confirmPassword: 'Password1',
             );
@@ -104,16 +113,34 @@ void main() {
           isTrue,
         );
         expect(_isSuccess(states[2]), isTrue);
-        expect(repo.updatePasswordCalled, isTrue);
+        expect(repo.confirmResetCalled, isTrue);
+        expect(repo.lastCode, _validCode);
       });
     });
 
-    group('updatePassword — validation', () {
+    group('confirmReset — validation', () {
+      test('oobCode vide → error sans appel repo', () async {
+        final repo = _FakeAuthRepository();
+        final ctrl = _makeController(repo);
+        await ctrl.confirmReset(
+          oobCode: '',
+          newPassword: 'Password1',
+          confirmPassword: 'Password1',
+        );
+        expect(repo.confirmResetCalled, isFalse);
+        expect(_isError(ctrl.state), isTrue);
+        expect(_errorMsg(ctrl.state), contains('Code'));
+      });
+
       test('mot de passe trop court → error sans appel repo', () async {
         final repo = _FakeAuthRepository();
         final ctrl = _makeController(repo);
-        await ctrl.updatePassword(newPassword: 'abc', confirmPassword: 'abc');
-        expect(repo.updatePasswordCalled, isFalse);
+        await ctrl.confirmReset(
+          oobCode: _validCode,
+          newPassword: 'abc',
+          confirmPassword: 'abc',
+        );
+        expect(repo.confirmResetCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
         expect(_errorMsg(ctrl.state), '8 caractères minimum');
       });
@@ -121,11 +148,12 @@ void main() {
       test('mot de passe sans chiffre → error', () async {
         final repo = _FakeAuthRepository();
         final ctrl = _makeController(repo);
-        await ctrl.updatePassword(
+        await ctrl.confirmReset(
+          oobCode: _validCode,
           newPassword: 'abcdefgh',
           confirmPassword: 'abcdefgh',
         );
-        expect(repo.updatePasswordCalled, isFalse);
+        expect(repo.confirmResetCalled, isFalse);
         expect(_errorMsg(ctrl.state), 'Au moins un chiffre');
       });
 
@@ -134,11 +162,12 @@ void main() {
         () async {
           final repo = _FakeAuthRepository();
           final ctrl = _makeController(repo);
-          await ctrl.updatePassword(
+          await ctrl.confirmReset(
+            oobCode: _validCode,
             newPassword: 'Password1',
             confirmPassword: 'Password2',
           );
-          expect(repo.updatePasswordCalled, isFalse);
+          expect(repo.confirmResetCalled, isFalse);
           expect(
             _errorMsg(ctrl.state),
             'Les mots de passe ne correspondent pas',
@@ -147,12 +176,16 @@ void main() {
       );
     });
 
-    group('updatePassword — erreurs Supabase', () {
-      test('otp_expired → lien expiré', () async {
+    group('confirmReset — erreurs Firebase', () {
+      test('expired-action-code → lien expiré', () async {
         final repo = _FakeAuthRepository()
-          ..updateError = AuthException('Token expired', code: 'otp_expired');
+          ..confirmError = FirebaseAuthException(
+            code: 'expired-action-code',
+            message: 'The action code has expired.',
+          );
         final ctrl = _makeController(repo);
-        await ctrl.updatePassword(
+        await ctrl.confirmReset(
+          oobCode: _validCode,
           newPassword: 'Password1',
           confirmPassword: 'Password1',
         );
@@ -162,9 +195,10 @@ void main() {
 
       test('exception inconnue → message générique', () async {
         final repo = _FakeAuthRepository()
-          ..updateError = Exception('network error');
+          ..confirmError = Exception('network error');
         final ctrl = _makeController(repo);
-        await ctrl.updatePassword(
+        await ctrl.confirmReset(
+          oobCode: _validCode,
           newPassword: 'Password1',
           confirmPassword: 'Password1',
         );
