@@ -51,6 +51,9 @@ dependencies:
   # PWA install prompt dismiss persistence
   shared_preferences: ^2.3.5
 
+  # SVG rendering (logo Google officiel sur les boutons d'auth)
+  flutter_svg: ^2.0.10+1
+
   # JS interop (install prompt bridge)
   web: ^1.1.0
 
