@@ -77,9 +77,49 @@ jobs:
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }}
 
       - name: Deploy to Firebase Hosting
+        id: firebase_deploy
+        # Voir step suivant — on tolère un cas d'erreur précis et SEUL (retry race
+        # connu de l'action upstream). Toute autre erreur est propagée par la step
+        # de tolérance.
+        continue-on-error: true
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           channelId: ${{ needs.determine-env.outputs.firebase_channel }}
+
+      # Bug retry race de FirebaseExtended/action-hosting-deploy@v0 :
+      #
+      # Symptôme : le client retry son POST /channels/<channel>/releases sur erreur
+      # réseau (« premature close »), mais le 1er POST a en fait réussi côté
+      # serveur Firebase. Le 2e POST reçoit alors HTTP 400 FAILED_PRECONDITION
+      # « supplied version ... is the current active version ». L'action exit 1
+      # alors que le contenu est bel et bien déployé sur le channel.
+      #
+      # Observé sur develop le 2026-06-30 (commits f541d92 et 0fa3bce). Pour ne
+      # pas masquer les vrais fails, on grep le log du job courant : si
+      # exactement cette signature d'erreur apparaît, on succeed avec un warning.
+      # Toute autre cause d'échec laisse le job en fail.
+      #
+      # À retirer dès que l'action upstream patche son retry handling — suivre :
+      # https://github.com/FirebaseExtended/action-hosting-deploy/issues
+      - name: Tolerate Firebase retry-race FAILED_PRECONDITION
+        if: steps.firebase_deploy.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # On parse les logs du run courant. La signature ciblée vient de
+          # firebase-tools (Firebase Hosting REST API) — assez précise pour
+          # qu'aucune autre erreur n'y matche par accident.
+          LOGS=$(gh run view "${{ github.run_id }}" \
+            --repo "${{ github.repository }}" \
+            --log 2>/dev/null || true)
+          if echo "$LOGS" | grep -qE 'FAILED_PRECONDITION.{0,200}is the current active version'; then
+            echo "::warning::Firebase retry-race detected (known upstream bug). Content WAS deployed — treating job as success."
+            exit 0
+          else
+            echo "::error::Firebase deploy failed for a reason OTHER than the known retry race. Inspect the deploy step logs."
+            exit 1
+          fi
