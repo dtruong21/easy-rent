@@ -19,6 +19,7 @@ import '../../features/payments/presentation/payment_form_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/receipts/presentation/lease_receipts_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
+import '../../features/simulator/presentation/simulator_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
 import 'go_router_refresh_stream.dart';
@@ -293,6 +294,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
           child: const ProfilePage(),
+          transition: AppTransition.standard,
+        ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Simulateur d'investissement (FEAT-018)
+      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/simulator',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const SimulatorPage(),
+          transition: AppTransition.standard,
+        ),
+      ),
+      GoRoute(
+        path: '/simulator/:id',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: SimulatorPage(scenarioId: state.pathParameters['id']),
           transition: AppTransition.standard,
         ),
       ),
