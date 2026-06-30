@@ -6,7 +6,7 @@
     "display": "standalone",
     "background_color": "#F7F4ED",
     "theme_color": "#1B1A17",
-    "description": "Baillan. Votre bailliage, tenu au jour le jour — outil pour bailleurs : quittances, loyers, charges, locataires, documents.",
+    "description": "Baillan. Tenir registre — outil pour bailleurs : quittances, loyers, charges, locataires, documents.",
     "orientation": "any",
     "prefer_related_applications": false,
     "categories": ["productivity", "business", "finance"],
