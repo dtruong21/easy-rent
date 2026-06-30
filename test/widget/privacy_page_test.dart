@@ -79,12 +79,19 @@ void main() {
       expect(text, contains('6 juillet 1989'));
     });
 
-    testWidgets('mentionne Supabase comme sous-traitant', (tester) async {
+    testWidgets('mentionne Firebase/Google comme sous-traitant (RGPD)', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap(const PrivacyPage()));
       await tester.pumpAndSettle();
 
       final text = _allText(tester);
-      expect(text, contains('Supabase'));
+      // Post FEAT-019 : la stack data est passée de Supabase à Firebase.
+      // L'obligation RGPD reste : informer l'utilisateur du sous-traitant.
+      expect(text, contains('Firebase'));
+      expect(text, contains('Google'));
+      // Vérifie aussi qu'on ne mentionne plus Supabase (résidu RGPD).
+      expect(text, isNot(contains('Supabase')));
     });
   });
 }
