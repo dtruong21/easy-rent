@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// EasyRent — Firestore security rules.
+//
+// FEAT-019 Phase 0 : DENY ALL par défaut. Les rules par collection
+// (landlords, properties, tenants, leases, payments, receipts) seront
+// ajoutées en Phase 1 en suivant le principe "owner-only" :
+//   allow read, write: if request.auth != null
+//                      && request.auth.uid == resource.data.landlord_id;
+//
+// Référence : docs/SECURITY.md + docs/state/SCHEMA.md.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default: deny everything until per-collection rules are written.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

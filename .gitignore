@@ -97,3 +97,6 @@ skills-lock.json
 **/*.config.dart
 **/*.mocks.dart
 
+
+# Backups (FEAT-019 migration)
+backups/
