@@ -48,15 +48,6 @@ jobs:
     needs: determine-env
     runs-on: ubuntu-latest
     environment: ${{ needs.determine-env.outputs.env_name }}
-    # `actions: read` est requis par la tolerance step qui interroge l'API
-    # `/repos/.../actions/jobs/{id}/logs` pour détecter le bug retry race de
-    # firebase-tools. Sans ça : HTTP 403 « Resource not accessible by integration ».
-    # `contents: read` couvre le checkout. `pull-requests: write` permet à
-    # action-hosting-deploy@v0 de commenter les preview URLs sur les PRs.
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -85,64 +76,72 @@ jobs:
             ${{ needs.determine-env.outputs.env_name == 'staging' && '--pwa-strategy=none' || '' }} \
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }}
 
+      # Déploiement Firebase Hosting via firebase-tools CLI direct.
+      #
+      # Pourquoi PAS l'action FirebaseExtended/action-hosting-deploy@v0 :
+      # cette action a un bug connu de retry handling — sur erreur réseau
+      # « premature close » pendant le POST /channels/<ch>/releases, le
+      # client retry, mais le 1er POST a en fait réussi côté serveur. Le 2e
+      # POST reçoit HTTP 400 FAILED_PRECONDITION « supplied version ... is
+      # the current active version ». L'action exit 1 alors que le contenu
+      # EST déployé. Observé 4× consécutivement sur develop le 2026-06-30
+      # (runs 28457605436, 28462827564, 28464397651, 28465482241).
+      #
+      # Tentative précédente de tolerance via parsing des logs cross-step
+      # (gh run view --log / gh api .../jobs/{id}/logs) abandonnée car
+      # GitHub Actions n'expose PAS les logs d'un run/job in-progress —
+      # l'endpoint zip-archive ne sert qu'après fin du run.
+      #
+      # Solution adoptée : on appelle firebase-tools nous-mêmes dans la même
+      # step, on capture stderr inline, on grep dans la même bash session.
+      # Si l'erreur est exactement la signature retry race connue, on succeed
+      # avec un warning (le contenu est déployé, c'est juste un faux fail).
+      # Toute autre erreur fait remonter l'exit code.
+      #
+      # À retirer / simplifier dès que firebase-tools patche son retry —
+      # suivre https://github.com/firebase/firebase-tools/issues
       - name: Deploy to Firebase Hosting
         id: firebase_deploy
-        # Voir step suivant — on tolère un cas d'erreur précis et SEUL (retry race
-        # connu de l'action upstream). Toute autre erreur est propagée par la step
-        # de tolérance.
-        continue-on-error: true
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
-          channelId: ${{ needs.determine-env.outputs.firebase_channel }}
-
-      # Bug retry race de FirebaseExtended/action-hosting-deploy@v0 :
-      #
-      # Symptôme : le client retry son POST /channels/<channel>/releases sur erreur
-      # réseau (« premature close »), mais le 1er POST a en fait réussi côté
-      # serveur Firebase. Le 2e POST reçoit alors HTTP 400 FAILED_PRECONDITION
-      # « supplied version ... is the current active version ». L'action exit 1
-      # alors que le contenu est bel et bien déployé sur le channel.
-      #
-      # Observé sur develop le 2026-06-30 (commits f541d92 et 0fa3bce). Pour ne
-      # pas masquer les vrais fails, on grep le log du job courant : si
-      # exactement cette signature d'erreur apparaît, on succeed avec un warning.
-      # Toute autre cause d'échec laisse le job en fail.
-      #
-      # À retirer dès que l'action upstream patche son retry handling — suivre :
-      # https://github.com/FirebaseExtended/action-hosting-deploy/issues
-      - name: Tolerate Firebase retry-race FAILED_PRECONDITION
-        if: steps.firebase_deploy.outcome == 'failure'
         env:
-          GH_TOKEN: ${{ github.token }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
         run: |
-          set -euo pipefail
-          # On parse les logs du run courant. La signature ciblée vient de
-          # firebase-tools (Firebase Hosting REST API) — assez précise pour
-          # qu'aucune autre erreur n'y matche par accident.
-          # `gh run view --log` renvoie 0 octet sur un run encore in-progress
-          # (l'endpoint sous-jacent ne sert le zip d'archives qu'après fin du run).
-          # On passe par l'endpoint per-job qui, lui, expose les logs des steps
-          # déjà terminées même quand le job parent tourne encore.
-          JOB_ID=$(gh run view "${{ github.run_id }}" \
-            --repo "${{ github.repository }}" \
-            --json jobs \
-            --jq '.jobs[] | select(.name | startswith("Build & Deploy")) | .databaseId')
-          if [ -z "$JOB_ID" ]; then
-            echo "::error::Tolerance step could not locate the deploy job ID."
-            exit 1
-          fi
-          LOGS=$(gh api "repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs" 2>/dev/null || true)
-          echo "Fetched $(echo -n "$LOGS" | wc -c) bytes of job log."
-          # Phrase exclusive à l'erreur Firebase Hosting REST API quand on tente
-          # de release une version déjà active sur le channel. Aucune autre
-          # erreur n'utilise cette tournure exacte.
-          if echo "$LOGS" | grep -qF "is the current active version"; then
-            echo "::warning::Firebase retry-race detected (known upstream bug). Content WAS deployed — treating job as success."
-            exit 0
+          set +e
+          # Service account credentials (Google Application Default Credentials).
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
+
+          OUT="$RUNNER_TEMP/firebase-deploy.log"
+
+          # Channel "live" = production (commande différente).
+          if [ "$FIREBASE_CHANNEL" = "live" ]; then
+            npx -y firebase-tools@latest deploy --only hosting \
+              --project "$FIREBASE_PROJECT_ID" \
+              --non-interactive 2>&1 | tee "$OUT"
+            EXIT=${PIPESTATUS[0]}
           else
-            echo "::error::Firebase deploy failed for a reason OTHER than the known retry race. Inspect the deploy step logs."
-            exit 1
+            npx -y firebase-tools@latest hosting:channel:deploy "$FIREBASE_CHANNEL" \
+              --expires 7d \
+              --project "$FIREBASE_PROJECT_ID" \
+              --non-interactive 2>&1 | tee "$OUT"
+            EXIT=${PIPESTATUS[0]}
           fi
+
+          # Cleanup credentials immédiatement (defense in depth).
+          rm -f "$SA_FILE"
+
+          if [ $EXIT -eq 0 ]; then
+            exit 0
+          fi
+
+          # Exit non-zero : on regarde si c'est le retry race connu.
+          if grep -qF "is the current active version" "$OUT"; then
+            echo "::warning::Firebase retry-race detected (FAILED_PRECONDITION 'current active version'). Content WAS deployed — the first POST succeeded server-side; only the retry POST failed. Treating job as success."
+            exit 0
+          fi
+
+          # Toute autre erreur propage.
+          echo "::error::Firebase deploy failed for an UNKNOWN reason (not the retry race). See log above."
+          exit $EXIT
