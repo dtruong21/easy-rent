@@ -117,11 +117,10 @@ class FirestoreReceiptsRepository implements ReceiptsRepository {
     _log.info('generate(paymentIds=$paymentIds, leaseId=$leaseId)');
     try {
       final res = await _callable('generateReceipt').call(<String, dynamic>{
-        if (paymentIds != null) 'paymentIds': paymentIds,
-        if (leaseId != null) 'leaseId': leaseId,
-        if (periodStart != null)
-          'periodStart': periodStart.toUtc().toIso8601String(),
-        if (periodEnd != null) 'periodEnd': periodEnd.toUtc().toIso8601String(),
+        'paymentIds': ?paymentIds,
+        'leaseId': ?leaseId,
+        'periodStart': ?periodStart?.toUtc().toIso8601String(),
+        'periodEnd': ?periodEnd?.toUtc().toIso8601String(),
       });
       final data = (res.data as Map?) ?? const {};
       final receiptId = data['receiptId'] as String?;

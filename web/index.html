@@ -41,6 +41,46 @@
       margin: 0;
     }
   </style>
+  <script>
+    // PWA update strategy (FEAT-019).
+    //
+    // Combinée aux headers Cache-Control configurés dans firebase.json
+    // (no-cache sur index.html / flutter_bootstrap.js / flutter_service_worker.js,
+    // long-cache sur les assets hashés), ce script garantit qu'un nouveau
+    // déploiement est servi aux utilisateurs sans qu'ils aient à vider leur
+    // cache manuellement — y compris sur Brave / Chrome / Safari iOS PWA.
+    //
+    // Comportement :
+    // 1. Au chargement, on désenregistre TOUT Service Worker existant et on
+    //    purge le cache. Le rebuild courant utilise --pwa-strategy=none donc
+    //    aucun SW n'est ré-installé. Conséquence : les visiteurs ayant un SW
+    //    obsolète (avant FEAT-019) sont auto-nettoyés à leur prochaine visite,
+    //    UNE SEULE FOIS, sans intervention.
+    // 2. Une fois le cleanup fait, on pose un flag dans sessionStorage pour
+    //    éviter de re-rouler l'init coûteuse à chaque navigation interne.
+    // 3. Si on ré-active le SW en prod plus tard (offline-first), retirer la
+    //    branche `unregister` et remplacer par un update() + reload on
+    //    controllerchange (pattern standard pour activer le nouveau SW vite).
+    if ('serviceWorker' in navigator && !sessionStorage.getItem('er_sw_cleanup')) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        var hadSw = regs.length > 0;
+        var unregs = regs.map(function(r) { return r.unregister(); });
+        return Promise.all(unregs).then(function() {
+          if (typeof caches !== 'undefined' && caches.keys) {
+            return caches.keys().then(function(names) {
+              return Promise.all(names.map(function(n) { return caches.delete(n); }));
+            });
+          }
+        }).then(function() {
+          sessionStorage.setItem('er_sw_cleanup', '1');
+          // Si on a effectivement viré un SW, on recharge pour servir le
+          // bundle frais (sans ça, l'ancien fetch interceptor traîne encore
+          // tant que la page n'est pas naviguée).
+          if (hadSw) window.location.reload();
+        });
+      }).catch(function() {});
+    }
+  </script>
 </head>
 <body>
   <!--
