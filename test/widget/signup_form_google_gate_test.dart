@@ -60,6 +60,9 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> sendCurrentUserEmailVerification() async {}
+
+  @override
   Future<void> signOut() async {}
 }
 

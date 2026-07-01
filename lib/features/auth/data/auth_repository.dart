@@ -33,6 +33,8 @@ abstract interface class AuthRepository {
   /// Crée un compte et :
   /// 1. Provisionne Firebase Auth user + displayName
   /// 2. Écrit landlords/{uid} avec consent RGPD horodaté (atomicité art. 7.1)
+  /// 3. Envoie un email de vérification (template Firebase Auth par défaut)
+  /// 4. Signe out — l'utilisateur devra cliquer le lien puis se reconnecter
   ///
   /// Si Identity Platform `beforeUserCreated` est activé, la Cloud Function
   /// crée déjà le doc landlords ; le `set({merge:true})` client garantit
@@ -42,6 +44,17 @@ abstract interface class AuthRepository {
     required String password,
     required String fullName,
   });
+
+  /// Envoie (ou renvoie) un email de vérification à l'utilisateur courant.
+  ///
+  /// L'utilisateur DOIT être signé (i.e. `currentUser != null`). Utilise le
+  /// template email par défaut Firebase Auth — customisable dans Firebase
+  /// Console → Authentication → Templates → « Vérification d'e-mail ». Le
+  /// lien pointe vers `<origin>/login` après vérification.
+  ///
+  /// Lève `FirebaseAuthException('no-current-user', ...)` si aucun user
+  /// n'est signé au moment de l'appel.
+  Future<void> sendCurrentUserEmailVerification();
 
   /// Connecte avec un compte Google existant.
   ///
@@ -181,6 +194,33 @@ class FirebaseAuthRepository implements AuthRepository {
       'updatedAt': now,
       'deletedAt': null,
     }, SetOptions(merge: true));
+
+    // Envoie l'email de vérification puis signe out : l'utilisateur devra
+    // cliquer le lien reçu par email puis se reconnecter. Empêche l'accès
+    // aux routes protégées via un compte non vérifié (defense in depth
+    // complémentaire à `isAuthenticatedProvider` qui check `emailVerified`).
+    await _sendVerificationEmail(user);
+    await _auth.signOut();
+  }
+
+  @override
+  Future<void> sendCurrentUserEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No signed-in user to send verification email to.',
+      );
+    }
+    await _sendVerificationEmail(user);
+  }
+
+  Future<void> _sendVerificationEmail(User user) async {
+    final origin = Uri.base.origin;
+    _log.info('sendEmailVerification requested (origin: $origin)');
+    await user.sendEmailVerification(
+      ActionCodeSettings(url: '$origin/login', handleCodeInApp: false),
+    );
   }
 
   @override

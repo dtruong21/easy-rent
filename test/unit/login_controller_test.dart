@@ -1,6 +1,7 @@
 import 'package:easyrent/features/auth/application/login_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/login_page_state.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -63,6 +64,9 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> sendCurrentUserEmailVerification() async {}
+
+  @override
   Future<void> signOut() async {
     signOutCalled = true;
   }
@@ -71,6 +75,31 @@ class _FakeAuthRepository implements AuthRepository {
 class _ThrowingSignOutRepo extends _FakeAuthRepository {
   @override
   Future<void> signOut() async => throw Exception('signOut failed');
+}
+
+/// Fake pour l'edge case FEAT-021 : signInWithPassword réussit MAIS
+/// l'utilisateur n'a pas vérifié son email. Le controller doit détecter ce
+/// cas, relancer un email de vérif, signer out, et afficher un message
+/// explicite. MockUser de firebase_auth_mocks permet de contrôler
+/// `emailVerified` (via `isEmailVerified: false`).
+class _UnverifiedUserRepo extends _FakeAuthRepository {
+  _UnverifiedUserRepo()
+    : _mockUser = MockUser(
+        uid: 'uid-unverified',
+        email: 'user@exemple.fr',
+        isEmailVerified: false,
+      );
+
+  final MockUser _mockUser;
+  bool sendVerificationCalled = false;
+
+  @override
+  User? get currentUser => _mockUser;
+
+  @override
+  Future<void> sendCurrentUserEmailVerification() async {
+    sendVerificationCalled = true;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -191,6 +220,29 @@ void main() {
           'Une erreur est survenue. Veuillez réessayer.',
         );
       });
+    });
+
+    group('signIn — email non vérifié (FEAT-021)', () {
+      test(
+        'signIn réussi mais emailVerified=false → resend + signOut + message',
+        () async {
+          final repo = _UnverifiedUserRepo();
+          final ctrl = _makeController(repo);
+
+          await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
+
+          expect(repo.signInCalled, isTrue);
+          // Le controller a détecté emailVerified=false et déclenché la
+          // procédure de relance automatique.
+          expect(repo.sendVerificationCalled, isTrue);
+          expect(repo.signOutCalled, isTrue);
+          expect(_isError(ctrl.state), isTrue);
+          expect(
+            _errorMsg(ctrl.state),
+            contains('email n\'est pas encore vérifié'),
+          );
+        },
+      );
     });
 
     group('signInWithGoogle', () {
