@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import 'apple_auth_exception.dart';
 import 'google_auth_exception.dart';
 
 final _log = Logger('AuthRepository');
@@ -82,6 +83,51 @@ abstract interface class AuthRepository {
   /// (audit trail RGPD). Si le compte existe déjà (`isNewUser == false`),
   /// le doc landlord n'est jamais modifié.
   Future<void> signUpWithGoogle({required bool rgpdConsent});
+
+  /// Connecte avec un compte Apple existant.
+  ///
+  /// **Ne crée jamais de nouveau compte** : si le popup Apple révèle un
+  /// utilisateur inconnu de Baillan (`isNewUser == true`), le compte Firebase
+  /// Auth créé par le popup est immédiatement révoqué (rollback : `delete()`
+  /// + `signOut()`) puis l'appel lève
+  /// `FirebaseAuthException(code: AppleAuthErrorCode.newUserOnLogin)`.
+  /// Cette garde évite qu'un compte soit provisionné sans consentement RGPD
+  /// explicite (art. 7.1) — toute première inscription Apple doit passer
+  /// par [signUpWithApple].
+  ///
+  /// **Spécificité Apple** : si ce rollback delete() puis un nouveau
+  /// [signUpWithApple] est retenté depuis le même Apple ID, Apple ne
+  /// re-transmettra PAS le nom complet (bug/limitation connue : le
+  /// displayName + email complet ne sont fournis qu'à la toute première
+  /// autorisation OAuth pour un couple app/Apple ID). Voir
+  /// [signUpWithApple] pour le fallback appliqué.
+  Future<void> signInWithApple();
+
+  /// Crée un compte (ou connecte un compte existant) via Apple.
+  ///
+  /// [rgpdConsent] doit être `true` — sinon l'appel lève
+  /// `FirebaseAuthException(code: AppleAuthErrorCode.consentDeclined)`
+  /// **avant** d'ouvrir le popup Apple (aucune création n'est tentée sans
+  /// consentement explicite).
+  ///
+  /// Si le compte Apple est nouveau (`isNewUser == true`), le doc
+  /// `landlords/{uid}` (déjà provisionné par la Cloud Function
+  /// `beforeUserCreated`) est surchargé via `set(merge:true)` pour ajouter
+  /// `signupProvider: 'apple'` et `rgpdConsentSource: 'apple-popup'`
+  /// (audit trail RGPD). Si le compte existe déjà (`isNewUser == false`),
+  /// le doc landlord n'est jamais modifié.
+  ///
+  /// **Spécificités Apple à connaître** :
+  /// - `user.displayName` peut être `null` (Apple ne renvoie le nom complet
+  ///   qu'à la toute première autorisation OAuth pour ce couple app/Apple
+  ///   ID — un rollback `delete()` suivi d'un nouveau `signUpWithApple`
+  ///   depuis le même Apple ID ne re-déclenchera pas l'envoi du nom). Le
+  ///   fallback CREATE utilise `user.displayName ?? user.email ?? ''`.
+  /// - "Hide My Email" : l'utilisateur peut choisir un email proxy
+  ///   `@privaterelay.appleid.com`. Firebase Auth le traite comme un email
+  ///   vérifié standard — aucun filtrage/validation de domaine n'est
+  ///   appliqué ici.
+  Future<void> signUpWithApple({required bool rgpdConsent});
 
   /// Envoie un email de réinitialisation de mot de passe.
   Future<void> sendPasswordResetEmail(String email);
@@ -317,6 +363,116 @@ class FirebaseAuthRepository implements AuthRepository {
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'google-popup',
         'signupProvider': 'google',
+        'createdAt': now,
+        'updatedAt': now,
+        'deletedAt': null,
+      });
+    }
+  }
+
+  @override
+  Future<void> signInWithApple() async {
+    _log.info('signInWithApple requested');
+    // Scopes 'email' + 'name' — PAS de scope 'profile' (n'existe pas côté
+    // Apple ; le nom complet est demandé via le scope 'name' dédié).
+    final provider = OAuthProvider('apple.com')
+      ..addScope('email')
+      ..addScope('name');
+    final cred = await _auth.signInWithPopup(provider);
+    final isNewUser = _isNewUser(cred);
+    if (!isNewUser) {
+      // Connexion normale — un compte Baillan existait déjà pour cet Apple.
+      return;
+    }
+
+    // Rollback strict : aucun compte n'est autorisé à persister sans le
+    // consentement RGPD explicite requis par le flow /signup.
+    final user = cred.user;
+    try {
+      await user?.delete();
+    } catch (e, st) {
+      _log.severe(
+        'orphan account uid=${user?.uid} created without RGPD consent — '
+        'needs cleanup',
+        e,
+        st,
+      );
+    }
+    try {
+      await _auth.signOut();
+    } catch (e, st) {
+      _log.warning('signOut after rollback failed', e, st);
+    }
+    throw FirebaseAuthException(
+      code: AppleAuthErrorCode.newUserOnLogin,
+      message: 'Apple account has no associated Baillan landlord account.',
+    );
+  }
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {
+    if (!rgpdConsent) {
+      throw FirebaseAuthException(
+        code: AppleAuthErrorCode.consentDeclined,
+        message: 'RGPD consent not given before Apple sign-up.',
+      );
+    }
+
+    _log.info('signUpWithApple requested');
+    final provider = OAuthProvider('apple.com')
+      ..addScope('email')
+      ..addScope('name');
+    final cred = await _auth.signInWithPopup(provider);
+    final user = cred.user;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-user',
+        message: 'signInWithPopup returned null user',
+      );
+    }
+
+    final isNewUser = _isNewUser(cred);
+    if (!isNewUser) {
+      // Compte Apple déjà existant — ne jamais toucher au doc landlord
+      // (préserve signupProvider/rgpdConsent d'origine).
+      return;
+    }
+
+    // Le doc landlords/{uid} peut avoir été pré-provisionné par la Cloud
+    // Function `beforeUserCreated` (handleNewUser) si Identity Platform est
+    // activé. On lit l'état du doc pour choisir entre CREATE (CF inactive,
+    // payload complet exigé par la rule CREATE) et UPDATE (CF active : la
+    // rule UPDATE — firestore.rules:72-73 — interdit de toucher
+    // `rgpdConsentAt` et `rgpdConsentVersion`, on n'écrit donc QUE les
+    // métadonnées d'audit Apple par-dessus).
+    final docRef = _firestore.doc('landlords/${user.uid}');
+    final snap = await docRef.get();
+    final now = FieldValue.serverTimestamp();
+
+    if (snap.exists) {
+      await docRef.update({
+        'signupProvider': 'apple',
+        'rgpdConsentSource': 'apple-popup',
+        'updatedAt': now,
+      });
+    } else {
+      // Fallback fullName : Apple ne renvoie le displayName qu'à la toute
+      // première autorisation OAuth pour ce couple app/Apple ID. En cas de
+      // re-signup après un rollback (delete() suite à signInWithApple sur un
+      // compte inconnu), `user.displayName` peut être `null` — on retombe
+      // sur l'email (potentiellement un alias '@privaterelay.appleid.com'
+      // si l'utilisateur a activé "Hide My Email", traité comme un email
+      // normal) puis chaîne vide en dernier recours.
+      await docRef.set({
+        'id': user.uid,
+        'email': user.email,
+        'fullName': user.displayName ?? user.email ?? '',
+        'phone': null,
+        'address': null,
+        'rgpdConsentAt': now,
+        'rgpdConsentVersion': rgpdConsentVersion,
+        'rgpdConsentSource': 'apple-popup',
+        'signupProvider': 'apple',
         'createdAt': now,
         'updatedAt': now,
         'deletedAt': null,

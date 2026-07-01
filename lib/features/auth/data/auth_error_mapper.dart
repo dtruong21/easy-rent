@@ -1,11 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'apple_auth_exception.dart';
 import 'google_auth_exception.dart';
 
 /// Traduit les [FirebaseAuthException] en messages utilisateur français.
 ///
 /// Codes Firebase : https://firebase.google.com/docs/auth/admin/errors
-/// Codes Baillan (préfixe `baillan/`) : voir [GoogleAuthErrorCode].
+/// Codes Baillan (préfixe `baillan/`) : voir [GoogleAuthErrorCode] et
+/// [AppleAuthErrorCode].
 class AuthErrorMapper {
   const AuthErrorMapper._();
 
@@ -61,6 +63,12 @@ class AuthErrorMapper {
         return 'Votre navigateur bloque les cookies tiers nécessaires à '
             'Google. Activez-les ou utilisez le formulaire email.';
 
+      // Code Apple spécifique pouvant survenir si l'utilisateur ferme la
+      // fenêtre popup Apple avant de valider — synonyme fonctionnel de
+      // 'popup-closed-by-user' côté Firebase.
+      case 'user-cancelled':
+        return 'Connexion Apple annulée.';
+
       case GoogleAuthErrorCode.newUserOnLogin:
         return 'Aucun compte Baillan associé à ce Google. '
             'Veuillez d\'abord créer un compte.';
@@ -74,6 +82,20 @@ class AuthErrorMapper {
 
       case GoogleAuthErrorCode.popupClosed:
         return 'Connexion Google annulée.';
+
+      case AppleAuthErrorCode.newUserOnLogin:
+        return 'Aucun compte Baillan associé à cet Apple. '
+            'Veuillez d\'abord créer un compte.';
+
+      case AppleAuthErrorCode.consentDeclined:
+        return 'Vous devez accepter la politique de confidentialité.';
+
+      case AppleAuthErrorCode.popupBlocked:
+        return 'Votre navigateur a bloqué la fenêtre Apple. '
+            'Autorisez les pop-ups pour ce site et réessayez.';
+
+      case AppleAuthErrorCode.popupClosed:
+        return 'Connexion Apple annulée.';
 
       default:
         return 'Une erreur est survenue. Veuillez réessayer.';

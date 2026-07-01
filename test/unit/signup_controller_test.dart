@@ -12,11 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeAuthRepository implements AuthRepository {
   bool signUpCalled = false;
   bool signUpWithGoogleCalled = false;
+  bool signUpWithAppleCalled = false;
   bool? lastGoogleRgpdConsent;
+  bool? lastAppleRgpdConsent;
   String? lastEmail;
   String? lastFullName;
   Exception? signUpError;
   Exception? signUpWithGoogleError;
+  Exception? signUpWithAppleError;
 
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
@@ -67,6 +70,16 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> sendCurrentUserEmailVerification() async {}
+
+  @override
+  Future<void> signInWithApple() async {}
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {
+    signUpWithAppleCalled = true;
+    lastAppleRgpdConsent = rgpdConsent;
+    if (signUpWithAppleError != null) throw signUpWithAppleError!;
+  }
 
   @override
   Future<void> signOut() async {}
@@ -371,6 +384,107 @@ void main() {
           ..signUpWithGoogleError = Exception('boom');
         final ctrl = _makeController(repo);
         await ctrl.signUpWithGoogle(rgpdConsent: true);
+        expect(
+          _errorMsg(ctrl.state),
+          'Une erreur est survenue. Veuillez réessayer.',
+        );
+      });
+    });
+
+    group('signUpWithApple', () {
+      test(
+        'rgpdConsent=false → error SANS appel repo (defense en profondeur)',
+        () async {
+          final repo = _FakeAuthRepository();
+          final ctrl = _makeController(repo);
+          await ctrl.signUpWithApple(rgpdConsent: false);
+          expect(repo.signUpWithAppleCalled, isFalse);
+          expect(_isError(ctrl.state), isTrue);
+          expect(
+            _errorMsg(ctrl.state),
+            'Vous devez accepter la politique de confidentialité',
+          );
+        },
+      );
+
+      test(
+        'happy path rgpdConsent=true → submitting puis idle, repo appelé',
+        () async {
+          final repo = _FakeAuthRepository();
+          final container = ProviderContainer(
+            overrides: [authRepositoryProvider.overrideWithValue(repo)],
+          );
+          addTearDown(container.dispose);
+
+          final states = <SignupPageState>[];
+          container.listen<SignupPageState>(
+            signupControllerProvider,
+            (_, next) => states.add(next),
+            fireImmediately: true,
+          );
+
+          await container
+              .read(signupControllerProvider.notifier)
+              .signUpWithApple(rgpdConsent: true);
+
+          expect(repo.signUpWithAppleCalled, isTrue);
+          expect(repo.lastAppleRgpdConsent, isTrue);
+          expect(states.first, const SignupPageState.idle());
+          expect(
+            states[1].maybeWhen(submitting: () => true, orElse: () => false),
+            isTrue,
+          );
+          expect(states.last, const SignupPageState.idle());
+        },
+      );
+
+      test(
+        'account-exists-with-different-credential → error avec CTA /login et label "Se connecter"',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signUpWithAppleError = FirebaseAuthException(
+              code: 'account-exists-with-different-credential',
+              message: 'conflict',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signUpWithApple(rgpdConsent: true);
+
+          final cta = ctrl.state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => (null, null),
+          );
+          expect(cta.$1, '/login');
+          expect(cta.$2, 'Se connecter');
+          expect(_errorMsg(ctrl.state), contains('Un compte existe déjà'));
+        },
+      );
+
+      test(
+        'consentDeclined relayé depuis le repo → error, pas de CTA',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signUpWithAppleError = FirebaseAuthException(
+              code: 'baillan/apple-rgpd-consent-declined',
+              message: 'consent declined at repo layer',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signUpWithApple(rgpdConsent: true);
+
+          expect(_isError(ctrl.state), isTrue);
+          final cta = ctrl.state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => ('NOT', 'NOT'),
+          );
+          expect(cta.$1, isNull);
+          expect(cta.$2, isNull);
+        },
+      );
+
+      test('exception générique → message fallback français', () async {
+        final repo = _FakeAuthRepository()
+          ..signUpWithAppleError = Exception('boom');
+        final ctrl = _makeController(repo);
+        await ctrl.signUpWithApple(rgpdConsent: true);
         expect(
           _errorMsg(ctrl.state),
           'Une erreur est survenue. Veuillez réessayer.',

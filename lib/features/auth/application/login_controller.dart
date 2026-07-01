@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/utils/email_validator.dart';
+import '../data/apple_auth_exception.dart';
 import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
 import '../data/google_auth_exception.dart';
@@ -95,6 +96,36 @@ class LoginController extends StateNotifier<LoginPageState> {
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue signInWithGoogle', e, st);
+      state = const LoginPageState.error(
+        message: 'Une erreur est survenue. Veuillez réessayer.',
+      );
+    }
+  }
+
+  /// Connecte avec un compte Apple existant.
+  ///
+  /// Ne crée jamais de nouveau compte : si le repo détecte un Apple inconnu
+  /// de Baillan, l'erreur [AppleAuthErrorCode.newUserOnLogin] est mappée en
+  /// état error avec un CTA contextuel vers `/signup`.
+  Future<void> signInWithApple() async {
+    state = const LoginPageState.submitting();
+    try {
+      await _repository.signInWithApple();
+      state = const LoginPageState.idle();
+    } on FirebaseAuthException catch (e, st) {
+      _log.warning(
+        'FirebaseAuthException signInWithApple (code=${e.code})',
+        e,
+        st,
+      );
+      final isNewUserOnLogin = e.code == AppleAuthErrorCode.newUserOnLogin;
+      state = LoginPageState.error(
+        message: AuthErrorMapper.fromException(e),
+        ctaRoute: isNewUserOnLogin ? '/signup' : null,
+        ctaLabel: isNewUserOnLogin ? 'Créer un compte' : null,
+      );
+    } catch (e, st) {
+      _log.severe('Erreur inattendue signInWithApple', e, st);
       state = const LoginPageState.error(
         message: 'Une erreur est survenue. Veuillez réessayer.',
       );

@@ -1,7 +1,7 @@
+import 'package:easyrent/features/auth/data/apple_auth_exception.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
-import 'package:easyrent/features/auth/data/google_auth_exception.dart';
 import 'package:easyrent/features/auth/presentation/login_page.dart';
-import 'package:easyrent/features/auth/presentation/widgets/google_sign_in_button.dart';
+import 'package:easyrent/features/auth/presentation/widgets/apple_sign_in_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +13,7 @@ import 'package:go_router/go_router.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
-  Exception? signInWithGoogleError;
+  Exception? signInWithAppleError;
 
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
@@ -35,12 +35,18 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signInWithGoogle() async {
-    if (signInWithGoogleError != null) throw signInWithGoogleError!;
-  }
+  Future<void> signInWithGoogle() async {}
 
   @override
   Future<void> signUpWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> signInWithApple() async {
+    if (signInWithAppleError != null) throw signInWithAppleError!;
+  }
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {}
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {}
@@ -57,12 +63,6 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> sendCurrentUserEmailVerification() async {}
-
-  @override
-  Future<void> signInWithApple() async {}
-
-  @override
-  Future<void> signUpWithApple({required bool rgpdConsent}) async {}
 
   @override
   Future<void> signOut() async {}
@@ -105,34 +105,34 @@ Widget _buildLoginPage({required _FakeAuthRepository repo}) {
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('LoginForm — bouton Google et CTA contextuel', () {
-    testWidgets('GoogleSignInButton actif par défaut (pas de gate)', (
+  group('LoginForm — bouton Apple et CTA contextuel', () {
+    testWidgets('AppleSignInButton actif par défaut (pas de gate)', (
       tester,
     ) async {
       await tester.pumpWidget(_buildLoginPage(repo: _FakeAuthRepository()));
       await tester.pumpAndSettle();
 
-      final googleBtn = tester.widget<GoogleSignInButton>(
-        find.byType(GoogleSignInButton),
+      final appleBtn = tester.widget<AppleSignInButton>(
+        find.byType(AppleSignInButton),
       );
-      expect(googleBtn.onPressed, isNotNull);
+      expect(appleBtn.onPressed, isNotNull);
     });
 
     testWidgets(
-      'baillan/google-new-user-on-login affiche le CTA "Créer un compte"',
+      'baillan/apple-new-user-on-login affiche le CTA "Créer un compte"',
       (tester) async {
         final repo = _FakeAuthRepository()
-          ..signInWithGoogleError = FirebaseAuthException(
-            code: GoogleAuthErrorCode.newUserOnLogin,
-            message: 'No Baillan account for this Google account.',
+          ..signInWithAppleError = FirebaseAuthException(
+            code: AppleAuthErrorCode.newUserOnLogin,
+            message: 'No Baillan account for this Apple account.',
           );
         await tester.pumpWidget(_buildLoginPage(repo: repo));
         await tester.pumpAndSettle();
 
         // Le concept "La Page du Registre" ajoute du chrome au-dessus du
-        // form — GoogleSignInButton peut se retrouver sous le fold du
+        // form — AppleSignInButton peut se retrouver sous le fold du
         // viewport de test 800x600. ensureVisible scroll avant tap.
-        final btnFinder = find.byType(GoogleSignInButton);
+        final btnFinder = find.byType(AppleSignInButton);
         await tester.ensureVisible(btnFinder);
         await tester.pumpAndSettle();
         await tester.tap(btnFinder);
@@ -140,7 +140,7 @@ void main() {
 
         expect(
           find.text(
-            'Aucun compte Baillan associé à ce Google. '
+            'Aucun compte Baillan associé à cet Apple. '
             'Veuillez d\'abord créer un compte.',
           ),
           findsOneWidget,
@@ -155,14 +155,14 @@ void main() {
       tester,
     ) async {
       final repo = _FakeAuthRepository()
-        ..signInWithGoogleError = FirebaseAuthException(
-          code: GoogleAuthErrorCode.newUserOnLogin,
-          message: 'No Baillan account for this Google account.',
+        ..signInWithAppleError = FirebaseAuthException(
+          code: AppleAuthErrorCode.newUserOnLogin,
+          message: 'No Baillan account for this Apple account.',
         );
       await tester.pumpWidget(_buildLoginPage(repo: repo));
       await tester.pumpAndSettle();
 
-      final btnFinder = find.byType(GoogleSignInButton);
+      final btnFinder = find.byType(AppleSignInButton);
       await tester.ensureVisible(btnFinder);
       await tester.pumpAndSettle();
       await tester.tap(btnFinder);

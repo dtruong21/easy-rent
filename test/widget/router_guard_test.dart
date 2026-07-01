@@ -62,6 +62,12 @@ class _NoOpRepo implements AuthRepository {
   Future<void> sendCurrentUserEmailVerification() async {}
 
   @override
+  Future<void> signInWithApple() async {}
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {}
+
+  @override
   Future<void> signOut() async {}
 }
 

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../application/signup_controller.dart';
+import 'apple_sign_in_button.dart';
 import 'google_sign_in_button.dart';
 import 'or_divider.dart';
 import 'password_field.dart';
@@ -27,9 +28,11 @@ class _SignupFormState extends ConsumerState<SignupForm> {
 
   // Marque quel bouton a déclenché la dernière requête. Le controller
   // `signupControllerProvider` partage un état `submitting` unique entre
-  // email/password et Google ; ce flag évite que les deux boutons spinnent
-  // simultanément. Voir _LoginFormState pour le même pattern.
+  // email/password, Google et Apple ; ces flags évitent que plusieurs
+  // boutons spinnent simultanément. Voir _LoginFormState pour le même
+  // pattern et l'arbitrage bool-vs-enum.
   bool _googleClickedLast = false;
+  bool _appleClickedLast = false;
 
   @override
   void initState() {
@@ -59,7 +62,10 @@ class _SignupFormState extends ConsumerState<SignupForm> {
       _rgpdConsent;
 
   Future<void> _submit() async {
-    setState(() => _googleClickedLast = false);
+    setState(() {
+      _googleClickedLast = false;
+      _appleClickedLast = false;
+    });
     await ref
         .read(signupControllerProvider.notifier)
         .signUp(
@@ -72,10 +78,23 @@ class _SignupFormState extends ConsumerState<SignupForm> {
   }
 
   Future<void> _submitGoogle() async {
-    setState(() => _googleClickedLast = true);
+    setState(() {
+      _googleClickedLast = true;
+      _appleClickedLast = false;
+    });
     await ref
         .read(signupControllerProvider.notifier)
         .signUpWithGoogle(rgpdConsent: _rgpdConsent);
+  }
+
+  Future<void> _submitApple() async {
+    setState(() {
+      _appleClickedLast = true;
+      _googleClickedLast = false;
+    });
+    await ref
+        .read(signupControllerProvider.notifier)
+        .signUpWithApple(rgpdConsent: _rgpdConsent);
   }
 
   @override
@@ -179,7 +198,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
           const SizedBox(height: 24),
           FilledButton(
             onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
-            child: (isSubmitting && !_googleClickedLast)
+            child: (isSubmitting && !_googleClickedLast && !_appleClickedLast)
                 ? SizedBox(
                     height: 18,
                     width: 18,
@@ -195,11 +214,17 @@ class _SignupFormState extends ConsumerState<SignupForm> {
             onPressed: (_rgpdConsent && !isSubmitting) ? _submitGoogle : null,
             isLoading: isSubmitting && _googleClickedLast,
           ),
+          const SizedBox(height: 12),
+          AppleSignInButton(
+            onPressed: (_rgpdConsent && !isSubmitting) ? _submitApple : null,
+            isLoading: isSubmitting && _appleClickedLast,
+          ),
           if (!_rgpdConsent)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Cochez la case ci-dessus pour activer la connexion Google',
+                'Cochez la case ci-dessus pour activer la connexion Google '
+                'ou Apple',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

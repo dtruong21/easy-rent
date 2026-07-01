@@ -14,9 +14,11 @@ class _FakeAuthRepository implements AuthRepository {
   bool signInCalled = false;
   bool signOutCalled = false;
   bool signInWithGoogleCalled = false;
+  bool signInWithAppleCalled = false;
   String? lastEmail;
   Exception? signInError;
   Exception? signInWithGoogleError;
+  Exception? signInWithAppleError;
 
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
@@ -65,6 +67,15 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> sendCurrentUserEmailVerification() async {}
+
+  @override
+  Future<void> signInWithApple() async {
+    signInWithAppleCalled = true;
+    if (signInWithAppleError != null) throw signInWithAppleError!;
+  }
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {}
 
   @override
   Future<void> signOut() async {
@@ -326,6 +337,92 @@ void main() {
           ..signInWithGoogleError = Exception('boom');
         final ctrl = _makeController(repo);
         await ctrl.signInWithGoogle();
+        expect(
+          _errorMsg(ctrl.state),
+          'Une erreur est survenue. Veuillez réessayer.',
+        );
+      });
+    });
+
+    group('signInWithApple', () {
+      test('happy path → submitting puis idle, repo appelé', () async {
+        final repo = _FakeAuthRepository();
+        final container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+
+        final states = <LoginPageState>[];
+        container.listen<LoginPageState>(
+          loginControllerProvider,
+          (_, next) => states.add(next),
+          fireImmediately: true,
+        );
+
+        await container
+            .read(loginControllerProvider.notifier)
+            .signInWithApple();
+
+        expect(repo.signInWithAppleCalled, isTrue);
+        expect(states.first, const LoginPageState.idle());
+        expect(
+          states[1].maybeWhen(submitting: () => true, orElse: () => false),
+          isTrue,
+        );
+        expect(states.last, const LoginPageState.idle());
+      });
+
+      test(
+        'newUserOnLogin → état error avec CTA /signup et label "Créer un compte"',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signInWithAppleError = FirebaseAuthException(
+              code: 'baillan/apple-new-user-on-login',
+              message: 'no associated landlord',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signInWithApple();
+
+          final state = ctrl.state;
+          expect(_isError(state), isTrue);
+          final cta = state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => (null, null),
+          );
+          expect(cta.$1, '/signup');
+          expect(cta.$2, 'Créer un compte');
+          expect(
+            _errorMsg(state).startsWith('Aucun compte Baillan associé'),
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'account-exists-with-different-credential → error SANS CTA (pas un cas /login)',
+        () async {
+          final repo = _FakeAuthRepository()
+            ..signInWithAppleError = FirebaseAuthException(
+              code: 'account-exists-with-different-credential',
+              message: 'conflict',
+            );
+          final ctrl = _makeController(repo);
+          await ctrl.signInWithApple();
+
+          final cta = ctrl.state.maybeWhen(
+            error: (m, ctaRoute, ctaLabel) => (ctaRoute, ctaLabel),
+            orElse: () => ('NOT_ERROR', 'NOT_ERROR'),
+          );
+          expect(cta.$1, isNull);
+          expect(cta.$2, isNull);
+        },
+      );
+
+      test('exception générique → message fallback français', () async {
+        final repo = _FakeAuthRepository()
+          ..signInWithAppleError = Exception('boom');
+        final ctrl = _makeController(repo);
+        await ctrl.signInWithApple();
         expect(
           _errorMsg(ctrl.state),
           'Une erreur est survenue. Veuillez réessayer.',
