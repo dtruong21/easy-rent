@@ -145,3 +145,45 @@ jobs:
           # Toute autre erreur propage.
           echo "::error::Firebase deploy failed for an UNKNOWN reason (not the retry race). See log above."
           exit $EXIT
+
+      # Loggue l'URL du channel après un deploy réussi (ou toléré). La CLI
+      # firebase-tools n'imprime PAS l'URL du channel quand le POST /releases
+      # errore (retry race), donc on la récupère via channel:list — l'URL du
+      # channel est stable dans le temps (hash aléatoire assigné à la
+      # création, jamais rechangé). Le CLI channel:list ne fait qu'un GET
+      # inoffensif, aucun risque même si le déploiement principal a hoqueté.
+      - name: Log Firebase channel URL
+        if: always() && steps.firebase_deploy.outcome != 'skipped'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
+          FIREBASE_ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+        run: |
+          set +e
+          SA_FILE="$RUNNER_TEMP/firebase-sa-url.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
+
+          if [ "$FIREBASE_CHANNEL" = "live" ]; then
+            URL="https://$FIREBASE_PROJECT_ID.web.app"
+          else
+            URL=$(npx -y firebase-tools@latest hosting:channel:list \
+              --project "$FIREBASE_PROJECT_ID" --json 2>/dev/null \
+              | jq -r --arg ch "$FIREBASE_CHANNEL" '.result.channels[] | select(.name | endswith("/channels/" + $ch)) | .url' \
+              | head -n1)
+          fi
+
+          rm -f "$SA_FILE"
+
+          if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+            echo "::notice title=Deploy URL::$FIREBASE_ENV_NAME → $URL"
+            {
+              echo "## Deploy — $FIREBASE_ENV_NAME"
+              echo ""
+              echo "**Channel** : \`$FIREBASE_CHANNEL\`"
+              echo "**URL** : $URL"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Could not resolve channel URL for $FIREBASE_CHANNEL — check Firebase Console."
+          fi
