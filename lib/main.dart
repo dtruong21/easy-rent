@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:logging/logging.dart';
 import 'core/config/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/application/anon_expiry_renewer.dart';
 import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
 import 'firebase_options.dart';
 
@@ -33,11 +36,27 @@ Future<void> main() async {
   runApp(const ProviderScope(child: BaillanApp()));
 }
 
-class BaillanApp extends ConsumerWidget {
+class BaillanApp extends ConsumerStatefulWidget {
   const BaillanApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BaillanApp> createState() => _BaillanAppState();
+}
+
+class _BaillanAppState extends ConsumerState<BaillanApp> {
+  @override
+  void initState() {
+    super.initState();
+    // BAILLAN-M1 : renouvelle anonExpiresAt au boot si la session est
+    // anonyme (throttlé côté renewer — voir anon_expiry_renewer.dart). Ne
+    // bloque jamais le premier rendu (fire-and-forget).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(anonExpiryRenewerProvider.notifier).renewIfNeeded());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: 'Baillan.',

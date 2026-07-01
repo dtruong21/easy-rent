@@ -33,7 +33,7 @@ class PropertiesListPage extends ConsumerWidget {
         : ref.watch(viewModeProvider('properties'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes biens', fallbackRoute: '/'),
+      appBar: AppAppBar(title: 'Mes biens', fallbackRoute: '/dashboard'),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_property'),
         onPressed: () => context.push('/properties/new'),

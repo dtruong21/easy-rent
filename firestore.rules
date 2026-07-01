@@ -26,6 +26,21 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // BAILLAN-M1 — Firebase Anonymous Auth (« essai sans compte »). Le
+    // provider de sign-in est exposé dans le custom claim standard
+    // `firebase.sign_in_provider` du token ID.
+    function isAnonymous() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    // Compte complet : signé ET pas anonyme (email/password vérifié, Google,
+    // Apple). Toutes les collections métier (properties, tenants, leases,
+    // payments, receipts, documents) sont réservées à isFullyAuthed() —
+    // un anonyme ne peut PAS y écrire (seul le simulateur lui est ouvert).
+    function isFullyAuthed() {
+      return isSignedIn() && !isAnonymous();
+    }
+
     function isOwner(landlordId) {
       return isSignedIn() && request.auth.uid == landlordId;
     }
@@ -49,12 +64,15 @@ service cloud.firestore {
       allow get: if isOwner(uid) && isActive(resource);
       allow list: if false; // chaque user ne voit que son propre doc
 
-      // CREATE : autorisé côté client juste après createUserWithEmailAndPassword,
-      // avec consent RGPD obligatoire dans le même write (atomicité art. 7.1).
-      // Identity Platform `beforeUserCreated` peut fournir une seconde couche
-      // (defense-in-depth) si activé — `set({merge:true})` rend les 2 chemins
-      // idempotents. Si IP désactivée, c'est ce chemin qui crée le doc.
-      allow create: if isOwner(uid)
+      // CREATE (compte complet) : autorisé côté client juste après
+      // createUserWithEmailAndPassword, avec consent RGPD obligatoire dans
+      // le même write (atomicité art. 7.1). Identity Platform
+      // `beforeUserCreated` peut fournir une seconde couche
+      // (defense-in-depth) si activé — `set({merge:true})` rend les 2
+      // chemins idempotents. Si IP désactivée, c'est ce chemin qui crée le
+      // doc.
+      allow create: if isFullyAuthed()
+        && isOwner(uid)
         && request.resource.data.id == uid
         && request.resource.data.email is string
         && request.resource.data.fullName is string
@@ -62,17 +80,66 @@ service cloud.firestore {
         && request.resource.data.rgpdConsentVersion is string
         && request.resource.data.rgpdConsentVersion.size() > 0
         && request.resource.data.rgpdConsentAt is timestamp
+        && request.resource.data.isAnonymous == false
         && request.resource.data.deletedAt == null;
 
-      // UPDATE : profil propre. RGPD consent versionné et identifiants immuables.
-      allow update: if isOwner(uid)
+      // CREATE (anonyme, BAILLAN-M1) : defense-in-depth — en pratique le
+      // doc est provisionné par la Cloud Function `handleNewUser`
+      // (beforeUserCreated, Admin SDK, bypasse les rules). Ce chemin
+      // n'existe que si Identity Platform blocking functions est désactivé
+      // ET permet au client de recréer un doc anonyme cohérent : PAS de
+      // `rgpdConsentAt` (l'anonyme n'a rien signé), `email`/`fullName`
+      // vides par construction.
+      allow create: if isAnonymous()
+        && request.auth.uid == uid
+        && request.resource.data.id == uid
+        && request.resource.data.email == null
+        && request.resource.data.fullName == ''
+        && request.resource.data.isAnonymous == true
+        && request.resource.data.subscriptionTier == 'anonymous'
+        && request.resource.data.anonExpiresAt is timestamp
+        && request.resource.data.rgpdConsentAt == null
+        && request.resource.data.deletedAt == null;
+
+      // UPDATE (compte complet) : profil propre. RGPD consent versionné,
+      // identifiants et `subscriptionTier`/`isAnonymous` immuables côté
+      // client (seule la Callable `finalizeAnonymousUpgrade`, via Admin
+      // SDK, peut faire transitionner un tier — bypass des rules).
+      allow update: if isFullyAuthed()
+        && isOwner(uid)
         && isActive(resource)
         && request.resource.data.id == resource.data.id
         && preservesImmutables(resource)
         && request.resource.data.rgpdConsentAt == resource.data.rgpdConsentAt
-        && request.resource.data.rgpdConsentVersion == resource.data.rgpdConsentVersion;
+        && request.resource.data.rgpdConsentVersion == resource.data.rgpdConsentVersion
+        && request.resource.data.subscriptionTier == resource.data.subscriptionTier
+        && request.resource.data.isAnonymous == resource.data.isAnonymous;
 
-      // Soft-delete via Callable `softDeleteLandlord`.
+      // UPDATE (anonyme, BAILLAN-M1) : limité aux champs que le renewer
+      // d'expiration et l'app cliente ont besoin de toucher — jamais
+      // `rgpdConsentAt`/`Version` (l'anonyme ne consent jamais côté client),
+      // jamais `subscriptionTier` (seule la Callable finalize peut upgrader).
+      allow update: if isAnonymous()
+        && isOwner(uid)
+        && isActive(resource)
+        && resource.data.isAnonymous == true
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.email == null
+        && request.resource.data.fullName == ''
+        && request.resource.data.isAnonymous == true
+        && request.resource.data.subscriptionTier == 'anonymous'
+        && request.resource.data.anonExpiresAt is timestamp
+        // Borne supérieure sur anonExpiresAt : un anon ne peut pas se
+        // stamper une expiration en l'an 9999 pour échapper au cron.
+        // Autorisé = now + 15 jours max (marge d'1j vs le renouvellement
+        // 14j côté client pour tolérer les décalages d'horloge).
+        && request.resource.data.anonExpiresAt < request.time + duration.value(15, 'd')
+        && request.resource.data.rgpdConsentAt == null
+        && preservesImmutables(resource);
+
+      // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
+      // anonymes expirés passe par la Cloud Function planifiée
+      // `cleanupExpiredAnon` (Admin SDK, bypasse les rules).
       allow delete: if false;
     }
 
@@ -83,7 +150,9 @@ service cloud.firestore {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
       allow list: if isSignedIn(); // filtré par .where('landlordId', '==', uid)
 
-      allow create: if isSignedIn()
+      // BAILLAN-M1 : create/update réservés aux comptes complets — un
+      // anonyme n'a accès qu'au simulateur, jamais au registre de biens.
+      allow create: if isFullyAuthed()
         && request.resource.data.landlordId == request.auth.uid
         && request.resource.data.deletedAt == null
         && request.resource.data.id == id
@@ -94,7 +163,8 @@ service cloud.firestore {
         // activeLeaseCount maintenu par CF — doit valoir 0 à la création
         && request.resource.data.activeLeaseCount == 0;
 
-      allow update: if isOwner(resource.data.landlordId)
+      allow update: if isFullyAuthed()
+        && isOwner(resource.data.landlordId)
         && isActive(resource)
         && preservesImmutables(resource)
         // activeLeaseCount n'est jamais touché par le client (denorm CF only).
@@ -110,7 +180,8 @@ service cloud.firestore {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
       allow list: if isSignedIn();
 
-      allow create: if isSignedIn()
+      // BAILLAN-M1 : create/update réservés aux comptes complets.
+      allow create: if isFullyAuthed()
         && request.resource.data.landlordId == request.auth.uid
         && request.resource.data.deletedAt == null
         && request.resource.data.id == id
@@ -122,7 +193,8 @@ service cloud.firestore {
         && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
         && request.resource.data.activeLeaseCount == 0;
 
-      allow update: if isOwner(resource.data.landlordId)
+      allow update: if isFullyAuthed()
+        && isOwner(resource.data.landlordId)
         && isActive(resource)
         && preservesImmutables(resource)
         && request.resource.data.activeLeaseCount == resource.data.activeLeaseCount;
@@ -202,6 +274,24 @@ service cloud.firestore {
       allow update: if isOwner(resource.data.landlordId)
         && isActive(resource)
         && preservesImmutables(resource);
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // paid_plan_interest/{uid}   — docId = Firebase Auth UID (BAILLAN-M1)
+    //
+    // Marque d'intérêt pour le futur Plan Pro. Réservé aux comptes complets
+    // (un anonyme n'a pas encore vu la proposition de valeur du produit —
+    // le CTA "M'avertir" n'est jamais montré aux anons côté UI).
+    // ====================================================================
+    match /paid_plan_interest/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+
+      allow create, update: if isFullyAuthed()
+        && isOwner(uid)
+        && request.resource.data.features is list;
 
       allow delete: if false;
     }

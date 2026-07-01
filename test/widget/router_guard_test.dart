@@ -1,6 +1,7 @@
 import 'package:easyrent/core/router/app_router.dart';
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/session_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 // ---------------------------------------------------------------------------
 // Fake repo NoOp.
 //
-// La garde du routeur lit `ref.read(isAuthenticatedProvider)`, ce qu'on
+// La garde du routeur lit `ref.read(sessionStateProvider)`, ce qu'on
 // override directement dans le ProviderScope ; le repo n'a donc qu'à
 // satisfaire le contrat AuthRepository sans logique utile.
 //
@@ -17,6 +18,11 @@ import 'package:flutter_test/flutter_test.dart';
 // passwordRecovery" (Supabase). Firebase utilise un oobCode lu dans
 // l'URL — la garde routeur n'a plus à le gérer (voir
 // ResetPasswordPage qui consomme `Uri.base.queryParameters['oobCode']`).
+//
+// BAILLAN-M1 : `/` est désormais LandingPage (publique) — le dashboard a
+// bougé en `/dashboard`. Ces tests couvrent le binaire historique
+// unauthenticated/fullyAuthenticated ; la matrice complète 3-états (incluant
+// `anonymous`) est couverte par `router_three_state_guard_test.dart`.
 // ---------------------------------------------------------------------------
 
 class _NoOpRepo implements AuthRepository {
@@ -68,14 +74,34 @@ class _NoOpRepo implements AuthRepository {
   Future<void> signUpWithApple({required bool rgpdConsent}) async {}
 
   @override
+  Future<void> signInAnonymously() async {}
+
+  @override
+  Future<void> linkAnonymousWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required bool rgpdConsent,
+  }) async {}
+
+  @override
+  Future<void> linkAnonymousWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> linkAnonymousWithApple({required bool rgpdConsent}) async {}
+
+  @override
   Future<void> signOut() async {}
 }
 
-Widget _buildApp({required bool isAuthenticated, String? initialLocation}) {
+Widget _buildApp({
+  required SessionState sessionState,
+  String? initialLocation,
+}) {
   return ProviderScope(
     overrides: [
       authRepositoryProvider.overrideWithValue(_NoOpRepo()),
-      isAuthenticatedProvider.overrideWithValue(isAuthenticated),
+      sessionStateProvider.overrideWithValue(sessionState),
     ],
     child: Consumer(
       builder: (context, ref, _) {
@@ -93,21 +119,26 @@ Widget _buildApp({required bool isAuthenticated, String? initialLocation}) {
 
 void main() {
   group('Garde de route', () {
-    testWidgets('utilisateur non authentifié sur / est redirigé vers /login', (
+    testWidgets('utilisateur non authentifié sur / voit la landing', (
       tester,
     ) async {
-      await tester.pumpWidget(_buildApp(isAuthenticated: false));
+      await tester.pumpWidget(
+        _buildApp(sessionState: SessionState.unauthenticated),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Baillan.'), findsOneWidget);
-      expect(find.byType(TextField), findsNWidgets(2));
+      expect(find.byKey(const Key('landing_cta_signup')), findsOneWidget);
     });
 
     testWidgets('utilisateur non authentifié tentant /login reste sur /login', (
       tester,
     ) async {
       await tester.pumpWidget(
-        _buildApp(isAuthenticated: false, initialLocation: '/login'),
+        _buildApp(
+          sessionState: SessionState.unauthenticated,
+          initialLocation: '/login',
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -116,15 +147,17 @@ void main() {
     });
 
     testWidgets(
-      'utilisateur authentifié naviguant vers /login est redirigé vers /',
+      'utilisateur authentifié naviguant vers /login est redirigé vers /dashboard',
       (tester) async {
         await tester.pumpWidget(
-          _buildApp(isAuthenticated: true, initialLocation: '/login'),
+          _buildApp(
+            sessionState: SessionState.fullyAuthenticated,
+            initialLocation: '/login',
+          ),
         );
         await tester.pumpAndSettle();
 
         expect(find.byType(TextField), findsNothing);
-        expect(find.text('Baillan.'), findsWidgets);
       },
     );
 
@@ -132,7 +165,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _buildApp(isAuthenticated: false, initialLocation: '/privacy'),
+        _buildApp(
+          sessionState: SessionState.unauthenticated,
+          initialLocation: '/privacy',
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -143,7 +179,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _buildApp(isAuthenticated: true, initialLocation: '/privacy'),
+        _buildApp(
+          sessionState: SessionState.fullyAuthenticated,
+          initialLocation: '/privacy',
+        ),
       );
       await tester.pumpAndSettle();
 

@@ -2,6 +2,7 @@ import 'package:easyrent/features/auth/application/signup_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/signup_page_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,9 +11,16 @@ import 'package:flutter_test/flutter_test.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
+  _FakeAuthRepository({User? currentUser}) : _currentUser = currentUser;
+
+  final User? _currentUser;
+
   bool signUpCalled = false;
   bool signUpWithGoogleCalled = false;
   bool signUpWithAppleCalled = false;
+  bool linkAnonymousWithEmailPasswordCalled = false;
+  bool linkAnonymousWithGoogleCalled = false;
+  bool linkAnonymousWithAppleCalled = false;
   bool? lastGoogleRgpdConsent;
   bool? lastAppleRgpdConsent;
   String? lastEmail;
@@ -25,7 +33,7 @@ class _FakeAuthRepository implements AuthRepository {
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override
-  User? get currentUser => null;
+  User? get currentUser => _currentUser;
 
   @override
   Future<void> signInWithPassword({
@@ -79,6 +87,33 @@ class _FakeAuthRepository implements AuthRepository {
     signUpWithAppleCalled = true;
     lastAppleRgpdConsent = rgpdConsent;
     if (signUpWithAppleError != null) throw signUpWithAppleError!;
+  }
+
+  @override
+  Future<void> signInAnonymously() async {}
+
+  @override
+  Future<void> linkAnonymousWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required bool rgpdConsent,
+  }) async {
+    linkAnonymousWithEmailPasswordCalled = true;
+    lastEmail = email;
+    lastFullName = fullName;
+  }
+
+  @override
+  Future<void> linkAnonymousWithGoogle({required bool rgpdConsent}) async {
+    linkAnonymousWithGoogleCalled = true;
+    lastGoogleRgpdConsent = rgpdConsent;
+  }
+
+  @override
+  Future<void> linkAnonymousWithApple({required bool rgpdConsent}) async {
+    linkAnonymousWithAppleCalled = true;
+    lastAppleRgpdConsent = rgpdConsent;
   }
 
   @override
@@ -490,6 +525,94 @@ void main() {
           'Une erreur est survenue. Veuillez réessayer.',
         );
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // BAILLAN-M1 — détection anon → branche vers linkAnonymousWith*
+  // ---------------------------------------------------------------------
+  group('SignupController — upgrade anonyme (BAILLAN-M1)', () {
+    test('signUp() avec currentUser anonyme → linkAnonymousWithEmailPassword '
+        '(pas signUpWithPassword)', () async {
+      final repo = _FakeAuthRepository(
+        currentUser: MockUser(isAnonymous: true, uid: 'anon-1'),
+      );
+      final ctrl = _makeController(repo);
+
+      await ctrl.signUp(
+        fullName: _validSignup.fullName,
+        email: _validSignup.email,
+        password: _validSignup.password,
+        confirmPassword: _validSignup.confirmPassword,
+        rgpdConsent: _validSignup.rgpdConsent,
+      );
+
+      expect(repo.linkAnonymousWithEmailPasswordCalled, isTrue);
+      expect(repo.signUpCalled, isFalse);
+      expect(ctrl.state, const SignupPageState.awaitingConfirmation());
+    });
+
+    test('signUp() avec currentUser non-anonyme (ou null) → signUpWithPassword '
+        'classique (comportement inchangé)', () async {
+      final repo = _FakeAuthRepository();
+      final ctrl = _makeController(repo);
+
+      await ctrl.signUp(
+        fullName: _validSignup.fullName,
+        email: _validSignup.email,
+        password: _validSignup.password,
+        confirmPassword: _validSignup.confirmPassword,
+        rgpdConsent: _validSignup.rgpdConsent,
+      );
+
+      expect(repo.signUpCalled, isTrue);
+      expect(repo.linkAnonymousWithEmailPasswordCalled, isFalse);
+    });
+
+    test(
+      'signUpWithGoogle() avec currentUser anonyme → linkAnonymousWithGoogle',
+      () async {
+        final repo = _FakeAuthRepository(
+          currentUser: MockUser(isAnonymous: true, uid: 'anon-2'),
+        );
+        final ctrl = _makeController(repo);
+
+        await ctrl.signUpWithGoogle(rgpdConsent: true);
+
+        expect(repo.linkAnonymousWithGoogleCalled, isTrue);
+        expect(repo.signUpWithGoogleCalled, isFalse);
+        expect(ctrl.state, const SignupPageState.idle());
+      },
+    );
+
+    test(
+      'signUpWithApple() avec currentUser anonyme → linkAnonymousWithApple',
+      () async {
+        final repo = _FakeAuthRepository(
+          currentUser: MockUser(isAnonymous: true, uid: 'anon-3'),
+        );
+        final ctrl = _makeController(repo);
+
+        await ctrl.signUpWithApple(rgpdConsent: true);
+
+        expect(repo.linkAnonymousWithAppleCalled, isTrue);
+        expect(repo.signUpWithAppleCalled, isFalse);
+        expect(ctrl.state, const SignupPageState.idle());
+      },
+    );
+
+    test('signUpWithGoogle() anonyme + rgpdConsent=false → guard AVANT tout '
+        'appel repository (ni signup ni link)', () async {
+      final repo = _FakeAuthRepository(
+        currentUser: MockUser(isAnonymous: true, uid: 'anon-4'),
+      );
+      final ctrl = _makeController(repo);
+
+      await ctrl.signUpWithGoogle(rgpdConsent: false);
+
+      expect(repo.linkAnonymousWithGoogleCalled, isFalse);
+      expect(repo.signUpWithGoogleCalled, isFalse);
+      expect(_isError(ctrl.state), isTrue);
     });
   });
 }

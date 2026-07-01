@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
@@ -129,6 +130,52 @@ abstract interface class AuthRepository {
   ///   appliqué ici.
   Future<void> signUpWithApple({required bool rgpdConsent});
 
+  /// Ouvre une session Firebase Anonymous Auth (« essai sans compte »).
+  ///
+  /// La Cloud Function `handleNewUser` (beforeUserCreated) provisionne le
+  /// doc `landlords/{uid}` correspondant avec `isAnonymous: true`,
+  /// `subscriptionTier: 'anonymous'` et `anonExpiresAt: now + 14 jours`.
+  /// **Aucun consentement RGPD n'est demandé/stampé** — l'anonyme n'a rien
+  /// signé (voir `docs/LEGAL.md`).
+  Future<void> signInAnonymously();
+
+  /// Lie le compte anonyme courant à un email + mot de passe, en préservant
+  /// l'UID (et donc les scénarios simulateur déjà sauvegardés).
+  ///
+  /// Doit être appelée uniquement quand `currentUser?.isAnonymous == true`
+  /// (sinon lève `StateError`). Séquence :
+  /// 1. `EmailAuthProvider.credential` + `currentUser.linkWithCredential`
+  /// 2. `updateDisplayName(fullName)`
+  /// 3. Callable `finalizeAnonymousUpgrade` (stamp RGPD + tier='free' côté
+  ///    serveur, Admin SDK — évite toute rule client permissive)
+  /// 4. Email de vérification puis `signOut` (même flow que
+  ///    [signUpWithPassword] : l'utilisateur doit confirmer son email avant
+  ///    de ré-accéder à l'app en tant que compte complet)
+  ///
+  /// [rgpdConsent] doit être `true` — sinon lève
+  /// `FirebaseAuthException(code: GoogleAuthErrorCode.consentDeclined)`
+  /// avant toute tentative de link.
+  Future<void> linkAnonymousWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required bool rgpdConsent,
+  });
+
+  /// Lie le compte anonyme courant à un compte Google, en préservant l'UID.
+  ///
+  /// [rgpdConsent] doit être `true` — sinon lève
+  /// `FirebaseAuthException(code: GoogleAuthErrorCode.consentDeclined)`
+  /// **avant** d'ouvrir le popup Google.
+  Future<void> linkAnonymousWithGoogle({required bool rgpdConsent});
+
+  /// Lie le compte anonyme courant à un compte Apple, en préservant l'UID.
+  ///
+  /// [rgpdConsent] doit être `true` — sinon lève
+  /// `FirebaseAuthException(code: AppleAuthErrorCode.consentDeclined)`
+  /// **avant** d'ouvrir le popup Apple.
+  Future<void> linkAnonymousWithApple({required bool rgpdConsent});
+
   /// Envoie un email de réinitialisation de mot de passe.
   Future<void> sendPasswordResetEmail(String email);
 
@@ -175,20 +222,100 @@ bool _defaultIsNewUser(UserCredential cred) {
   return info.isNewUser;
 }
 
+/// Ouvre le popup OAuth de link pour un utilisateur anonyme donné.
+///
+/// Extrait en fonction injectable car `firebase_auth_mocks` (0.14.2) ne
+/// surcharge pas `User.linkWithPopup` (méthode concrète héritée de la classe
+/// réelle `User`, absente de `MockUser` → `NoSuchMethodError` en test). En
+/// production, [_defaultLinkWithPopup] délègue simplement au SDK.
+typedef LinkWithPopupFn =
+    Future<UserCredential> Function(User user, AuthProvider provider);
+
+Future<UserCredential> _defaultLinkWithPopup(
+  User user,
+  AuthProvider provider,
+) => user.linkWithPopup(provider);
+
+/// Lie un utilisateur anonyme à une [AuthCredential] (email/password ici).
+///
+/// Extrait en fonction injectable car `firebase_auth_mocks` (0.14.2) contient
+/// un bug connu : `MockUser.linkWithCredential` construit un
+/// `MockUserCredential(false, mockUser: this)` alors que `this.isAnonymous`
+/// reste `true` (champ final non mutable) — l'assertion interne du package
+/// (`mockUser.isAnonymous == isAnonymous`) échoue systématiquement en debug.
+/// En production, [_defaultLinkWithCredential] délègue simplement au SDK.
+typedef LinkWithCredentialFn =
+    Future<UserCredential> Function(User user, AuthCredential credential);
+
+Future<UserCredential> _defaultLinkWithCredential(
+  User user,
+  AuthCredential credential,
+) => user.linkWithCredential(credential);
+
+/// Appelle la Cloud Function callable `finalizeAnonymousUpgrade`.
+///
+/// Extrait en fonction injectable : il n'existe pas de test double officiel
+/// pour `FirebaseFunctions`/`HttpsCallable` (contrairement à
+/// `firebase_auth_mocks` ou `fake_cloud_firestore`), donc les tests
+/// unitaires injectent un [FinalizeUpgradeFn] simulé plutôt que de dépendre
+/// d'un backend réel.
+typedef FinalizeUpgradeFn =
+    Future<void> Function({
+      required bool rgpdConsent,
+      required String rgpdConsentVersion,
+    });
+
 /// Implémentation s'appuyant sur [FirebaseAuth] + [FirebaseFirestore].
 class FirebaseAuthRepository implements AuthRepository {
+  /// [functions] est optionnel : requis uniquement par le chemin de
+  /// production de `linkAnonymousWith*` (construction lazy du callable HTTPS
+  /// dans [_finalizeUpgrade]). Les tests qui n'exercent pas ces méthodes (ou
+  /// qui injectent directement [finalizeUpgrade]) peuvent l'omettre plutôt
+  /// que de mocker un `FirebaseFunctions` réel (aucun test double officiel).
   FirebaseAuthRepository(
     this._auth,
     this._firestore, {
+    FirebaseFunctions? functions,
     IsNewUserResolver isNewUserResolver = _defaultIsNewUser,
-  }) : _isNewUser = isNewUserResolver;
+    LinkWithPopupFn linkWithPopup = _defaultLinkWithPopup,
+    LinkWithCredentialFn linkWithCredential = _defaultLinkWithCredential,
+    FinalizeUpgradeFn? finalizeUpgrade,
+  }) : _isNewUser = isNewUserResolver,
+       _linkWithPopup = linkWithPopup,
+       _linkWithCredential = linkWithCredential,
+       _finalizeUpgrade =
+           finalizeUpgrade ??
+           (({required rgpdConsent, required rgpdConsentVersion}) async {
+             final fn = functions;
+             if (fn == null) {
+               throw StateError(
+                 'FirebaseAuthRepository built without FirebaseFunctions — '
+                 'cannot call finalizeAnonymousUpgrade.',
+               );
+             }
+             await fn.httpsCallable('finalizeAnonymousUpgrade').call({
+               'rgpdConsent': rgpdConsent,
+               'rgpdConsentVersion': rgpdConsentVersion,
+             });
+           });
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final IsNewUserResolver _isNewUser;
+  final LinkWithPopupFn _linkWithPopup;
+  final LinkWithCredentialFn _linkWithCredential;
+  final FinalizeUpgradeFn _finalizeUpgrade;
 
   @override
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  // CRITICAL fix — session-state refresh après link (BAILLAN-M1) :
+  // `authStateChanges()` NE FIRE PAS sur linkWithCredential/linkWithPopup
+  // (UID inchangé, Firebase ne considère pas ça comme un sign-in event). Le
+  // sessionStateProvider resterait bloqué sur "anonymous" après un upgrade
+  // réussi. On utilise `userChanges()` qui, lui, émet aussi sur les
+  // mutations du User (link provider, email verified, displayName…) — c'est
+  // un superset de `authStateChanges()`, tous les consommateurs qui font
+  // `user != null` restent corrects.
+  Stream<User?> get authStateChanges => _auth.userChanges();
 
   @override
   User? get currentUser => _auth.currentUser;
@@ -262,11 +389,25 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   Future<void> _sendVerificationEmail(User user) async {
-    final origin = Uri.base.origin;
+    final origin = _safeOrigin();
     _log.info('sendEmailVerification requested (origin: $origin)');
     await user.sendEmailVerification(
       ActionCodeSettings(url: '$origin/login', handleCodeInApp: false),
     );
+  }
+
+  /// `Uri.base.origin` lève `StateError` hors des schémas http(s) (ex. les
+  /// tests `flutter test` exécutés en `file://`). Fallback neutre : le lien
+  /// de vérification pointera vers un chemin relatif si l'origin ne peut pas
+  /// être résolu — en production (navigateur réel), l'origin http(s) est
+  /// toujours disponible, ce fallback ne joue donc qu'en environnement de
+  /// test.
+  String _safeOrigin() {
+    try {
+      return Uri.base.origin;
+    } on StateError {
+      return '';
+    }
   }
 
   @override
@@ -481,6 +622,107 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> signInAnonymously() async {
+    _log.info('signInAnonymously requested');
+    await _auth.signInAnonymously();
+  }
+
+  /// Garde commune aux 3 méthodes `linkAnonymousWith*` : vérifie qu'une
+  /// session anonyme est bien active avant de tenter un lien. Lever un
+  /// `StateError` plutôt qu'une `FirebaseAuthException` ici : ce n'est pas
+  /// une erreur Firebase, c'est un bug d'appel côté UI (le bouton "Créer un
+  /// compte" ne devrait jamais être branché sur ces méthodes hors contexte
+  /// anonyme).
+  User _requireAnonymousUser() {
+    final user = _auth.currentUser;
+    if (user == null || !user.isAnonymous) {
+      throw StateError(
+        'linkAnonymousWith* requires an active anonymous session '
+        '(currentUser=${user?.uid}, isAnonymous=${user?.isAnonymous}).',
+      );
+    }
+    return user;
+  }
+
+  Future<void> _finalizeAnonymousUpgrade({required bool rgpdConsent}) async {
+    _log.info('finalizeAnonymousUpgrade callable requested');
+    await _finalizeUpgrade(
+      rgpdConsent: rgpdConsent,
+      rgpdConsentVersion: rgpdConsentVersion,
+    );
+  }
+
+  @override
+  Future<void> linkAnonymousWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required bool rgpdConsent,
+  }) async {
+    if (!rgpdConsent) {
+      throw FirebaseAuthException(
+        code: GoogleAuthErrorCode.consentDeclined,
+        message: 'RGPD consent not given before anonymous upgrade.',
+      );
+    }
+    final anonUser = _requireAnonymousUser();
+    _log.info('linkAnonymousWithEmailPassword requested');
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+    final cred = await _linkWithCredential(anonUser, credential);
+    final user = cred.user;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-user',
+        message: 'linkWithCredential returned null user',
+      );
+    }
+    await user.updateDisplayName(fullName);
+    await _finalizeAnonymousUpgrade(rgpdConsent: rgpdConsent);
+    await _sendVerificationEmail(user);
+    await _auth.signOut();
+  }
+
+  @override
+  Future<void> linkAnonymousWithGoogle({required bool rgpdConsent}) async {
+    if (!rgpdConsent) {
+      throw FirebaseAuthException(
+        code: GoogleAuthErrorCode.consentDeclined,
+        message: 'RGPD consent not given before anonymous upgrade.',
+      );
+    }
+    final anonUser = _requireAnonymousUser();
+    _log.info('linkAnonymousWithGoogle requested');
+
+    final provider = GoogleAuthProvider()
+      ..addScope('email')
+      ..addScope('profile');
+    await _linkWithPopup(anonUser, provider);
+    await _finalizeAnonymousUpgrade(rgpdConsent: rgpdConsent);
+  }
+
+  @override
+  Future<void> linkAnonymousWithApple({required bool rgpdConsent}) async {
+    if (!rgpdConsent) {
+      throw FirebaseAuthException(
+        code: AppleAuthErrorCode.consentDeclined,
+        message: 'RGPD consent not given before anonymous upgrade.',
+      );
+    }
+    final anonUser = _requireAnonymousUser();
+    _log.info('linkAnonymousWithApple requested');
+
+    final provider = OAuthProvider('apple.com')
+      ..addScope('email')
+      ..addScope('name');
+    await _linkWithPopup(anonUser, provider);
+    await _finalizeAnonymousUpgrade(rgpdConsent: rgpdConsent);
+  }
+
+  @override
   Future<void> sendPasswordResetEmail(String email) async {
     final origin = Uri.base.origin;
     _log.info('sendPasswordResetEmail requested (origin: $origin)');
@@ -519,5 +761,6 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return FirebaseAuthRepository(
     FirebaseAuth.instance,
     FirebaseFirestore.instance,
+    functions: FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );
 });

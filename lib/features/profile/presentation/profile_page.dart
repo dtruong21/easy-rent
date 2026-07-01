@@ -114,7 +114,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mon profil', fallbackRoute: '/'),
+      appBar: AppAppBar(title: 'Mon profil', fallbackRoute: '/dashboard'),
       body: _buildBody(isSubmitting: isSubmitting, errorMessage: errorMessage),
     );
   }

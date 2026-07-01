@@ -56,3 +56,7 @@ export {
   createDocument,
   getDocumentDownloadUrl,
 } from "./callable/documents";
+export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
+
+// ---------- Scheduled ----------
+export {cleanupExpiredAnon} from "./scheduled/cleanup_expired_anon";

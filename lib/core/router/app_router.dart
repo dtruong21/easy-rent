@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_session_provider.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/domain/session_state.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/landing/presentation/landing_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/properties/presentation/properties_list_page.dart';
 import '../../features/properties/presentation/property_detail_page.dart';
@@ -40,13 +42,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: refreshStream,
     redirect: (context, state) {
-      // isAuthenticatedProvider expose le user FirebaseAuth (data du
-      // StreamProvider, fallback sur currentUser en cache sur loading/error).
-      // Override possible en test via override(isAuthenticatedProvider, ...).
-      final isAuthed = ref.read(isAuthenticatedProvider);
+      // sessionStateProvider expose l'état 3-branches dérivé du user
+      // FirebaseAuth (data du StreamProvider, fallback sur currentUser en
+      // cache sur loading/error). Override possible en test via
+      // override(sessionStateProvider, ...).
+      final sessionState = ref.read(sessionStateProvider);
       final location = state.matchedLocation;
 
-      // Routes publiques accessibles sans session.
+      // Routes accessibles à TOUS, quel que soit sessionState (landing +
+      // auth forms + légal). `/` a un traitement spécial ci-dessous (les
+      // sessions actives y sont redirigées ailleurs).
       const publicRoutes = {
         '/login',
         '/signup',
@@ -54,25 +59,61 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/reset-password',
         '/privacy',
       };
-      if (publicRoutes.contains(location)) {
-        // Si déjà connecté, /login et /signup redirigent vers /.
-        // /reset-password reste accessible même connecté (cas où l'utilisateur
-        // clique son lien email après avoir réauthentifié manuellement).
-        if (isAuthed && (location == '/login' || location == '/signup')) {
-          return '/';
-        }
-        return null;
-      }
 
-      if (!isAuthed) return '/login';
-      return null;
+      // Routes accessibles aux anonymes ET aux comptes complets (le
+      // simulateur est le carrefour d'onboarding — BAILLAN-M1). `state.
+      // matchedLocation` résout les segments dynamiques (`/simulator/:id`
+      // devient `/simulator/abc123`), d'où le `startsWith` pour couvrir les
+      // deux routes `/simulator` et `/simulator/:id` en une seule règle.
+      final isAnonAccessible =
+          location == '/simulator' || location.startsWith('/simulator/');
+
+      switch (sessionState) {
+        case SessionState.unauthenticated:
+          if (location == '/') return null; // landing publique
+          if (publicRoutes.contains(location)) return null;
+          return '/login';
+
+        case SessionState.anonymous:
+          // Un anonyme qui atterrit sur la landing repart directement vers
+          // le simulateur (déjà "dans" son essai sans compte).
+          if (location == '/') return '/simulator';
+          if (publicRoutes.contains(location)) return null;
+          if (isAnonAccessible) return null;
+          // Toute route métier complète (dashboard, properties, etc.) est
+          // hors de portée d'un anonyme — retour à la landing.
+          return '/';
+
+        case SessionState.fullyAuthenticated:
+          if (location == '/') return '/dashboard';
+          // /login et /signup redirigent un compte déjà connecté.
+          if (location == '/login' || location == '/signup') {
+            return '/dashboard';
+          }
+          // /reset-password reste accessible même connecté (cas où
+          // l'utilisateur clique son lien email après avoir réauthentifié
+          // manuellement) ; /forgot-password et /privacy aussi.
+          return null;
+      }
     },
     routes: [
       // -----------------------------------------------------------------------
-      // Dashboard
+      // Landing publique (BAILLAN-M1) — carrefour d'onboarding.
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const LandingPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Dashboard — déplacé de "/" vers "/dashboard" (BAILLAN-M1).
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/dashboard',
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
           child: const DashboardPage(),

@@ -138,7 +138,17 @@ class _PrivacyContent extends StatelessWidget {
               'le compte bailleur est actif, puis supprimées sur demande dans les '
               'délais légaux.\n\n'
               '• Compte bailleur : conservé jusqu\'à la demande de suppression ou '
-              'l\'inactivité prolongée (>2 ans), sous réserve des obligations légales.',
+              'l\'inactivité prolongée (>2 ans), sous réserve des obligations légales.\n\n'
+              '• Session anonyme (mode démo, avant création de compte) : les données '
+              'liées à une session anonyme (scénarios de simulation d\'investissement, '
+              'préférences éphémères) sont conservées 14 jours glissants à compter '
+              'de la dernière activité, puis supprimées automatiquement par un '
+              'traitement quotidien (Cloud Function planifiée). Aucune donnée '
+              'nominative n\'est collectée pendant cette phase — seul un identifiant '
+              'technique Firebase Anonymous UID permet de rattacher les scénarios '
+              'à la session en cours. La création d\'un compte pendant la période '
+              'de démo préserve les scénarios enregistrés et fait basculer le '
+              'compte en régime standard de conservation.',
         ),
 
         // 6. Sécurité

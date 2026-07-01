@@ -8,13 +8,23 @@ import 'package:logging/logging.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
 import '../../../core/utils/money_format.dart';
+import '../../auth/application/anon_expiry_renewer.dart';
+import '../../auth/application/auth_session_provider.dart';
+import '../../auth/data/landlord_tier_repository.dart';
+import '../../auth/domain/session_state.dart';
+import '../../auth/domain/subscription_tier.dart';
+import '../../auth/presentation/widgets/anon_demo_banner.dart';
+import '../application/scenario_limit_controller.dart';
 import '../data/investment_scenario_repository.dart';
 import '../domain/investment_scenario.dart';
 import '../domain/scenario_results.dart';
+import 'widgets/coming_soon_paid_plan_section.dart';
 import 'widgets/save_scenario_dialog.dart';
 import 'widgets/saved_scenarios_row.dart';
 import 'widgets/scenario_form_validators.dart';
+import 'widgets/scenario_limit_reached_modal.dart';
 import 'widgets/scenario_results_card.dart';
+import 'widgets/tier_chip.dart';
 
 final _log = Logger('SimulatorPage');
 
@@ -234,6 +244,19 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
   Future<void> _saveScenario() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    // L'enforcement de la limite ne s'applique qu'à la CRÉATION (un update
+    // ne change pas le nombre total de scénarios sauvegardés). Relecture
+    // synchrone au clic (pas seulement `onPressed: disabled`) pour couvrir
+    // le cas où le compte a évolué depuis le dernier rebuild.
+    final isCreating = _loadedScenario == null;
+    if (isCreating && !ref.read(canSaveAnotherScenarioProvider)) {
+      final tier =
+          ref.read(landlordTierProvider).valueOrNull?.tier ??
+          SubscriptionTier.anonymous;
+      await showScenarioLimitReachedModal(context, tier: tier);
+      return;
+    }
+
     final preview = _buildScenarioFromForm();
     if (preview == null) return;
 
@@ -297,6 +320,11 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
       // Recharge la liste des scénarios.
       await ref.read(investmentScenariosListProvider.notifier).reload();
 
+      // BAILLAN-M1 : sauvegarder un scénario est un signal d'activité
+      // meaningful — renouvelle anonExpiresAt si la session est anonyme
+      // (no-op silencieux sinon, throttlé côté renewer).
+      unawaited(ref.read(anonExpiryRenewerProvider.notifier).renewIfNeeded());
+
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -324,97 +352,152 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
   Widget build(BuildContext context) {
     final spacing =
         Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+    final sessionState = ref.watch(sessionStateProvider);
+    final tier =
+        ref.watch(landlordTierProvider).valueOrNull?.tier ??
+        SubscriptionTier.anonymous;
 
     return Scaffold(
       appBar: AppAppBar(
         title: "Simulateur d'investissement",
         fallbackRoute: '/',
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(spacing.lg),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Disclaimer permanent.
-                      _DisclaimerBanner(),
-                      SizedBox(height: spacing.lg),
-
-                      // Mes scénarios sauvegardés.
-                      const SavedScenariosRow(),
-
-                      // Formulaire.
-                      _ScenarioForm(
-                        formKey: _formKey,
-                        purchasePriceCtrl: _purchasePriceCtrl,
-                        notaryFeesCtrl: _notaryFeesCtrl,
-                        worksCtrl: _worksCtrl,
-                        isNewProperty: _isNewProperty,
-                        onIsNewPropertyChanged: (v) {
-                          setState(() => _isNewProperty = v);
-                          _onFieldChanged();
-                        },
-                        downPaymentCtrl: _downPaymentCtrl,
-                        loanPrincipalCtrl: _loanPrincipalCtrl,
-                        loanRateCtrl: _loanRateCtrl,
-                        loanDurationCtrl: _loanDurationCtrl,
-                        monthlyRentCtrl: _monthlyRentCtrl,
-                        propertyTaxCtrl: _propertyTaxCtrl,
-                        insurancePnoCtrl: _insurancePnoCtrl,
-                        condoFeesCtrl: _condoFeesCtrl,
-                        notesCtrl: _notesCtrl,
-                      ),
-                      SizedBox(height: spacing.lg),
-
-                      // Résultats KPI.
-                      if (_results != null)
-                        ScenarioResultsCard(results: _results!),
-                      if (_results == null) _EmptyResultsHint(),
-
-                      SizedBox(height: spacing.lg),
-
-                      // Message d'erreur.
-                      if (_errorMessage != null)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: spacing.sm),
-                          child: Text(
-                            _errorMessage!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
+      body: Column(
+        children: [
+          const AnonDemoBanner(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: EdgeInsets.all(spacing.lg),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Signalétique tier — persistant en haut de page.
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: TierChip(),
                             ),
-                          ),
-                        ),
+                            SizedBox(height: spacing.md),
 
-                      // Bouton sauvegarder.
-                      FilledButton.icon(
-                        key: const Key('save_scenario_button'),
-                        onPressed: _isSaving ? null : _saveScenario,
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                            // Disclaimer permanent.
+                            _DisclaimerBanner(),
+                            SizedBox(height: spacing.lg),
+
+                            // Mes scénarios sauvegardés.
+                            const SavedScenariosRow(),
+
+                            // Formulaire.
+                            _ScenarioForm(
+                              formKey: _formKey,
+                              purchasePriceCtrl: _purchasePriceCtrl,
+                              notaryFeesCtrl: _notaryFeesCtrl,
+                              worksCtrl: _worksCtrl,
+                              isNewProperty: _isNewProperty,
+                              onIsNewPropertyChanged: (v) {
+                                setState(() => _isNewProperty = v);
+                                _onFieldChanged();
+                              },
+                              downPaymentCtrl: _downPaymentCtrl,
+                              loanPrincipalCtrl: _loanPrincipalCtrl,
+                              loanRateCtrl: _loanRateCtrl,
+                              loanDurationCtrl: _loanDurationCtrl,
+                              monthlyRentCtrl: _monthlyRentCtrl,
+                              propertyTaxCtrl: _propertyTaxCtrl,
+                              insurancePnoCtrl: _insurancePnoCtrl,
+                              condoFeesCtrl: _condoFeesCtrl,
+                              notesCtrl: _notesCtrl,
+                            ),
+                            SizedBox(height: spacing.lg),
+
+                            // Résultats KPI.
+                            if (_results != null)
+                              ScenarioResultsCard(results: _results!),
+                            if (_results == null) _EmptyResultsHint(),
+
+                            SizedBox(height: spacing.lg),
+
+                            // Message d'erreur.
+                            if (_errorMessage != null)
+                              Padding(
+                                padding: EdgeInsets.only(bottom: spacing.sm),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
                                 ),
-                              )
-                            : const Icon(Icons.save_outlined),
-                        label: Text(
-                          widget.scenarioId != null
-                              ? 'Mettre à jour le scénario'
-                              : 'Sauvegarder ce scénario',
+                              ),
+
+                            // Bouton sauvegarder.
+                            FilledButton.icon(
+                              key: const Key('save_scenario_button'),
+                              onPressed: _isSaving ? null : _saveScenario,
+                              icon: _isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_outlined),
+                              label: Text(
+                                widget.scenarioId != null
+                                    ? 'Mettre à jour le scénario'
+                                    : 'Sauvegarder ce scénario',
+                              ),
+                            ),
+                            SizedBox(height: spacing.xxl),
+
+                            // Pied de page « Prochainement — Plan Pro » :
+                            // uniquement pour les comptes FREE (les anons
+                            // voient un CTA les invitant à créer un compte
+                            // gratuit d'abord — trop tôt pour leur vendre un
+                            // futur plan payant).
+                            if (tier == SubscriptionTier.free)
+                              const ComingSoonPaidPlanSection()
+                            else if (sessionState == SessionState.anonymous)
+                              _CreateFreeAccountFirstHint(),
+
+                            SizedBox(height: spacing.xxl),
+                          ],
                         ),
                       ),
-
-                      SizedBox(height: spacing.xxl),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Hint anonyme (remplace la section Plan Pro) ─────────────────────────────
+
+class _CreateFreeAccountFirstHint extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      key: const Key('create_free_account_first_hint'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Text(
+        'Créez un compte gratuit d\'abord pour découvrir toutes les '
+        'fonctionnalités à venir de Baillan.',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

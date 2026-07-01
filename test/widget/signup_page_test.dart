@@ -61,6 +61,23 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> signUpWithApple({required bool rgpdConsent}) async {}
 
   @override
+  Future<void> signInAnonymously() async {}
+
+  @override
+  Future<void> linkAnonymousWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required bool rgpdConsent,
+  }) async {}
+
+  @override
+  Future<void> linkAnonymousWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> linkAnonymousWithApple({required bool rgpdConsent}) async {}
+
+  @override
   Future<void> signOut() async {}
 }
 

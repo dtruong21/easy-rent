@@ -33,7 +33,7 @@ class LeasesListPage extends ConsumerWidget {
         : ref.watch(viewModeProvider('leases'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes baux', fallbackRoute: '/'),
+      appBar: AppAppBar(title: 'Mes baux', fallbackRoute: '/dashboard'),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_lease'),
         onPressed: () => context.push('/leases/new'),

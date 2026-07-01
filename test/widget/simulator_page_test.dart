@@ -3,6 +3,10 @@
 /// Couvre : rendu form, validators, disclaimer, save dialog, load scenario.
 library;
 
+import 'package:easyrent/features/auth/application/auth_session_provider.dart';
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/session_state.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/simulator/data/investment_scenario_repository.dart';
 import 'package:easyrent/features/simulator/domain/investment_scenario.dart';
 import 'package:easyrent/features/simulator/presentation/simulator_page.dart';
@@ -121,6 +125,17 @@ Widget _buildPage({_FakeRepo? repo}) {
       investmentScenarioRepositoryProvider.overrideWithValue(fakeRepo),
       investmentScenariosListProvider.overrideWith(
         () => _FakeListNotifier(fakeRepo.scenarios),
+      ),
+      // BAILLAN-M1 : SimulatorPage lit désormais sessionStateProvider (pour
+      // AnonDemoBanner) et landlordTierProvider (pour TierChip + enforcement
+      // de la limite). Ces tests pré-datent le concept de tier — on fixe un
+      // compte complet FREE (aucune restriction pertinente ici, la limite
+      // FREE est 3 et les fixtures ne dépassent jamais 1 scénario).
+      sessionStateProvider.overrideWithValue(SessionState.fullyAuthenticated),
+      landlordTierProvider.overrideWith(
+        (ref) => Stream.value(
+          const LandlordTierSnapshot(tier: SubscriptionTier.free),
+        ),
       ),
     ],
     child: MaterialApp.router(routerConfig: router),

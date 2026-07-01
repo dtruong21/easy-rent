@@ -50,11 +50,24 @@ class SignupController extends StateNotifier<SignupPageState> {
 
     state = const SignupPageState.submitting();
     try {
-      await _repository.signUpWithPassword(
-        email: email.trim(),
-        password: password,
-        fullName: fullName.trim(),
-      );
+      // BAILLAN-M1 : un visiteur en session anonyme (essai simulateur sans
+      // compte) qui remplit le formulaire de création de compte doit être
+      // LIÉ (préserve UID + scénarios sauvegardés) plutôt que de créer un
+      // second compte. Transparent pour l'UI — `SignupForm` ne change pas.
+      if (_repository.currentUser?.isAnonymous ?? false) {
+        await _repository.linkAnonymousWithEmailPassword(
+          email: email.trim(),
+          password: password,
+          fullName: fullName.trim(),
+          rgpdConsent: rgpdConsent,
+        );
+      } else {
+        await _repository.signUpWithPassword(
+          email: email.trim(),
+          password: password,
+          fullName: fullName.trim(),
+        );
+      }
       // Le repository a envoyé l'email de vérification puis signé out. On
       // reste sur /signup avec la vue SignupConfirmationSentView jusqu'au
       // clic du lien reçu par email. L'utilisateur devra ensuite se
@@ -88,7 +101,13 @@ class SignupController extends StateNotifier<SignupPageState> {
 
     state = const SignupPageState.submitting();
     try {
-      await _repository.signUpWithGoogle(rgpdConsent: rgpdConsent);
+      // BAILLAN-M1 : anon → link (préserve UID + scénarios), sinon signup
+      // classique. Transparent pour l'UI.
+      if (_repository.currentUser?.isAnonymous ?? false) {
+        await _repository.linkAnonymousWithGoogle(rgpdConsent: rgpdConsent);
+      } else {
+        await _repository.signUpWithGoogle(rgpdConsent: rgpdConsent);
+      }
       state = const SignupPageState.idle();
       _log.info('Signup Google réussi — session active');
     } on FirebaseAuthException catch (e, st) {
@@ -128,7 +147,13 @@ class SignupController extends StateNotifier<SignupPageState> {
 
     state = const SignupPageState.submitting();
     try {
-      await _repository.signUpWithApple(rgpdConsent: rgpdConsent);
+      // BAILLAN-M1 : anon → link (préserve UID + scénarios), sinon signup
+      // classique. Transparent pour l'UI.
+      if (_repository.currentUser?.isAnonymous ?? false) {
+        await _repository.linkAnonymousWithApple(rgpdConsent: rgpdConsent);
+      } else {
+        await _repository.signUpWithApple(rgpdConsent: rgpdConsent);
+      }
       state = const SignupPageState.idle();
       _log.info('Signup Apple réussi — session active');
     } on FirebaseAuthException catch (e, st) {
