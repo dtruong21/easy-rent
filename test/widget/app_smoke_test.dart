@@ -78,10 +78,9 @@ void main() {
       await tester.pump();
 
       expect(find.text('Baillan.'), findsOneWidget);
-      expect(
-        find.text('Connectez-vous pour gérer vos locations'),
-        findsOneWidget,
-      );
+      // Nouveau design "La Page du Registre" (2026-07-01) : l'aphorisme
+      // remplace l'ancien subhead descriptif.
+      expect(find.text('En cas de doute, sortez le registre.'), findsOneWidget);
     });
 
     testWidgets('shows email field and password field', (tester) async {

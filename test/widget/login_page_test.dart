@@ -200,7 +200,14 @@ void main() {
       await tester.pumpWidget(_buildLoginPage(repo: _FakeAuthRepository()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Mot de passe oublié ?'));
+      // Le nouveau design (concept "La Page du Registre") ajoute du chrome
+      // au-dessus du form (cartouche + aphorisme + filet) — les liens
+      // secondaires en bas peuvent tomber hors du viewport de test 800x600
+      // par défaut. ensureVisible scroll la SingleChildScrollView avant tap.
+      final finder = find.text('Mot de passe oublié ?');
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      await tester.tap(finder);
       await tester.pumpAndSettle();
 
       expect(find.text('Mot de passe oublié'), findsOneWidget);
@@ -210,7 +217,10 @@ void main() {
       await tester.pumpWidget(_buildLoginPage(repo: _FakeAuthRepository()));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Créer un compte'));
+      final finder = find.text('Créer un compte');
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      await tester.tap(finder);
       await tester.pumpAndSettle();
 
       expect(find.text('Page inscription'), findsOneWidget);
