@@ -265,11 +265,13 @@ class _LoginPageState extends State<LoginPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Pagination verticale "p. 1"
+        // Intitulé vertical style "en-tête de contrat" — remplace la
+        // pagination "p. 1" qui évoquait un registre. Le paraphe SVG en
+        // dessous joue le rôle de signature en marge.
         RotatedBox(
           quarterTurns: 3,
           child: Text(
-            'p. 1  —  Session',
+            'Contrat  —  Ouverture',
             style: TextStyle(
               fontFamily: 'Cochin',
               fontFamilyFallback: _serifFallback,
@@ -464,14 +466,15 @@ class _LoginPageState extends State<LoginPage>
             ],
           ),
         ),
-        // Numéro d'article — la contrepartie éditoriale du wordmark.
+        // Cartouche de droite — style "date + intitulé" d'une feuille de
+        // contrat plutôt qu'un numéro d'article de code de loi.
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'art. 1',
+                _formatFrenchDate(DateTime.now()),
                 style: TextStyle(
                   fontFamily: 'Cochin',
                   fontFamilyFallback: _serifFallback,
@@ -483,7 +486,7 @@ class _LoginPageState extends State<LoginPage>
               ),
               const SizedBox(height: 2),
               Text(
-                'Session',
+                'Ouverture',
                 style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 2.5,
@@ -517,15 +520,15 @@ class _LoginPageState extends State<LoginPage>
         ),
         const SizedBox(height: 12),
         Text(
-          'Consignez votre entrée pour reprendre le fil des quittances, '
-          'des baux et des échéances.',
+          'Signez votre entrée. Vos identifiants ouvrent le registre du '
+          'bailliage — quittances, baux, échéances.',
           style: TextStyle(fontSize: 13.5, height: 1.55, color: mutedColor),
         ),
       ],
     );
   }
 
-  /// Pied de la feuille — mention légale en tout petit, style pied de registre.
+  /// Pied de la feuille — style "Fait à… le…" d'une feuille de contrat FR.
   Widget _buildSheetFooter({required Color mutedColor}) {
     return Row(
       children: [
@@ -538,7 +541,7 @@ class _LoginPageState extends State<LoginPage>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'fin. art. 1',
+            'Fait le ${_formatFrenchDate(DateTime.now())} · Baillan.',
             style: TextStyle(
               fontFamily: 'Cochin',
               fontFamilyFallback: _serifFallback,
@@ -559,12 +562,12 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  /// Pagination de repli affichée sous la feuille sur mobile (la marge
-  /// extérieure gauche desktop étant masquée).
+  /// Pied de repli affiché sous la feuille sur mobile (la marge extérieure
+  /// desktop étant masquée). Style contract minimaliste.
   Widget _buildFooterPagination({required Color mutedColor}) {
     return Center(
       child: Text(
-        'p. 1  —  Session',
+        'Contrat · Ouverture',
         style: TextStyle(
           fontFamily: 'Cochin',
           fontFamilyFallback: _serifFallback,
@@ -609,6 +612,27 @@ const List<String> _serifFallback = [
   'Georgia',
   'serif',
 ];
+
+/// Formate une date française style contrat : « 1er juillet 2026 »,
+/// « 15 mars 2026 ». Ordinal seulement sur le 1er du mois (convention FR).
+String _formatFrenchDate(DateTime d) {
+  const months = [
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
+  ];
+  final day = d.day == 1 ? '1er' : d.day.toString();
+  return '$day ${months[d.month - 1]} ${d.year}';
+}
 
 /// Peint un watermark répété "Registre" en filigrane très pâle sur la feuille.
 /// C'est le détail "notarial" — comme le filigrane d'un papier officiel qu'on
