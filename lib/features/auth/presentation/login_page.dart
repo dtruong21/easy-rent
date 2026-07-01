@@ -634,9 +634,11 @@ String _formatFrenchDate(DateTime d) {
   return '$day ${months[d.month - 1]} ${d.year}';
 }
 
-/// Peint un watermark répété "Registre" en filigrane très pâle sur la feuille.
-/// C'est le détail "notarial" — comme le filigrane d'un papier officiel qu'on
-/// ne voit qu'en inclinant la page.
+/// Peint un watermark "ORIGINAL" en filigrane très pâle sur la feuille.
+/// C'est LA convention française sur l'exemplaire principal d'un contrat
+/// signé (par opposition à "COPIE" ou "DUPLICATA" sur les exemplaires
+/// secondaires). Rendu en petites capitales sérif italique + letter-spacing
+/// large — comme un cachet posé de biais.
 class _WatermarkPainter extends CustomPainter {
   const _WatermarkPainter({required this.color});
 
@@ -649,12 +651,12 @@ class _WatermarkPainter extends CustomPainter {
       fontFamily: 'Cochin',
       fontFamilyFallback: _serifFallback,
       fontStyle: FontStyle.italic,
-      fontSize: 88,
+      fontSize: 96,
       fontWeight: FontWeight.w400,
-      letterSpacing: 8,
+      letterSpacing: 12,
     );
     final tp = TextPainter(
-      text: TextSpan(text: 'Registre', style: textStyle),
+      text: TextSpan(text: 'ORIGINAL', style: textStyle),
       textDirection: TextDirection.ltr,
     )..layout();
 
