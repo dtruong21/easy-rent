@@ -31,6 +31,32 @@ class LoginController extends StateNotifier<LoginPageState> {
         email: email.trim(),
         password: password,
       );
+
+      // Guard email verification (FEAT-021). `reload()` force la synchro
+      // du champ `emailVerified` — un email vérifié post-signup ne se
+      // reflète pas côté client sans reload.
+      final user = _repository.currentUser;
+      await user?.reload();
+      final refreshed = _repository.currentUser;
+
+      if (refreshed != null && !refreshed.emailVerified) {
+        // Renvoie automatiquement un email de vérification puis signe out.
+        // Le simple fait de tenter de se connecter avant vérification
+        // relance le mail — pas besoin de bouton "Renvoyer" explicite.
+        try {
+          await _repository.sendCurrentUserEmailVerification();
+        } catch (e, st) {
+          _log.warning('resend verification email failed', e, st);
+        }
+        await _repository.signOut();
+        state = const LoginPageState.error(
+          message:
+              'Votre email n\'est pas encore vérifié. Nous venons de vous '
+              'renvoyer le lien de confirmation — vérifiez votre boîte mail.',
+        );
+        return;
+      }
+
       // Succès : authStateChanges déclenche GoRouter via GoRouterRefreshStream
       // → redirect vers /. Pas besoin de changer le state ici.
       state = const LoginPageState.idle();

@@ -66,6 +66,9 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
+  Future<void> sendCurrentUserEmailVerification() async {}
+
+  @override
   Future<void> signOut() async {}
 }
 
@@ -106,40 +109,46 @@ void main() {
     });
 
     group('signUp — chemin nominal', () {
-      test('signup réussi → idle (Firebase auto-signe)', () async {
-        final repo = _FakeAuthRepository();
-        final container = ProviderContainer(
-          overrides: [authRepositoryProvider.overrideWithValue(repo)],
-        );
-        addTearDown(container.dispose);
+      test(
+        'signup réussi → awaitingConfirmation (email de vérif envoyé)',
+        () async {
+          final repo = _FakeAuthRepository();
+          final container = ProviderContainer(
+            overrides: [authRepositoryProvider.overrideWithValue(repo)],
+          );
+          addTearDown(container.dispose);
 
-        final states = <SignupPageState>[];
-        container.listen<SignupPageState>(
-          signupControllerProvider,
-          (_, next) => states.add(next),
-          fireImmediately: true,
-        );
+          final states = <SignupPageState>[];
+          container.listen<SignupPageState>(
+            signupControllerProvider,
+            (_, next) => states.add(next),
+            fireImmediately: true,
+          );
 
-        await container
-            .read(signupControllerProvider.notifier)
-            .signUp(
-              fullName: _validSignup.fullName,
-              email: _validSignup.email,
-              password: _validSignup.password,
-              confirmPassword: _validSignup.confirmPassword,
-              rgpdConsent: _validSignup.rgpdConsent,
-            );
+          await container
+              .read(signupControllerProvider.notifier)
+              .signUp(
+                fullName: _validSignup.fullName,
+                email: _validSignup.email,
+                password: _validSignup.password,
+                confirmPassword: _validSignup.confirmPassword,
+                rgpdConsent: _validSignup.rgpdConsent,
+              );
 
-        expect(states[0], const SignupPageState.idle());
-        expect(
-          states[1].maybeWhen(submitting: () => true, orElse: () => false),
-          isTrue,
-        );
-        expect(states[2], const SignupPageState.idle());
-        expect(repo.signUpCalled, isTrue);
-        expect(repo.lastEmail, _validSignup.email);
-        expect(repo.lastFullName, _validSignup.fullName);
-      });
+          expect(states[0], const SignupPageState.idle());
+          expect(
+            states[1].maybeWhen(submitting: () => true, orElse: () => false),
+            isTrue,
+          );
+          // FEAT-021 : le repository a envoyé l'email de vérif + signé out,
+          // le state reste sur awaitingConfirmation pour afficher la vue
+          // « Vérifiez votre boîte mail ».
+          expect(states[2], const SignupPageState.awaitingConfirmation());
+          expect(repo.signUpCalled, isTrue);
+          expect(repo.lastEmail, _validSignup.email);
+          expect(repo.lastFullName, _validSignup.fullName);
+        },
+      );
 
       test('trimme email et fullName', () async {
         final repo = _FakeAuthRepository();

@@ -55,10 +55,12 @@ class SignupController extends StateNotifier<SignupPageState> {
         password: password,
         fullName: fullName.trim(),
       );
-      // Firebase Auth signe l'utilisateur immédiatement après création — pas
-      // de step "email confirmation" obligatoire par défaut.
-      state = const SignupPageState.idle();
-      _log.info('Signup réussi — session active');
+      // Le repository a envoyé l'email de vérification puis signé out. On
+      // reste sur /signup avec la vue SignupConfirmationSentView jusqu'au
+      // clic du lien reçu par email. L'utilisateur devra ensuite se
+      // connecter manuellement via /login.
+      state = const SignupPageState.awaitingConfirmation();
+      _log.info('Signup réussi — email de vérification envoyé');
     } on FirebaseAuthException catch (e, st) {
       _log.warning('FirebaseAuthException signup (code=${e.code})', e, st);
       state = SignupPageState.error(message: AuthErrorMapper.fromException(e));
