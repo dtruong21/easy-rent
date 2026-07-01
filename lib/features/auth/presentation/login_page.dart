@@ -128,6 +128,14 @@ class _LoginPageState extends State<LoginPage>
           // le LoginForm interne (FilledButton, TextField, IconButton…)
           // pioche partout les couleurs light-mode et reste cohérent avec
           // le papier même quand l'utilisateur est en dark mode global.
+          // Centrage vertical de la feuille sur le bureau : quand la
+          // hauteur du contenu est inférieure au viewport (desktop, grands
+          // écrans), on veut la feuille au milieu (objet délibérément posé
+          // au centre du plan de travail), pas collée en haut. Quand le
+          // contenu est plus haut que le viewport (mobile), on retombe sur
+          // un scroll classique. Le ConstrainedBox(minHeight: viewport)
+          // combiné à IntrinsicHeight + Center dans une Column joue les
+          // deux rôles.
           return Theme(
             data: AppTheme.light,
             child: SafeArea(
@@ -136,31 +144,38 @@ class _LoginPageState extends State<LoginPage>
                   horizontal: isDesktop ? 40 : 16,
                   vertical: isDesktop ? 48 : 24,
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: _kSheetMaxWidth + (isDesktop ? 140 : 0),
-                    ),
-                    child: AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, _) {
-                        return FadeTransition(
-                          opacity: _sheetFade,
-                          child: SlideTransition(
-                            position: _sheetSlide,
-                            child: _buildRegisterSpread(
-                              context: context,
-                              isDesktop: isDesktop,
-                              sheetColor: sheetColor,
-                              inkColor: inkColor,
-                              mutedColor: mutedColor,
-                              oliveTone: oliveTone,
-                              ruleTone: ruleTone,
-                              isAmbientDark: isDark,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:
+                        constraints.maxHeight -
+                        (isDesktop ? 96 : 48), // compense vertical padding
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: _kSheetMaxWidth + (isDesktop ? 140 : 0),
+                      ),
+                      child: AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) {
+                          return FadeTransition(
+                            opacity: _sheetFade,
+                            child: SlideTransition(
+                              position: _sheetSlide,
+                              child: _buildRegisterSpread(
+                                context: context,
+                                isDesktop: isDesktop,
+                                sheetColor: sheetColor,
+                                inkColor: inkColor,
+                                mutedColor: mutedColor,
+                                oliveTone: oliveTone,
+                                ruleTone: ruleTone,
+                                isAmbientDark: isDark,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
