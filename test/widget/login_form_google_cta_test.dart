@@ -123,7 +123,13 @@ void main() {
         await tester.pumpWidget(_buildLoginPage(repo: repo));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(GoogleSignInButton));
+        // Le concept "La Page du Registre" ajoute du chrome au-dessus du
+        // form — GoogleSignInButton peut se retrouver sous le fold du
+        // viewport de test 800x600. ensureVisible scroll avant tap.
+        final btnFinder = find.byType(GoogleSignInButton);
+        await tester.ensureVisible(btnFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(btnFinder);
         await tester.pumpAndSettle();
 
         expect(
@@ -150,10 +156,16 @@ void main() {
       await tester.pumpWidget(_buildLoginPage(repo: repo));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(GoogleSignInButton));
+      final btnFinder = find.byType(GoogleSignInButton);
+      await tester.ensureVisible(btnFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(btnFinder);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('login_error_cta_button')));
+      final ctaFinder = find.byKey(const Key('login_error_cta_button'));
+      await tester.ensureVisible(ctaFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(ctaFinder);
       await tester.pumpAndSettle();
 
       expect(find.text('Page inscription'), findsOneWidget);
