@@ -26,8 +26,24 @@ class LoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Connectez-vous pour gérer vos locations',
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    'Tenir registre.',
+                    // Signature de marque sous le wordmark — même stack
+                    // sérif italique (Cochin/Palatino) que le mot au-dessus,
+                    // mais taille body et couleur muted pour rester discret.
+                    // Cadence identique (mot + point).
+                    style: TextStyle(
+                      fontFamily: 'Cochin',
+                      fontFamilyFallback: const [
+                        'Palatino Linotype',
+                        'Book Antiqua',
+                        'Palatino',
+                        'Georgia',
+                        'serif',
+                      ],
+                      fontStyle: FontStyle.italic,
+                      fontSize: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
