@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/email_validator.dart';
 import '../../application/login_controller.dart';
+import 'apple_sign_in_button.dart';
 import 'google_sign_in_button.dart';
 import 'or_divider.dart';
 import 'password_field.dart';
@@ -23,10 +24,18 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
   // Marque quel bouton a déclenché la dernière requête de connexion. Le
   // controller `loginControllerProvider` partage un état `submitting` unique
-  // entre l'email/password et Google ; sans ce flag, les deux boutons
-  // afficheraient un spinner simultané — perturbe l'UX et suggère que les
-  // deux flows s'exécutent en parallèle.
+  // entre l'email/password, Google et Apple ; sans ces flags, plusieurs
+  // boutons afficheraient un spinner simultané — perturbe l'UX et suggère
+  // que plusieurs flows s'exécutent en parallèle.
+  //
+  // NB : on garde deux bool distincts (plutôt qu'un enum {none,email,google,
+  // apple}) pour rester un mirroir strict et minimal du pattern Google
+  // existant — un refactor enum toucherait aussi signup_form.dart et
+  // introduirait un diff plus large que nécessaire pour ce ticket. À
+  // reconsidérer si un 3e provider OAuth est ajouté un jour (le nombre de
+  // bool deviendrait difficile à maintenir en synchronisation).
   bool _googleClickedLast = false;
+  bool _appleClickedLast = false;
 
   @override
   void initState() {
@@ -50,7 +59,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       _passwordController.text.isNotEmpty;
 
   Future<void> _submit() async {
-    setState(() => _googleClickedLast = false);
+    setState(() {
+      _googleClickedLast = false;
+      _appleClickedLast = false;
+    });
     await ref
         .read(loginControllerProvider.notifier)
         .signIn(
@@ -60,8 +72,19 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   }
 
   Future<void> _submitGoogle() async {
-    setState(() => _googleClickedLast = true);
+    setState(() {
+      _googleClickedLast = true;
+      _appleClickedLast = false;
+    });
     await ref.read(loginControllerProvider.notifier).signInWithGoogle();
+  }
+
+  Future<void> _submitApple() async {
+    setState(() {
+      _appleClickedLast = true;
+      _googleClickedLast = false;
+    });
+    await ref.read(loginControllerProvider.notifier).signInWithApple();
   }
 
   @override
@@ -128,7 +151,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           const SizedBox(height: 24),
           FilledButton(
             onPressed: (_canSubmit && !isSubmitting) ? _submit : null,
-            child: (isSubmitting && !_googleClickedLast)
+            child: (isSubmitting && !_googleClickedLast && !_appleClickedLast)
                 ? SizedBox(
                     height: 18,
                     width: 18,
@@ -143,6 +166,11 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           GoogleSignInButton(
             onPressed: isSubmitting ? null : _submitGoogle,
             isLoading: isSubmitting && _googleClickedLast,
+          ),
+          const SizedBox(height: 12),
+          AppleSignInButton(
+            onPressed: isSubmitting ? null : _submitApple,
+            isLoading: isSubmitting && _appleClickedLast,
           ),
           const SizedBox(height: 12),
           TextButton(

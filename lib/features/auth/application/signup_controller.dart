@@ -111,6 +111,46 @@ class SignupController extends StateNotifier<SignupPageState> {
       );
     }
   }
+
+  /// Crée un compte (ou connecte un compte existant) via Apple.
+  ///
+  /// [rgpdConsent] est capturé au moment du clic (snapshot du state de la
+  /// checkbox RGPD côté widget) — défense en profondeur : même si le widget
+  /// autorisait l'appel par erreur, ce guard rejette toute tentative sans
+  /// consentement explicite avant d'ouvrir le popup Apple.
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {
+    if (!rgpdConsent) {
+      state = const SignupPageState.error(
+        message: 'Vous devez accepter la politique de confidentialité',
+      );
+      return;
+    }
+
+    state = const SignupPageState.submitting();
+    try {
+      await _repository.signUpWithApple(rgpdConsent: rgpdConsent);
+      state = const SignupPageState.idle();
+      _log.info('Signup Apple réussi — session active');
+    } on FirebaseAuthException catch (e, st) {
+      _log.warning(
+        'FirebaseAuthException signUpWithApple (code=${e.code})',
+        e,
+        st,
+      );
+      final isAccountConflict =
+          e.code == 'account-exists-with-different-credential';
+      state = SignupPageState.error(
+        message: AuthErrorMapper.fromException(e),
+        ctaRoute: isAccountConflict ? '/login' : null,
+        ctaLabel: isAccountConflict ? 'Se connecter' : null,
+      );
+    } catch (e, st) {
+      _log.severe('Erreur inattendue signUpWithApple', e, st);
+      state = const SignupPageState.error(
+        message: 'Une erreur est survenue. Veuillez réessayer.',
+      );
+    }
+  }
 }
 
 final signupControllerProvider =

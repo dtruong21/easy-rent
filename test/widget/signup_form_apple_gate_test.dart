@@ -1,7 +1,7 @@
+import 'package:easyrent/features/auth/data/apple_auth_exception.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
-import 'package:easyrent/features/auth/data/google_auth_exception.dart';
 import 'package:easyrent/features/auth/presentation/signup_page.dart';
-import 'package:easyrent/features/auth/presentation/widgets/google_sign_in_button.dart';
+import 'package:easyrent/features/auth/presentation/widgets/apple_sign_in_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,9 +13,9 @@ import 'package:go_router/go_router.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
-  bool signUpWithGoogleCalled = false;
+  bool signUpWithAppleCalled = false;
   bool? lastRgpdConsent;
-  Exception? signUpWithGoogleError;
+  Exception? signUpWithAppleError;
 
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
@@ -40,10 +40,16 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> signInWithGoogle() async {}
 
   @override
-  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {
-    signUpWithGoogleCalled = true;
+  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> signInWithApple() async {}
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {
+    signUpWithAppleCalled = true;
     lastRgpdConsent = rgpdConsent;
-    if (signUpWithGoogleError != null) throw signUpWithGoogleError!;
+    if (signUpWithAppleError != null) throw signUpWithAppleError!;
   }
 
   @override
@@ -61,12 +67,6 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> sendCurrentUserEmailVerification() async {}
-
-  @override
-  Future<void> signInWithApple() async {}
-
-  @override
-  Future<void> signUpWithApple({required bool rgpdConsent}) async {}
 
   @override
   Future<void> signOut() async {}
@@ -104,36 +104,36 @@ Widget _buildSignupPage({required _FakeAuthRepository repo}) {
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('SignupForm — gate Google sur consentement RGPD', () {
+  group('SignupForm — gate Apple sur consentement RGPD', () {
     testWidgets(
-      'GoogleSignInButton.onPressed est null tant que la checkbox RGPD '
+      'AppleSignInButton.onPressed est null tant que la checkbox RGPD '
       'n\'est pas cochée',
       (tester) async {
         await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
         await tester.pumpAndSettle();
 
-        final googleBtn = tester.widget<GoogleSignInButton>(
-          find.byType(GoogleSignInButton),
+        final appleBtn = tester.widget<AppleSignInButton>(
+          find.byType(AppleSignInButton),
         );
-        expect(googleBtn.onPressed, isNull);
+        expect(appleBtn.onPressed, isNull);
       },
     );
 
-    testWidgets('cocher la case RGPD active le bouton Google', (tester) async {
+    testWidgets('cocher la case RGPD active le bouton Apple', (tester) async {
       await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(Checkbox));
       await tester.pump();
 
-      final googleBtn = tester.widget<GoogleSignInButton>(
-        find.byType(GoogleSignInButton),
+      final appleBtn = tester.widget<AppleSignInButton>(
+        find.byType(AppleSignInButton),
       );
-      expect(googleBtn.onPressed, isNotNull);
+      expect(appleBtn.onPressed, isNotNull);
     });
 
     testWidgets(
-      'tap sur le bouton actif appelle signUpWithGoogle(rgpdConsent: true)',
+      'tap sur le bouton actif appelle signUpWithApple(rgpdConsent: true)',
       (tester) async {
         final repo = _FakeAuthRepository();
         await tester.pumpWidget(_buildSignupPage(repo: repo));
@@ -142,11 +142,11 @@ void main() {
         await tester.tap(find.byType(Checkbox));
         await tester.pump();
 
-        await tester.ensureVisible(find.byType(GoogleSignInButton));
-        await tester.tap(find.byType(GoogleSignInButton));
+        await tester.ensureVisible(find.byType(AppleSignInButton));
+        await tester.tap(find.byType(AppleSignInButton));
         await tester.pump();
 
-        expect(repo.signUpWithGoogleCalled, isTrue);
+        expect(repo.signUpWithAppleCalled, isTrue);
         expect(repo.lastRgpdConsent, isTrue);
       },
     );
@@ -155,8 +155,8 @@ void main() {
       'si le repo throw rgpd-consent-declined, le message FR s\'affiche',
       (tester) async {
         final repo = _FakeAuthRepository()
-          ..signUpWithGoogleError = FirebaseAuthException(
-            code: GoogleAuthErrorCode.consentDeclined,
+          ..signUpWithAppleError = FirebaseAuthException(
+            code: AppleAuthErrorCode.consentDeclined,
             message: 'RGPD consent not given.',
           );
         await tester.pumpWidget(_buildSignupPage(repo: repo));
@@ -165,8 +165,8 @@ void main() {
         await tester.tap(find.byType(Checkbox));
         await tester.pump();
 
-        await tester.ensureVisible(find.byType(GoogleSignInButton));
-        await tester.tap(find.byType(GoogleSignInButton));
+        await tester.ensureVisible(find.byType(AppleSignInButton));
+        await tester.tap(find.byType(AppleSignInButton));
         await tester.pumpAndSettle();
 
         expect(
