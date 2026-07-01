@@ -99,55 +99,69 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Fond bureau : ink en dark, paperDeep en light — donne à la "feuille"
-    // (paper / cream) un contraste doux d'objet posé.
+    // Le bureau (background derrière la feuille) s'inverse selon
+    // l'ambiance : sombre la nuit, clair le jour. C'est le seul élément qui
+    // change selon le mode.
     final Color deskColor = isDark ? AppTheme.ink : AppTheme.paperDeep;
-    final Color sheetColor = isDark ? AppTheme.inkSurface : AppTheme.cream;
-    final Color inkColor = isDark ? AppTheme.paper : AppTheme.ink;
-    final Color mutedColor = isDark ? AppTheme.oliveSoft : AppTheme.inkMuted;
-    final Color oliveTone = isDark ? AppTheme.oliveSoft : AppTheme.olive;
-    final Color ruleTone = isDark
-        ? AppTheme.oliveSoft.withValues(alpha: 0.30)
-        : AppTheme.ruleStrong;
+
+    // La feuille elle-même NE S'INVERSE PAS. Un papier est un objet
+    // physique, il reste papier peu importe l'éclairage ambiant. En dark
+    // mode, on lit "l'acte à la lampe de bureau" — la feuille est
+    // toujours illuminée papier/encre, le décor autour est sombre. Cette
+    // approche : (a) préserve la métaphore "acte notarial posé", (b)
+    // garantit que le FilledButton olive et le texte ink restent lisibles
+    // quel que soit le mode.
+    const Color sheetColor = AppTheme.cream;
+    const Color inkColor = AppTheme.ink;
+    const Color mutedColor = AppTheme.inkMuted;
+    const Color oliveTone = AppTheme.olive;
+    const Color ruleTone = AppTheme.ruleStrong;
 
     return Scaffold(
       backgroundColor: deskColor,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isDesktop = constraints.maxWidth >= _kDesktopBreakpoint;
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isDesktop ? 40 : 16,
-                vertical: isDesktop ? 48 : 24,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: _kSheetMaxWidth + (isDesktop ? 140 : 0),
-                  ),
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      return FadeTransition(
-                        opacity: _sheetFade,
-                        child: SlideTransition(
-                          position: _sheetSlide,
-                          child: _buildRegisterSpread(
-                            context: context,
-                            isDesktop: isDesktop,
-                            sheetColor: sheetColor,
-                            inkColor: inkColor,
-                            mutedColor: mutedColor,
-                            oliveTone: oliveTone,
-                            ruleTone: ruleTone,
+          // Force le thème LIGHT dans le sous-arbre de la feuille : ainsi
+          // le LoginForm interne (FilledButton, TextField, IconButton…)
+          // pioche partout les couleurs light-mode et reste cohérent avec
+          // le papier même quand l'utilisateur est en dark mode global.
+          return Theme(
+            data: AppTheme.light,
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 40 : 16,
+                  vertical: isDesktop ? 48 : 24,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: _kSheetMaxWidth + (isDesktop ? 140 : 0),
+                    ),
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, _) {
+                        return FadeTransition(
+                          opacity: _sheetFade,
+                          child: SlideTransition(
+                            position: _sheetSlide,
+                            child: _buildRegisterSpread(
+                              context: context,
+                              isDesktop: isDesktop,
+                              sheetColor: sheetColor,
+                              inkColor: inkColor,
+                              mutedColor: mutedColor,
+                              oliveTone: oliveTone,
+                              ruleTone: ruleTone,
+                              isAmbientDark: isDark,
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -160,6 +174,11 @@ class _LoginPageState extends State<LoginPage>
 
   /// Compose la double-page : marge extérieure (paraphe + pagination) à
   /// gauche + feuille centrale. Sur mobile la marge est masquée.
+  ///
+  /// [isAmbientDark] : le fond bureau est-il en mode sombre ? Sert à ajuster
+  /// deux choses hors du sous-arbre thème light forcé : (a) la couleur des
+  /// éléments de marge (paraphe + pagination) qui vivent SUR le bureau, pas
+  /// sur la feuille, (b) l'intensité de l'ombre portée de la feuille.
   Widget _buildRegisterSpread({
     required BuildContext context,
     required bool isDesktop,
@@ -168,7 +187,18 @@ class _LoginPageState extends State<LoginPage>
     required Color mutedColor,
     required Color oliveTone,
     required Color ruleTone,
+    required bool isAmbientDark,
   }) {
+    // Sur le bureau (autour de la feuille), les éléments de marge doivent
+    // s'adapter à l'ambiance : olive pâle sur bureau sombre, olive dense sur
+    // bureau clair. Sinon ils disparaissent.
+    final Color marginMuted = isAmbientDark
+        ? AppTheme.oliveSoft
+        : AppTheme.inkMuted;
+    final Color marginOlive = isAmbientDark
+        ? AppTheme.oliveSoft
+        : AppTheme.olive;
+
     final sheet = _buildSheet(
       context: context,
       isDesktop: isDesktop,
@@ -177,6 +207,7 @@ class _LoginPageState extends State<LoginPage>
       mutedColor: mutedColor,
       oliveTone: oliveTone,
       ruleTone: ruleTone,
+      isAmbientDark: isAmbientDark,
     );
 
     if (!isDesktop) {
@@ -185,7 +216,7 @@ class _LoginPageState extends State<LoginPage>
         children: [
           sheet,
           const SizedBox(height: 20),
-          _buildFooterPagination(mutedColor: mutedColor),
+          _buildFooterPagination(mutedColor: marginMuted),
         ],
       );
     }
@@ -198,8 +229,8 @@ class _LoginPageState extends State<LoginPage>
           child: Padding(
             padding: const EdgeInsets.only(top: 72, right: 24),
             child: _buildOuterMargin(
-              mutedColor: mutedColor,
-              oliveTone: oliveTone,
+              mutedColor: marginMuted,
+              oliveTone: marginOlive,
             ),
           ),
         ),
@@ -264,20 +295,26 @@ class _LoginPageState extends State<LoginPage>
     required Color mutedColor,
     required Color oliveTone,
     required Color ruleTone,
+    required bool isAmbientDark,
   }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Ombre portée très douce, sépia-neutre — donne l'effet "objet posé"
-    // sans passer en style Material 3. Opacités bornées à ≤ 6% (light) / 15%
-    // (dark) pour éviter le look Card MD3.
-    final shadow = isDark
+    // Ombre portée : plus marquée sur bureau sombre pour que la feuille
+    // décolle bien du fond ; plus subtile sur bureau clair. Opacités
+    // toujours bornées pour ne pas passer en look Material Card 3.
+    final shadow = isAmbientDark
         ? const [
             BoxShadow(
-              color: Color(0x26000000), // ~15%
-              blurRadius: 40,
-              offset: Offset(0, 16),
-              spreadRadius: -8,
+              color: Color(
+                0x66000000,
+              ), // ~40% — feuille éclairée sur bureau nuit
+              blurRadius: 48,
+              offset: Offset(0, 20),
+              spreadRadius: -6,
+            ),
+            BoxShadow(
+              color: Color(0x33000000), // ~20% halo proche
+              blurRadius: 12,
+              offset: Offset(0, 4),
+              spreadRadius: -2,
             ),
           ]
         : const [
@@ -316,9 +353,8 @@ class _LoginPageState extends State<LoginPage>
                   child: RepaintBoundary(
                     child: CustomPaint(
                       painter: _WatermarkPainter(
-                        color: inkColor.withValues(
-                          alpha: isDark ? 0.025 : 0.028,
-                        ),
+                        // Feuille toujours en light-mode → opacité fixe.
+                        color: inkColor.withValues(alpha: 0.028),
                       ),
                     ),
                   ),
