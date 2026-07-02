@@ -99,10 +99,15 @@ class _FakeRepo implements InvestmentScenarioRepository {
 // Helper de montage
 // ---------------------------------------------------------------------------
 
-Widget _buildPage({_FakeRepo? repo}) {
+Widget _buildPage({
+  _FakeRepo? repo,
+  SessionState sessionState = SessionState.fullyAuthenticated,
+  SubscriptionTier tier = SubscriptionTier.free,
+  String initialLocation = '/simulator',
+}) {
   final fakeRepo = repo ?? _FakeRepo();
   final router = GoRouter(
-    initialLocation: '/simulator',
+    initialLocation: initialLocation,
     routes: [
       GoRoute(
         path: '/simulator',
@@ -128,14 +133,11 @@ Widget _buildPage({_FakeRepo? repo}) {
       ),
       // BAILLAN-M1 : SimulatorPage lit désormais sessionStateProvider (pour
       // AnonDemoBanner) et landlordTierProvider (pour TierChip + enforcement
-      // de la limite). Ces tests pré-datent le concept de tier — on fixe un
-      // compte complet FREE (aucune restriction pertinente ici, la limite
-      // FREE est 3 et les fixtures ne dépassent jamais 1 scénario).
-      sessionStateProvider.overrideWithValue(SessionState.fullyAuthenticated),
+      // de la limite). Défaut : compte complet FREE (aucune restriction
+      // pertinente ici) — surchargeable par test pour l'anonyme.
+      sessionStateProvider.overrideWithValue(sessionState),
       landlordTierProvider.overrideWith(
-        (ref) => Stream.value(
-          const LandlordTierSnapshot(tier: SubscriptionTier.free),
-        ),
+        (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
       ),
     ],
     child: MaterialApp.router(routerConfig: router),
@@ -494,6 +496,63 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(notaryText(tester), '15000,00');
+    });
+  });
+
+  group('SimulatorPage — bouton retour selon la session', () {
+    testWidgets('compte complet : retour présent, navigue vers /', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('app_bar_back')));
+      await tester.pumpAndSettle();
+      expect(find.text('Dashboard'), findsOneWidget);
+    });
+
+    testWidgets('anonyme sur /simulator : PAS de bouton retour '
+        '(le foyer anonyme n\'a pas de destination de retour)', (tester) async {
+      await tester.pumpWidget(
+        _buildPage(
+          sessionState: SessionState.anonymous,
+          tier: SubscriptionTier.anonymous,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('app_bar_back')), findsNothing);
+    });
+
+    testWidgets('anonyme sur /simulator/:id : retour vers /simulator', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(scenarios: [_fakeScenario]);
+      await tester.pumpWidget(
+        _buildPage(
+          repo: repo,
+          sessionState: SessionState.anonymous,
+          tier: SubscriptionTier.anonymous,
+          initialLocation: '/simulator/scenario-abc',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Scénario chargé (prix 200 000 €), bouton retour présent.
+      expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('app_bar_back')));
+      await tester.pumpAndSettle();
+
+      // De retour sur la racine du simulateur : formulaire vierge.
+      final priceField = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('field_purchase_price')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(priceField.controller.text, isEmpty);
+      expect(find.text("Simulateur d'investissement"), findsOneWidget);
     });
   });
 }
