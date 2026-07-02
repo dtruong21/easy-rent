@@ -10,10 +10,12 @@ import '../../../core/ui/theme/app_spacing.dart';
 import '../../../core/utils/money_format.dart';
 import '../../auth/application/anon_expiry_renewer.dart';
 import '../../auth/application/auth_session_provider.dart';
+import '../../auth/application/login_controller.dart';
 import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/session_state.dart';
 import '../../auth/domain/subscription_tier.dart';
 import '../../auth/presentation/widgets/anon_demo_banner.dart';
+import '../../auth/presentation/widgets/quit_demo_dialog.dart';
 import '../application/scenario_limit_controller.dart';
 import '../data/investment_scenario_repository.dart';
 import '../domain/investment_scenario.dart';
@@ -389,6 +391,24 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     }
   }
 
+  /// Sortie explicite du mode démo (session anonyme) — remplace le bouton
+  /// back masqué pour les anonymes. Confirme d'abord (le scénario démo est
+  /// perdu au signOut), et propose la conversion en compte comme alternative.
+  Future<void> _onQuitDemoPressed() async {
+    final choice = await showQuitDemoDialog(context);
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case QuitDemoChoice.signup:
+        context.go('/signup');
+      case QuitDemoChoice.quit:
+        await ref.read(loginControllerProvider.notifier).signOut();
+        // Retour à la page de garde. La garde router redirige déjà la
+        // session devenue unauthenticated hors de /simulator (vers /login) ;
+        // on vise la landing explicitement si la page est encore montée.
+        if (mounted) context.go('/');
+    }
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -400,10 +420,26 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
         ref.watch(landlordTierProvider).valueOrNull?.tier ??
         SubscriptionTier.anonymous;
 
+    final isAnon = sessionState == SessionState.anonymous;
+
     return Scaffold(
       appBar: AppAppBar(
         title: "Simulateur d'investissement",
+        // Un anonyme n'a nulle part où « revenir » : la garde router
+        // réécrit `/` en `/simulator` pour lui (boucle no-op) — le
+        // simulateur est sa racine. On masque le back et on lui donne à la
+        // place une sortie explicite du mode démo (action ci-dessous).
+        showBackButton: !isAnon,
         fallbackRoute: '/',
+        actions: [
+          if (isAnon)
+            IconButton(
+              key: const Key('simulator_quit_demo'),
+              icon: const Icon(Icons.logout),
+              tooltip: 'Quitter le mode démo',
+              onPressed: _onQuitDemoPressed,
+            ),
+        ],
       ),
       body: Column(
         children: [

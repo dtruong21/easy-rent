@@ -4,6 +4,7 @@
 library;
 
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
+import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/session_state.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
@@ -95,11 +96,30 @@ class _FakeRepo implements InvestmentScenarioRepository {
   }
 }
 
+/// Fake [AuthRepository] minimal — seule [signOut] est exercée par les tests
+/// « quitter le mode démo » ; tout autre appel lève via [noSuchMethod].
+class _FakeAuthRepository implements AuthRepository {
+  bool signOutCalled = false;
+
+  @override
+  Future<void> signOut() async {
+    signOutCalled = true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 // ---------------------------------------------------------------------------
 // Helper de montage
 // ---------------------------------------------------------------------------
 
-Widget _buildPage({_FakeRepo? repo}) {
+Widget _buildPage({
+  _FakeRepo? repo,
+  SessionState sessionState = SessionState.fullyAuthenticated,
+  SubscriptionTier tier = SubscriptionTier.free,
+  AuthRepository? authRepository,
+}) {
   final fakeRepo = repo ?? _FakeRepo();
   final router = GoRouter(
     initialLocation: '/simulator',
@@ -117,6 +137,10 @@ Widget _buildPage({_FakeRepo? repo}) {
         path: '/',
         builder: (context, state) => const Scaffold(body: Text('Dashboard')),
       ),
+      GoRoute(
+        path: '/signup',
+        builder: (context, state) => const Scaffold(body: Text('Signup')),
+      ),
     ],
   );
 
@@ -129,14 +153,16 @@ Widget _buildPage({_FakeRepo? repo}) {
       // BAILLAN-M1 : SimulatorPage lit désormais sessionStateProvider (pour
       // AnonDemoBanner) et landlordTierProvider (pour TierChip + enforcement
       // de la limite). Ces tests pré-datent le concept de tier — on fixe un
-      // compte complet FREE (aucune restriction pertinente ici, la limite
-      // FREE est 3 et les fixtures ne dépassent jamais 1 scénario).
-      sessionStateProvider.overrideWithValue(SessionState.fullyAuthenticated),
+      // compte complet FREE par défaut (aucune restriction pertinente ici,
+      // la limite FREE est 3 et les fixtures ne dépassent jamais 1
+      // scénario). Les tests « mode anonyme » passent sessionState/tier
+      // anonymous et un [_FakeAuthRepository] pour capturer le signOut.
+      sessionStateProvider.overrideWithValue(sessionState),
       landlordTierProvider.overrideWith(
-        (ref) => Stream.value(
-          const LandlordTierSnapshot(tier: SubscriptionTier.free),
-        ),
+        (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
       ),
+      if (authRepository != null)
+        authRepositoryProvider.overrideWithValue(authRepository),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -494,6 +520,96 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(notaryText(tester), '15000,00');
+    });
+  });
+
+  group('SimulatorPage — mode anonyme (back masqué + quitter la démo)', () {
+    Widget anonPage({AuthRepository? authRepository}) => _buildPage(
+      sessionState: SessionState.anonymous,
+      tier: SubscriptionTier.anonymous,
+      authRepository: authRepository,
+    );
+
+    testWidgets('anonyme : back masqué, action Quitter le mode démo présente', (
+      tester,
+    ) async {
+      await tester.pumpWidget(anonPage());
+      await tester.pumpAndSettle();
+
+      // La garde router réécrit `/` en `/simulator` pour un anonyme : le
+      // back serait une boucle no-op — il doit être masqué.
+      expect(find.byKey(const Key('app_bar_back')), findsNothing);
+      expect(find.byKey(const Key('simulator_quit_demo')), findsOneWidget);
+    });
+
+    testWidgets('compte complet : back présent, pas d\'action Quitter', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+      expect(find.byKey(const Key('simulator_quit_demo')), findsNothing);
+    });
+
+    testWidgets('tap Quitter → dialog de confirmation', (tester) async {
+      await tester.pumpWidget(anonPage());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('simulator_quit_demo')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('quit_demo_dialog')), findsOneWidget);
+    });
+
+    testWidgets('dialog Annuler → reste sur le simulateur, pas de signOut', (
+      tester,
+    ) async {
+      final fakeAuth = _FakeAuthRepository();
+      await tester.pumpWidget(anonPage(authRepository: fakeAuth));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('simulator_quit_demo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('quit_demo_dialog')), findsNothing);
+      expect(find.text("Simulateur d'investissement"), findsOneWidget);
+      expect(fakeAuth.signOutCalled, isFalse);
+    });
+
+    testWidgets('dialog Quitter → signOut + retour à la racine', (
+      tester,
+    ) async {
+      final fakeAuth = _FakeAuthRepository();
+      await tester.pumpWidget(anonPage(authRepository: fakeAuth));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('simulator_quit_demo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('quit_demo_dialog_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(fakeAuth.signOutCalled, isTrue);
+      // Le harnais n'a pas de garde : `/` affiche la page marqueur.
+      expect(find.text('Dashboard'), findsOneWidget);
+    });
+
+    testWidgets('dialog Créer un compte → navigation /signup, pas de signOut', (
+      tester,
+    ) async {
+      final fakeAuth = _FakeAuthRepository();
+      await tester.pumpWidget(anonPage(authRepository: fakeAuth));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('simulator_quit_demo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('quit_demo_dialog_signup')));
+      await tester.pumpAndSettle();
+
+      expect(fakeAuth.signOutCalled, isFalse);
+      expect(find.text('Signup'), findsOneWidget);
     });
   });
 }
