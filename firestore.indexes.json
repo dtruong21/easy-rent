@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "landlords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isAnonymous", "order": "ASCENDING" },
+        { "fieldPath": "anonExpiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "properties",
       "queryScope": "COLLECTION",
       "fields": [
