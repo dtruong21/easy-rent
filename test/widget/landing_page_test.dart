@@ -185,6 +185,10 @@ void main() {
       await tester.pumpWidget(_buildApp(_FakeAuthRepository()));
       await tester.pump();
 
+      // Le lien vit en bas de la feuille « Page de garde » — hors du
+      // viewport de test (600 px) tant qu'on ne scrolle pas jusqu'à lui.
+      await tester.ensureVisible(find.byKey(const Key('landing_cta_login')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('landing_cta_login')));
       await tester.pumpAndSettle();
 
