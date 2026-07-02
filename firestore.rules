@@ -109,7 +109,12 @@ service cloud.firestore {
         && isOwner(uid)
         && isActive(resource)
         && request.resource.data.id == resource.data.id
-        && preservesImmutables(resource)
+        // PAS preservesImmutables() ici : le helper exige `landlordId`,
+        // champ que landlords ne porte pas (sa clé est `id`) — l'accès à un
+        // champ absent fait échouer la rule et refusait TOUT update. On
+        // inline les immuables pertinents pour cette collection.
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.deletedAt == resource.data.deletedAt
         && request.resource.data.rgpdConsentAt == resource.data.rgpdConsentAt
         && request.resource.data.rgpdConsentVersion == resource.data.rgpdConsentVersion
         && request.resource.data.subscriptionTier == resource.data.subscriptionTier
@@ -135,7 +140,10 @@ service cloud.firestore {
         // 14j côté client pour tolérer les décalages d'horloge).
         && request.resource.data.anonExpiresAt < request.time + duration.value(15, 'd')
         && request.resource.data.rgpdConsentAt == null
-        && preservesImmutables(resource);
+        // Même raison que la rule UPDATE compte complet : pas de
+        // preservesImmutables() sur landlords (pas de champ landlordId).
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.deletedAt == resource.data.deletedAt;
 
       // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
       // anonymes expirés passe par la Cloud Function planifiée
