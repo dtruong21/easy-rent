@@ -122,19 +122,29 @@ Widget _buildSignupPage({required _FakeAuthRepository repo}) {
 
 void main() {
   group('SignupForm — gate Apple sur consentement RGPD', () {
-    testWidgets(
-      'AppleSignInButton.onPressed est null tant que la checkbox RGPD '
-      'n\'est pas cochée',
-      (tester) async {
-        await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
-        await tester.pumpAndSettle();
+    testWidgets('tap Apple sans consentement → erreur près de la checkbox, '
+        'signUpWithApple PAS appelé, cocher la case efface l\'erreur', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_buildSignupPage(repo: repo));
+      await tester.pumpAndSettle();
 
-        final appleBtn = tester.widget<AppleSignInButton>(
-          find.byType(AppleSignInButton),
-        );
-        expect(appleBtn.onPressed, isNull);
-      },
-    );
+      // Le bouton reste cliquable sans consentement (un bouton mort sans
+      // explication n'est pas compris) : le clic explique au lieu de
+      // soumettre.
+      await tester.ensureVisible(find.byType(AppleSignInButton));
+      await tester.tap(find.byType(AppleSignInButton));
+      await tester.pumpAndSettle();
+
+      expect(repo.signUpWithAppleCalled, isFalse);
+      expect(find.byKey(const Key('rgpd_consent_error')), findsOneWidget);
+
+      // Cocher la case résout l'erreur.
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('rgpd_consent_error')), findsNothing);
+    });
 
     testWidgets('cocher la case RGPD active le bouton Apple', (tester) async {
       await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));

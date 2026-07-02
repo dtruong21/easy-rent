@@ -122,19 +122,29 @@ Widget _buildSignupPage({required _FakeAuthRepository repo}) {
 
 void main() {
   group('SignupForm — gate Google sur consentement RGPD', () {
-    testWidgets(
-      'GoogleSignInButton.onPressed est null tant que la checkbox RGPD '
-      'n\'est pas cochée',
-      (tester) async {
-        await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
-        await tester.pumpAndSettle();
+    testWidgets('tap Google sans consentement → erreur près de la checkbox, '
+        'signUpWithGoogle PAS appelé, cocher la case efface l\'erreur', (
+      tester,
+    ) async {
+      final repo = _FakeAuthRepository();
+      await tester.pumpWidget(_buildSignupPage(repo: repo));
+      await tester.pumpAndSettle();
 
-        final googleBtn = tester.widget<GoogleSignInButton>(
-          find.byType(GoogleSignInButton),
-        );
-        expect(googleBtn.onPressed, isNull);
-      },
-    );
+      // Le bouton reste cliquable sans consentement (un bouton mort sans
+      // explication n'est pas compris) : le clic explique au lieu de
+      // soumettre.
+      await tester.ensureVisible(find.byType(GoogleSignInButton));
+      await tester.tap(find.byType(GoogleSignInButton));
+      await tester.pumpAndSettle();
+
+      expect(repo.signUpWithGoogleCalled, isFalse);
+      expect(find.byKey(const Key('rgpd_consent_error')), findsOneWidget);
+
+      // Cocher la case résout l'erreur.
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('rgpd_consent_error')), findsNothing);
+    });
 
     testWidgets('cocher la case RGPD active le bouton Google', (tester) async {
       await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
