@@ -20,7 +20,7 @@ final scenarioCountProvider = StreamProvider<int>((ref) {
   return FirebaseFirestore.instance
       .collection('investment_scenarios')
       .where('landlordId', isEqualTo: user.uid)
-      .where('deletedAt', isEqualTo: null)
+      .where('deletedAt', isNull: true)
       .snapshots()
       .map((snap) => snap.size);
 });

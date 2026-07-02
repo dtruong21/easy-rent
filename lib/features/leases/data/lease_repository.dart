@@ -98,7 +98,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
     // indexes composites.
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('startDate', descending: true)
         .limit(200)
         .get();
@@ -240,7 +240,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
         .where('propertyId', isEqualTo: propertyId)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .limit(2)
         .get();

@@ -19,7 +19,7 @@ final activeLeaseRentProvider = FutureProvider.autoDispose.family<int?, String>(
         .where('landlordId', isEqualTo: uid)
         .where('propertyId', isEqualTo: propertyId)
         .where('status', isEqualTo: 'active')
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .limit(1)
         .get();
     if (qs.docs.isEmpty) return null;
@@ -39,7 +39,7 @@ final activeLeaseIdProvider = FutureProvider.autoDispose
           .where('landlordId', isEqualTo: uid)
           .where('propertyId', isEqualTo: propertyId)
           .where('status', isEqualTo: 'active')
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .limit(1)
           .get();
       if (qs.docs.isEmpty) return null;

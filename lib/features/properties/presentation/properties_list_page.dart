@@ -9,6 +9,7 @@ import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../application/properties_filter_provider.dart';
+import '../application/properties_list_provider.dart';
 import 'widgets/properties_card_view.dart';
 import 'widgets/properties_filter_bar.dart';
 import 'widgets/properties_table_view.dart';
@@ -53,7 +54,10 @@ class PropertiesListPage extends ConsumerWidget {
                 message: e is FirebaseException
                     ? ("Erreur. Vérifiez votre connexion et réessayez.")
                     : 'Erreur de chargement',
-                onRetry: () => ref.invalidate(filteredPropertiesProvider),
+                // Invalider la RACINE : filteredPropertiesProvider n'est
+                // qu'un dérivé — l'invalider seul relisait l'AsyncError
+                // caché par le notifier sans jamais refetcher.
+                onRetry: () => ref.invalidate(propertiesListItemsProvider),
               ),
               data: (properties) {
                 if (properties.isEmpty) {

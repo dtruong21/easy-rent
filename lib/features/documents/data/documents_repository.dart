@@ -103,7 +103,7 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
         .where('leaseId', isEqualTo: leaseId)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('uploadedAt', descending: true)
         .limit(_kMaxDocumentsPerList)
         .get();
@@ -285,7 +285,7 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
     _log.info('quotaForCurrentLandlord()');
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .get();
     var total = 0;
     for (final d in qs.docs) {

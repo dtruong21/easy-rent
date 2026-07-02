@@ -76,7 +76,7 @@ class FirestoreTenantRepository implements TenantRepository {
     _log.info('list()');
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('lastName')
         .limit(200)
         .get();
@@ -213,14 +213,14 @@ class FirestoreTenantRepository implements TenantRepository {
     final uid = _uid;
     final tenantsQs = _col
         .where('landlordId', isEqualTo: uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('lastName')
         .limit(200)
         .get();
     final leasesQs = _firestore
         .collection('leases')
         .where('landlordId', isEqualTo: uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .get();
 
@@ -291,7 +291,7 @@ class FirestoreTenantRepository implements TenantRepository {
         .collection('leases')
         .where('landlordId', isEqualTo: _uid)
         .where('tenantId', isEqualTo: tenantId)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('startDate', descending: true)
         .get();
 

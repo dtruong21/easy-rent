@@ -64,7 +64,7 @@ class FirestoreInvestmentScenarioRepository
     _log.info('list()');
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('updatedAt', descending: true)
         .limit(200)
         .get();

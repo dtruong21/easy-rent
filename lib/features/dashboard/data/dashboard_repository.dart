@@ -49,7 +49,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       _firestore
           .collection('payments')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .where(
             'paidAt',
             isGreaterThanOrEqualTo: Timestamp.fromDate(monthStart),
@@ -59,7 +59,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       _firestore
           .collection('leases')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .where('status', isEqualTo: 'active')
           .get(),
     ).wait;
@@ -89,7 +89,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
     final leasesQs = await _firestore
         .collection('leases')
         .where('landlordId', isEqualTo: uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .where('startDate', isLessThanOrEqualTo: Timestamp.fromDate(cutoff))
         .get();
@@ -109,7 +109,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       final paymentsQs = await _firestore
           .collection('payments')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .where('leaseId', whereIn: chunk)
           .orderBy('paidAt', descending: true)
           .get();
@@ -144,7 +144,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
     final qs = await _firestore
         .collection('leases')
         .where('landlordId', isEqualTo: uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .where('endDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
         .where('endDate', isLessThanOrEqualTo: Timestamp.fromDate(in30Days))
@@ -158,7 +158,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
     final qs = await _firestore
         .collection('documents')
         .where('landlordId', isEqualTo: _uid)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .where('category', isEqualTo: 'autre')
         .get();
     _log.fine('fetchDocsPending: count=${qs.docs.length}');
@@ -176,7 +176,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       _firestore
           .collection('payments')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .where(
             'paidAt',
             isGreaterThanOrEqualTo: Timestamp.fromDate(sixMonthsAgo),
@@ -186,7 +186,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       _firestore
           .collection('leases')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .where('status', isEqualTo: 'active')
           .get(),
     ).wait;
@@ -251,7 +251,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       final qs = await _firestore
           .collection('payments')
           .where('landlordId', isEqualTo: _uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .orderBy('createdAt', descending: true)
           .limit(limit)
           .get();
@@ -326,7 +326,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
       final qs = await _firestore
           .collection('documents')
           .where('landlordId', isEqualTo: _uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .orderBy('uploadedAt', descending: true)
           .limit(limit)
           .get();
@@ -360,19 +360,19 @@ class FirestoreDashboardRepository implements DashboardRepository {
       _firestore
           .collection('properties')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .limit(1)
           .get(),
       _firestore
           .collection('tenants')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .limit(1)
           .get(),
       _firestore
           .collection('leases')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isEqualTo: null)
+          .where('deletedAt', isNull: true)
           .limit(1)
           .get(),
     ]);

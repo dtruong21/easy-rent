@@ -71,7 +71,7 @@ class FirestorePaymentRepository implements PaymentRepository {
     final qs = await _col
         .where('landlordId', isEqualTo: _uid)
         .where('leaseId', isEqualTo: leaseId)
-        .where('deletedAt', isEqualTo: null)
+        .where('deletedAt', isNull: true)
         .orderBy('periodStart', descending: true)
         .limit(200)
         .get();
