@@ -4,22 +4,22 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-06-25T20:00:00Z
-- **Commit ref** : `a1fefec` (chore: Property.deletedAt + typed lease_form_page params + PaymentMethod sqlValue alignment)
-- **Branche** : `chore/cleanup-tech-debt-and-docs-refresh-v2` (rebased sur develop)
-- **Phase projet** : FEAT-001–016 ✅ mergées. MVP complet + FEAT-012/013/014/015/016 en production.
+- **Dernière mise à jour** : 2026-07-02T14:00:00Z
+- **Commit ref** : `8300d07` (Merge branch 'feature/anon-auth-m1' into claude/friendly-gates-07efcd)
+- **Branche** : `claude/friendly-gates-07efcd` (worktree, tip feature/anon-auth-m1)
+- **Phase projet** : MVP ✅ complet (FEAT-001–018), Pivot Firebase FEAT-019 ✅, Rebrand FEAT-020 ✅, Auth refinement FEAT-021 ✅, Router redesign FEAT-022 ✅
 
 ## Pointeurs
 
-| Aspect du projet | Fichier |
-|---|---|
-| Schéma Postgres (tables, colonnes, RLS, fonctions) | [`SCHEMA.md`](SCHEMA.md) |
-| Routes Flutter et widgets principaux | [`ROUTES.md`](ROUTES.md) |
-| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) |
-| Dépendances (pubspec, Deno imports, CLI tools, hosting CSP) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
-| Edge Functions déployées et planifiées | [`FUNCTIONS.md`](FUNCTIONS.md) |
-| Material 3 theme config + dark mode fixes | [`THEME.md`](THEME.md) |
-| Design tokens (couleurs sémantiques métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) |
+| Aspect du projet | Fichier | Contenu clé |
+|---|---|---|
+| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | 9 collections, 28 composite indexes, 3-couche rules |
+| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 30+ routes, deep linking |
+| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–022, MVP ✅ + post-MVP priorité |
+| Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
+| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | 14 callable + 8 triggers + 1 scheduled, TypeScript vitest |
+| Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
+| Design tokens (sémantique métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) | Couleurs (error, warning, success), spacing (4dp grid) |
 
 ## Comment l'utiliser
 
@@ -30,7 +30,7 @@
 3. Si la date est ≥ 7 jours OU manquante → flag-le à l'utilisateur et propose `/refresh-state` AVANT de continuer.
 4. Ne grep/scan le codebase QUE si l'état ne couvre pas ton besoin.
 
-**Économie attendue** : un agent qui consulte `SCHEMA.md` (200 tokens) au lieu de grep toutes les migrations (5000 tokens) divise sa consommation par 25.
+**Économie attendue** : un agent qui consulte `SCHEMA.md` (250 tokens) au lieu de grep Firestore rules (3000 tokens) divise sa consommation par 12.
 
 ## Quand mettre à jour cet état
 
@@ -40,79 +40,150 @@
 
 ## Stack résumé
 
-| Couche | Tech |
-|---|---|
-| Frontend | Flutter Web 3.x + Dart 3.11+ |
-| State | Riverpod 2.6.0 |
-| Navigation | GoRouter 14.6.0 + GoRouterRefreshStream (custom) |
-| Auth | Supabase Auth (email + password, session PKCE recovery) — **pivot FEAT-011 2026-06-22** |
-| Backend | Supabase (Postgres + Auth + Storage) |
-| PDF | pdf + printing packages |
-| Build | build_runner + freezed + json_serializable |
-| Hosting | Firebase Hosting (staging ✅, prod ready) |
-| CI/CD | GitHub Actions (ci.yml + deploy.yml + migrate-prod.yml) |
+| Couche | Tech | Notes |
+|---|---|---|
+| **Frontend** | Flutter Web 3.x + Dart 3.11+ | PWA, Canvas Kit, EB Garamond serif |
+| **State** | Riverpod 2.6.0 | StreamProvider FirebaseAuth + Firestore snapshots |
+| **Navigation** | GoRouter 14.6.0 | 3-state redirect guard (via sessionStateProvider) |
+| **Auth** | Firebase Auth native | Email/password + Google + Apple + anonymous tier |
+| **Backend** | Firestore + Cloud Functions | Node.js 20, vitest, 28 indexes, 3-couche rules |
+| **Storage** | Firebase Storage | /documents/, /receipts/, signed URLs 5 min |
+| **PDF** | pdf + printing | Quittance loi 6 juillet 1989 |
+| **Build** | build_runner + freezed + json_serializable | Code generation, no reflection |
+| **Hosting** | Firebase Hosting | Staging + prod channels, CSP (fonts.gstatic.com) |
+| **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
-## Changements récents (2026-06-23 — 2026-06-25)
+## Changements récents (2026-06-30 — 2026-07-02)
 
-### FEAT-012 — Cards system (5 phases — Phase 0 ✅)
-**Status** : ✅ DONE — toutes phases mergées (commits 2b7506b–9fdf647)
+### FEAT-022 : Redesign login "La Page du Registre"
 
-Refonte UI pages list (Properties, Tenants, Leases, Receipts) + dashboard polish :
-- Phase 1 (FEAT-012 Phase 0+1) : Leases en cards `LeaseCard` avec badges status
-- Phase 2 : Properties en cards `PropertyCard` avec address + type
-- Phase 3 : Tenants en cards `TenantCard` avec nom + email + phone
-- Phase 4 : Receipts timeline `ReceiptCard` avec PDF + share buttons
-- Phase 5 : Dashboard polish design tokens (color, spacing, typography)
+**Status** : 🟢 READY (landing public, routes mergées)
 
-**Foundation** : `lib/core/ui/cards/` (EntityCard, StatusBadge, CardGrid)
+- Landing page `/` publique (carrefour onboarding)
+- 3-state router (unauthenticated → /login | anonymous → /simulator | fullyAuthenticated → /dashboard)
+- Simulator accessible anonymes + comptes (investment_scenarios CRUD)
+- Quit demo dialog + action logout
+- AppAppBar absent landing (standalone page)
 
-### FEAT-013 — UX modernization (2 phases — ✅)
-**Status** : ✅ DONE (commits 0e20c80, ae5fdf1)
+### FEAT-021 : Vérification email post-signup
 
-- Phase 1 : AppAppBar standardisé + page transitions smooth (AppTransition enum)
-- Phase 2 : Palette color modern indigo (replace teal) + Material 3 defaults
+**Status** : ✅ DONE
 
-**Files** : `lib/core/ui/app_bar/app_app_bar.dart`, `lib/core/router/transitions.dart`
+- Firebase Auth email verification link (auto post-signup)
+- Cloud Function `handleNewUser` provision landlord doc
 
-### FEAT-014 — Forms enrichment FR (4 phases — ✅)
-**Status** : ✅ DONE (commits 4de7554–5f9cdfa — Phase 1–4 complets)
+### FEAT-020 : Rebrand EasyRent → Baillan
 
-32 colonnes enrichies pour conformité location FR (DPE, étage, garant, IRL, dépôt de garantie, etc.)
+**Status** : ✅ DONE (commit e5076c9)
 
-| Phase | Table | Colonnes ajoutées | Migration |
-|---|---|---|---|
-| 1 | properties | rooms, bedrooms, floor, has_elevator, furnished, heating_type, dpe_letter, dpe_value_kwh_m2_year, ges_letter, construction_year, postal_code, city (12 total) | 20260622220000 |
-| 2 | tenants | birth_date, birth_place, nationality, profession, employer, monthly_income_cents, previous_address, guarantor_name, guarantor_email, guarantor_phone (10 total) | 20260622230000 |
-| 3 | leases | lease_type, deposit_amount_cents, payment_day, payment_method, irl_index_value, irl_quarter_ref, agency_fees_cents, solidarity_clause, entry_inventory_done (9 total) | 20260623000000 |
-| 4 | payments | reference (1 total) | 20260623010000 |
+- Logo Baillan, palette indigo, EB Garamond serif (assets/fonts/)
+- Package name interne conservé (imports non-cassés)
 
-### FEAT-015 — Detail pages enrichment
-**Status** : ✅ DONE (commit 6959a9e)
+### FEAT-019 : Migration Supabase → Firebase (3 phases)
 
-Rendre visibles les champs FEAT-014 sur pages détail (PropertyDetailPage, TenantDetailPage, LeaseDetailPage). Finalisation StatusBadge migration (UI unifiée pour lease status).
+**Status** : ✅ DONE (commits 61a5956–85f1be2)
 
-### FEAT-016 — RGPD consent persistence
-**Status** : ✅ DONE (commit e82d113 — migration 20260623020000)
+**Phase 1** : Firestore collections (9) + rules + indexes (28 composite)
+**Phase 2** : Cloud Functions callables (14) + triggers (8) + scheduled (1)
+**Phase 3** : Client integration (Riverpod + CRUD UI, no breaking changes)
 
-Persistance consentement RGPD (accountability art. 7.1) :
-- Colonnes : `landlords.rgpd_consent_at` (timestamptz NOT NULL), `landlords.rgpd_consent_version` (text NOT NULL)
-- Backfill : comptes legacy = 'legacy-1', version = created_at
-- Trigger `handle_new_user()` : lit `rgpd_consent_version` depuis raw_user_meta_data, fallback 'legacy-1'
+**Piège soft-delete** : Firestore refus WHERE field==null sans index → solution systematic indexing (commits 61a5956, 85f1be2).
 
-## Audit incohérences (2026-06-25)
+### FEAT-018 : Simulateur investissement
 
-À la date 2026-06-25 (après merge FEAT-016, branche develop à 5f9cdfa) :
+**Status** : ✅ DONE
 
-- **✅ Migrations cohérentes** : 16 fichiers SQL, toutes appliquées remote (fixtures visibles en Studio)
-- **✅ Aucune route sans feature** : 18 routes GoRouter, 11 features implémentées
-- **✅ Aucune table sans RLS** : landlords, properties, tenants, leases, payments, receipts, documents — 100% RLS + DEFAULT auth.uid() sur FK
-- **✅ Aucune dépendance non déclarée** : pubspec.yaml à jour (Riverpod 2.6.0, GoRouter 14.6.0, freezed 2.5.7)
-- **✅ Firestore CSP fixed** : fonts.gstatic.com dans firebase.json
-- **✅ Edge Functions** : uniquement `generate-receipt` + `_shared` (send-receipt supprimée FEAT-008 pivot)
+- `/simulator` (list/create) + `/simulator/:id` (edit)
+- Accessible anonymes + comptes (investment_scenarios CRUD direct)
+
+## Audit incohérences (2026-07-02)
+
+À la date 2026-07-02 (après merge FEAT-019 + BAILLAN-M1, commit 8300d07) :
+
+- **✅ Collections Firestore cohérentes** : 9 collections (landlords, properties, tenants, leases, payments, receipts, documents, investment_scenarios, paid_plan_interest)
+- **✅ Règles de sécurité complètes** : 3 couches (rules + CF + triggers), isFullyAuthed() + isAnonymous(), soft-delete filters systématiques
+- **✅ 28 composite indexes** : Couvrent tous les soft-delete + cross-filters, zéro WHERE field==null sans index
+- **✅ Cloud Functions** : 14 callable (lease, payment, receipt, document, soft-delete, anonymous-upgrade) + 8 triggers (setUpdatedAt×7, recomputeReceiptStale) + 1 scheduled (cleanupExpiredAnon)
+- **✅ Routes cohérentes** : 30+ GoRouter routes, 3-state guard via sessionStateProvider (unauthenticated / anonymous / fullyAuthenticated)
+- **✅ Features mappées** : FEAT-001–022 tous dans FEATURES.md, matrice + statut + commits
+- **✅ Dépendances déclarées** : pubspec.yaml (23 packages), functions/package.json (firebase-admin/functions), firebase.json (CSP fonts.gstatic.com)
+- **✅ Aucune route sans feature** : 30 routes couverts par features implémentées
+- **✅ Anonyme tier system** : BAILLAN-M1 complet (14j essai, upgrade transactionnel, quit demo dialog)
+- **✅ Router refresh fix** : 07f20a3 couvre signe-in chaud regression (ref.listen sessionStateProvider vs GoRouterRefreshStream brut)
 
 ## Prochaines étapes (priorité)
 
-- **Dépendances P2 backlog** : Riverpod 3.x, GoRouter 17.x, freezed 3.x (breaking changes — attendre sprint)
-- **FEAT-012 Phase 1.5** : LeaseCard polish (dénormalisation loyer+charges dans la carte)
-- **Staging dédié** : préparation déploiement channel staging (actuellement sur main)
-- **Analytics avancées** (P1 post-MVP) : export comptable, vision Stripe/Brex (architecturale)
+### P1 (post-MVP)
+
+- **FEAT-012 Phase 1.5** : LeaseCard polish (denorm loyer+charges dans la card)
+- **Staging dédié** : GitHub Actions manual channel deploy (actuellement sur main)
+- **Password change + 2FA** : ProfilePage + Firebase Auth password API
+- **Rappels paiement** : Cloud Scheduler cron + email notifications
+
+### P2 (nice-to-have)
+
+- **Riverpod 3.x upgrade** : Breaking changes, codegen refactor (attendre sprint dédié)
+- **GoRouter 17.x upgrade** : API reshaping, breaking navigation changes
+- **OCR de baux scannés** : Firebase ML Kit + document ingestion
+- **App native Capacitor** : iOS + Android distribution
+
+## Dépendances P2 backlog (version upgrades)
+
+| Package | Current | Latest | Raison |
+|---|---|---|---|
+| `flutter_riverpod` | 2.6.0 | 3.x | Breaking changes, codegen refactor |
+| `go_router` | 14.6.0 | 17.x | Breaking changes, API reshaping |
+| `freezed` | 2.5.7 | 3.x | Breaking changes, output format |
+
+**Recommandation** : Attendre sprint dédié (MVP complet → versions mineures ensuite).
+
+## Contacts et ressources
+
+| Rôle | Resource |
+|---|---|
+| Conventions code | [`docs/CONVENTIONS.md`](../CONVENTIONS.md) |
+| Contraintes légales | [`docs/LEGAL.md`](../LEGAL.md) |
+| Roadmap détaillé | [`docs/ROADMAP.md`](../ROADMAP.md) |
+| Backlog ordonné | [`docs/BACKLOG.md`](../BACKLOG.md) |
+| Pipeline agents | [`docs/AGENTS.md`](../AGENTS.md) |
+
+## Stack technique détaillé (pour copilote)
+
+```
+Frontend:
+  Framework: Flutter Web 3.x
+  Lang: Dart 3.11+
+  State: Riverpod 2.6.0 (StreamProvider, FutureProvider, family)
+  Navigation: GoRouter 14.6.0 + custom transitions (fade/standard)
+  
+Auth:
+  Firebase Auth native (email/password + Google + Apple + anonymous)
+  Custom claims: firebase.sign_in_provider (anonymous detection)
+  Session: SessionState enum (3-branch) via StreamProvider + Firestore cache
+  
+Backend:
+  Firestore collections: landlords, properties, tenants, leases, payments,
+                         receipts, documents, investment_scenarios, paid_plan_interest
+  Cloud Functions: 14 callables + 8 triggers + 1 scheduled (Node.js 20)
+  Storage: signed URLs (5 min), documents + receipts buckets
+  
+Security:
+  Firestore rules: isFullyAuthed() + isAnonymous() + isOwner() + preservesImmutables()
+  Cloud Functions: Admin SDK (bypass rules, cross-entity validation)
+  RLS: soft-delete filters (28 composite indexes)
+  
+PDF + Legal:
+  pdf + printing packages
+  Quittance loi 6 juillet 1989 (rétention 5 ans, immuable)
+  Web Share API native (fallback mailto://)
+  
+Hosting:
+  Firebase Hosting (staging + prod channels)
+  CSP: default-src 'self'; fonts.gstatic.com; unsafe-inline (CanvasKit)
+  Service worker: offline shell
+  
+Build:
+  build_runner + freezed (immutable models) + json_serializable (serde)
+  CI: dart format (all files), flutter analyze, tests
+  Deploy: firebase deploy --only functions + manual channel selection
+```

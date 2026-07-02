@@ -1,270 +1,443 @@
-# Edge Functions et RPC — snapshot
+# Cloud Functions et Triggers — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/` + `supabase/functions/`. **Dernière sync** : 2026-06-25 (FEAT-008 Web Share API pivot, Edge Function send-receipt supprimée)
+> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
 
-## Edge Functions (Deno / TypeScript)
+## Architecture 3-couches
 
-### Fonctions déployées (2)
+1. **Firestore Rules** (`firestore.rules`) — ownership + soft-delete + immuabilité
+2. **Cloud Functions** (ce document) — mutations cross-entity + soft-delete + denormalization
+3. **Firestore Triggers** — setUpdatedAt + recomputeReceiptStale + propagation denorm
 
-#### `generate-receipt` (FEAT-007 Phase 2 — active)
+---
 
-| Propriété | Valeur |
-|---|---|
-| Dossier | `supabase/functions/generate-receipt/` |
-| Fichiers | index.ts, pdf_layout.ts, types.ts, deps.ts, deno.json, tests/ |
-| Invocation | POST `/functions/v1/generate-receipt` (JWT required) |
-| Body | `{lease_id: uuid, schema: 'public' \| 'dev'}` |
-| Retour | `{receipt_id: uuid, pdf_url: string}` |
-| Auth | JWT required (authentified user = landlord_id) |
-| Secrets | _(none)_ |
-| Dépendances | pdf-lib@1.17.1, @supabase/supabase-js@2.45.0 |
-| Priorité | P0 (actif prod) |
+## Auth Trigger
+
+### `handleNewUser`
+
+> ⚠️ **INACTIVE EN PRATIQUE (ADR 0001)** : les blocking functions
+> `beforeUserCreated` exigent GCIP/Identity Platform, **non activé** sur le
+> projet. Cette fonction existe dans le code (encore exportée dans
+> `index.ts` — incohérence relevée par bug-hunter 2026-07-02, un
+> `firebase deploy --only functions` échouerait) mais **ne se déclenche
+> jamais** : le provisioning du doc landlord est **100 % client**
+> (`auth_repository.dart`, chemins signUp*/link*/signInAnonymously).
+
+**Type** : Firebase Identity Platform blocking function (`beforeUserCreated`)
+
+**Déclencheur** : Post-signup (email, Google, Apple)
 
 **Logique** :
-1. Validate lease_id ownership via JWT (auth.uid() = landlord_id)
-2. Fetch payments for lease (period-grouped, RLS-filtered)
-3. Build PDF with pdf-lib (FR format, loi 1989 legal mentions)
-4. Upload PDF to Storage `receipts/<landlord_id>/<receipt_id>.pdf`
-5. INSERT `receipts` table via RLS (landlord_id from auth.uid())
-6. Return receipt_id + signed URL (5 min expiry)
+1. Vérifie `uid` disponible (GET /landlords/{uid} retourne 404)
+2. Lit custom claims de `raw_user_meta_data` :
+   - `rgpd_consent_version` (ex: 'v1-2026-07')
+   - `email`, `fullName`
+3. Provision doc `landlords/{uid}` :
+   - `id` = uid
+   - `email` = user.email (ou null anonyme)
+   - `fullName` = user.displayName (ou '' anonyme)
+   - `isAnonymous` = user.isAnonymous
+   - `subscriptionTier` = 'free' (compte) / 'anonymous' (essai)
+   - `rgpdConsentAt` = now()
+   - `rgpdConsentVersion` = custom claim (fallback 'legacy-1')
+   - `anonExpiresAt` = now + 14 jours (anonyme) / null (compte)
+   - `createdAt` = now()
+   - `deletedAt` = null
+4. Status code 200 → Auth continue
 
-**Appel côté client** :
-```dart
-final result = await supabase.functions.invoke(
-  'generate-receipt',
-  body: {'lease_id': leaseId, 'schema': schema},
-);
-// Retour : {receipt_id: ..., pdf_url: ...}
-```
+**Idempotence** :
+- Relance (double trigger) → doc existe → GET retourne doc → skip creation
+- OR : set({merge:true}) rend création + update atomique
 
-**Fichier client** : `lib/features/receipts/application/generate_receipt_controller.dart`
+**Fallback si Identity Platform off** :
+- Riverpod provisioning côté client après login (check doc exists, create si missing)
+- Même schéma — garantit cohérence
+
+**Fichier** : `functions/src/auth/handle_new_user.ts`
+
+**Tests** : `functions/src/__tests__/handle_new_user.test.ts` (vitest)
 
 ---
 
-#### `_shared` (Deno utilities — support)
+## Firestore Triggers
 
-| Propriété | Valeur |
+### Collection Triggers (setUpdatedAt)
+
+**Fonction exportée** : 7 variants (setUpdatedAtLandlords, setUpdatedAtProperties, etc.)
+
+**Type** : `onDocumentWritten` (create, update, delete)
+
+**Logique** :
+1. Déclenchement : change.after (post-write)
+2. Vérifie deletedAt != null (soft-delete ignore)
+3. Maj `updatedAt = now()` via Admin SDK
+4. Idempotent (idempotence key = docId)
+
+**Collections couvertes** :
+- landlords
+- properties
+- tenants
+- leases
+- payments
+- documents
+- investment_scenarios
+
+**Fichier** : `functions/src/triggers/set_updated_at.ts`
+
+### `recomputeReceiptStale`
+
+**Type** : `onDocumentWritten` (payments collection)
+
+**Déclencheur** : Create/update/delete payment
+
+**Logique** :
+1. Fetch ALL receipts liées à ce lease
+2. Pour chaque receipt :
+   - Check si payment base-amt change invalidate receipt
+   - Maj `isStale = true`
+   - CF `generateReceipt` client rejoue si stale flag true
+3. Admin SDK update batch
+
+**Note** : Quittances elles-mêmes immuables (pas de soft-delete) — `isStale` just flags recompute.
+
+**Fichier** : `functions/src/triggers/recompute_receipt_stale.ts`
+
+---
+
+## Callable Cloud Functions
+
+### Lease Management
+
+#### `createLease`
+
+**Type** : Callable (client invoke)
+
+**Signature** :
+```typescript
+export const createLease = onCall(async (request) => {
+  const data = request.data;
+  // { landlordId, propertyId, tenantId, status, startDate, endDate, monthlyRent, charges }
+});
+```
+
+**Validations** :
+1. Auth check : `request.auth.uid == data.landlordId`
+2. FK validation : GET properties/{propertyId}, tenants/{tenantId}
+3. Ownership check : properties.landlordId == tenantId.landlordId == landlordId
+4. Date logic : startDate <= endDate
+5. Status inference : compute from startDate/endDate vs now()
+
+**Mutations** :
+1. CREATE leases/{id} (Admin SDK, bypass rules)
+2. INCREMENT properties/{propertyId}.activeLeaseCount
+3. INCREMENT tenants/{tenantId}.activeLeaseCount
+
+**Retour** : `{leaseId: string}`
+
+**Erreurs** :
+- PERMISSION_DENIED : landlordId mismatch
+- NOT_FOUND : propertyId ou tenantId inexistant
+- INVALID_ARGUMENT : date logic failure
+
+**Fichier** : `functions/src/callable/lease_payment.ts`
+
+#### `updateLease`
+
+**Type** : Callable (client invoke)
+
+**Logique** :
+1. Fetch current lease
+2. Validate ownership (lease.landlordId == auth.uid)
+3. Recalc status si startDate/endDate change
+4. Admin SDK update (bypass rules soft-delete immutables)
+5. Return `{success: true}`
+
+**Fichier** : `functions/src/callable/lease_payment.ts`
+
+---
+
+### Payment Management
+
+#### `createPayment`
+
+**Type** : Callable (client invoke)
+
+**Signature** :
+```typescript
+export const createPayment = onCall(async (request) => {
+  const data = request.data;
+  // { landlordId, leaseId, amount, paidAt, periodStart, periodEnd }
+});
+```
+
+**Validations** :
+1. Auth + FK + ownership (via lease)
+2. Amount > 0 sanity check
+3. periodStart <= periodEnd
+
+**Mutations** :
+1. CREATE payments/{id}
+2. Trigger Cloud Function `generateReceipt` (async)
+
+**Retour** : `{paymentId: string}`
+
+**Fichier** : `functions/src/callable/lease_payment.ts`
+
+#### `updatePayment`
+
+**Type** : Callable
+
+**Logique** : Rare — idempotent no-op si amount/period unchanged.
+
+**Fichier** : `functions/src/callable/lease_payment.ts`
+
+---
+
+### Receipt Management
+
+#### `generateReceipt`
+
+**Type** : Callable (client invoke OR triggered post-payment)
+
+**Signature** :
+```typescript
+export const generateReceipt = onCall(async (request) => {
+  const data = request.data;
+  // { leaseId, paymentId (optional — si client appel direct) }
+});
+```
+
+**Logique** :
+1. Fetch lease, payment, landlord (auth check)
+2. Generate PDF via `pdf` library
+3. Upload to Firebase Storage `/receipts/{leaseId}/{receiptId}.pdf`
+4. CREATE receipts/{id} doc :
+   - amount, periodStart/End
+   - pdfUrl = signed URL (5 min)
+   - isVoided = false
+   - isStale = false
+   - createdAt = now()
+5. Retour : `{receiptId: string, pdfUrl: string}`
+
+**Trigger path** : payment creation → CF `generateReceipt` auto-invoke (async)
+
+**Client path** : LeaseReceiptsPage "Générer" button → invoke + show PDF
+
+**Fichier** : `functions/src/callable/receipts.ts`
+
+#### `voidReceipt`
+
+**Type** : Callable (client invoke)
+
+**Logique** :
+1. Fetch receipt + linked payment
+2. Soft-delete payment (set deletedAt)
+3. Mark receipt isVoided = true
+4. Auto-generateReceipt remplacement (nouveau doc)
+
+**Retour** : `{newReceiptId: string}`
+
+**Fichier** : `functions/src/callable/receipts.ts`
+
+#### `markReceiptAsSent`
+
+**Type** : Callable (client invoke)
+
+**Logique** :
+1. Fetch receipt
+2. Update sentAt = now()
+3. Audit trail (pas de mail envoyé — Web Share API côté client)
+
+**Retour** : `{success: true}`
+
+**Fichier** : `functions/src/callable/receipts.ts`
+
+---
+
+### Document Management
+
+#### `createDocument`
+
+**Type** : Callable (client invoke)
+
+**Signature** :
+```typescript
+export const createDocument = onCall(async (request) => {
+  const data = request.data;
+  // { leaseId (optional), category, title, fileBase64, mimeType }
+});
+```
+
+**Validations** :
+1. Auth + leaseId ownership (if present)
+2. MIME whitelist (PDF, JPEG, PNG)
+3. File size cap (50 MB)
+
+**Mutations** :
+1. Upload fileBase64 to Storage `/documents/{leaseId}/{docId}.{ext}`
+2. Compute legalHold from category :
+   - 'lease' → legalHold = true (rétention 3 ans)
+   - 'inventory' → legalHold = true (rétention 7 ans)
+   - 'other' → legalHold = false (soft-delete autorisé)
+3. CREATE documents/{id} doc
+
+**Retour** : `{documentId: string, storageUrl: string}`
+
+**Fichier** : `functions/src/callable/documents.ts`
+
+#### `getDocumentDownloadUrl`
+
+**Type** : Callable (client invoke)
+
+**Logique** :
+1. Fetch document
+2. Gen signed URL (5 min expiry)
+3. Return URL
+
+**Retour** : `{downloadUrl: string}`
+
+**Fichier** : `functions/src/callable/documents.ts`
+
+---
+
+### Soft Delete
+
+#### `softDeleteEntity`
+
+**Type** : Callable (universal soft-delete)
+
+**Signature** :
+```typescript
+export const softDeleteEntity = onCall(async (request) => {
+  const data = request.data;
+  // { collection, docId }
+});
+```
+
+**Logique** :
+1. Route par collection :
+   - `landlords` → check no active leases
+   - `properties` → check no active leases
+   - `tenants` → check no active leases
+   - `leases` → soft-delete OK
+   - `payments` → soft-delete OK
+   - `receipts` → REFUSE (immutable)
+   - `documents` → check legalHold (refuse si true)
+2. Update deletedAt = now()
+3. Decrement activeLeaseCount (properties, tenants)
+
+**Erreurs** :
+- FAILED_PRECONDITION : legalHold true / active leases exist
+
+**Retour** : `{success: true}`
+
+**Fichier** : `functions/src/callable/soft_delete.ts`
+
+---
+
+### Upgrade Flow
+
+#### `finalizeAnonymousUpgrade`
+
+**Type** : Callable (client invoke)
+
+**Déclencheur** : Anonyme clique "Créer un compte" après essai
+
+**Logique** :
+1. Fetch current user doc (anonyme)
+2. Validate email non-existant (aucun autre user same email)
+3. Transact :
+   - Update `landlords/{uid}` :
+     - isAnonymous = false
+     - subscriptionTier = 'free'
+     - rgpdConsentAt = now() (signup consent)
+     - rgpdConsentVersion = custom claim version
+     - email, fullName from request.data
+     - anonExpiresAt = null
+   - Preserve investment_scenarios (car landlordId constant = uid)
+4. Return `{success: true}`
+
+**Safety** : Investment scenarios restent accessibles (pas de migration).
+
+**Fichier** : `functions/src/callable/finalize_anonymous_upgrade.ts`
+
+**Tests** : `functions/src/__tests__/finalize_anonymous_upgrade.test.ts`
+
+---
+
+## Scheduled Functions (Cron)
+
+### `cleanupExpiredAnon`
+
+**Type** : Cloud Scheduler + Cloud Function
+
+**Schedule** : Daily 2 AM UTC (config via `gcloud` ou console)
+
+**Logique** :
+1. Query `landlords` where isAnonymous==true && anonExpiresAt < now()
+2. Batch soft-delete :
+   - Soft-delete ALL leases/payments/receipts (landlordId)
+   - Soft-delete properties, tenants, documents
+   - Soft-delete investment_scenarios
+   - Delete landlords/{uid} doc (vrai delete, pas soft — retention inutile anon)
+3. Log count deleted
+4. Idempotent (deletedAt check)
+
+**Fichier** : `functions/src/scheduled/cleanup_expired_anon.ts`
+
+**Logs** : Cloud Logging, queryable via `firebase functions:log`
+
+---
+
+## Helper Utilities
+
+**Fichier** : `functions/src/utils/callable_helpers.ts`
+
+| Helper | Signature | Usage |
+|---|---|---|
+| `validateOwnership()` | `(auth.uid, landlordId) → void` | Auth check (throw if mismatch) |
+| `validateFK()` | `(db, collection, docId, expected) → void` | FK validation |
+| `validateImmutables()` | `(oldData, newData) → void` | Immutable fields check |
+| `softDeleteCollection()` | `(db, collection, docId) → Promise<void>` | Generic soft-delete |
+| `incrementCounter()` | `(db, path, field, delta) → Promise<void>` | Denorm counter update |
+
+---
+
+## Test Coverage
+
+**Framework** : Vitest (replace Jest)
+
+**Files** : `functions/src/__tests__/*.test.ts`
+
+| Test | Coverage |
 |---|---|
-| Dossier | `supabase/functions/_shared/` |
-| Fichiers | utils.ts, types.ts, constants.ts |
-| Usage | Imported by `generate-receipt` |
-| Purpose | Shared types, PDF layouts, constants |
-| Secrets | _(none)_ |
+| `handle_new_user.test.ts` | Provision doc creation, custom claims parsing |
+| `finalize_anonymous_upgrade.test.ts` | Upgrade logic, email validation, investment_scenarios preservation |
+| _(more TBD)_ | Payment creation, receipt generation, soft-delete validation |
 
-**Contenu** :
-- PDF layout helpers (header, footer, table cells)
-- Constants (FR legal notices, tax ref)
-- Types (LeasePayment, ReceiptData)
-- Utility functions (date formatting, amount conversion)
-
----
-
-### Fonctions supprimées (FEAT-008 pivot)
-
-#### `send-receipt` (FEAT-008 Phase 1 — SUPPRIMÉE 2026-06-22)
-
-**Raison suppression** : Pivot Web Share API native (zéro dépendance backend email, zéro secret Resend, meilleure UX native)
-
-**Ancienne fonction** :
-- Utilisait Resend SDK (email via backend)
-- Nécessitait secret `RESEND_API_KEY`
-- Edge Function déployée Deno TS
-
-**Remplacement** :
-- Service Flutter `web_share_service.dart` (JS interop `navigator.share()`)
-- Fallback `mailto://` si Web Share API non supportée
-- RPC `mark_receipt_as_sent()` appelée APRÈS succès du partage (audit trail)
-- Zéro backend email, zéro dépendance API externe
-
----
-
-## RPC Postgres (SECURITY DEFINER)
-
-Créées en FEAT-002+. Exposées via `supabase.rpc()` côté client Dart.
-
-### Soft-delete RPC (public + dev schémas)
-
-Chacune pose `SET LOCAL app.allow_deleted_at_change = '1'` pour contourner le trigger `tr_01_prevent_protected_columns_change()`. Ownership check (`landlord_id = auth.uid()`) dans le WHERE. Idempotent.
-
-#### `public.soft_delete_landlord()` — FEAT-002
-
-Soft-delete du landlord courant (auth.uid()). Retourne void.
-
-```dart
-await supabase.rpc('soft_delete_landlord');
-```
-
-**Error** : ERRCODE P0002 si propriétaire inexistant ou déjà supprimé.
-
----
-
-#### `public.soft_delete_property(p_id uuid)` — FEAT-002
-
-Soft-delete property (ownership check : `landlord_id = auth.uid()`). Retourne void.
-
-```dart
-await supabase.rpc('soft_delete_property', params: {'p_id': propertyId});
-```
-
-**Error** : ERRCODE P0002 si propriété inexistante, appartenant à un autre user, ou déjà supprimée.
-
----
-
-#### `public.soft_delete_tenant(p_id uuid)` — FEAT-002
-
-Soft-delete tenant (ownership check). Retourne void.
-
-```dart
-await supabase.rpc('soft_delete_tenant', params: {'p_id': tenantId});
-```
-
-**Error** : ERRCODE P0002 si locataire inexistant ou déjà supprimé.
-
----
-
-#### `public.soft_delete_lease(p_id uuid)` — FEAT-002
-
-Soft-delete lease (ownership check). Retourne void.
-
-```dart
-await supabase.rpc('soft_delete_lease', params: {'p_id': leaseId});
-```
-
-**Error** : ERRCODE P0002 si bail inexistant ou déjà supprimé.
-
----
-
-#### `public.soft_delete_payment(p_id uuid)` — FEAT-006
-
-Soft-delete payment (ownership check : `landlord_id = auth.uid() AND deleted_at IS NULL`). Retourne void.
-
-```dart
-await supabase.rpc('soft_delete_payment', params: {'p_id': paymentId});
-```
-
-**Error** : ERRCODE P0002 si paiement inexistant, appartenant à un autre user, ou déjà supprimé.
-
----
-
-#### `public.soft_delete_document(p_id uuid)` — FEAT-009
-
-Soft-delete document (ownership check). Retourne TABLE `(storage_path text, hard_deleted boolean)`.
-
-```dart
-final result = await supabase.rpc('soft_delete_document', params: {'p_id': documentId});
-// result = [{'storage_path': '...', 'hard_deleted': true/false}]
-```
-
-**Logic** :
-- Si `legal_hold = false` → hard_deleted = true (frontend peut hard-delete depuis Storage)
-- Si `legal_hold = true` → hard_deleted = false (fichier conservé pour audit legal)
-
-**Error** : ERRCODE P0002 si document inexistant ou déjà supprimé.
-
----
-
-### Receipt-specific RPC
-
-#### `public.void_receipt(p_id uuid, p_reason text)` — FEAT-007
-
-Annulation quittance (void). Ownership check (landlord_id = auth.uid()). Retourne void.
-
-```dart
-await supabase.rpc('void_receipt', params: {
-  'p_id': receiptId,
-  'p_reason': 'Erreur date loyer',
-});
-```
-
-**Validation** :
-- `p_reason` : char_length BETWEEN 3 AND 500
-- `is_voided = false` actuellement (ne peut pas annuler deux fois)
-
-**Error** : ERRCODE P0002 si quittance inexistante, ERRCODE 23514 (check_violation) si reason invalide.
-
----
-
-#### `public.mark_receipt_as_sent(p_receipt_id uuid, p_sent_to_email text)` — FEAT-008
-
-Marquer quittance comme partagée (audit trail post-Web Share API). SECURITY DEFINER. Ownership check + validation email. Retourne TABLE `receipts`.
-
-```dart
-final result = await supabase.rpc('mark_receipt_as_sent', params: {
-  'p_receipt_id': receiptId,
-  'p_sent_to_email': tenantEmail,
-});
-```
-
-**Validation** :
-- Ownership : `landlord_id = auth.uid()`
-- `is_voided = false` (ne peut pas envoyer quittance annulée)
-- `is_stale = false` (ne peut pas envoyer si paiement archivé)
-- `p_sent_to_email` : regex email valide + char_length BETWEEN 3 AND 255
-
-**Idempotence** : 2e appel écrase `sent_at` + `sent_to_email` (dernière tentative enregistrée)
-
-**Error** :
-- ERRCODE P0002 si quittance inexistante, voided, ou stale
-- ERRCODE 22023 si email invalide
-- ERRCODE 23514 si quittance appartient à un autre landlord
-
----
-
-#### `public.soft_delete_lease()` avec trigger cascade
-
-**Trigger** : `tr_03_set_receipt_stale_on_payment_archive` (AFTER UPDATE OF deleted_at ON payments)
-
-Lorsqu'un paiement est archivé (soft-deleted), marque `is_stale = true` sur toutes les receipts qui référencent ce paiement via `payment_ids[]` (GIN index).
-
-```sql
-UPDATE receipts
-SET is_stale = true
-WHERE lease_id = (SELECT lease_id FROM payments WHERE id = NEW.id)
-  AND payment_ids @> ARRAY[NEW.id];
+**Run** :
+```bash
+npm run test          # One-shot
+npm run test:watch   # Watch mode
 ```
 
 ---
 
-## Version dev (schéma dev)
+## Deployment
 
-Toutes les RPC ci-dessus existent en version `dev.*` (préfixe `dev.`), opérant sur le schéma `dev` :
-- `dev.soft_delete_landlord()`
-- `dev.soft_delete_property(p_id uuid)`
-- `dev.soft_delete_tenant(p_id uuid)`
-- `dev.soft_delete_lease(p_id uuid)`
-- `dev.soft_delete_payment(p_id uuid)`
-- `dev.soft_delete_document(p_id uuid)`
-- `dev.void_receipt(p_id uuid, p_reason text)`
-- `dev.mark_receipt_as_sent(p_receipt_id uuid, p_sent_to_email text)`
+**Command** : `firebase deploy --only functions`
 
-Signatures exactes, mais opèrent sur `dev.landlords`, `dev.properties`, etc.
+**Output** : Tous les callables + triggers + scheduled redéployés (source ~40 KB compiled lib/)
+
+**Région** : europe-west1 (default, override per-function via `runWith()`)
+
+**Logs** : `firebase functions:log` (stream or tail 20 min)
 
 ---
 
-## Appels côté client Dart
+## Known Issues + Workarounds
 
-Pattern Riverpod + supabase_flutter :
-
-```dart
-// Via provider
-final supabase = ref.read(supabaseProvider);
-
-// RPC call
-await supabase.rpc('soft_delete_property', params: {'p_id': id});
-
-// Edge Function call
-final result = await supabase.functions.invoke(
-  'generate-receipt',
-  body: {'lease_id': leaseId, 'schema': schema},
-);
-```
-
----
-
-## Notes
-
-- **Multi-env** : Toutes les RPC existent sur public (PROD) et dev (DEV)
-- **Ownership** : Tous les checks sont côté DB (RLS + WHERE clause)
-- **Idempotence** : Soft-delete RPC sont idempotentes (2e appel = no-op, error P0002)
-- **Audit trail** : sent_at, voided_at, deleted_at conservent l'historique complet
-- **Edge Function timeout** : Respect 540s limit pour generate-receipt (build + upload PDF)
+| Issue | Status | Note |
+|---|---|---|
+| **Payment creation idempotence** | ✅ Fixed | Receipt generation retry → no-op if exists |
+| **Soft-delete cascade** | ✅ Designed | softDeleteEntity handles all cascades (no orphans) |
+| **Stale receipt recompute** | ✅ Implemented | recomputeReceiptStale CF trigger post-payment |

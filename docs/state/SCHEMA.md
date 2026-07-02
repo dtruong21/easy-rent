@@ -1,546 +1,328 @@
-# Schéma Postgres — snapshot
+# Schéma Firestore — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `supabase/migrations/`. **Dernière sync** : 2026-06-25 (FEAT-016 ✅ — migrations 20260622220000–20260623020000 complètent enrichissement FR + RGPD persistence)
+> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions. **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore.
 
-## Tables
+## Collections
 
-### `landlords` (public + dev)
+### `landlords/{uid}` — docId = Firebase Auth UID
 
-**Migration source** : `20260527081533_feat001_landlords_auth.sql` (création), `20260528120000_feat002_data_model.sql` (extension), `20260623020000_feat016_rgpd_consent.sql` (FEAT-016 RGPD persistence)
+Authentication + account tiers (anonymous/free/pro).
 
-| Colonne | Type | Contraintes |
-|---|---|---|
-| `id` | `uuid` | PRIMARY KEY, FK → `auth.users(id)` ON DELETE NO ACTION |
-| `email` | `text` | NOT NULL |
-| `full_name` | `text` | NOT NULL — rempli par trigger `handle_new_user()` depuis `raw_user_meta_data` ou fallback `email` (FEAT-011) |
-| `phone` | `text` | NULL |
-| `address` | `text` | NULL |
-| `rgpd_consent_at` | `timestamptz` | NOT NULL — timestamp acceptation RGPD (FEAT-016 backfill=created_at pour comptes existants, légacy='legacy-1') |
-| `rgpd_consent_version` | `text` | NOT NULL — version texte RGPD acceptée (FEAT-016, ex: 'v1-2026-06' ou 'legacy-1') |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() (trigger `tr_02_set_updated_at_landlords`) |
-| `deleted_at` | `timestamptz` | NULL — soft-delete. Modifiable uniquement via `soft_delete_landlord()` RPC |
+| Champ | Type | Valeur | Immuable | RLS |
+|---|---|---|---|---|
+| `id` | string | Firebase Auth UID | ✅ | isOwner(uid) |
+| `email` | string? | null (anon) / email (compte) | ✅ | — |
+| `fullName` | string | '' (anon) / nom complet | ✅ | — |
+| `isAnonymous` | bool | true (essai) / false (compte) | ✅ | — |
+| `subscriptionTier` | string | 'anonymous' / 'free' / 'pro' | ✅ | — |
+| `anonExpiresAt` | timestamp | Expiration essai (14j) | — | — |
+| `rgpdConsentAt` | timestamp? | null (anon) / date signature | ✅ | — |
+| `rgpdConsentVersion` | string | Numéro contrat RGPD | ✅ | — |
+| `createdAt` | timestamp | Création compte | ✅ | — |
+| `updatedAt` | timestamp | Dernière modification | — | CF trigger |
+| `deletedAt` | timestamp? | null (actif) / suppression | — | isActive(rsc) |
 
-**Index** : `idx_public_landlords_email` (public + dev)
-
-**RLS** : activée
-
-**Policies** (public + dev) :
-
-| Policy | Opération | Condition |
-|---|---|---|
-| `landlord_selects_self` | SELECT | `id = auth.uid() AND deleted_at IS NULL` |
-| `landlord_updates_self` | UPDATE | USING: `id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `id = auth.uid()` |
-
-**Client constraints** :
-- INSERT : **interdit** (aucune policy INSERT → trigger `handle_new_user()` insère auto)
-- DELETE : **interdit** (soft-delete via RPC `soft_delete_landlord()`)
-
----
-
-### `properties` (public + dev)
-
-**Migration source** : `20260528120000_feat002_data_model.sql` (FEAT-002), `20260622220000_feat014_phase1_property_enrichment.sql` (FEAT-014 Phase 1)
-
-| Colonne | Type | Contraintes |
-|---|---|---|
-| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT, DEFAULT auth.uid() (RLS) |
-| `name` | `text` | NOT NULL, CHECK length > 0 |
-| `address` | `text` | NOT NULL, CHECK length > 0 |
-| `type` | `text` | NOT NULL, CHECK IN ('appartement', 'maison', 'studio', 'autre') |
-| `surface_m2` | `numeric(6,2)` | NULL, CHECK > 0 (si renseigné) |
-| **FEAT-014 Phase 1** | | |
-| `rooms` | `smallint` | NULL, CHECK > 0 AND <= 50 |
-| `bedrooms` | `smallint` | NULL, CHECK >= 0 AND <= 50 |
-| `floor` | `smallint` | NULL, CHECK BETWEEN -5 AND 200 |
-| `has_elevator` | `boolean` | NOT NULL DEFAULT false |
-| `furnished` | `boolean` | NOT NULL DEFAULT false |
-| `heating_type` | `text` | NULL, CHECK IN ('electric', 'gas', 'collective', 'fuel', 'wood', 'heat_pump', 'other') |
-| `dpe_letter` | `text` | NULL, CHECK matches regex '^[A-G]$' (diagnostic performance énergétique) |
-| `dpe_value_kwh_m2_year` | `integer` | NULL, CHECK > 0 AND < 2000 (DPE valeur numérique) |
-| `ges_letter` | `text` | NULL, CHECK matches regex '^[A-G]$' (gaz effet serre) |
-| `construction_year` | `smallint` | NULL, CHECK BETWEEN 1700 AND current_year+1 |
-| `postal_code` | `text` | NULL, CHECK matches regex '^\d{5}$' (FR only) |
-| `city` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_property()` |
-
-**Index** : `idx_public_properties_landlord_id`, `idx_dev_properties_landlord_id`
-
-**RLS** : activée
-
-**Policies** (public + dev) :
-
-| Policy | Opération | Condition |
-|---|---|---|
-| `properties_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
-| `properties_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
-| `properties_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
-
----
-
-### `tenants` (public + dev)
-
-**Migration source** : `20260528120000_feat002_data_model.sql` (FEAT-002), `20260622230000_feat014_phase2_tenant_enrichment.sql` (FEAT-014 Phase 2)
-
-| Colonne | Type | Contraintes |
-|---|---|---|
-| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT, DEFAULT auth.uid() (RLS) |
-| `first_name` | `text` | NOT NULL, CHECK length > 0 |
-| `last_name` | `text` | NOT NULL, CHECK length > 0 |
-| `email` | `text` | NOT NULL, CHECK regex `^[^@\s]+@[^@\s]+\.[^@\s]+$` |
-| `phone` | `text` | NULL |
-| **FEAT-014 Phase 2** | | |
-| `birth_date` | `date` | NULL, CHECK BETWEEN 1900-01-01 AND (today - 18 years) |
-| `birth_place` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
-| `nationality` | `text` | NULL, CHECK char_length BETWEEN 1 AND 60 |
-| `profession` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
-| `employer` | `text` | NULL, CHECK char_length BETWEEN 1 AND 100 |
-| `monthly_income_cents` | `bigint` | NULL, CHECK >= 0 AND <= 10000000000 (en centimes) |
-| `previous_address` | `text` | NULL, CHECK char_length BETWEEN 1 AND 300 |
-| `guarantor_name` | `text` | NULL, CHECK char_length BETWEEN 1 AND 200 |
-| `guarantor_email` | `text` | NULL, CHECK regex `^[^@\s]+@[^@\s]+\.[^@\s]+$` |
-| `guarantor_phone` | `text` | NULL, CHECK char_length BETWEEN 1 AND 30 |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_tenant()` |
-
-**Index** : `idx_public_tenants_landlord_id`, `idx_dev_tenants_landlord_id`
-
-**RLS** : activée
-
-**Policies** (public + dev) :
-
-| Policy | Opération | Condition |
-|---|---|---|
-| `tenants_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
-| `tenants_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
-| `tenants_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
-
----
-
-### `leases` (public + dev)
-
-**Migration source** : `20260528120000_feat002_data_model.sql` (FEAT-002), `20260623000000_feat014_phase3_lease_enrichment.sql` (FEAT-014 Phase 3)
-
-| Colonne | Type | Contraintes |
-|---|---|---|
-| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS), DEFAULT auth.uid() |
-| `property_id` | `uuid` | FK → `properties(id)` ON DELETE RESTRICT |
-| `tenant_id` | `uuid` | FK → `tenants(id)` ON DELETE RESTRICT |
-| `rent_amount_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes, ex: 85000 = 850,00€) |
-| `charges_amount_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 |
-| `start_date` | `date` | NOT NULL |
-| `end_date` | `date` | NULL (= CDI), CHECK end_date > start_date (si renseigné) |
-| `status` | `text` | NOT NULL DEFAULT 'active', CHECK IN ('active', 'terminated', 'archived') |
-| **FEAT-014 Phase 3** | | |
-| `lease_type` | `text` | NOT NULL DEFAULT 'unfurnished', CHECK IN ('unfurnished', 'furnished', 'mobility', 'student') |
-| `deposit_amount_cents` | `bigint` | NULL, CHECK >= 0 AND <= 10000000000 (dépôt de garantie) |
-| `payment_day` | `smallint` | NOT NULL DEFAULT 1, CHECK BETWEEN 1 AND 28 (jour échéance mensuelle) |
-| `payment_method` | `text` | NOT NULL DEFAULT 'virement', CHECK IN ('virement', 'cheque', 'especes', 'prelevement', 'autre') |
-| `irl_index_value` | `numeric(8,2)` | NULL, CHECK > 0 AND < 10000 (indice révision loyer) |
-| `irl_quarter_ref` | `text` | NULL, CHECK matches regex '^T[1-4]-\d{4}$' (ex: 'T1-2026') |
-| `agency_fees_cents` | `bigint` | NOT NULL DEFAULT 0, CHECK >= 0 AND <= 10000000000 (honoraires agence) |
-| `solidarity_clause` | `boolean` | NOT NULL DEFAULT false (colocataires solidaires) |
-| `entry_inventory_done` | `boolean` | NOT NULL DEFAULT false (état des lieux d'entrée effectué) |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_lease()` |
-
-**Index** : `idx_public_leases_landlord_id`, `idx_public_leases_property_id`, `idx_public_leases_tenant_id`, `idx_public_leases_status_active_partial` (WHERE status='active' AND deleted_at IS NULL) + équivalents dev
-
-**RLS** : activée
-
-**Policies** (public + dev) :
-
-| Policy | Opération | Condition |
-|---|---|---|
-| `leases_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
-| `leases_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
-| `leases_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
-
----
-
-### `documents` (public + dev)
-
-**Migration source** : `20260602100520_feat009_documents.sql` (FEAT-009)
-
-| Colonne | Type | Contraintes |
-|---|---|---|
-| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | NOT NULL, FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
-| `lease_id` | `uuid` | NOT NULL, FK → `leases(id)` ON DELETE RESTRICT |
-| `category` | `public.document_category` | NOT NULL — enum (bail_signe, etat_des_lieux, attestation_assurance, quittance_scannee, autre) |
-| `filename` | `text` | NOT NULL, CHECK char_length BETWEEN 1 AND 255 |
-| `storage_path` | `text` | NOT NULL UNIQUE, CHECK char_length BETWEEN 1 AND 500 |
-| `mime_type` | `text` | NOT NULL, CHECK IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp') |
-| `size_bytes` | `integer` | NOT NULL, CHECK BETWEEN 1 AND 10485760 (10 MB max) |
-| `legal_hold` | `boolean` | NOT NULL DEFAULT false — calculé par trigger tr_00b : true ssi category IN ('bail_signe', 'etat_des_lieux'). Immuable après INSERT |
-| `uploaded_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() (trigger `tr_02_set_updated_at_documents`) |
-| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_document()` uniquement |
-
-**Nouveau type** : `public.document_category` + `dev.document_category` — ENUM (`bail_signe`, `etat_des_lieux`, `attestation_assurance`, `quittance_scannee`, `autre`)
-
-**Index** :
-- `idx_public_documents_lease (landlord_id, lease_id, deleted_at)` — listing par bail
-- `idx_public_documents_landlord (landlord_id, deleted_at)` — quota global landlord
-- `idx_public_documents_storage_path (storage_path) WHERE deleted_at IS NULL` — lookup soft-delete aware (UNIQUE partial)
-- Équivalents `idx_dev_documents_*`
-
-**RLS** : activée
-
-**Policies** (public + dev) :
-
-| Policy | Opération | Condition |
-|---|---|---|
-| `documents_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
-| `documents_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
-| `documents_update_category_only` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
-
-**Pas de policy DELETE** : soft-delete via RPC `soft_delete_document()` uniquement.
-
-**Triggers** :
-- `tr_00_assert_documents_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
-- `tr_00b_compute_legal_hold` BEFORE INSERT (calcul legal_hold depuis category)
-- `tr_01_prevent_protected_columns_change_documents` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
-- `tr_01b_protect_immutable_documents` BEFORE UPDATE (protège filename, storage_path, mime_type, size_bytes, legal_hold — aucun GUC bypass)
-- `tr_02_set_updated_at_documents` BEFORE UPDATE (réutilise FEAT-001)
-
----
-
-### `receipts` (public + dev)
-
-**Migration source** : `20260531172904_feat007_receipts.sql` (FEAT-007), `20260601103751_feat008_email_quittance.sql` (FEAT-008)
-
-| Colonne | Type | Contraintes |
-|---|---|---|
-| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `landlord_id` | `uuid` | NOT NULL, FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS) |
-| `lease_id` | `uuid` | NOT NULL, FK → `leases(id)` ON DELETE RESTRICT |
-| `payment_ids` | `uuid[]` | NOT NULL, CHECK array_length >= 1 |
-| `period_start` | `date` | NOT NULL, CHECK BETWEEN 1900-01-01..2100-12-31 |
-| `period_end` | `date` | NOT NULL, CHECK > period_start AND BETWEEN bornes |
-| `rent_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes) |
-| `charges_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 (en centimes) |
-| `total_cents` | `integer` | NOT NULL, CHECK > 0 AND CHECK = rent_cents + charges_cents |
-| `document_type` | `public.document_type` | NOT NULL — enum `quittance` ou `recu` |
-| `pdf_path` | `text` | NOT NULL — chemin Storage `receipts/<landlord_id>/<receipt_id>.pdf` |
-| `generated_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `is_voided` | `boolean` | NOT NULL DEFAULT false |
-| `voided_at` | `timestamptz` | NULL (doit être non-NULL si is_voided = true) |
-| `voided_reason` | `text` | NULL, CHECK char_length BETWEEN 3 AND 500 (obligatoire si voided) |
-| `is_stale` | `boolean` | NOT NULL DEFAULT false — recomputed par trigger tr_03 |
-| `sent_at` | `timestamptz` | NULL = jamais partagé. Audit trail partage. Marqué côté client APRÈS Web Share API réussi (FEAT-008 pivot 2026-06-22). Modifiable uniquement via `mark_receipt_as_sent` RPC. |
-| `sent_to_email` | `text` | NULL si `sent_at IS NULL`. Snapshot email destination au moment du partage. CHECK char_length BETWEEN 3 AND 255. Modifiable uniquement via `mark_receipt_as_sent` RPC. FEAT-008 pivot. |
-
-**Contraintes** :
-- `receipts_total_check` : `total_cents = rent_cents + charges_cents`
-- `receipts_voiding_consistency` : `(is_voided=false AND voided_at IS NULL AND voided_reason IS NULL) OR (is_voided=true AND voided_at IS NOT NULL AND voided_reason IS NOT NULL)`
-- `receipts_sent_consistency` : `(sent_at IS NULL AND sent_to_email IS NULL) OR (sent_at IS NOT NULL AND sent_to_email IS NOT NULL AND char_length(sent_to_email) BETWEEN 3 AND 255)` — FEAT-008
-- Pas de `updated_at` ni `deleted_at` : document immuable hors flags
+**RLS Rules** :
+- `get` : isOwner(uid) && isActive(resource)
+- `create` (compte) : isFullyAuthed() + RGPD consent obligatoire
+- `create` (anonyme) : isAnonymous() + anonExpiresAt valide
+- `update` (compte) : isFullyAuthed() && preservesImmutables()
+- `update` (anonyme) : isAnonymous() && anonExpiresAt <= now + 15j
+- `delete` : interdit (soft-delete via CF `softDeleteLandlord`)
 
 **Indexes** :
-- `idx_public_receipts_landlord_id` (filtrage RLS)
-- `idx_public_receipts_lease_id` (listing par bail)
-- `idx_public_receipts_period_start_desc` (lease_id, period_start DESC)
-- `idx_public_receipts_payment_ids_gin` USING GIN (payment_ids — trigger is_stale)
-- Équivalents `idx_dev_receipts_*`
-
-**RLS** : activée
-
-**Policies** (public + dev) :
-
-| Policy | Opération | Condition |
-|---|---|---|
-| `receipts_select_own` | SELECT | `landlord_id = auth.uid()` (toutes receipts y compris voided) |
-| `receipts_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
-
-**Pas de policy UPDATE ni DELETE** : immuabilité des champs métier ; voiding uniquement via RPC `void_receipt`.
+- `isAnonymous, anonExpiresAt ASC` (cleanup expiration)
 
 **Triggers** :
-- `tr_00_assert_receipt_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
-- `tr_01_prevent_protected_columns_change_receipts` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
-- `tr_01b_protect_sent_columns_receipts` BEFORE UPDATE (protège sent_at + sent_to_email — dédié FEAT-008, GUC app.allow_sent_columns_change)
-- Pas de tr_02 (pas de updated_at)
-- `tr_03_set_receipt_stale_on_payment_archive` sur public.payments + dev.payments AFTER UPDATE OF deleted_at
+- setUpdatedAt (CF)
 
 ---
 
-### `payments` (public + dev)
+### `properties/{id}` — CRUD direct
 
-**Migration source** : `20260531102202_feat006_payments.sql` (FEAT-006), `20260623010000_feat014_phase4_payment_reference.sql` (FEAT-014 Phase 4)
+Bien immobilier (appartement, maison, etc).
 
-| Colonne | Type | Contraintes |
+| Champ | Type | Notes |
 |---|---|---|
-| `id` | `uuid` | PRIMARY KEY, DEFAULT gen_random_uuid() |
-| `lease_id` | `uuid` | FK → `leases(id)` ON DELETE RESTRICT |
-| `landlord_id` | `uuid` | FK → `landlords(id)` ON DELETE RESTRICT (dénormalisé pour RLS), DEFAULT auth.uid() |
-| `period_start` | `date` | NOT NULL, CHECK BETWEEN 1900-01-01..2100-12-31 |
-| `period_end` | `date` | NOT NULL, CHECK > period_start AND BETWEEN 1900-01-01..2100-12-31 |
-| `paid_at` | `date` | NOT NULL (autorisée futur), CHECK BETWEEN 1900-01-01..2100-12-31 |
-| `rent_amount_cents` | `integer` | NOT NULL, CHECK > 0 (en centimes, ex: 85000 = 850,00€) |
-| `charges_amount_cents` | `integer` | NOT NULL DEFAULT 0, CHECK >= 0 (en centimes) |
-| `payment_method` | `text` | NOT NULL, CHECK IN ('virement', 'cheque', 'especes', 'prelevement', 'autre') |
-| `notes` | `text` | NULL, CHECK length <= 500 |
-| **FEAT-014 Phase 4** | | |
-| `reference` | `text` | NULL (numéro de chèque, virement, etc.) |
-| `created_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `updated_at` | `timestamptz` | NOT NULL DEFAULT now() |
-| `deleted_at` | `timestamptz` | NULL — soft-delete via RPC `soft_delete_payment()` |
+| `id` | string | UUID, docId |
+| `landlordId` | string | FK → landlords.id |
+| `name` | string | Adresse ou nom |
+| `address` | string | Complète (rue + code postal) |
+| `type` | string | 'appartement' / 'maison' / 'studio' / 'autre' |
+| `activeLeaseCount` | int | Denormalisé (CF) — CRUD client refusé |
+| `createdAt` | timestamp | Création |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp? | Soft-delete |
 
-**Index** :
-- `idx_public_payments_landlord_id` (RLS filtrage auth.uid())
-- `idx_public_payments_lease_id` (listage paiements d'un bail)
-- `idx_public_payments_period_start_desc` (tri par période décroissante)
-- `idx_public_payments_active_partial` (WHERE deleted_at IS NULL, requête la plus fréquente)
-+ équivalents dev
+**RLS** :
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create` : isFullyAuthed() + activeLeaseCount==0 à la création
+- `update` : isFullyAuthed() + preservesImmutables()
+- `delete` : interdit
 
-**RLS** : activée
+**Indexes** :
+- landlordId, deletedAt, name
+- landlordId, deletedAt, createdAt DESC
 
-**Policies** (public + dev) :
+---
 
-| Policy | Opération | Condition |
+### `tenants/{id}` — CRUD direct
+
+Locataire.
+
+| Champ | Type | Notes |
 |---|---|---|
-| `payments_select_own` | SELECT | `landlord_id = auth.uid() AND deleted_at IS NULL` |
-| `payments_insert_own` | INSERT | WITH CHECK: `landlord_id = auth.uid()` |
-| `payments_update_own` | UPDATE | USING: `landlord_id = auth.uid() AND deleted_at IS NULL` / WITH CHECK: `landlord_id = auth.uid()` |
+| `id` | string | UUID |
+| `landlordId` | string | FK → landlords.id |
+| `firstName` | string | Prénom |
+| `lastName` | string | Nom |
+| `email` | string | Valide regex |
+| `activeLeaseCount` | int | Denormalisé |
+| `createdAt` | timestamp | — |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp? | Soft-delete |
 
-**Notes** :
-- Pas de policy DELETE (soft-delete via RPC uniquement)
-- Aucune UNIQUE sur (lease_id, period_start, period_end) — doublons autorisés (régularisations)
-- FK lease_id RESTRICT : impossible de supprimer un bail avec des paiements
+**RLS** :
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create` : isFullyAuthed() + activeLeaseCount==0
+- `update` : isFullyAuthed() + preservesImmutables()
+- `delete` : interdit
 
----
-
-## Triggers et fonctions Postgres
-
-### Fonctions helper (debug, init)
-
-**`dev.check_schema_parity()`** — Compares tables between `public` et `dev` schémas. FEAT-001.
-
-**`dev.assert_rls_both_schemas(table_name text)`** — Assert RLS activée sur table dans les deux schémas. FEAT-002.
-
----
-
-### Fonctions de sécurité
-
-**`public.prevent_protected_columns_change()`** — Trigger BEFORE INSERT OR UPDATE (réutilisable, 4 tables × 2 schémas)
-
-- **À l'INSERT** :
-  - Bloque `deleted_at` ≠ NULL sauf flag `app.allow_deleted_at_change = '1'` (réservé aux RPC)
-  - Force `created_at := now()` et `updated_at := now()` (pragmatique — corrige les antidates silencieusement)
-- **À l'UPDATE** :
-  - Bloque modification de `deleted_at` sauf flag (ERRCODE 42501)
-  - Bloque modification de `created_at` (immuable, ERRCODE 42501)
-  - Force `updated_at := OLD.updated_at` (repris par tr_02)
-
-**`public.assert_lease_ownership_consistency()`** — Trigger BEFORE INSERT OR UPDATE sur `public.leases`, SECURITY DEFINER, SET search_path = public
-
-- Valide que `property_id` existe
-- Valide que `tenant_id` existe
-- Valide que `property_id.landlord_id` = `NEW.landlord_id`
-- Valide que `tenant_id.landlord_id` = `NEW.landlord_id`
-- ERRCODE 23514 (check_violation)
-- Bypass RLS intentionnellement pour voir toutes les lignes (cohérence cross-FK)
-
-**`dev.assert_lease_ownership_consistency()`** — Mirror DEV (SET search_path = dev, lit dev.properties et dev.tenants)
-
-**`public.assert_payment_lease_ownership()`** — Trigger BEFORE INSERT OR UPDATE sur `public.payments`, SECURITY DEFINER, SET search_path = public (FEAT-006)
-
-- Valide que `lease_id` existe dans `public.leases`
-- Valide que `lease_id.landlord_id` = `NEW.landlord_id`
-- ERRCODE 23514 (check_violation)
-- Bypass RLS intentionnellement pour voir toutes les lignes (cohérence cross-FK)
-
-**`dev.assert_payment_lease_ownership()`** — Mirror DEV (SET search_path = dev, lit dev.leases)
+**Indexes** :
+- landlordId, deletedAt, lastName
+- landlordId, deletedAt, createdAt DESC
 
 ---
 
-### Fonctions d'auto-provisioning et maintenance
+### `leases/{id}` — CROSS-ENTITY (CF exclusive)
 
-**`public.handle_new_user()`** — Trigger AFTER INSERT ON `auth.users`, SECURITY DEFINER, SET search_path = public
+Bail (lien bien ↔ locataire).
 
-- Insère une ligne dans `public.landlords` ET `dev.landlords` à chaque signup
-- Extrait `full_name` de `raw_user_meta_data->>'full_name'` (FEAT-011 pivot 2026-06-22), fallback `NEW.email` si absent
-- Lit `rgpd_consent_version` de `raw_user_meta_data` (FEAT-016), fallback 'legacy-1' pour creations admin/Studio
-- Définit `rgpd_consent_at = now()` au signup
-- Idempotent (ON CONFLICT DO NOTHING)
-- Migrations : `20260622130000_feat011_handle_new_user_fullname.sql`, `20260623020000_feat016_rgpd_consent.sql`
-- FEAT-001 (création), FEAT-011 (refactor pour password auth), FEAT-016 (RGPD persistence)
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `landlordId` | string | FK → landlords.id |
+| `propertyId` | string | FK → properties.id |
+| `tenantId` | string | FK → tenants.id |
+| `status` | string | 'ongoing' / 'upcoming' / 'ended' |
+| `startDate` | date | Date début bail |
+| `endDate` | date | Date fin bail |
+| `monthlyRent` | int | En centimes |
+| `charges` | int | En centimes |
+| `createdAt` | timestamp | — |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp? | Soft-delete |
 
-**`public.set_updated_at()`** — Trigger BEFORE UPDATE, maintient `updated_at = now()`
+**RLS** :
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create/update/delete` : interdit (CF exclusive)
 
-- Attaché à `public.landlords` (tr_02), `public.properties` (tr_02), `public.tenants` (tr_02), `public.leases` (tr_02) + équivalents dev
-- FEAT-001 (créée FEAT-002 a renommé le trigger sur landlords pour respect de l'ordre alphabétique tr_01 < tr_02)
-
----
-
-### RPC SECURITY DEFINER — soft-delete
-
-Chacune pose `SET LOCAL app.allow_deleted_at_change = '1'` (scope transaction) pour contourner le trigger `tr_01`. Ownership check (`landlord_id = auth.uid()`) dans le WHERE. Aucune policy DELETE sur aucune table.
-
-**`public.soft_delete_landlord()`** — Soft-delete du landlord courant (auth.uid()). FEAT-002.
-
-**`public.soft_delete_property(p_id uuid)`** — Soft-delete property (vérifie ownership). FEAT-002.
-
-**`public.soft_delete_tenant(p_id uuid)`** — Soft-delete tenant (vérifie ownership). FEAT-002.
-
-**`public.soft_delete_lease(p_id uuid)`** — Soft-delete lease (vérifie ownership). FEAT-002.
-
-**`public.soft_delete_payment(p_id uuid)`** — Soft-delete payment (vérifie ownership `landlord_id = auth.uid()` AND deleted_at IS NULL). FEAT-006.
-
-**Versions dev** : `dev.soft_delete_landlord()`, `dev.soft_delete_property()`, `dev.soft_delete_tenant()`, `dev.soft_delete_lease()`, `dev.soft_delete_payment()` — mêmes signatures, opèrent sur schéma `dev`.
+**Indexes** (composite) :
+- landlordId, deletedAt, status, startDate DESC
+- landlordId, propertyId, deletedAt
+- landlordId, tenantId, deletedAt
+- landlordId, status, endDate ASC
+- landlordId, deletedAt, startDate DESC
+- deletedAt, landlordId, status, endDate
+- deletedAt, landlordId, status, startDate
+- deletedAt, landlordId, tenantId, startDate DESC
 
 ---
 
-## Triggers ordre d'exécution
+### `payments/{id}` — CROSS-ENTITY (CF exclusive)
 
-PG exécute BEFORE INSERT OR UPDATE dans l'ordre alphabétique du nom. Ordre garanti :
+Paiement de loyer.
 
-1. **`tr_00_assert_*_ownership`** (leases + payments) — Validation cross-FK
-   - `tr_00_assert_lease_ownership` (leases)
-   - `tr_00_assert_payment_lease_ownership` (payments, FEAT-006)
-2. **`tr_01_prevent_protected_columns_change_*`** (toutes les 5 tables) — Bloque deleted_at, created_at ; force updated_at
-   - landlords, properties, tenants, leases, payments (FEAT-006)
-3. **`tr_02_set_updated_at_*`** (toutes les 5 tables sauf si DELETE) — Remet à jour updated_at
-   - landlords, properties, tenants, leases, payments (FEAT-006)
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `landlordId` | string | FK → landlords.id |
+| `leaseId` | string | FK → leases.id |
+| `amount` | int | Montant en centimes |
+| `paidAt` | timestamp | Date/heure paiement |
+| `periodStart` | date | Début période couverte |
+| `periodEnd` | date | Fin période couverte |
+| `createdAt` | timestamp | — |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp? | Soft-delete |
 
----
+**RLS** :
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create/update/delete` : interdit (CF exclusive)
 
-## Schémas
-
-### `public` (PROD)
-
-- Status : Initialized by Supabase (default)
-- RLS : enabled per table
-- Roles : `authenticated`, `anon`, `service_role`
-
-### `dev` (DEV)
-
-- Status : créé via migration init
-- RLS : enabled per table
-- Roles : `authenticated`, `anon`, `service_role`
-- Default privileges : `SELECT, INSERT, UPDATE, DELETE` sur tables pour `authenticated`
-- Comment : "Development/staging mirror of public schema. Mapped to Git branch `develop`."
-
----
-
-## Résumé des changements FEAT-008 (Phase 1 — SQL)
-
-**Migration** : `20260601103751_feat008_email_quittance.sql`
-
-**Colonnes ajoutées à `receipts`** (public + dev) :
-- `sent_at timestamptz NULL` — audit trail email, NULL = jamais envoyé
-- `sent_to_email text NULL` — snapshot email destination au moment de l'envoi
-
-**Contrainte** : `receipts_sent_consistency` CHECK — sent_at et sent_to_email sont NULL ensemble ou non-NULL ensemble (+ char_length 3..255)
-
-**Nouveau trigger** (public + dev) : `tr_01b_protect_sent_columns_receipts` BEFORE UPDATE — protège sent_at et sent_to_email contre toute écriture directe hors RPC. Mécanisme GUC `app.allow_sent_columns_change = '1'`.
-
-**Nouvelle RPC** (public + dev) : `mark_receipt_as_sent(p_receipt_id uuid, p_sent_to_email text) RETURNS receipts` — SECURITY DEFINER, SET search_path = public/dev, REVOKE anon. Vérifie ownership + is_voided=false + is_stale=false. Pose le flag GUC. Idempotent (2e appel écrase). ERRCODE 22023 si email invalide, P0002 si not found/voided/stale/cross-user.
-
-**RLS** : inchangée (pas de nouvelle policy — l'immuabilité document reste garantie par l'absence de policy UPDATE ; la RPC est SECURITY DEFINER).
-
-**Tests** : `supabase/tests/rls_receipts_send.sql` (14 tests)
+**Indexes** :
+- landlordId, deletedAt, paidAt DESC
+- landlordId, leaseId, deletedAt, paidAt DESC
+- landlordId, leaseId, deletedAt, periodStart DESC
+- landlordId, deletedAt, periodStart DESC
+- deletedAt, landlordId, createdAt DESC
+- deletedAt, landlordId, periodStart ASC
+- deletedAt, landlordId, paidAt ASC
 
 ---
 
-## Résumé des changements FEAT-009 (SQL — couche données + Storage)
+### `receipts/{id}` — IMMUABLES (CF exclusive)
 
-**Migration** : `20260602100520_feat009_documents.sql`
+Quittance de paiement (loi 6 juillet 1989 — rétention 5 ans).
 
-**Nouveau type** : `public.document_category` + `dev.document_category` — ENUM (`bail_signe`, `etat_des_lieux`, `attestation_assurance`, `quittance_scannee`, `autre`)
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `landlordId` | string | FK → landlords.id |
+| `leaseId` | string | FK → leases.id |
+| `paymentId` | string | FK → payments.id |
+| `amount` | int | Montant en centimes |
+| `periodStart` | date | Début période |
+| `periodEnd` | date | Fin période |
+| `isVoided` | bool | Annulé = création nouvelle + soft-delete paiment |
+| `isStale` | bool | Périmé (recalc CF si paiement annulé ou loyer change) |
+| `pdfUrl` | string? | Lien Storage (CF remplit) |
+| `sentAt` | timestamp? | Envoi par email |
+| `createdAt` | timestamp | — |
+| `updatedAt` | timestamp | CF trigger |
 
-**Nouvelles tables** : `documents` (public + dev) — Documents locatifs uploadés par le bailleur
+**RLS** :
+- `get/list` : isOwner(landlordId) (pas de deletedAt filtré — audit trail)
+- `create/update/delete` : interdit (CF exclusive)
 
-**Trigger framework** :
-- `tr_00_assert_documents_lease_ownership` BEFORE INSERT (ownership, SECURITY DEFINER)
-- `tr_00b_compute_legal_hold` BEFORE INSERT (calcule legal_hold depuis category — D3 modifié)
-- `tr_01_prevent_protected_columns_change_documents` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
-- `tr_01b_protect_immutable_documents` BEFORE UPDATE (protège 5 colonnes immuables, aucun GUC bypass)
-- `tr_02_set_updated_at_documents` BEFORE UPDATE (réutilise FEAT-001)
-
-**RPC** : `soft_delete_document(p_id uuid) RETURNS TABLE(storage_path text, hard_deleted boolean)` (public + dev) — SECURITY DEFINER, REVOKE anon. Retourne (storage_path, true) si legal_hold=false (frontend hard-delete), (NULL, false) si legal_hold=true (fichier conservé).
-
-**RLS** : 3 policies × 2 schémas (SELECT/INSERT/UPDATE, pas de DELETE). UPDATE protégé réellement par tr_01b (seule category mutable).
-
-**Storage** : Bucket `documents` créé (privé, MIME whitelist PDF/JPEG/PNG/WEBP, 10MB max) + 3 policies (SELECT + INSERT + DELETE — pas d'UPDATE). Path = `{env}/{landlord_id}/{document_id}.{ext}`, isolation sur segment [2].
-
-**Tests** : `supabase/tests/rls_documents.sql` (23 tests)
-
----
-
-## Résumé des changements FEAT-007 (Phase 1 — SQL)
-
-**Nouveau type** : `public.document_type` + `dev.document_type` — ENUM (`quittance`, `recu`)
-
-**Nouvelles tables** : `receipts` (public + dev) — Quittances et reçus PDF
-
-**Migration** : `20260531172904_feat007_receipts.sql` (610 lignes)
-
-**Trigger framework** :
-- `tr_00_assert_receipt_lease_ownership` BEFORE INSERT (ownership lease → receipt, SECURITY DEFINER)
-- `tr_01_prevent_protected_columns_change_receipts` BEFORE INSERT OR UPDATE (réutilise FEAT-002)
-- `tr_03_set_receipt_stale_on_payment_archive` AFTER UPDATE OF deleted_at ON payments → marque is_stale = true sur les receipts liées
-
-**RPC framework** : `void_receipt(p_id uuid, p_reason text)` (public + dev) — SECURITY DEFINER, REVOKE anon
-
-**RLS** : 2 policies × 2 schémas (SELECT/INSERT seulement — pas d'UPDATE ni DELETE)
-
-**Storage** : Bucket `receipts` créé (privé, PDF-only, 10MB max) + 2 policies (SELECT + INSERT, pas UPDATE/DELETE)
-
-**Cohérence cross-FK** : Trigger `assert_receipt_lease_ownership()` valide lease_id → landlord_id (bail soft-deleted toléré — régularisation post-clôture)
+**Indexes** :
+- landlordId, leaseId, periodStart DESC
+- landlordId, periodStart DESC
+- landlordId, isVoided, periodStart DESC
+- landlordId, isStale, periodStart DESC
 
 ---
 
-## Résumé des changements FEAT-006
+### `documents/{id}` — CF exclusive
 
-**Nouvelle table** : `payments` (public + dev) — Paiements mensuels d'un bail
+Document (bail scanned, état des lieux, etc).
 
-**Migration** : `20260531102202_feat006_payments.sql` (890 lignes)
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `landlordId` | string | FK → landlords.id |
+| `leaseId` | string? | FK → leases.id (optionnel) |
+| `category` | string | 'lease' / 'inventory' / 'other' |
+| `legalHold` | bool | true = non-supprimable (rétention 3–7 ans) |
+| `title` | string | Nom affichage |
+| `storageUrl` | string | Lien Storage (CF) |
+| `uploadedAt` | timestamp | — |
+| `createdAt` | timestamp | — |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp? | Soft-delete (refusé si legalHold==true) |
 
-**Trigger framework** : Extend tr_00/tr_01/tr_02 à `payments` (order alphabétique maintenu)
+**RLS** :
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create/update/delete` : interdit (CF exclusive)
 
-**RPC framework** : Ajoute `soft_delete_payment()` (public + dev)
-
-**RLS** : 3 policies × 2 schémas (SELECT/INSERT/UPDATE, pas de DELETE)
-
-**Cohérence cross-FK** : Trigger `assert_payment_lease_ownership()` SECURITY DEFINER valide lease_id → landlord_id
-
----
-
-## Résumé des changements FEAT-002
-
-**Nouvelles tables** : `properties`, `tenants`, `leases` (public + dev)
-
-**Colonnes ajoutées à `landlords`** : `full_name`, `phone`, `address`
-
-**FK change** : `landlords.id → auth.users(id)` : CASCADE → NO ACTION (rétention 5 ans RGPD)
-
-**Soft-delete** : Implémentation exhaustive (24 policies RLS pour les 4 tables × 2 schémas × SELECT/INSERT/UPDATE, aucune DELETE)
-
-**Trigger framework** : Pattern tr_00/tr_01/tr_02 pour ordre d'exécution alphabétique stable
-
-**RPC framework** : 4 RPC × 2 schémas pour soft-delete (+ versions dev)
-
-**Protection colonne** : Trigger `prevent_protected_columns_change()` bloque modification de `deleted_at`, `created_at` sauf flag de session `app.allow_deleted_at_change = '1'`
-
-**Cohérence cross-FK** : Trigger `assert_lease_ownership_consistency()` SECURITY DEFINER valide la triade (property, tenant, lease) appartient au même landlord
+**Indexes** :
+- landlordId, leaseId, deletedAt, uploadedAt DESC
+- landlordId, deletedAt, category
+- deletedAt, landlordId, uploadedAt DESC
 
 ---
 
-## Notes
+### `investment_scenarios/{id}` — CRUD direct
 
-- **Multi-env strategy** : Same database hosts `public` (PROD) et `dev` (DEV) sur Supabase free tier
-- **Migration rule** : Toutes les migrations futures DOIVENT appliquer les changements aux DEUX schémas (docs/ENVIRONMENTS.md)
-- **Applied to production** : FEAT-002 exécutée 2026-05-28 ~12:00 UTC; FEAT-006 en staging (prête prod)
-- **RLS tests** : `supabase/tests/rls_landlords.sql` (14), `rls_properties.sql` (12), `rls_tenants.sql` (12), `rls_leases.sql` (26), `rls_payments.sql` (31), `rls_receipts.sql` (31) = 126 tests totaux
-- **Date hardening** : Bornes 1900-01-01 à 2100-12-31 appliquées à leases (FEAT-005), payments (FEAT-006) et receipts (FEAT-007)
-- **Applied to production** : FEAT-007 Phase 1 (SQL) exécutée 2026-05-31 via supabase db push (confirmed "Remote database is up to date")
+Simulateur d'investissement (accessible anonymes).
+
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID |
+| `landlordId` | string | FK → landlords.id |
+| `name` | string | Nom scénario (120 chars max) |
+| `schemaVersion` | int | Version structure JSON |
+| `scenarioJson` | map | Inputs simulateur sérialisés |
+| `createdAt` | timestamp | — |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp? | Soft-delete |
+
+**RLS** :
+- `get/list` : isSignedIn() (anonymes + comptes)
+- `create` : isSignedIn() (anonymes + comptes)
+- `update` : isOwner(landlordId) + preservesImmutables()
+- `delete` : interdit
+
+**Indexes** :
+- landlordId, deletedAt, updatedAt DESC
+
+---
+
+### `paid_plan_interest/{uid}` — BAILLAN-M1
+
+Marque d'intérêt futur Plan Pro (docId = Firebase Auth UID).
+
+| Champ | Type | Notes |
+|---|---|---|
+| `features` | array | Features souhaitées |
+| `createdAt` | timestamp | — |
+
+**RLS** :
+- `get` : isOwner(uid)
+- `create/update` : isFullyAuthed() && isOwner(uid)
+- `delete` : interdit
+
+---
+
+## Règles de sécurité (firestore.rules)
+
+**3 couches** :
+1. **Rules** (ce fichier) — ownership self + immuabilité base + soft-delete filter
+2. **Callable Cloud Functions** — mutations cross-entity + soft-delete + denormalization
+3. **Triggers Firestore** — setUpdatedAt + recomputeReceiptStale + propagation denorm
+
+**Helpers clés** :
+- `isSignedIn()` : user authentifié
+- `isAnonymous()` : firebase.sign_in_provider == 'anonymous'
+- `isFullyAuthed()` : signé && !anonyme
+- `isOwner(uid)` : auth.uid == uid
+- `isActive(rsc)` : rsc.data.deletedAt == null
+- `preservesImmutables(rsc)` : landlordId, createdAt, deletedAt non modifiés
+
+**Défense en profondeur** :
+- Anonymes : jamais CRUD collections métier (properties, leases, etc.) — simulateur uniquement
+- Immutables : landlordId, createdAt immuables côté client (CF bypass via Admin SDK)
+- Soft-delete : aucune route client ne crée `deletedAt` (CF exclusive)
+- Anonexpiresät : plafond now + 15j (tolérance décalage horloge vs renouvellement 14j CF)
+
+---
+
+## Cloud Functions (callables + triggers)
+
+| Fonction | Type | Rôle |
+|---|---|---|
+| `handleNewUser` | auth trigger | Provisionne doc landlord post-signup |
+| `setUpdatedAt*` | triggers (7×) | Maintient updatedAt à chaque write |
+| `recomputeReceiptStale` | trigger | Marque quittances périmées |
+| `createLease` | callable | Valide FK + crée lease + incrémente activeLeaseCount |
+| `updateLease` | callable | Maj lease + recalc status |
+| `createPayment` | callable | Crée payment + trigger generateReceipt |
+| `updatePayment` | callable | Maj payment (rare — idempotent) |
+| `generateReceipt` | callable | PDF + storage URL |
+| `voidReceipt` | callable | Marque isVoided + crée remplacement |
+| `markReceiptAsSent` | callable | Marque sentAt |
+| `createDocument` | callable | Upload Storage + legalHold depuis category |
+| `getDocumentDownloadUrl` | callable | Signe URL Storage (5 min) |
+| `softDeleteEntity` | callable | Marque deletedAt (refus si legalHold==true) |
+| `finalizeAnonymousUpgrade` | callable | Upgrade anon → fully authed (tier change + RGPD consent) |
+| `cleanupExpiredAnon` | scheduled (cron) | Purge landlords anonymes expirés |
+
+---
+
+## Notes d'architecture
+
+**Piège isEqualTo: null** :
+- Firestore refus WHERE field == null sans index composite.
+- Solution : `WHERE field == null` génère error ; utilise CF pour filtrer isActive() côté code.
+- Tous les soft-deletes couverts par composite index (deletedAt, [autres fields]).
+- Commits référence : 61a5956, 52a09c9, 85f1be2.
+
+**Dénormalisation** :
+- `activeLeaseCount` (properties, tenants) = recalc CF post create/soft-delete lease
+- Quittances : `isStale` recalculé CF si paiement change
+- Indexing : 28 composites documentent dépendance cf. firestore.indexes.json
+
+**Anonyme (BAILLAN-M1)** :
+- Essai 14j gratuit, renouvellable avant expiration
+- Accès simulateur uniquement, pas de CRUD métier
+- Upgrade → création compte full (transactionnel CF `finalizeAnonymousUpgrade`)
