@@ -172,6 +172,14 @@ Widget _wrap({bool onboarding = false, int retards = 0}) {
         builder: (context, state) => const Scaffold(body: Text('leases')),
       ),
       GoRoute(
+        path: '/leases',
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'baux filter=${state.uri.queryParameters['filter'] ?? 'none'}',
+          ),
+        ),
+      ),
+      GoRoute(
         path: '/profile',
         builder: (context, state) => const Scaffold(body: Text('profile')),
       ),
@@ -314,6 +322,54 @@ void main() {
         find.byKey(const Key('kpi_retards')),
       );
       expect(kpiRetards.semanticColor, equals(AppColors.light.neutral.solid));
+    });
+  });
+  group('DashboardPage — drill-down KPI cliquables', () {
+    testWidgets('tap « Loyers du mois » → /leases?filter=active', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('kpi_loyers')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('baux filter=active'), findsOneWidget);
+    });
+
+    testWidgets('tap « Retards » → /leases?filter=active', (tester) async {
+      await tester.pumpWidget(_wrap(retards: 2));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('kpi_retards')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('baux filter=active'), findsOneWidget);
+    });
+
+    testWidgets('tap « Baux à renouveler » → /leases?filter=renewable', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('kpi_renouvellements')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('baux filter=renewable'), findsOneWidget);
+    });
+
+    testWidgets('« Documents en attente » n\'est PAS cliquable (pas de '
+        'page globale documents)', (tester) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('kpi_docs')));
+      await tester.pumpAndSettle();
+
+      // Toujours sur le dashboard : le tap n'a navigué nulle part.
+      expect(find.byKey(const Key('kpi_docs')), findsOneWidget);
+      expect(find.textContaining('baux filter='), findsNothing);
     });
   });
 }

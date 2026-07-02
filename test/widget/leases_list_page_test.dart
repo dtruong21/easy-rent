@@ -374,6 +374,64 @@ void main() {
       expect(find.byType(SegmentedButton<LeaseFilter>), findsOneWidget);
     });
   });
+
+  group('LeasesListPage — initialFilter (drill-down KPI)', () {
+    testWidgets('initialFilter applique le filtre au leaseFilterProvider', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: _appTheme(),
+            home: const LeasesListPage(initialFilter: LeaseFilter.renewable),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(container.read(leaseFilterProvider), LeaseFilter.renewable);
+    });
+
+    testWidgets('sans initialFilter → le filtre reste « all » (défaut)', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(theme: _appTheme(), home: const LeasesListPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(container.read(leaseFilterProvider), LeaseFilter.all);
+    });
+  });
+
+  group('LeaseFilter.fromQueryParam', () {
+    test('parse les valeurs connues', () {
+      expect(LeaseFilter.fromQueryParam('active'), LeaseFilter.active);
+      expect(LeaseFilter.fromQueryParam('renewable'), LeaseFilter.renewable);
+      expect(LeaseFilter.fromQueryParam('terminated'), LeaseFilter.terminated);
+      expect(LeaseFilter.fromQueryParam('all'), LeaseFilter.all);
+    });
+
+    test('null / inconnu → null (page garde son filtre courant)', () {
+      expect(LeaseFilter.fromQueryParam(null), isNull);
+      expect(LeaseFilter.fromQueryParam(''), isNull);
+      expect(LeaseFilter.fromQueryParam('bidon'), isNull);
+    });
+  });
 }
 
 /// Notifier qui reste en état loading indéfini.

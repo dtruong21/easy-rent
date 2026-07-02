@@ -14,6 +14,7 @@ import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/properties/presentation/properties_list_page.dart';
 import '../../features/properties/presentation/property_detail_page.dart';
 import '../../features/properties/presentation/property_form_page.dart';
+import '../../features/leases/domain/lease_filter.dart';
 import '../../features/leases/presentation/lease_detail_page.dart';
 import '../../features/leases/presentation/lease_form_page.dart';
 import '../../features/leases/presentation/leases_list_page.dart';
@@ -258,7 +259,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/leases',
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
-          child: const LeasesListPage(),
+          // ?filter=active|renewable|... : drill-down depuis un KPI dashboard.
+          child: LeasesListPage(
+            initialFilter: LeaseFilter.fromQueryParam(
+              state.uri.queryParameters['filter'],
+            ),
+          ),
           transition: AppTransition.standard,
         ),
       ),

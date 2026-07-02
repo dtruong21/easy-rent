@@ -10,6 +10,7 @@ import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../application/leases_filter_provider.dart';
 import '../application/leases_list_provider.dart';
+import '../domain/lease_filter.dart';
 import 'widgets/leases_card_view.dart';
 import 'widgets/leases_filter_bar.dart';
 import 'widgets/leases_table_view.dart';
@@ -23,11 +24,33 @@ import 'widgets/leases_table_view.dart';
 /// - Bandeau si la limite de 200 baux est atteinte.
 /// - Toggle Card/Tableau (masqué sur mobile).
 /// - Filtre par statut (SegmentedButton sur desktop, Dropdown sur mobile).
-class LeasesListPage extends ConsumerWidget {
-  const LeasesListPage({super.key});
+class LeasesListPage extends ConsumerStatefulWidget {
+  const LeasesListPage({super.key, this.initialFilter});
+
+  /// Filtre pré-appliqué à l'arrivée (drill-down depuis un KPI dashboard,
+  /// ex. `/leases?filter=renewable`). Appliqué une fois au montage ; `null`
+  /// → la page garde le filtre courant du [leaseFilterProvider].
+  final LeaseFilter? initialFilter;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LeasesListPage> createState() => _LeasesListPageState();
+}
+
+class _LeasesListPageState extends ConsumerState<LeasesListPage> {
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialFilter;
+    if (initial != null) {
+      // Post-frame : muter un provider pendant le build initial est interdit.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(leaseFilterProvider.notifier).state = initial;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final asyncLeases = ref.watch(filteredLeasesProvider);
     final viewMode = context.isMobile
         ? ViewMode.card

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
@@ -68,6 +69,11 @@ class KpiGrid extends StatelessWidget {
     // Couleur sémantique docs.
     final docsColor = docs.count > 0 ? colors.info.solid : colors.neutral.solid;
 
+    // Drill-down : chaque KPI (sauf Documents, faute de page globale) ouvre
+    // la liste des baux pré-filtrée. Loyers et Retards mènent aux baux actifs
+    // — c'est là que vivent paiements et quittances ; la distinction fine
+    // (vue paiements dédiée, filtre « retard ») viendra quand LeaseListItem
+    // portera l'info paiement. Renouvellements a un filtre exact (renewable).
     return [
       KpiCard(
         key: const Key('kpi_loyers'),
@@ -76,6 +82,7 @@ class KpiGrid extends StatelessWidget {
         value: MoneyFormat.formatEurosFromCents(loyers.encaissedCents),
         subtitle: 'Dû : ${MoneyFormat.formatEurosFromCents(loyers.dueCents)}',
         semanticColor: loyersColor,
+        onTap: () => context.go('/leases?filter=active'),
       ),
       KpiCard(
         key: const Key('kpi_retards'),
@@ -86,6 +93,7 @@ class KpiGrid extends StatelessWidget {
             ? 'locataire(s) en retard'
             : 'Tout est à jour',
         semanticColor: retardsColor,
+        onTap: () => context.go('/leases?filter=active'),
       ),
       KpiCard(
         key: const Key('kpi_renouvellements'),
@@ -94,7 +102,10 @@ class KpiGrid extends StatelessWidget {
         value: renouvellements.count.toString(),
         subtitle: 'dans les 30 prochains jours',
         semanticColor: renouvellementsColor,
+        onTap: () => context.go('/leases?filter=renewable'),
       ),
+      // Documents : pas de page globale documents (ils vivent sous
+      // /leases/:id) → pas de drill-down (pas de onTap, donc pas de chevron).
       KpiCard(
         key: const Key('kpi_docs'),
         icon: Icons.folder_outlined,

@@ -22,4 +22,15 @@ enum LeaseFilter {
     LeaseFilter.renewable => 'À renouveler',
     LeaseFilter.terminated => 'Terminés',
   };
+
+  /// Parse la valeur d'un query param `?filter=` (drill-down depuis un KPI
+  /// dashboard). Retourne `null` si absent ou inconnu → la page garde le
+  /// filtre courant du [StateProvider].
+  static LeaseFilter? fromQueryParam(String? raw) {
+    if (raw == null) return null;
+    for (final f in LeaseFilter.values) {
+      if (f.name == raw) return f;
+    }
+    return null;
+  }
 }
