@@ -20,13 +20,13 @@ class InvestmentScenario with _$InvestmentScenario {
     /// Prix d'achat du bien (centimes, > 0).
     @JsonKey(name: 'purchase_price_cents') required int purchasePriceCents,
 
-    /// Frais de notaire (centimes, >= 0). Standard : 7,5 % ancien / 2,5 % neuf.
+    /// Frais de notaire (centimes, >= 0). Standard : 8 % ancien / 2 % neuf.
     @JsonKey(name: 'notary_fees_cents') @Default(0) int notaryFeesCents,
 
     /// Travaux initiaux (centimes, >= 0).
     @JsonKey(name: 'works_initial_cents') @Default(0) int worksInitialCents,
 
-    /// true = bien neuf (frais notaire réduits ~2,5 %).
+    /// true = bien neuf (frais notaire réduits ~2 %).
     @JsonKey(name: 'is_new_property') @Default(false) bool isNewProperty,
 
     /// Apport personnel (centimes, >= 0).

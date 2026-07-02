@@ -684,7 +684,7 @@ class _AcquisitionSection extends StatelessWidget {
                 key: const Key('field_is_new_property'),
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Bien neuf'),
-                subtitle: const Text('Frais notaire ~2,5 % (vs 7,5 % ancien)'),
+                subtitle: const Text('Frais notaire ~2 % (vs 8 % ancien)'),
                 value: isNewProperty,
                 onChanged: onIsNewPropertyChanged,
               ),
@@ -693,7 +693,7 @@ class _AcquisitionSection extends StatelessWidget {
                 key: const Key('field_notary_fees'),
                 controller: notaryFeesCtrl,
                 label: 'Frais de notaire',
-                helperText: 'Standard : 7,5 % ancien / 2,5 % neuf',
+                helperText: 'Standard : 8 % ancien / 2 % neuf',
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,

@@ -240,21 +240,30 @@ void main() {
   group(
     'computeScenarioResults — cohérence avec computeLoanMonthlyPaymentCents',
     () {
-      test('totalInterest = mensualité × durée - capital (pour taux > 0)', () {
+      test('KPI 6/7 — assurance comptée une seule fois (pas de double '
+          'comptage)', () {
+        // Capital 100 000 €, taux 3 %, 120 mois, assurance 30 bps.
         final s = _makeScenario(
           loanPrincipalCents: 10000000,
           loanRateBps: 300,
           loanDurationMonths: 120,
         );
         final r = computeScenarioResults(s);
-        // Total remboursé = mensualité × 120
+
+        // La mensualité inclut DÉJÀ l'assurance (30 bps sur capital initial :
+        // 10000000 × 30/10000/12 = 2500 cents/mois → 300000 sur 120 mois).
         final totalRepaid = r.loanMonthlyPaymentCents * 120;
-        // Intérêts = totalRepaid - principal (sans l'assurance dans le calcul)
-        // Note : totalLoanCost inclut assurance séparément
-        expect(r.totalInterestPaidCents, greaterThanOrEqualTo(0));
-        expect(r.totalLoanCostCents, greaterThan(10000000));
-        // Coût total doit être inférieur au total remboursé × durée max imaginable
-        expect(r.totalLoanCostCents, lessThan(totalRepaid * 2));
+        const totalInsurance = 300000;
+
+        // Intérêts purs = total remboursé − capital − assurance.
+        expect(
+          r.totalInterestPaidCents,
+          totalRepaid - 10000000 - totalInsurance,
+        );
+        // Coût total crédit = capital + intérêts purs + assurance
+        //                   = exactement le total remboursé (assurance UNE fois).
+        expect(r.totalLoanCostCents, totalRepaid);
+        expect(r.totalInterestPaidCents, greaterThan(0));
       });
     },
   );

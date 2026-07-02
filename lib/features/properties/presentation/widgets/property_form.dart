@@ -881,7 +881,7 @@ class _FinancementSection extends StatelessWidget {
               labelText: 'Frais de notaire',
               hintText: 'Ex. : 15000',
               suffixText: '€',
-              helperText: 'Standard : 7,5 % ancien / 2,5 % neuf',
+              helperText: 'Standard : 8 % ancien / 2 % neuf',
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
@@ -900,7 +900,7 @@ class _FinancementSection extends StatelessWidget {
           SwitchListTile(
             key: const Key('field_is_new_property'),
             title: const Text('Bien neuf'),
-            subtitle: const Text('Impact sur les frais de notaire (~2,5 %)'),
+            subtitle: const Text('Impact sur les frais de notaire (~2 %)'),
             value: isNewProperty,
             contentPadding: EdgeInsets.zero,
             onChanged: enabled ? onIsNewPropertyChanged : null,

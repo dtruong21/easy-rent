@@ -108,9 +108,9 @@ ScenarioResults computeScenarioResults(InvestmentScenario s) {
   final cashflow = s.monthlyRentHcCents - loanPayment - monthlyCharges;
 
   // ── Coût total crédit ────────────────────────────────────────────────────
-  // Mensualité × durée = total remboursé (capital + intérêts + assurance).
+  // Mensualité × durée = total remboursé (capital + intérêts + assurance —
+  // la mensualité inclut DÉJÀ l'assurance, cf. computeLoanMonthlyPaymentCents).
   final totalRepaid = loanPayment * s.loanDurationMonths;
-  final totalInterest = math.max(0, totalRepaid - s.loanPrincipalCents);
   // Assurance = capital × (insuranceBps / 10000) × durée en années.
   final totalInsurance =
       (s.loanPrincipalCents *
@@ -118,6 +118,13 @@ ScenarioResults computeScenarioResults(InvestmentScenario s) {
               10000 *
               (s.loanDurationMonths / 12))
           .round();
+  // Intérêts purs : on retranche capital ET assurance du total remboursé,
+  // sinon l'assurance serait comptée dans les intérêts (KPI 6) puis une
+  // seconde fois dans le coût total (KPI 7).
+  final totalInterest = math.max(
+    0,
+    totalRepaid - s.loanPrincipalCents - totalInsurance,
+  );
   final totalLoanCost = s.loanPrincipalCents + totalInterest + totalInsurance;
 
   // ── Valeur estimée à terme ───────────────────────────────────────────────
