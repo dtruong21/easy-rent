@@ -79,3 +79,21 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+  # Sérif éditorial Baillan (identité « acte notarial »). Bundlée en asset car
+  # Flutter Web/CanvasKit ne résout pas les familles système CSS (Cochin,
+  # Palatino…) — sans asset, le rendu retombe sur Roboto. EB Garamond, licence
+  # OFL (assets/fonts/OFL.txt), subset latin (~63 Ko par style).
+  fonts:
+    - family: EB Garamond
+      fonts:
+        - asset: assets/fonts/EBGaramond-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/EBGaramond-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/EBGaramond-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/EBGaramond-SemiBoldItalic.ttf
+          weight: 600
+          style: italic

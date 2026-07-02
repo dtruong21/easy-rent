@@ -183,7 +183,7 @@ class _LandingPageState extends ConsumerState<LandingPage>
                                           child: Text(
                                             'Registre · Page de garde',
                                             style: TextStyle(
-                                              fontFamily: 'Cochin',
+                                              fontFamily: 'EB Garamond',
                                               fontFamilyFallback: serifFallback,
                                               fontStyle: FontStyle.italic,
                                               fontSize: 12,

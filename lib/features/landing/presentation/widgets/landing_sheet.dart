@@ -2,21 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 
-/// Stack sérif partagé — Cochin/Palatino avec fallback lisible (miroir de
-/// `login_page.dart`).
-const List<String> serifFallback = [
-  'Palatino Linotype',
-  'Book Antiqua',
-  'Palatino',
-  'Georgia',
-  'serif',
-];
+/// Fallback du sérif EB Garamond bundlé en asset (miroir de
+/// `login_page.dart`) — ne sert qu'en cas d'asset manquant.
+const List<String> serifFallback = ['Georgia', 'serif'];
 
 /// La feuille « Page de garde » du registre — couverture éditoriale de la
 /// landing (BAILLAN-M1, redesign 2026-07-02).
 ///
 /// Même vocabulaire que la login page (« La Page du Registre ») : feuillet
-/// crème bordé d'un hairline, ombre douce, Cochin, filets olive. Ici la
+/// crème bordé d'un hairline, ombre douce, EB Garamond, filets olive. Ici la
 /// composition est CENTRÉE (typographie de page de titre) : cartouche
 /// date/intitulé, masthead, double filet animé, pitch, sommaire en articles,
 /// deux CTAs de poids égal (product lock #2 — aucun biais visuel entre
@@ -131,7 +125,7 @@ class LandingSheet extends StatelessWidget {
         Text(
           _formatFrenchDate(DateTime.now()),
           style: const TextStyle(
-            fontFamily: 'Cochin',
+            fontFamily: 'EB Garamond',
             fontFamilyFallback: serifFallback,
             fontStyle: FontStyle.italic,
             fontSize: 15,
@@ -160,7 +154,7 @@ class LandingSheet extends StatelessWidget {
           'Baillan.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Cochin',
+            fontFamily: 'EB Garamond',
             fontFamilyFallback: serifFallback,
             fontSize: isDesktop ? 64 : 48,
             fontWeight: FontWeight.w500,
@@ -173,7 +167,7 @@ class LandingSheet extends StatelessWidget {
           'Tenir registre.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontFamily: 'Cochin',
+            fontFamily: 'EB Garamond',
             fontFamilyFallback: serifFallback,
             fontStyle: FontStyle.italic,
             fontSize: 18,
@@ -219,7 +213,7 @@ class LandingSheet extends StatelessWidget {
       'registre de vos biens.',
       textAlign: TextAlign.center,
       style: TextStyle(
-        fontFamily: 'Cochin',
+        fontFamily: 'EB Garamond',
         fontFamilyFallback: serifFallback,
         fontStyle: FontStyle.italic,
         fontSize: 21,
@@ -315,7 +309,7 @@ class LandingSheet extends StatelessWidget {
           child: Text(
             'Fait le ${_formatFrenchDate(DateTime.now())} · Baillan.',
             style: const TextStyle(
-              fontFamily: 'Cochin',
+              fontFamily: 'EB Garamond',
               fontFamilyFallback: serifFallback,
               fontStyle: FontStyle.italic,
               fontSize: 12,
@@ -358,7 +352,7 @@ class _SommaireEntry extends StatelessWidget {
           child: Text(
             numeral,
             style: const TextStyle(
-              fontFamily: 'Cochin',
+              fontFamily: 'EB Garamond',
               fontFamilyFallback: serifFallback,
               fontStyle: FontStyle.italic,
               fontSize: 16,

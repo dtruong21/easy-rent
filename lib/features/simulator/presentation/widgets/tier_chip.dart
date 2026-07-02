@@ -13,7 +13,7 @@ import '../../application/scenario_limit_controller.dart';
 /// - Free : « COMPTE GRATUIT · X/3 SCÉNARIOS » (compteur live)
 /// - Paid : « PLAN PRO · ILLIMITÉ »
 ///
-/// Style Baillan : Cochin italique, petites capitales trackées — cohérent
+/// Style Baillan : EB Garamond italique, petites capitales trackées — cohérent
 /// avec le reste de la marque (cf. `login_page.dart`).
 class TierChip extends ConsumerWidget {
   const TierChip({super.key});
@@ -49,7 +49,7 @@ class TierChip extends ConsumerWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontFamily: 'Cochin',
+          fontFamily: 'EB Garamond',
           fontStyle: FontStyle.italic,
           fontSize: 12.5,
           letterSpacing: 1.4,

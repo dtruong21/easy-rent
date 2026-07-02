@@ -9,7 +9,7 @@ import 'widgets/login_form.dart';
 /// Métaphore : la page IS un feuillet de registre notarial posé sur un bureau
 /// d'encre. Un grand rectangle crème (max 800px) centré, cartouche éditorial
 /// en tête ("Baillan." + "art. 1 — Session"), filet olive hairline, aphorisme
-/// en Cochin italique au-dessus du formulaire, paraphe SVG et pagination
+/// en EB Garamond italique au-dessus du formulaire, paraphe SVG et pagination
 /// verticale dans la marge extérieure gauche (desktop). Ombre portée très
 /// douce sous la feuille pour l'effet "posé". Animation d'entrée : fade-up
 /// de la feuille, tracé du filet olive gauche-droite, apparition différée du
@@ -273,7 +273,7 @@ class _LoginPageState extends State<LoginPage>
           child: Text(
             'Contrat  —  Ouverture',
             style: TextStyle(
-              fontFamily: 'Cochin',
+              fontFamily: 'EB Garamond',
               fontFamilyFallback: _serifFallback,
               fontStyle: FontStyle.italic,
               fontSize: 13,
@@ -456,7 +456,7 @@ class _LoginPageState extends State<LoginPage>
               Text(
                 'Tenir registre.',
                 style: TextStyle(
-                  fontFamily: 'Cochin',
+                  fontFamily: 'EB Garamond',
                   fontFamilyFallback: _serifFallback,
                   fontStyle: FontStyle.italic,
                   fontSize: 16,
@@ -476,7 +476,7 @@ class _LoginPageState extends State<LoginPage>
               Text(
                 _formatFrenchDate(DateTime.now()),
                 style: TextStyle(
-                  fontFamily: 'Cochin',
+                  fontFamily: 'EB Garamond',
                   fontFamilyFallback: _serifFallback,
                   fontStyle: FontStyle.italic,
                   fontSize: 15,
@@ -509,7 +509,7 @@ class _LoginPageState extends State<LoginPage>
         Text(
           'En cas de doute, sortez le registre.',
           style: TextStyle(
-            fontFamily: 'Cochin',
+            fontFamily: 'EB Garamond',
             fontFamilyFallback: _serifFallback,
             fontStyle: FontStyle.italic,
             fontSize: 22,
@@ -543,7 +543,7 @@ class _LoginPageState extends State<LoginPage>
           child: Text(
             'Fait le ${_formatFrenchDate(DateTime.now())} · Baillan.',
             style: TextStyle(
-              fontFamily: 'Cochin',
+              fontFamily: 'EB Garamond',
               fontFamilyFallback: _serifFallback,
               fontStyle: FontStyle.italic,
               fontSize: 12,
@@ -569,7 +569,7 @@ class _LoginPageState extends State<LoginPage>
       child: Text(
         'Contrat · Ouverture',
         style: TextStyle(
-          fontFamily: 'Cochin',
+          fontFamily: 'EB Garamond',
           fontFamilyFallback: _serifFallback,
           fontStyle: FontStyle.italic,
           fontSize: 12,
@@ -604,14 +604,9 @@ class _LoginPageState extends State<LoginPage>
   }
 }
 
-/// Stack sérif partagé — Cochin/Palatino avec fallback lisible.
-const List<String> _serifFallback = [
-  'Palatino Linotype',
-  'Book Antiqua',
-  'Palatino',
-  'Georgia',
-  'serif',
-];
+/// Fallback du sérif EB Garamond bundlé en asset — ne sert qu'en cas
+/// d'asset manquant.
+const List<String> _serifFallback = ['Georgia', 'serif'];
 
 /// Formate une date française style contrat : « 1er juillet 2026 »,
 /// « 15 mars 2026 ». Ordinal seulement sur le 1er du mois (convention FR).
@@ -648,7 +643,7 @@ class _WatermarkPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final textStyle = TextStyle(
       color: color,
-      fontFamily: 'Cochin',
+      fontFamily: 'EB Garamond',
       fontFamilyFallback: _serifFallback,
       fontStyle: FontStyle.italic,
       fontSize: 96,

@@ -11,10 +11,10 @@ import '../ui/theme/app_spacing.dart';
 ///   - Encre noire chaude (#1B1A17) au lieu de noir pur — moins clinique.
 ///   - Accent olive sourd (#3F4A2A) au lieu d'indigo — aucun concurrent
 ///     SaaS de gestion locative ne l'utilise, donc différenciant.
-///   - Typo serif Cochin/Palatino pour le display (la marque, les montants,
-///     les titres de quittance) — voix d'un acte signé. Sans-serif système
-///     pour l'opérationnel (formulaires, tables, navigation). Cf. plan de
-///     rebrand pour le détail.
+///   - Typo serif EB Garamond (bundlée en asset) pour le display (la marque,
+///     les montants, les titres de quittance) — voix d'un acte signé.
+///     Sans-serif système pour l'opérationnel (formulaires, tables,
+///     navigation). Cf. plan de rebrand pour le détail.
 ///   - Oxblood (#9A3B2F) sur les états critiques uniquement (quittance
 ///     annulée, paiement en retard).
 class AppTheme {
@@ -110,16 +110,11 @@ class AppTheme {
 
   // --- Typographie ----------------------------------------------------------
   /// Sérif éditorial pour la marque, les montants, les titres de quittance.
-  /// Cochin est natif sur macOS/iOS, Palatino l'est sur Windows, et le
-  /// stack tombe en fallback Georgia/serif si rien d'autre n'est dispo.
-  static const String _displayFontFamily = 'Cochin';
-  static const List<String> _displayFontFamilyFallback = [
-    'Palatino Linotype',
-    'Book Antiqua',
-    'Palatino',
-    'Georgia',
-    'serif',
-  ];
+  /// EB Garamond (licence OFL) est bundlée en asset — Flutter Web/CanvasKit
+  /// ne résout pas les familles système CSS (Cochin, Palatino…), le rendu
+  /// retomberait sur Roboto. Le fallback ne sert qu'en cas d'asset manquant.
+  static const String _displayFontFamily = 'EB Garamond';
+  static const List<String> _displayFontFamilyFallback = ['Georgia', 'serif'];
 
   // Sans-serif natif. Sur Flutter Web, "system-ui" est interprété par le
   // navigateur — SF Pro sur macOS/iOS, Segoe UI sur Windows, Roboto sur
@@ -208,7 +203,7 @@ class AppTheme {
   static ThemeData _build(Brightness brightness) {
     final colorScheme = _scheme(brightness);
 
-    // TextTheme : on applique le stack serif Cochin/Palatino sur les
+    // TextTheme : on applique le sérif EB Garamond sur les
     // display/headline (la voix éditoriale Baillan), et on laisse le système
     // sur body/label (lisibilité opérationnelle).
     //
