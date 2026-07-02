@@ -57,6 +57,16 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
   final _worksCtrl = TextEditingController();
   bool _isNewProperty = false;
 
+  // ── Pré-remplissage auto des frais de notaire ────────────────────────────
+  // prix × 8 % (ancien) / 2 % (neuf). Actif tant que l'utilisateur n'a pas
+  // saisi une valeur à la main ; vider le champ le ré-arme, et basculer le
+  // toggle « Bien neuf » force un re-calcul (geste explicite de demande du
+  // taux standard, même après une saisie manuelle).
+  static const double _notaryRateOld = 0.08;
+  static const double _notaryRateNew = 0.02;
+  bool _notaryAutoFill = true;
+  bool _notarySetProgrammatically = false;
+
   // ── Controllers — Financement ────────────────────────────────────────────
   final _downPaymentCtrl = TextEditingController();
   final _loanPrincipalCtrl = TextEditingController();
@@ -91,6 +101,8 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     for (final ctrl in _allControllers) {
       ctrl.addListener(_onFieldChanged);
     }
+    _purchasePriceCtrl.addListener(_onPurchasePriceChangedForNotary);
+    _notaryFeesCtrl.addListener(_onNotaryFieldChanged);
     if (widget.scenarioId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadScenario());
     }
@@ -113,12 +125,43 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _purchasePriceCtrl.removeListener(_onPurchasePriceChangedForNotary);
+    _notaryFeesCtrl.removeListener(_onNotaryFieldChanged);
     for (final ctrl in _allControllers) {
       ctrl.removeListener(_onFieldChanged);
       ctrl.dispose();
     }
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Auto-fill frais de notaire ───────────────────────────────────────────
+
+  void _onNotaryFieldChanged() {
+    if (_notarySetProgrammatically) return;
+    // Saisie manuelle → on fige. Champ vidé → on ré-arme l'auto-fill.
+    _notaryAutoFill = _notaryFeesCtrl.text.trim().isEmpty;
+  }
+
+  void _onPurchasePriceChangedForNotary() {
+    if (_notaryAutoFill) _applyNotaryPrefill();
+  }
+
+  void _applyNotaryPrefill() {
+    final price = MoneyFormat.eurosToCents(_purchasePriceCtrl.text);
+    final String text;
+    if (price == null || price <= 0) {
+      text = '';
+    } else {
+      final rate = _isNewProperty ? _notaryRateNew : _notaryRateOld;
+      // Arrondi à l'euro : montant indicatif, pas de centimes.
+      final cents = ((price * rate) / 100).round() * 100;
+      text = MoneyFormat.centsToInput(cents);
+    }
+    if (_notaryFeesCtrl.text == text) return;
+    _notarySetProgrammatically = true;
+    _notaryFeesCtrl.text = text;
+    _notarySetProgrammatically = false;
   }
 
   // ── Chargement scénario en mode édition ──────────────────────────────────
@@ -399,6 +442,11 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                               isNewProperty: _isNewProperty,
                               onIsNewPropertyChanged: (v) {
                                 setState(() => _isNewProperty = v);
+                                // Toggle = demande explicite du taux standard
+                                // → ré-arme l'auto-fill même après une saisie
+                                // manuelle.
+                                _notaryAutoFill = true;
+                                _applyNotaryPrefill();
                                 _onFieldChanged();
                               },
                               downPaymentCtrl: _downPaymentCtrl,
@@ -693,7 +741,7 @@ class _AcquisitionSection extends StatelessWidget {
                 key: const Key('field_notary_fees'),
                 controller: notaryFeesCtrl,
                 label: 'Frais de notaire',
-                helperText: 'Standard : 8 % ancien / 2 % neuf',
+                helperText: 'Pré-rempli : 8 % ancien / 2 % neuf — modifiable',
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,

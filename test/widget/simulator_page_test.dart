@@ -384,4 +384,116 @@ void main() {
       expect(find.text('Scénario existant'), findsOneWidget);
     });
   });
+
+  group('SimulatorPage — pré-remplissage frais de notaire', () {
+    String notaryText(WidgetTester tester) {
+      final editable = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('field_notary_fees')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      return editable.controller.text;
+    }
+
+    testWidgets('prix saisi → notaire pré-rempli à 8 % (ancien)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.pumpAndSettle();
+
+      expect(notaryText(tester), '16000,00'); // 200 000 × 8 %
+    });
+
+    testWidgets('toggle Bien neuf → recalcule à 2 %, retour ancien → 8 %', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.tap(find.byKey(const Key('field_is_new_property')));
+      await tester.pumpAndSettle();
+      expect(notaryText(tester), '4000,00'); // 200 000 × 2 %
+
+      await tester.tap(find.byKey(const Key('field_is_new_property')));
+      await tester.pumpAndSettle();
+      expect(notaryText(tester), '16000,00');
+    });
+
+    testWidgets('saisie manuelle fige le champ ; le toggle le ré-arme', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      // L'utilisateur impose sa propre valeur…
+      await tester.enterText(
+        find.byKey(const Key('field_notary_fees')),
+        '12000',
+      );
+      // …un nouveau prix ne doit PAS l'écraser.
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '250000',
+      );
+      await tester.pumpAndSettle();
+      expect(notaryText(tester), '12000');
+
+      // Le toggle est une demande explicite du taux standard → ré-arme.
+      await tester.tap(find.byKey(const Key('field_is_new_property')));
+      await tester.pumpAndSettle();
+      expect(notaryText(tester), '5000,00'); // 250 000 × 2 %
+    });
+
+    testWidgets('champ vidé → auto-fill ré-armé au prochain prix', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_notary_fees')),
+        '12000',
+      );
+      await tester.enterText(find.byKey(const Key('field_notary_fees')), '');
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '100000',
+      );
+      await tester.pumpAndSettle();
+      expect(notaryText(tester), '8000,00'); // 100 000 × 8 %
+    });
+
+    testWidgets('mode édition : la valeur sauvée n\'est pas écrasée', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(scenarios: [_fakeScenario]);
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      // Charge le scénario existant (notaire sauvé : 15 000 €).
+      await tester.tap(find.text('Scénario existant'));
+      await tester.pumpAndSettle();
+
+      expect(notaryText(tester), '15000,00');
+    });
+  });
 }
