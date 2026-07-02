@@ -9,6 +9,7 @@ import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../application/leases_filter_provider.dart';
+import '../application/leases_list_provider.dart';
 import 'widgets/leases_card_view.dart';
 import 'widgets/leases_filter_bar.dart';
 import 'widgets/leases_table_view.dart';
@@ -53,7 +54,9 @@ class LeasesListPage extends ConsumerWidget {
                 message: e is FirebaseException
                     ? ("Erreur. Vérifiez votre connexion et réessayez.")
                     : 'Erreur de chargement',
-                onRetry: () => ref.invalidate(filteredLeasesProvider),
+                // Invalider la RACINE : le dérivé filtré relirait l'AsyncError
+                // caché par le notifier sans jamais refetcher.
+                onRetry: () => ref.invalidate(leasesListProvider),
               ),
               data: (leases) {
                 if (leases.isEmpty) {

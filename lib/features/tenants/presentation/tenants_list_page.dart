@@ -9,6 +9,7 @@ import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
 import '../application/tenants_filter_provider.dart';
+import '../application/tenants_list_provider.dart';
 import 'widgets/tenants_card_view.dart';
 import 'widgets/tenants_filter_bar.dart';
 import 'widgets/tenants_table_view.dart';
@@ -53,7 +54,9 @@ class TenantsListPage extends ConsumerWidget {
                 message: e is FirebaseException
                     ? 'Erreur Firestore : ${e.message ?? e.code}'
                     : 'Erreur de chargement',
-                onRetry: () => ref.invalidate(filteredTenantsProvider),
+                // Invalider la RACINE : le dérivé filtré relirait l'AsyncError
+                // caché par le notifier sans jamais refetcher.
+                onRetry: () => ref.invalidate(tenantsListItemsProvider),
               ),
               data: (tenants) {
                 if (tenants.isEmpty) {

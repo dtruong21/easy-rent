@@ -45,9 +45,15 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
 
     try {
       final repo = _ref.read(receiptsRepositoryProvider);
+      // La Callable generateReceipt exige TOUJOURS leaseId (requireString,
+      // receipts.ts) — y compris avec paymentIds, dont elle vérifie la
+      // cohérence (p.leaseId == leaseId). L'omettre en mode paymentIds
+      // faisait échouer toute génération depuis la fiche bail en
+      // invalid-argument (« leaseId must be a non-empty string »),
+      // bug découvert en E2E le 2026-07-02.
       final result = await repo.generate(
         paymentIds: paymentIds,
-        leaseId: paymentIds != null ? null : leaseId,
+        leaseId: leaseId,
         periodStart: periodStart,
         periodEnd: periodEnd,
       );
