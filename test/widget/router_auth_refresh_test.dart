@@ -211,6 +211,38 @@ void main() {
       expect(_loc(router), '/dashboard');
     });
 
+    testWidgets(
+      'login refusé (rollback new-user-on-login) : sign-in puis sign-out '
+      '→ retour /login',
+      (tester) async {
+        final repo = _StreamAuthRepo();
+        final router = await _pumpApp(tester, repo);
+
+        router.go('/login');
+        await tester.pumpAndSettle();
+
+        // signInWithGoogle/Apple d'un compte provider SANS compte Baillan :
+        // le popup signe l'utilisateur (événement 1), le repo détecte
+        // isNewUser et rollback delete()+signOut() (événement 2, ~centaines
+        // de ms plus tard). Entre les deux, la garde redirige légitimement
+        // vers /dashboard (état fullyAuthenticated transitoire) — l'app
+        // DOIT revenir sur /login une fois le rollback terminé, où le
+        // message d'erreur du controller est affiché.
+        repo.emit(_verifiedUser());
+        await tester.pump();
+        repo.emit(null);
+        await tester.pumpAndSettle();
+
+        expect(
+          _loc(router),
+          '/login',
+          reason:
+              'Après le rollback new-user-on-login, la garde doit ramener '
+              'sur /login (le flash /dashboard intermédiaire est transitoire)',
+        );
+      },
+    );
+
     testWidgets('sign-out à chaud sur /dashboard → redirect /login', (
       tester,
     ) async {
