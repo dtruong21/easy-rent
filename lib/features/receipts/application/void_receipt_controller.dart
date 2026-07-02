@@ -4,6 +4,7 @@ import 'package:logging/logging.dart';
 
 import '../data/receipts_repository.dart';
 import 'lease_receipts_provider.dart';
+import '../../dashboard/application/dashboard_provider.dart';
 
 final _log = Logger('VoidReceiptController');
 
@@ -50,6 +51,7 @@ class VoidReceiptController extends StateNotifier<VoidReceiptState> {
           .voidReceipt(receiptId, reason);
 
       _ref.invalidate(leaseReceiptsProvider(leaseId));
+      _ref.invalidate(dashboardProvider);
       _log.info('receipt voided id=$receiptId');
       state = const VoidReceiptSuccess();
     } on FirebaseFunctionsException catch (e, st) {

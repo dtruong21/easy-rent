@@ -3,6 +3,9 @@ import 'package:logging/logging.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../payments/domain/payment_method.dart';
+import '../../dashboard/application/dashboard_provider.dart';
+import '../../properties/application/properties_list_provider.dart';
+import '../../tenants/application/tenants_list_provider.dart';
 import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
@@ -101,6 +104,11 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
 
       // Invalider la liste pour afficher le nouveau/modifié bail.
       _ref.invalidate(leasesListProvider);
+      // Un bail change le statut des cards biens (Loué/Vacant, locataire,
+      // loyer denormalisés) et locataires (Actif/Sans bail) + le dashboard.
+      _ref.invalidate(propertiesListItemsProvider);
+      _ref.invalidate(tenantsListItemsProvider);
+      _ref.invalidate(dashboardProvider);
 
       state = LeaseFormState.success(lease: result);
     } on FirebaseFunctionsException catch (e, st) {

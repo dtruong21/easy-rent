@@ -6,6 +6,7 @@ import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/leases/presentation/lease_form_page.dart';
+import 'package:easyrent/features/leases/presentation/widgets/lease_form.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
@@ -286,8 +287,11 @@ Widget _buildForm({
       ),
       GoRoute(
         path: '/tenants/new',
-        builder: (context, _) =>
-            const Scaffold(body: Text('nouveau locataire')),
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'nouveau locataire picker=${state.uri.queryParameters['picker'] ?? '0'}',
+          ),
+        ),
       ),
     ],
   );
@@ -615,6 +619,62 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Erreur de connexion'), findsOneWidget);
+    });
+  });
+  group('LeaseFormPage — création locataire inline (picker)', () {
+    testWidgets('bouton « Nouveau locataire » présent en création → push '
+        '/tenants/new?picker=1 (le formulaire bail reste dans la pile)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_create_tenant_inline')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_create_tenant_inline')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('nouveau locataire picker=1'), findsOneWidget);
+    });
+
+    testWidgets('bouton présent aussi quand AUCUN locataire n\'existe '
+        '(bandeau + raccourci, plus de cul-de-sac)', (tester) async {
+      await tester.pumpWidget(_buildForm(tenants: []));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Vous devez d\'abord créer un locataire.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('btn_create_tenant_inline')), findsOneWidget);
+    });
+
+    testWidgets('bouton absent en mode édition', (tester) async {
+      await tester.pumpWidget(_buildForm(initial: _makeLease()));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_create_tenant_inline')), findsNothing);
+    });
+
+    testWidgets('selectTenantById présélectionne le locataire dans le '
+        'dropdown', (tester) async {
+      await tester.pumpWidget(
+        _buildForm(
+          tenants: [
+            _makeTenant(),
+            _makeTenant(id: 't2', firstName: 'Marie', lastName: 'Durand'),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Marie Durand'), findsNothing);
+
+      tester
+          .state<LeaseFormWidgetState>(find.byType(LeaseForm))
+          .selectTenantById('t2');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Marie Durand'), findsOneWidget);
     });
   });
 }

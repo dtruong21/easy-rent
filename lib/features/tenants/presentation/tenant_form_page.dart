@@ -19,10 +19,16 @@ final _log = Logger('TenantFormPage');
 ///
 /// Sur succès : SnackBar toast + navigation vers la liste.
 class TenantFormPage extends ConsumerStatefulWidget {
-  const TenantFormPage({super.key, this.initial});
+  const TenantFormPage({super.key, this.initial, this.popOnSuccess = false});
 
   /// Locataire à éditer, ou [null] pour une création.
   final Tenant? initial;
+
+  /// Mode « picker » : la page a été pushée depuis un autre formulaire
+  /// (ex. création de bail) — au succès on pop avec l'id du locataire créé
+  /// pour que l'appelant le présélectionne, au lieu de naviguer vers la
+  /// liste (flux « créer un bail sans repasser par le dashboard »).
+  final bool popOnSuccess;
 
   @override
   ConsumerState<TenantFormPage> createState() => _TenantFormPageState();
@@ -169,7 +175,11 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
           );
-          context.go('/tenants');
+          if (widget.popOnSuccess && context.canPop()) {
+            context.pop(tenant.id);
+          } else {
+            context.go('/tenants');
+          }
         },
         error: (_) {
           // L'erreur est affichée inline — pas besoin de toast supplémentaire.

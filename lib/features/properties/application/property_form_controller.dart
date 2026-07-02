@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../data/property_repository.dart';
+import '../../dashboard/application/dashboard_provider.dart';
 import '../domain/heating_type.dart';
 import '../domain/property.dart';
 import '../domain/property_form_state.dart';
@@ -142,7 +143,10 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
       }
 
       // Invalider la liste pour afficher le nouveau/modifié bien.
+      // Les deux listes (picker bail + cards « Mes biens ») + dashboard.
       _ref.invalidate(propertiesListProvider);
+      _ref.invalidate(propertiesListItemsProvider);
+      _ref.invalidate(dashboardProvider);
 
       state = PropertyFormState.success(property: result);
     } on FirebaseFunctionsException catch (e, st) {

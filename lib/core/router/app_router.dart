@@ -225,7 +225,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/tenants/new',
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
-          child: const TenantFormPage(),
+          // ?picker=1 : ouvert en push depuis un autre formulaire (ex. bail)
+          // → au succès, pop(tenantId) au lieu de go('/tenants').
+          child: TenantFormPage(
+            popOnSuccess: state.uri.queryParameters['picker'] == '1',
+          ),
           transition: AppTransition.standard,
         ),
       ),

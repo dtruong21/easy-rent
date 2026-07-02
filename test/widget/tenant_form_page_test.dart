@@ -322,4 +322,97 @@ void main() {
       expect(find.textContaining('Données invalides'), findsOneWidget);
     });
   });
+  group('TenantFormPage — mode picker (popOnSuccess)', () {
+    testWidgets('succès → pop(tenantId) vers l\'appelant au lieu de '
+        'go(/tenants)', (tester) async {
+      String? poppedId;
+      final repo = _FakeTenantRepository();
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () async {
+                    poppedId = await context.push<String>(
+                      '/tenants/new?picker=1',
+                    );
+                  },
+                  child: const Text('ouvrir picker'),
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/tenants/new',
+            builder: (context, state) => TenantFormPage(
+              popOnSuccess: state.uri.queryParameters['picker'] == '1',
+            ),
+          ),
+          GoRoute(
+            path: '/tenants',
+            builder: (context, _) => const Scaffold(body: Text('tenants')),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ouvrir picker'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TenantFormPage), findsOneWidget);
+
+      // Émet l'état success via le controller réel (même mécanique que le
+      // harnais initialState plus haut) : le contrat testé est la RÉACTION
+      // de la page — pop(tenant.id) vers l'appelant, pas go('/tenants').
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(TenantFormPage)),
+      );
+      container.read(tenantFormControllerProvider.notifier).state =
+          TenantFormState.success(tenant: repo._makeTenant());
+      await tester.pumpAndSettle();
+
+      // Le fake _makeTenant() renvoie l'id 'test-id' : on est revenu sur
+      // l'écran appelant avec cet id, PAS sur la liste des locataires.
+      expect(poppedId, 'test-id');
+      expect(find.text('ouvrir picker'), findsOneWidget);
+      expect(find.text('tenants'), findsNothing);
+    });
+
+    testWidgets('hors mode picker : succès → go(/tenants) (comportement '
+        'historique conservé)', (tester) async {
+      final repo = _FakeTenantRepository();
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (context, _) => const TenantFormPage()),
+          GoRoute(
+            path: '/tenants',
+            builder: (context, _) => const Scaffold(body: Text('tenants')),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(TenantFormPage)),
+      );
+      container.read(tenantFormControllerProvider.notifier).state =
+          TenantFormState.success(tenant: repo._makeTenant());
+      await tester.pumpAndSettle();
+
+      expect(find.text('tenants'), findsOneWidget);
+    });
+  });
 }

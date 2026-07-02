@@ -103,6 +103,18 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     super.dispose();
   }
 
+  /// Création d'un locataire SANS quitter le formulaire : push du
+  /// formulaire locataire en mode picker (?picker=1 → pop(tenantId) au
+  /// succès), attente du refetch de la liste (le controller locataire
+  /// invalide tenantsListProvider), puis présélection dans le dropdown.
+  Future<void> _onCreateTenantInline() async {
+    final newTenantId = await context.push<String>('/tenants/new?picker=1');
+    if (newTenantId == null || !mounted) return;
+    await ref.read(tenantsListProvider.future);
+    if (!mounted) return;
+    _formWidgetKey.currentState?.selectTenantById(newTenantId);
+  }
+
   Future<void> _submit() async {
     final formState = _formWidgetKey.currentState;
     if (formState == null || !formState.validateAll()) return;
@@ -283,7 +295,11 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     final asyncProperties = ref.watch(propertiesListProvider);
     final asyncTenants = ref.watch(tenantsListProvider);
 
-    if (asyncProperties.isLoading || asyncTenants.isLoading) {
+    // hasValue : pendant un refetch (invalidation après création inline
+    // d'un locataire), on garde le formulaire monté — le remplacer par un
+    // spinner détruirait la saisie en cours.
+    if ((asyncProperties.isLoading && !asyncProperties.hasValue) ||
+        (asyncTenants.isLoading && !asyncTenants.hasValue)) {
       return Scaffold(
         appBar: AppAppBar(
           title: isCreating ? 'Nouveau bail' : 'Modifier le bail',
@@ -320,6 +336,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               irlQuarterController: _irlQuarterCtrl,
               initialPropertyId: widget.initial?.propertyId,
               initialTenantId: widget.initial?.tenantId,
+              onCreateTenant: isCreating ? _onCreateTenantInline : null,
               initialStartDate: widget.initial?.startDate,
               initialEndDate: widget.initial?.endDate,
               initialLeaseType: widget.initial?.leaseType,

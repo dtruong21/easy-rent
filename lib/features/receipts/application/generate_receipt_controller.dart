@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import '../data/receipts_repository.dart';
 import '../domain/receipt_generation_state.dart';
 import 'lease_receipts_provider.dart';
+import '../../dashboard/application/dashboard_provider.dart';
 
 final _log = Logger('GenerateReceiptController');
 
@@ -59,6 +60,7 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
       );
 
       _ref.invalidate(leaseReceiptsProvider(leaseId));
+      _ref.invalidate(dashboardProvider);
 
       _log.info('receipt generated id=${result.receiptId}');
       state = ReceiptGenerationState.success(result: result);

@@ -34,6 +34,7 @@ class LeaseForm extends StatefulWidget {
     required this.irlQuarterController,
     this.initialPropertyId,
     this.initialTenantId,
+    this.onCreateTenant,
     this.initialStartDate,
     this.initialEndDate,
     this.initialLeaseType,
@@ -70,6 +71,10 @@ class LeaseForm extends StatefulWidget {
   /// ID du locataire pré-sélectionné (mode édition).
   final String? initialTenantId;
 
+  /// Si non-null, affiche un raccourci « Nouveau locataire » sous le picker
+  /// (flux création de bail sans repasser par la liste des locataires).
+  final VoidCallback? onCreateTenant;
+
   final DateTime? initialStartDate;
   final DateTime? initialEndDate;
   final LeaseType? initialLeaseType;
@@ -101,6 +106,11 @@ class LeaseFormWidgetState extends State<LeaseForm> {
 
   bool _propertyTouched = false;
   bool _tenantTouched = false;
+
+  // Incrémenté par [selectTenantById] : le DropdownButtonFormField fige son
+  // initialValue à la création — changer la clé du sous-arbre force sa
+  // re-création avec la sélection programmatique (locataire tout juste créé).
+  int _tenantFieldGeneration = 0;
   bool _rentTouched = false;
   bool _chargesTouched = false;
   bool _depositTouched = false;
@@ -130,6 +140,20 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     _paymentMethod = widget.initialPaymentMethod ?? PaymentMethod.virement;
     _solidarityClause = widget.initialSolidarityClause;
     _entryInventoryDone = widget.initialEntryInventoryDone;
+  }
+
+  /// Sélectionne le locataire [id] (créé inline depuis le formulaire) —
+  /// no-op si l'id est absent de [LeaseForm.tenants] (liste pas encore
+  /// rafraîchie : l'appelant doit attendre le refetch avant d'appeler).
+  void selectTenantById(String id) {
+    final tenant = widget.tenants.where((t) => t.id == id).firstOrNull;
+    if (tenant == null) return;
+    setState(() {
+      _selectedTenant = tenant;
+      _tenantTouched = true;
+      _tenantFieldGeneration++;
+    });
+    widget.onTenantChanged(tenant);
   }
 
   Future<void> _pickStartDate() async {
@@ -302,12 +326,42 @@ class LeaseFormWidgetState extends State<LeaseForm> {
 
   Widget _buildTenantField() {
     if (widget.tenants.isEmpty) {
-      return _NoItemsHint(
-        message: 'Vous devez d\'abord créer un locataire.',
-        route: '/tenants/new',
-        buttonLabel: 'Créer un locataire',
+      // Aucun locataire : bandeau explicatif + création inline sans quitter
+      // le formulaire (le bail en cours de saisie est préservé) — avant, le
+      // bandeau n'offrait aucune action et forçait le détour par le
+      // dashboard (retour utilisateur 2026-07-02).
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _NoItemsHint(
+            message: 'Vous devez d\'abord créer un locataire.',
+            route: '/tenants/new',
+            buttonLabel: 'Créer un locataire',
+          ),
+          if (widget.onCreateTenant != null) _createTenantButton(),
+        ],
       );
     }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        KeyedSubtree(
+          key: ValueKey('tenant_field_gen_$_tenantFieldGeneration'),
+          child: _buildTenantDropdown(),
+        ),
+        if (widget.onCreateTenant != null) _createTenantButton(),
+      ],
+    );
+  }
+
+  Widget _createTenantButton() => TextButton.icon(
+    key: const Key('btn_create_tenant_inline'),
+    onPressed: widget.enabled ? widget.onCreateTenant : null,
+    icon: const Icon(Icons.person_add_outlined, size: 18),
+    label: const Text('Nouveau locataire'),
+  );
+
+  Widget _buildTenantDropdown() {
     return FormField<Tenant>(
       key: const Key('field_tenant'),
       initialValue: _selectedTenant,

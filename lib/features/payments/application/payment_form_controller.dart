@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import '../data/payment_repository.dart';
+import '../../dashboard/application/dashboard_provider.dart';
 import '../domain/payment.dart';
 import '../domain/payment_form_state.dart';
 import '../domain/payment_method.dart';
@@ -85,6 +86,7 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
 
       // Invalider la liste pour afficher le nouveau/modifié paiement.
       _ref.invalidate(leasePaymentsProvider(leaseId));
+      _ref.invalidate(dashboardProvider);
 
       state = PaymentFormState.success(payment: result);
     } on FirebaseFunctionsException catch (e, st) {
@@ -121,6 +123,7 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       await _ref.read(paymentRepositoryProvider).archive(paymentId);
       _ref.invalidate(leasePaymentsProvider(leaseId));
       _ref.invalidate(paymentDetailProvider(paymentId));
+      _ref.invalidate(dashboardProvider);
       // Archive n'a pas de payload — on retombe sur idle.
       state = const PaymentFormState.idle();
     } on FirebaseFunctionsException catch (e, st) {

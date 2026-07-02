@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import '../data/tenant_repository.dart';
+import '../../dashboard/application/dashboard_provider.dart';
 import '../domain/tenant.dart';
 import '../domain/tenant_form_state.dart';
 import 'tenant_detail_provider.dart';
@@ -121,8 +122,14 @@ class TenantFormController extends StateNotifier<TenantFormState> {
         _ref.invalidate(tenantDetailProvider(result.id));
       }
 
-      // Invalider la liste pour afficher le nouveau/modifié locataire.
+      // Invalider LES DEUX listes : l'ancienne (picker du formulaire
+      // bail) ET la liste enrichie cards que lit « Mes locataires » —
+      // n'invalider que l'ancienne laissait la page vide après création
+      // (bug remonté le 2026-07-02). Le dashboard suit (onboarding,
+      // activité).
       _ref.invalidate(tenantsListProvider);
+      _ref.invalidate(tenantsListItemsProvider);
+      _ref.invalidate(dashboardProvider);
 
       state = TenantFormState.success(tenant: result);
     } on FirebaseFunctionsException catch (e, st) {
