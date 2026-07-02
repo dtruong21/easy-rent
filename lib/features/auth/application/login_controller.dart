@@ -58,8 +58,9 @@ class LoginController extends StateNotifier<LoginPageState> {
         return;
       }
 
-      // Succès : authStateChanges déclenche GoRouter via GoRouterRefreshStream
-      // → redirect vers /. Pas besoin de changer le state ici.
+      // Succès : le changement de sessionState déclenche le refresh du
+      // router (ref.listen dans appRouterProvider) → redirect automatique.
+      // Pas besoin de changer le state ici.
       state = const LoginPageState.idle();
     } on FirebaseAuthException catch (e, st) {
       _log.warning('FirebaseAuthException signIn (code=${e.code})', e, st);

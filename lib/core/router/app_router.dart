@@ -1,8 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_session_provider.dart';
-import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/domain/session_state.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
@@ -24,23 +24,30 @@ import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
-import 'go_router_refresh_stream.dart';
 import 'transitions.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  // GoRouterRefreshStream écoute le flux d'auth et déclenche une réévaluation
-  // de la garde (redirect) à chaque changement de session (login, logout, refresh).
-  final refreshStream = GoRouterRefreshStream(
-    ref.watch(authRepositoryProvider).authStateChanges,
-  );
-
-  // Le ref.onDispose garantit que le ChangeNotifier est libéré quand le
-  // provider est détruit (hot-reload, tests…).
-  ref.onDispose(refreshStream.dispose);
+  // Réévalue la garde (redirect) à chaque CHANGEMENT d'état de session
+  // (login, logout, link anonyme → compte).
+  //
+  // ⚠️ On écoute sessionStateProvider, PAS le stream Firebase brut. L'ancien
+  // câblage (GoRouterRefreshStream sur authStateChanges) perdait une course
+  // systématique : la notification du stream brut arrivait avant que
+  // sessionStateProvider n'ait intégré l'événement, la garde lisait donc
+  // l'état PÉRIMÉ et n'était jamais réévaluée ensuite — un sign-in à chaud
+  // laissait l'utilisateur planté sur /login ou /signup (« la popup Google
+  // se ferme et rien ne se passe », 2026-07-02). Riverpod notifie ref.listen
+  // APRÈS la mise à jour du provider : la garde lit toujours l'état frais.
+  // Régression couverte par router_auth_refresh_test.dart.
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.onDispose(refreshNotifier.dispose);
+  ref.listen<SessionState>(sessionStateProvider, (previous, next) {
+    if (previous != next) refreshNotifier.refresh();
+  });
 
   return GoRouter(
     initialLocation: '/',
-    refreshListenable: refreshStream,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
       // sessionStateProvider expose l'état 3-branches dérivé du user
       // FirebaseAuth (data du StreamProvider, fallback sur currentUser en
@@ -349,3 +356,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// [ChangeNotifier] minimal branché sur [GoRouter.refreshListenable] —
+/// notifié depuis le `ref.listen(sessionStateProvider…)` du
+/// [appRouterProvider], donc toujours APRÈS la mise à jour de l'état de
+/// session (contrairement à l'écoute du stream Firebase brut, cf. commentaire
+/// du provider).
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void refresh() => notifyListeners();
+}

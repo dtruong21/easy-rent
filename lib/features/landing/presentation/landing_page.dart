@@ -97,11 +97,11 @@ class _LandingPageState extends ConsumerState<LandingPage>
     setState(() => _isStartingAnonymous = true);
     try {
       await ref.read(authRepositoryProvider).signInAnonymously();
-      // Succès : authStateChanges déclenche GoRouterRefreshStream → le
-      // router redirige automatiquement vers /simulator (sessionState
-      // devient anonymous). Pas besoin de context.go ici, mais on le fait
-      // quand même pour un rendu instantané (évite d'attendre le prochain
-      // tick du StreamProvider dans les tests widget / connexions lentes).
+      // Succès : le changement de sessionState déclenche le refresh du
+      // router (ref.listen dans appRouterProvider) → redirection
+      // automatique vers /simulator. On garde le context.go explicite pour
+      // un rendu instantané (évite d'attendre le prochain tick du
+      // StreamProvider dans les tests widget / connexions lentes).
       if (mounted) context.go('/simulator');
     } on FirebaseAuthException catch (e, st) {
       _log.warning('signInAnonymously failed (code=${e.code})', e, st);
