@@ -39,10 +39,17 @@
         ]
       },
       {
-        "//": "Assets hashés par Flutter (main.dart.js, *.part.js, canvaskit, fonts) — long cache, immutable.",
+        "//": "JS/wasm + polices EB Garamond (assets bundlés au nom + contenu stables) — long cache immutable.",
         "source": "**/*.@(js|wasm|mjs|woff|woff2|ttf|otf)",
         "headers": [
           {"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}
+        ]
+      },
+      {
+        "//": "Polices d'ICÔNES Material/Cupertino : nom de fichier FIXE mais contenu VARIABLE (tree-shaking = seules les icônes utilisées sont incluses). JAMAIS immutable — sinon un ancien subset mis en cache masque toute icône ajoutée depuis (bug icône Simulateur, ajoutée en FEAT-018 mais absente d'un subset caché depuis FEAT-010 ; 2026-07-03). Revalidation ETag (no-cache) → 304 léger si inchangé. Règle placée APRÈS le glob immutable : Firebase applique la dernière config matchante pour une clé d'en-tête donnée.",
+        "source": "**/@(MaterialIcons-Regular.otf|CupertinoIcons.ttf)",
+        "headers": [
+          {"key": "Cache-Control", "value": "no-cache"}
         ]
       },
       {
