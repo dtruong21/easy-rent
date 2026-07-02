@@ -425,12 +425,16 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     return Scaffold(
       appBar: AppAppBar(
         title: "Simulateur d'investissement",
-        // Un anonyme n'a nulle part où « revenir » : la garde router
-        // réécrit `/` en `/simulator` pour lui (boucle no-op) — le
-        // simulateur est sa racine. On masque le back et on lui donne à la
-        // place une sortie explicite du mode démo (action ci-dessous).
-        showBackButton: !isAnon,
-        fallbackRoute: '/',
+        // Session anonyme : /simulator est le foyer — un retour vers '/'
+        // serait re-redirigé ici en boucle par le router (bouton mort).
+        // Racine sans stack → aucun bouton (AppAppBar masque quand
+        // fallbackRoute est null) ; édition d'un scénario → retour à la
+        // racine du simulateur. Comptes complets : retour dashboard via '/'.
+        // La sortie de l'anonyme passe par l'action explicite « Quitter le
+        // mode démo » ci-dessous (dialog de confirmation + signOut).
+        fallbackRoute: isAnon
+            ? (widget.scenarioId != null ? '/simulator' : null)
+            : '/',
         actions: [
           if (isAnon)
             IconButton(

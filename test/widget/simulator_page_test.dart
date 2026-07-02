@@ -119,10 +119,11 @@ Widget _buildPage({
   SessionState sessionState = SessionState.fullyAuthenticated,
   SubscriptionTier tier = SubscriptionTier.free,
   AuthRepository? authRepository,
+  String initialLocation = '/simulator',
 }) {
   final fakeRepo = repo ?? _FakeRepo();
   final router = GoRouter(
-    initialLocation: '/simulator',
+    initialLocation: initialLocation,
     routes: [
       GoRoute(
         path: '/simulator',
@@ -152,11 +153,10 @@ Widget _buildPage({
       ),
       // BAILLAN-M1 : SimulatorPage lit désormais sessionStateProvider (pour
       // AnonDemoBanner) et landlordTierProvider (pour TierChip + enforcement
-      // de la limite). Ces tests pré-datent le concept de tier — on fixe un
-      // compte complet FREE par défaut (aucune restriction pertinente ici,
-      // la limite FREE est 3 et les fixtures ne dépassent jamais 1
-      // scénario). Les tests « mode anonyme » passent sessionState/tier
-      // anonymous et un [_FakeAuthRepository] pour capturer le signOut.
+      // de la limite). Défaut : compte complet FREE (aucune restriction
+      // pertinente ici). Les tests « mode anonyme » passent
+      // sessionState/tier anonymous, un [_FakeAuthRepository] pour capturer
+      // le signOut, et initialLocation pour le cas /simulator/:id.
       sessionStateProvider.overrideWithValue(sessionState),
       landlordTierProvider.overrideWith(
         (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
@@ -523,33 +523,42 @@ void main() {
     });
   });
 
-  group('SimulatorPage — mode anonyme (back masqué + quitter la démo)', () {
-    Widget anonPage({AuthRepository? authRepository}) => _buildPage(
+  group('SimulatorPage — mode anonyme (retour + quitter la démo)', () {
+    Widget anonPage({
+      _FakeRepo? repo,
+      AuthRepository? authRepository,
+      String initialLocation = '/simulator',
+    }) => _buildPage(
+      repo: repo,
       sessionState: SessionState.anonymous,
       tier: SubscriptionTier.anonymous,
       authRepository: authRepository,
+      initialLocation: initialLocation,
     );
 
-    testWidgets('anonyme : back masqué, action Quitter le mode démo présente', (
-      tester,
-    ) async {
+    testWidgets('anonyme sur /simulator : pas de bouton retour (foyer sans '
+        'destination), action Quitter le mode démo présente', (tester) async {
       await tester.pumpWidget(anonPage());
       await tester.pumpAndSettle();
 
       // La garde router réécrit `/` en `/simulator` pour un anonyme : le
-      // back serait une boucle no-op — il doit être masqué.
+      // back serait une boucle no-op — fallbackRoute null le masque. La
+      // sortie passe par l'action « Quitter le mode démo ».
       expect(find.byKey(const Key('app_bar_back')), findsNothing);
       expect(find.byKey(const Key('simulator_quit_demo')), findsOneWidget);
     });
 
-    testWidgets('compte complet : back présent, pas d\'action Quitter', (
-      tester,
-    ) async {
+    testWidgets('compte complet : retour présent (→ /), pas d\'action '
+        'Quitter', (tester) async {
       await tester.pumpWidget(_buildPage());
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
       expect(find.byKey(const Key('simulator_quit_demo')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('app_bar_back')));
+      await tester.pumpAndSettle();
+      expect(find.text('Dashboard'), findsOneWidget);
     });
 
     testWidgets('tap Quitter → dialog de confirmation', (tester) async {
@@ -610,6 +619,31 @@ void main() {
 
       expect(fakeAuth.signOutCalled, isFalse);
       expect(find.text('Signup'), findsOneWidget);
+    });
+
+    testWidgets('anonyme sur /simulator/:id : retour vers /simulator', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(scenarios: [_fakeScenario]);
+      await tester.pumpWidget(
+        anonPage(repo: repo, initialLocation: '/simulator/scenario-abc'),
+      );
+      await tester.pumpAndSettle();
+
+      // Scénario chargé (prix 200 000 €), bouton retour présent.
+      expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('app_bar_back')));
+      await tester.pumpAndSettle();
+
+      // De retour sur la racine du simulateur : formulaire vierge.
+      final priceField = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('field_purchase_price')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(priceField.controller.text, isEmpty);
+      expect(find.text("Simulateur d'investissement"), findsOneWidget);
     });
   });
 }
