@@ -17,6 +17,13 @@ final _log = Logger('AuthRepository');
 /// **Doit rester synchronisé avec functions/src/auth/handle_new_user.ts**.
 const String rgpdConsentVersion = 'v1-2026-06';
 
+/// Fenêtre d'expiration glissante d'une session anonyme (BAILLAN-M1).
+///
+/// À garder synchronisé avec `anonExpiryWindow`
+/// (`application/anon_expiry_renewer.dart` — non importable ici sans cycle)
+/// et `ANON_EXPIRY_DAYS` (`functions/src/auth/handle_new_user.ts`).
+const Duration _anonProvisionExpiryWindow = Duration(days: 14);
+
 /// Contrat public — les widgets / providers consomment cette interface,
 /// jamais l'implémentation directement (mocks faciles en test).
 abstract interface class AuthRepository {
@@ -130,13 +137,17 @@ abstract interface class AuthRepository {
   ///   appliqué ici.
   Future<void> signUpWithApple({required bool rgpdConsent});
 
-  /// Ouvre une session Firebase Anonymous Auth (« essai sans compte »).
+  /// Ouvre une session Firebase Anonymous Auth (« essai sans compte »),
+  /// puis provisionne le doc `landlords/{uid}` avec `isAnonymous: true`,
+  /// `subscriptionTier: 'anonymous'` et `anonExpiresAt: now + 14 jours`
+  /// s'il n'existe pas déjà (session anonyme réutilisée).
   ///
-  /// La Cloud Function `handleNewUser` (beforeUserCreated) provisionne le
-  /// doc `landlords/{uid}` correspondant avec `isAnonymous: true`,
-  /// `subscriptionTier: 'anonymous'` et `anonExpiresAt: now + 14 jours`.
-  /// **Aucun consentement RGPD n'est demandé/stampé** — l'anonyme n'a rien
-  /// signé (voir `docs/LEGAL.md`).
+  /// Le provisioning est fait côté client (chemin CREATE anonyme des
+  /// rules) : sur ce projet, Identity Platform est désactivé, la Cloud
+  /// Function `handleNewUser` (beforeUserCreated) ne se déclenche donc
+  /// jamais — elle ne sert que de defense-in-depth si IP est activé un
+  /// jour. **Aucun consentement RGPD n'est demandé/stampé** — l'anonyme
+  /// n'a rien signé (voir `docs/LEGAL.md`).
   Future<void> signInAnonymously();
 
   /// Lie le compte anonyme courant à un email + mot de passe, en préservant
@@ -361,6 +372,9 @@ class FirebaseAuthRepository implements AuthRepository {
       'fullName': fullName,
       'phone': null,
       'address': null,
+      'isAnonymous': false,
+      'subscriptionTier': 'free',
+      'anonExpiresAt': null,
       'rgpdConsentAt': now,
       'rgpdConsentVersion': rgpdConsentVersion,
       'createdAt': now,
@@ -500,6 +514,9 @@ class FirebaseAuthRepository implements AuthRepository {
         'fullName': user.displayName ?? '',
         'phone': null,
         'address': null,
+        'isAnonymous': false,
+        'subscriptionTier': 'free',
+        'anonExpiresAt': null,
         'rgpdConsentAt': now,
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'google-popup',
@@ -610,6 +627,9 @@ class FirebaseAuthRepository implements AuthRepository {
         'fullName': user.displayName ?? user.email ?? '',
         'phone': null,
         'address': null,
+        'isAnonymous': false,
+        'subscriptionTier': 'free',
+        'anonExpiresAt': null,
         'rgpdConsentAt': now,
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'apple-popup',
@@ -624,7 +644,42 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> signInAnonymously() async {
     _log.info('signInAnonymously requested');
-    await _auth.signInAnonymously();
+    final cred = await _auth.signInAnonymously();
+    final user = cred.user;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-user',
+        message: 'signInAnonymously returned null user',
+      );
+    }
+
+    // Provisionne landlords/{uid} si absent. Identity Platform étant
+    // désactivé sur ce projet, la CF handleNewUser (beforeUserCreated) ne
+    // tourne jamais : le chemin CREATE anonyme des rules est le chemin
+    // nominal. Doc déjà présent = session anonyme réutilisée — on ne touche
+    // à rien (anonExpiresAt est renouvelé par AnonExpiryRenewer).
+    final docRef = _firestore.doc('landlords/${user.uid}');
+    final snap = await docRef.get();
+    if (snap.exists) return;
+
+    final now = FieldValue.serverTimestamp();
+    await docRef.set({
+      'id': user.uid,
+      'email': null,
+      'fullName': '',
+      'phone': null,
+      'address': null,
+      'isAnonymous': true,
+      'subscriptionTier': 'anonymous',
+      'anonExpiresAt': Timestamp.fromDate(
+        DateTime.now().add(_anonProvisionExpiryWindow),
+      ),
+      'rgpdConsentAt': null,
+      'rgpdConsentVersion': null,
+      'createdAt': now,
+      'updatedAt': now,
+      'deletedAt': null,
+    });
   }
 
   /// Garde commune aux 3 méthodes `linkAnonymousWith*` : vérifie qu'une
