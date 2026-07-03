@@ -50,6 +50,11 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
   late final TextEditingController _rentCtrl;
   late final TextEditingController _chargesCtrl;
 
+  /// Vrai dès que loyer/charges ont été initialisés (paiement en édition, ou
+  /// bail). Empêche le pré-remplissage différé (bail chargé en asynchrone via
+  /// la route de création) d'écraser une saisie déjà faite par l'utilisateur.
+  bool _amountsSeeded = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +62,9 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     final lease = widget.lease;
 
     // Mode édition : pré-remplir depuis le paiement existant.
-    // Mode création : pré-remplir depuis le bail si disponible.
+    // Mode création : pré-remplir depuis le bail si passé au constructeur ;
+    // sinon (route /leases/:id/payments/new) il arrive en asynchrone et le
+    // pré-remplissage se fait dans build() (voir _seedAmountsFromLease).
     if (payment != null) {
       _rentCtrl = TextEditingController(
         text: MoneyFormat.centsToInput(payment.rentAmountCents),
@@ -65,6 +72,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
       _chargesCtrl = TextEditingController(
         text: MoneyFormat.centsToInput(payment.chargesAmountCents),
       );
+      _amountsSeeded = true;
     } else if (lease != null) {
       _rentCtrl = TextEditingController(
         text: MoneyFormat.centsToInput(lease.rentAmountCents),
@@ -72,10 +80,20 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
       _chargesCtrl = TextEditingController(
         text: MoneyFormat.centsToInput(lease.chargesAmountCents),
       );
+      _amountsSeeded = true;
     } else {
       _rentCtrl = TextEditingController();
       _chargesCtrl = TextEditingController();
     }
+  }
+
+  /// Pré-remplit loyer + charges depuis le bail à sa première résolution, en
+  /// mode création uniquement, une seule fois (respecte une saisie en cours).
+  void _seedAmountsFromLease(Lease lease) {
+    if (_amountsSeeded) return;
+    _amountsSeeded = true;
+    _rentCtrl.text = MoneyFormat.centsToInput(lease.rentAmountCents);
+    _chargesCtrl.text = MoneyFormat.centsToInput(lease.chargesAmountCents);
   }
 
   @override
@@ -216,6 +234,11 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
         body: const Center(child: Text('Bail introuvable.')),
       );
     }
+
+    // Création via la route /leases/:id/payments/new : le bail n'est pas passé
+    // au constructeur, il arrive ici via leaseDetailProvider → on sème les
+    // montants du bail (loyer + charges) dès sa résolution.
+    if (isCreating) _seedAmountsFromLease(lease);
 
     return Scaffold(
       appBar: AppAppBar(

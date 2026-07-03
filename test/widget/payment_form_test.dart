@@ -516,6 +516,36 @@ Widget _buildFormPage({
   );
 }
 
+/// Monte [PaymentFormPage] comme la VRAIE route de création
+/// (`/leases/:id/payments/new`) : uniquement `leaseId`, sans `lease` ni
+/// `initial`. Le bail est donc chargé en asynchrone via `leaseDetailProvider`
+/// (→ `leaseRepositoryProvider`), reproduisant le contexte du pré-remplissage
+/// différé.
+Widget _buildCreatePage({required Lease lease}) {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, _) => PaymentFormPage(leaseId: lease.id),
+      ),
+      GoRoute(
+        path: '/leases/:id',
+        builder: (_, state) =>
+            Scaffold(body: Text('lease ${state.pathParameters['id']}')),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      leaseRepositoryProvider.overrideWithValue(_FakeLeaseRepo(lease)),
+      paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
+      paymentFormControllerProvider.overrideWith(PaymentFormController.new),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
 Widget _buildEditPage({
   required _FakePaymentRepo paymentRepo,
   required Lease lease,
@@ -699,7 +729,47 @@ void _gap004Tests() {
   });
 }
 
+// ===========================================================================
+// Création — pré-remplissage des montants depuis le bail (route réelle
+// /leases/:id/payments/new, bail chargé en asynchrone)
+// ===========================================================================
+
+void _createPrefillTests() {
+  group('PaymentFormPage création — pré-remplissage montants depuis bail', () {
+    testWidgets(
+      'route réelle (bail chargé async) → loyer + charges pré-remplis',
+      (tester) async {
+        // Bail : loyer 85000 (« 850,00 »), charges 5000 (« 50,00 »).
+        await tester.pumpWidget(_buildCreatePage(lease: _makeTestLease()));
+        await tester.pumpAndSettle();
+
+        expect(find.text('850,00'), findsOneWidget);
+        expect(find.text('50,00'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'une saisie utilisateur n\'est pas écrasée par le pré-remplissage',
+      (tester) async {
+        await tester.pumpWidget(_buildCreatePage(lease: _makeTestLease()));
+        await tester.pumpAndSettle();
+
+        // Pré-rempli à 850,00 → l'utilisateur corrige le loyer.
+        await tester.enterText(find.byKey(const Key('field_rent')), '900,00');
+        await tester.pump();
+        // Un rebuild ultérieur (autre champ) ne doit PAS re-semer le bail.
+        await tester.enterText(find.byKey(const Key('field_charges')), '60,00');
+        await tester.pump();
+
+        expect(find.text('900,00'), findsOneWidget);
+        expect(find.text('850,00'), findsNothing);
+      },
+    );
+  });
+}
+
 void _runPageTests() {
   _gap003Tests();
   _gap004Tests();
+  _createPrefillTests();
 }
