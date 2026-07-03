@@ -2,11 +2,13 @@
 
 Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-<slug>.md`.
 
-> Dernière mise à jour : 2026-05-28 (post merge FEAT-001 + validation staging bout-en-bout)
+> Dernière mise à jour : 2026-07-03 (FEAT-024 planifiée, préparation faite)
 
 ## En cours
 
-_(rien encore)_
+| ID | Titre | Statut | Doc |
+|---|---|---|---|
+| FEAT-024 | App mobile iOS/Android (Flutter natif) | 🟡 Préparée — dev semaine du 6 juillet 2026 | [`docs/MOBILE.md`](MOBILE.md) (audit portabilité + décisions + plan semaine) |
 
 ## Prochain (P0 — MVP, chaîne bloquante)
 

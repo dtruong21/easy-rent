@@ -40,10 +40,13 @@
 - [ ] État des lieux digital (entrée/sortie)
 - [ ] Notifications push (PWA)
 - [ ] Multi-facteur (2FA / TOTP)
+- [ ] **FEAT-024 — App mobile iOS/Android (Flutter natif)** — planifiée
+      semaine du 6 juillet 2026, préparation : [`docs/MOBILE.md`](MOBILE.md)
 
 ## P2 (nice-to-have)
 
 - [ ] OCR de baux scannés
 - [ ] Intégration bancaire (rapprochement automatique des virements)
-- [ ] App native via Capacitor
+- [ ] ~~App native via Capacitor~~ → remplacée par FEAT-024 (Flutter cible
+      iOS/Android nativement — même codebase, pas de wrapper web)
 - [ ] Mode multi-propriétaires (SCI, indivision)
