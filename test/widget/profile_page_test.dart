@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
@@ -289,9 +290,17 @@ void main() {
     });
   });
 
-  group('ProfilePage — réglages (apparence, légal, session)', () {
+  group('ProfilePage — réglages (apparence, légal, à propos, session)', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      PackageInfo.setMockInitialValues(
+        appName: 'Baillan',
+        packageName: 'app.baillan',
+        version: '1.0.0',
+        buildNumber: '42',
+        buildSignature: '',
+        installerStore: null,
+      );
     });
 
     testWidgets('sections et contrôles présents', (tester) async {
@@ -304,7 +313,22 @@ void main() {
       expect(find.text('Légal'), findsOneWidget);
       expect(find.byKey(const Key('tile_terms')), findsOneWidget);
       expect(find.byKey(const Key('tile_privacy')), findsOneWidget);
+      expect(find.text('À propos'), findsOneWidget);
       expect(find.byKey(const Key('btn_logout_profile')), findsOneWidget);
+    });
+
+    testWidgets('À propos — version, build et environnement affichés', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      // APP_ENV absent en test → défaut 'dev' → libellé dev/staging.
+      expect(
+        find.text('Baillan. v1.0.0 (build 42) · dev/staging'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('choisir « Sombre » applique et persiste le thème', (

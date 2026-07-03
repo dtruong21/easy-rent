@@ -71,10 +71,13 @@ jobs:
         # Firebase config (apiKey, projectId, etc.) est embarquée dans
         # lib/firebase_options.dart — pas besoin de dart-defines (les Firebase
         # Web keys sont publiques par design, sécurité via Rules + App Check).
+        # --build-number : numéro de run GitHub → version.json → affiché dans
+        # Profil → À propos (identifie le déploiement exact).
         run: |
           flutter build web --release \
             ${{ needs.determine-env.outputs.env_name == 'staging' && '--pwa-strategy=none' || '' }} \
-            --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }}
+            --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
+            --build-number=${{ github.run_number }}
 
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
       #

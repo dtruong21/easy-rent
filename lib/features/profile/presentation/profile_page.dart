@@ -216,6 +216,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           const SizedBox(height: 32),
           const ProfileLegalSection(),
           const SizedBox(height: 24),
+          const ProfileAboutSection(),
+          const SizedBox(height: 32),
           const ProfileSessionSection(),
         ],
       ),

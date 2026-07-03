@@ -1,7 +1,14 @@
 name: easyrent
 description: "Baillan. — Tenir registre. En cas de doute, sortez le registre. (FEAT-020 : rebrand EasyRent → Baillan ; package name interne conservé pour éviter de casser ~200 imports `package:easyrent/...`)"
 publish_to: 'none'
-version: 0.1.0+1
+# Versioning : MAJOR.MINOR.PATCH+BUILD (semver).
+# - version sémantique : bumpée à la main à chaque lot fonctionnel notable
+#   (1.0.0 = MVP complet, juillet 2026)
+# - +BUILD : écrasé au build par --build-number (CI : run_number GitHub,
+#   local : git rev-list --count HEAD) → identifie le déploiement exact.
+# Affichée dans Profil → À propos (package_info_plus lit version.json sur
+# le web ; lira le manifest natif sur iOS/Android).
+version: 1.0.0+1
 
 environment:
   sdk: ^3.11.0
@@ -56,6 +63,7 @@ dependencies:
 
   # JS interop (install prompt bridge)
   web: ^1.1.0
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

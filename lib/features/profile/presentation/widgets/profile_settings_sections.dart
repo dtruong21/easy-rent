@@ -1,11 +1,13 @@
 // Sections « réglages » de la page profil : apparence (thème), liens
-// légaux et déconnexion. Extraites de ProfilePage pour garder la page
-// sous la limite de 200 lignes.
+// légaux, à propos (version) et déconnexion. Extraites de ProfilePage pour
+// garder la page sous la limite de 200 lignes.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/app_info/app_info_provider.dart';
+import '../../../../core/config/env.dart';
 import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../auth/application/login_controller.dart';
 
@@ -79,6 +81,56 @@ class ProfileLegalSection extends StatelessWidget {
           title: const Text('Politique de confidentialité'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/privacy'),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// À propos — version + environnement
+// ---------------------------------------------------------------------------
+
+/// Version de l'app (semver + numéro de build) et environnement courant.
+///
+/// Permet de vérifier quel déploiement on a sous les yeux — indispensable
+/// pour tester staging vs prod (voir la convention dans pubspec.yaml).
+class ProfileAboutSection extends ConsumerWidget {
+  const ProfileAboutSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final asyncInfo = ref.watch(appInfoProvider);
+
+    final versionLabel = asyncInfo.when(
+      data: (info) => 'v${info.version} (build ${info.buildNumber})',
+      loading: () => '…',
+      error: (_, _) => 'version inconnue',
+    );
+    final envLabel = Env.isProd ? 'production' : 'dev/staging';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'À propos'),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Baillan. $versionLabel · $envLabel',
+              key: const Key('txt_app_version'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ],
     );
