@@ -9,7 +9,7 @@ Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-
 | ID | Titre | Statut | Doc |
 |---|---|---|---|
 | FEAT-024 | App mobile iOS/Android (Flutter natif) | 🟡 Préparée — dev semaine du 6 juillet 2026 | [`docs/MOBILE.md`](MOBILE.md) (audit portabilité + décisions + plan semaine) |
-| FEAT-025 | Écran Profil → vrai paramétrage (password change, contact support) | 📋 Spec'd — formalise P1-001 | [`backlog/025-settings-profile.md`](backlog/025-settings-profile.md) |
+| FEAT-025 | Écran Profil → vrai paramétrage (password change, contact support) | ✅ Livré staging 2026-07-03 (commits f5734b4 + 0cd54de) — reste : notif email (extension Trigger Email, runbook dans la story) | [`backlog/025-settings-profile.md`](backlog/025-settings-profile.md) |
 
 ## Prochain (P0 — MVP, chaîne bloquante)
 

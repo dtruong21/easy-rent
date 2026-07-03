@@ -72,6 +72,8 @@
 
 **Note FEAT-023 (2026-07-03)** : `/profile` porte désormais les réglages app — sélecteur de thème (Système/Clair/Sombre, persisté localStorage via `themeModeProvider`), liens `/terms` + `/privacy`, bouton déconnexion.
 
+**Note FEAT-025 (2026-07-03)** : + section Sécurité (changement de mot de passe in-app, visible uniquement si `hasPasswordProvider` — comptes email) et section Support (formulaire « Nous contacter » → collection `support_requests` create-only). Politique de confidentialité passée en v1.1.
+
 ---
 
 ## Anonymous Routes (essai BAILLAN-M1)

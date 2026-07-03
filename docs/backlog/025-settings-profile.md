@@ -109,9 +109,15 @@ Scénario : plateforme sans client mail configuré
 2. ~~Lien email pour le mot de passe~~ → **pivot : formulaire in-app** (actuel + nouveau + confirmation, réauthentification Firebase).
 3. **Réservé aux comptes email** : l'option mot de passe n'apparaît QUE si `providerData` contient `password` — rien d'affiché pour Google/Apple/anonyme.
 
-## Décision restante (fin de sprint)
+## Décision notification (tranchée 2026-07-03 fin de sprint)
 
-- **Canal de notification email des demandes support** : (a) extension Firebase « Trigger Email » (config console + SMTP, zéro code repo), (b) Cloud Function onCreate après merge du fix deploy functions (branche ADR 0001), (c) V1 sans notif — consultation console Firestore. Le formulaire est livré quoi qu'il en soit.
+**Option A retenue : extension Firebase « Trigger Email » (firestore-send-email)** → notification vers daki.tle.26@gmail.com. Le formulaire est livré et fonctionnel indépendamment (les demandes s'enregistrent dans `support_requests`).
+
+**Runbook d'installation (session dédiée, ~10 min, nécessite une action utilisateur)** :
+1. **Utilisateur** : créer un mot de passe d'application Gmail pour daki.tle.26@gmail.com (myaccount.google.com → Sécurité → validation en deux étapes → mots de passe d'application).
+2. Installer l'extension : `firebase ext:install firebase/firestore-send-email --project easy-rent-54cd4` — collection surveillée : `mail` (défaut), SMTP URI : `smtps://daki.tle.26@gmail.com:<app-password>@smtp.gmail.com:465`, FROM : daki.tle.26@gmail.com.
+3. **Code (petite itération)** : double écriture au submit — le repo support écrit aussi un doc `mail` {to, message:{subject,text}} composé depuis la demande ; nouveau bloc rules create-only pour `mail` (même procédure d'isolation git que f5734b4). ⚠️ Ne PAS pointer l'extension sur `support_requests` directement : son champ `message` (map attendu) entre en collision avec notre `message` (string).
+4. **Rate-limit (exigence audit sécurité)** : configurer/adjoindre un throttle par landlordId à cette étape (sinon spam Firestore = spam boîte mail).
 
 ## Out of scope
 
