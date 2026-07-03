@@ -20,8 +20,11 @@ import '../../features/leases/presentation/lease_detail_page.dart';
 import '../../features/leases/presentation/lease_form_page.dart';
 import '../../features/leases/presentation/leases_list_page.dart';
 import '../../features/payments/presentation/payment_form_page.dart';
+import '../../features/profile/presentation/change_password_page.dart';
+import '../../features/profile/presentation/profile_details_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/receipts/presentation/lease_receipts_page.dart';
+import '../../features/support/presentation/support_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
@@ -349,6 +352,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
           child: const ProfilePage(),
+          transition: AppTransition.standard,
+        ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Sous-pages profil — hub mobile-first (restructuration 2026-07-03).
+      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/profile/details',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ProfileDetailsPage(),
+          transition: AppTransition.standard,
+        ),
+      ),
+      GoRoute(
+        path: '/profile/password',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ChangePasswordPage(),
+          transition: AppTransition.standard,
+        ),
+      ),
+      GoRoute(
+        path: '/profile/support',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const SupportPage(),
           transition: AppTransition.standard,
         ),
       ),

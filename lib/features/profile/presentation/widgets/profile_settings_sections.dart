@@ -1,6 +1,6 @@
-// Sections « réglages » de la page profil : apparence (thème), liens
-// légaux, à propos (version) et déconnexion. Extraites de ProfilePage pour
-// garder la page sous la limite de 200 lignes.
+// Sections « réglages » du hub /profile : apparence (thème), tuiles légales,
+// à propos (version) et déconnexion. Extraites de ProfilePage pour garder la
+// page sous la limite de 200 lignes.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,19 +54,22 @@ class ProfileAppearanceSection extends ConsumerWidget {
 // Légal — CGU + politique de confidentialité
 // ---------------------------------------------------------------------------
 
-/// Liens vers les pages légales (`/terms`, `/privacy`).
+/// Tuiles vers les pages légales (`/terms`, `/privacy`).
+///
+/// Pas de [SectionHeader] ici : ces tuiles sont insérées par [ProfilePage]
+/// dans son propre groupe « Aide », partagé avec la tuile support — un seul
+/// header pour tout le groupe, pas de duplication.
 ///
 /// `push` (et non `go`) : la page profil reste dans la pile, le retour
 /// revient ici.
-class ProfileLegalSection extends StatelessWidget {
-  const ProfileLegalSection({super.key});
+class ProfileLegalTiles extends StatelessWidget {
+  const ProfileLegalTiles({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Légal'),
         ListTile(
           key: const Key('tile_terms'),
           contentPadding: EdgeInsets.zero,
