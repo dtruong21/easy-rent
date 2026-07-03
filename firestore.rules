@@ -305,6 +305,34 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // support_requests/{id}   — CREATE-ONLY (FEAT-025)
+    //
+    // Formulaire « Nous contacter ». Le client écrit une demande à son
+    // propre nom ; il ne relit JAMAIS (pas de back-office in-app en V1).
+    // Traitement (notification email, triage) via Admin SDK / console.
+    // ====================================================================
+    match /support_requests/{id} {
+      allow get, list: if false;   // l'utilisateur ne relit pas ses demandes en V1
+
+      allow create: if isFullyAuthed()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.appVersion is string
+        && request.resource.data.appEnv is string
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // ====================================================================
     // Fallback — tout le reste bloqué
     // ====================================================================
     match /{document=**} {
