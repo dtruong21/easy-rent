@@ -10,6 +10,7 @@ import '../../../../core/app_info/app_info_provider.dart';
 import '../../../../core/config/env.dart';
 import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../auth/application/login_controller.dart';
+import 'section_header.dart';
 
 // ---------------------------------------------------------------------------
 // Apparence — choix du thème
@@ -27,7 +28,7 @@ class ProfileAppearanceSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Apparence'),
+        const SectionHeader(title: 'Apparence'),
         const SizedBox(height: 12),
         SegmentedButton<ThemeMode>(
           key: const Key('segments_theme_mode'),
@@ -65,7 +66,7 @@ class ProfileLegalSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Légal'),
+        const SectionHeader(title: 'Légal'),
         ListTile(
           key: const Key('tile_terms'),
           contentPadding: EdgeInsets.zero,
@@ -113,7 +114,7 @@ class ProfileAboutSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'À propos'),
+        const SectionHeader(title: 'À propos'),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -153,7 +154,7 @@ class ProfileSessionSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Session'),
+        const SectionHeader(title: 'Session'),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           key: const Key('btn_logout_profile'),
@@ -163,25 +164,6 @@ class ProfileSessionSection extends ConsumerWidget {
           style: OutlinedButton.styleFrom(foregroundColor: colorScheme.error),
         ),
       ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Header de section
-// ---------------------------------------------------------------------------
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      title,
-      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 }

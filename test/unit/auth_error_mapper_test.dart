@@ -63,6 +63,13 @@ void main() {
       );
     });
 
+    test('requires-recent-login → invite à se reconnecter (FEAT-025)', () {
+      expect(
+        AuthErrorMapper.fromException(e('requires-recent-login')),
+        'Pour des raisons de sécurité, reconnectez-vous puis réessayez.',
+      );
+    });
+
     test('expired-action-code → lien expiré', () {
       expect(
         AuthErrorMapper.fromException(e('expired-action-code')),

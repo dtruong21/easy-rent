@@ -194,6 +194,22 @@ abstract interface class AuthRepository {
   /// Envoie un email de réinitialisation de mot de passe.
   Future<void> sendPasswordResetEmail(String email);
 
+  /// Réauthentifie l'utilisateur courant avec son mot de passe actuel.
+  ///
+  /// Prérequis Firebase pour [updatePassword] (« recent login »). Lève
+  /// `FirebaseAuthException(code: 'wrong-password'|'invalid-credential', ...)`
+  /// si le mot de passe est incorrect, ou `StateError` si aucun utilisateur
+  /// n'est signé ou si son email est absent (compte social sans email —
+  /// ne devrait jamais être appelé dans ce cas, cf. `hasPasswordProvider`).
+  Future<void> reauthenticateWithPassword(String currentPassword);
+
+  /// Change le mot de passe de l'utilisateur courant.
+  ///
+  /// À appeler APRÈS [reauthenticateWithPassword] (Firebase exige une
+  /// session récente pour cette opération sensible). Lève `StateError` si
+  /// aucun utilisateur n'est signé.
+  Future<void> updatePassword(String newPassword);
+
   /// Confirme le reset password avec l'oobCode reçu dans l'email.
   Future<void> confirmPasswordReset({
     required String code,
@@ -797,6 +813,34 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<String> verifyPasswordResetCode(String code) async {
     return await _auth.verifyPasswordResetCode(code);
+  }
+
+  @override
+  Future<void> reauthenticateWithPassword(String currentPassword) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw StateError(
+        'reauthenticateWithPassword requires a signed-in user with an '
+        'email (currentUser=${user?.uid}).',
+      );
+    }
+    _log.info('reauthenticateWithPassword requested');
+    final cred = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('updatePassword requires a signed-in user.');
+    }
+    _log.info('updatePassword requested');
+    await user.updatePassword(newPassword);
   }
 
   @override

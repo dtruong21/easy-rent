@@ -98,6 +98,12 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     signOutCalled = true;
   }
+
+  @override
+  Future<void> reauthenticateWithPassword(String currentPassword) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
 }
 
 class _ThrowingSignOutRepo extends _FakeAuthRepository {

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../support/presentation/widgets/profile_support_section.dart';
 import '../application/landlord_profile_provider.dart';
 import '../application/profile_form_controller.dart';
 import '../domain/landlord_profile.dart';
 import '../domain/profile_form_state.dart';
 import 'widgets/profile_form.dart';
+import 'widgets/profile_security_section.dart';
 import 'widgets/profile_settings_sections.dart';
 
 final _log = Logger('ProfilePage');
@@ -212,11 +214,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 24),
+          const ProfileSecuritySection(),
+          const SizedBox(height: 32),
           const ProfileAppearanceSection(),
           const SizedBox(height: 32),
           const ProfileLegalSection(),
           const SizedBox(height: 24),
           const ProfileAboutSection(),
+          const SizedBox(height: 32),
+          const ProfileSupportSection(),
           const SizedBox(height: 32),
           const ProfileSessionSection(),
         ],

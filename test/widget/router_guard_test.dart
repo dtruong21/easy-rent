@@ -92,6 +92,12 @@ class _NoOpRepo implements AuthRepository {
 
   @override
   Future<void> signOut() async {}
+
+  @override
+  Future<void> reauthenticateWithPassword(String currentPassword) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
 }
 
 Widget _buildApp({

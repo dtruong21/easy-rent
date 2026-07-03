@@ -7,14 +7,23 @@
 /// - État erreur → message inline affiché
 /// - État submitting → bouton désactivé avec indicateur
 /// - Email affiché en lecture seule
+/// - Section Sécurité (FEAT-025) : gating par provider (password/Google/
+///   Apple/anonyme), succès, erreurs de changement de mot de passe
+/// - Section Support (FEAT-025) : validation, succès, échec
 library;
 
+import 'dart:async';
+
 import 'package:easyrent/core/theme/theme_mode_provider.dart';
+import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/application/profile_form_controller.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/profile/domain/profile_form_state.dart';
 import 'package:easyrent/features/profile/presentation/profile_page.dart';
+import 'package:easyrent/features/support/data/support_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +32,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
-// Fake repository
+// Fake repositories
 // ---------------------------------------------------------------------------
 
 class _FakeProfileRepository implements ProfileRepository {
@@ -66,6 +75,186 @@ class _FakeProfileRepository implements ProfileRepository {
   }
 }
 
+/// Fake [AuthRepository] dont on contrôle le [User] exposé (pour
+/// [hasPasswordProvider]) et les 2 appels du flow de changement de mot de
+/// passe in-app (FEAT-025).
+class _FakeAuthRepository implements AuthRepository {
+  _FakeAuthRepository(this._user);
+
+  final User? _user;
+
+  bool reauthenticateCalled = false;
+  bool updatePasswordCalled = false;
+  String? lastCurrentPassword;
+  String? lastNewPassword;
+
+  /// Si non-null, jeté par [reauthenticateWithPassword].
+  FirebaseAuthException? reauthenticateError;
+
+  /// Si non-null, [reauthenticateWithPassword] attend que ce [Completer]
+  /// soit complété avant de retourner — permet d'observer l'état
+  /// `submitting` dans les tests (sans ce hook, le Future se résoudrait
+  /// avant le prochain `pump()`).
+  Completer<void>? reauthenticateGate;
+
+  @override
+  Stream<User?> get authStateChanges => Stream.value(_user);
+
+  @override
+  User? get currentUser => _user;
+
+  @override
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  Future<void> signUpWithPassword({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {}
+
+  @override
+  Future<void> sendCurrentUserEmailVerification() async {}
+
+  @override
+  Future<void> signInWithGoogle() async {}
+
+  @override
+  Future<void> signUpWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> signInWithApple() async {}
+
+  @override
+  Future<void> signUpWithApple({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> signInAnonymously() async {}
+
+  @override
+  Future<void> linkAnonymousWithEmailPassword({
+    required String email,
+    required String password,
+    required String fullName,
+    required bool rgpdConsent,
+  }) async {}
+
+  @override
+  Future<void> linkAnonymousWithGoogle({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> linkAnonymousWithApple({required bool rgpdConsent}) async {}
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {}
+
+  @override
+  Future<String> verifyPasswordResetCode(String code) async =>
+      'test@example.com';
+
+  @override
+  Future<void> confirmPasswordReset({
+    required String code,
+    required String newPassword,
+  }) async {}
+
+  @override
+  Future<void> reauthenticateWithPassword(String currentPassword) async {
+    reauthenticateCalled = true;
+    lastCurrentPassword = currentPassword;
+    final gate = reauthenticateGate;
+    if (gate != null) await gate.future;
+    final err = reauthenticateError;
+    if (err != null) throw err;
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    updatePasswordCalled = true;
+    lastNewPassword = newPassword;
+  }
+
+  @override
+  Future<void> signOut() async {}
+}
+
+/// Fake [SupportRepository] — enregistre le dernier appel pour assertion.
+class _FakeSupportRepository implements SupportRepository {
+  bool submitCalled = false;
+  String? lastSubject;
+  String? lastMessage;
+  String? lastAppVersion;
+  String? lastAppEnv;
+  Exception? submitError;
+
+  /// Si non-null, [submit] attend que ce [Completer] soit complété avant de
+  /// retourner — permet d'observer l'état `submitting` dans les tests.
+  Completer<void>? submitGate;
+
+  @override
+  Future<void> submit({
+    required String subject,
+    required String message,
+    required String appVersion,
+    required String appEnv,
+  }) async {
+    submitCalled = true;
+    lastSubject = subject;
+    lastMessage = message;
+    lastAppVersion = appVersion;
+    lastAppEnv = appEnv;
+    final gate = submitGate;
+    if (gate != null) await gate.future;
+    final err = submitError;
+    if (err != null) throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Faker le User / providerData (firebase_auth_mocks)
+// ---------------------------------------------------------------------------
+
+UserInfo _providerInfo(String providerId) => UserInfo.fromJson({
+  'uid': 'uid-1',
+  'email': 'test@example.com',
+  'displayName': null,
+  'photoUrl': null,
+  'phoneNumber': null,
+  'isAnonymous': false,
+  'isEmailVerified': true,
+  'providerId': providerId,
+  'tenantId': null,
+  'refreshToken': null,
+  'creationTimestamp': null,
+  'lastSignInTimestamp': null,
+});
+
+MockUser _passwordUser() => MockUser(
+  isAnonymous: false,
+  uid: 'uid-1',
+  email: 'test@example.com',
+  providerData: [_providerInfo('password')],
+);
+
+MockUser _googleUser() => MockUser(
+  isAnonymous: false,
+  uid: 'uid-1',
+  email: 'g@example.com',
+  providerData: [_providerInfo('google.com')],
+);
+
+MockUser _appleUser() => MockUser(
+  isAnonymous: false,
+  uid: 'uid-1',
+  email: 'a@example.com',
+  providerData: [_providerInfo('apple.com')],
+);
+
+MockUser _anonUser() => MockUser(isAnonymous: true, uid: 'uid-a');
+
 // ---------------------------------------------------------------------------
 // Helper de montage
 // ---------------------------------------------------------------------------
@@ -89,6 +278,8 @@ LandlordProfile _makeProfile({
 Widget _buildPage({
   required _FakeProfileRepository repo,
   ProfileFormState? initialFormState,
+  _FakeAuthRepository? authRepo,
+  _FakeSupportRepository? supportRepo,
 }) {
   final router = GoRouter(
     routes: [
@@ -104,9 +295,18 @@ Widget _buildPage({
     ],
   );
 
+  // Fake par défaut = compte email (providerData contient 'password') pour
+  // ne pas casser les tests existants qui ne s'occupent pas de la section
+  // Sécurité (elle sera juste présente et inerte).
+  final resolvedAuthRepo = authRepo ?? _FakeAuthRepository(_passwordUser());
+
   return ProviderScope(
     overrides: [
       profileRepositoryProvider.overrideWithValue(repo),
+      authRepositoryProvider.overrideWithValue(resolvedAuthRepo),
+      supportRepositoryProvider.overrideWithValue(
+        supportRepo ?? _FakeSupportRepository(),
+      ),
       if (initialFormState != null)
         profileFormControllerProvider.overrideWith(
           (ref) => ProfileFormController(ref)..state = initialFormState,
@@ -373,6 +573,450 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('page privacy'), findsOneWidget);
+    });
+  });
+
+  group('ProfilePage — section Sécurité (FEAT-025)', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      PackageInfo.setMockInitialValues(
+        appName: 'Baillan',
+        packageName: 'app.baillan',
+        version: '1.0.0',
+        buildNumber: '42',
+        buildSignature: '',
+        installerStore: null,
+      );
+    });
+
+    testWidgets('compte email → section Sécurité visible', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_passwordUser());
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sécurité'), findsOneWidget);
+      expect(find.byKey(const Key('field_current_password')), findsOneWidget);
+      expect(find.byKey(const Key('field_new_password')), findsOneWidget);
+      expect(find.byKey(const Key('field_confirm_password')), findsOneWidget);
+      expect(find.byKey(const Key('btn_change_password')), findsOneWidget);
+    });
+
+    testWidgets('compte Google → rien affiché', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_googleUser());
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sécurité'), findsNothing);
+      expect(find.byKey(const Key('field_current_password')), findsNothing);
+    });
+
+    testWidgets('compte Apple → rien affiché', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_appleUser());
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sécurité'), findsNothing);
+      expect(find.byKey(const Key('field_current_password')), findsNothing);
+    });
+
+    testWidgets('session anonyme → rien affiché', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_anonUser());
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sécurité'), findsNothing);
+      expect(find.byKey(const Key('field_current_password')), findsNothing);
+    });
+
+    testWidgets(
+      'succès — repo appelé (reauth puis update), snackbar, champs vidés',
+      (tester) async {
+        final repo = _FakeProfileRepository()..seed(_makeProfile());
+        final authRepo = _FakeAuthRepository(_passwordUser());
+        await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('field_current_password')),
+          'OldPassword1',
+        );
+        await tester.enterText(
+          find.byKey(const Key('field_new_password')),
+          'NewPassword2',
+        );
+        await tester.enterText(
+          find.byKey(const Key('field_confirm_password')),
+          'NewPassword2',
+        );
+        await tester.pump();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_change_password')),
+        );
+        await tester.tap(find.byKey(const Key('btn_change_password')));
+        await tester.pumpAndSettle();
+
+        expect(authRepo.reauthenticateCalled, isTrue);
+        expect(authRepo.lastCurrentPassword, 'OldPassword1');
+        expect(authRepo.updatePasswordCalled, isTrue);
+        expect(authRepo.lastNewPassword, 'NewPassword2');
+
+        expect(find.text('Mot de passe mis à jour'), findsOneWidget);
+
+        final currentField = tester.widget<TextField>(
+          find
+              .descendant(
+                of: find.byKey(const Key('field_current_password')),
+                matching: find.byType(TextField),
+              )
+              .first,
+        );
+        expect(currentField.controller?.text ?? '', isEmpty);
+      },
+    );
+
+    testWidgets(
+      'mot de passe actuel erroné → message dédié, updatePassword jamais appelé',
+      (tester) async {
+        final repo = _FakeProfileRepository()..seed(_makeProfile());
+        final authRepo = _FakeAuthRepository(_passwordUser())
+          ..reauthenticateError = FirebaseAuthException(
+            code: 'wrong-password',
+            message: 'wrong password',
+          );
+        await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('field_current_password')),
+          'WrongPassword1',
+        );
+        await tester.enterText(
+          find.byKey(const Key('field_new_password')),
+          'NewPassword2',
+        );
+        await tester.enterText(
+          find.byKey(const Key('field_confirm_password')),
+          'NewPassword2',
+        );
+        await tester.pump();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_change_password')),
+        );
+        await tester.tap(find.byKey(const Key('btn_change_password')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Mot de passe actuel incorrect.'), findsOneWidget);
+        expect(authRepo.updatePasswordCalled, isFalse);
+      },
+    );
+
+    testWidgets('invalid-credential → même message dédié que wrong-password', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_passwordUser())
+        ..reauthenticateError = FirebaseAuthException(
+          code: 'invalid-credential',
+          message: 'invalid credential',
+        );
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_current_password')),
+        'WrongPassword1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_new_password')),
+        'NewPassword2',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_confirm_password')),
+        'NewPassword2',
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const Key('btn_change_password')));
+      await tester.tap(find.byKey(const Key('btn_change_password')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mot de passe actuel incorrect.'), findsOneWidget);
+      expect(authRepo.updatePasswordCalled, isFalse);
+    });
+
+    testWidgets('nouveau mot de passe == actuel → refusé sans appel repo', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_passwordUser());
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_current_password')),
+        'SamePassword1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_new_password')),
+        'SamePassword1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_confirm_password')),
+        'SamePassword1',
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const Key('btn_change_password')));
+      await tester.tap(find.byKey(const Key('btn_change_password')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Le nouveau mot de passe doit être différent de l\'actuel.'),
+        findsOneWidget,
+      );
+      expect(authRepo.reauthenticateCalled, isFalse);
+      expect(authRepo.updatePasswordCalled, isFalse);
+    });
+
+    testWidgets('confirmation différente → message dédié, aucun appel repo', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final authRepo = _FakeAuthRepository(_passwordUser());
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_current_password')),
+        'OldPassword1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_new_password')),
+        'NewPassword2',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_confirm_password')),
+        'Different3',
+      );
+      await tester.pump();
+
+      // Le bouton est désactivé côté UI (_canSubmit) tant que confirm !=
+      // new — pas de tap possible ; on valide simplement l'état désactivé.
+      final btn = tester.widget<FilledButton>(
+        find.byKey(const Key('btn_change_password')),
+      );
+      expect(btn.onPressed, isNull);
+      expect(authRepo.reauthenticateCalled, isFalse);
+    });
+
+    testWidgets('bouton désactivé pendant submit', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final gate = Completer<void>();
+      final authRepo = _FakeAuthRepository(_passwordUser())
+        ..reauthenticateGate = gate;
+      await tester.pumpWidget(_buildPage(repo: repo, authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_current_password')),
+        'OldPassword1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_new_password')),
+        'NewPassword2',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_confirm_password')),
+        'NewPassword2',
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const Key('btn_change_password')));
+      await tester.pumpAndSettle();
+      // `tap()` n'attend que le geste physique (down/up), pas la résolution
+      // du Future retourné par `onPressed` — le submit reste bloqué sur
+      // `gate.future` après ce await, ce qui permet d'observer l'état
+      // `submitting` de façon déterministe.
+      await tester.tap(find.byKey(const Key('btn_change_password')));
+      await tester.pump();
+
+      final btn = tester.widget<FilledButton>(
+        find.byKey(const Key('btn_change_password')),
+      );
+      expect(btn.onPressed, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // Débloque le submit puis laisse le Future se résoudre pour éviter un
+      // timer pending en fin de test.
+      gate.complete();
+      await tester.pumpAndSettle();
+    });
+  });
+
+  group('ProfilePage — section Support (FEAT-025)', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      PackageInfo.setMockInitialValues(
+        appName: 'Baillan',
+        packageName: 'app.baillan',
+        version: '1.0.0',
+        buildNumber: '42',
+        buildSignature: '',
+        installerStore: null,
+      );
+    });
+
+    testWidgets('section présente avec champs et bouton', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Support'), findsOneWidget);
+      expect(find.byKey(const Key('field_support_subject')), findsOneWidget);
+      expect(find.byKey(const Key('field_support_message')), findsOneWidget);
+      expect(find.byKey(const Key('btn_support_submit')), findsOneWidget);
+    });
+
+    testWidgets('bouton désactivé si sujet ou message vide', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('btn_support_submit')));
+      final btn = tester.widget<FilledButton>(
+        find.byKey(const Key('btn_support_submit')),
+      );
+      expect(btn.onPressed, isNull);
+    });
+
+    testWidgets(
+      'succès — repo appelé avec landlordId/subject/message/appVersion/appEnv, snackbar, champs vidés',
+      (tester) async {
+        final repo = _FakeProfileRepository()..seed(_makeProfile());
+        final authRepo = _FakeAuthRepository(_passwordUser());
+        final supportRepo = _FakeSupportRepository();
+        await tester.pumpWidget(
+          _buildPage(repo: repo, authRepo: authRepo, supportRepo: supportRepo),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('field_support_subject')),
+        );
+        await tester.enterText(
+          find.byKey(const Key('field_support_subject')),
+          'Problème de quittance',
+        );
+        await tester.enterText(
+          find.byKey(const Key('field_support_message')),
+          'La quittance de mars ne se génère pas.',
+        );
+        await tester.pump();
+
+        await tester.ensureVisible(find.byKey(const Key('btn_support_submit')));
+        await tester.tap(find.byKey(const Key('btn_support_submit')));
+        await tester.pumpAndSettle();
+
+        expect(supportRepo.submitCalled, isTrue);
+        expect(supportRepo.lastSubject, 'Problème de quittance');
+        expect(
+          supportRepo.lastMessage,
+          'La quittance de mars ne se génère pas.',
+        );
+        expect(supportRepo.lastAppVersion, '1.0.0+42');
+        expect(supportRepo.lastAppEnv, 'dev');
+
+        expect(
+          find.text('Message envoyé. Nous reviendrons vers vous par email.'),
+          findsOneWidget,
+        );
+
+        final subjectField = tester.widget<TextFormField>(
+          find.byKey(const Key('field_support_subject')),
+        );
+        expect(subjectField.controller?.text ?? '', isEmpty);
+      },
+    );
+
+    testWidgets('échec réseau → message inline neutre retentable', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final supportRepo = _FakeSupportRepository()
+        ..submitError = Exception('network down');
+      await tester.pumpWidget(_buildPage(repo: repo, supportRepo: supportRepo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('field_support_subject')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_support_subject')),
+        'Sujet',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_support_message')),
+        'Message',
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const Key('btn_support_submit')));
+      await tester.tap(find.byKey(const Key('btn_support_submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Envoi impossible. Réessayez dans quelques instants.'),
+        findsOneWidget,
+      );
+      // Retentable : le bouton redevient actif (les champs n'ont pas été
+      // vidés, l'utilisateur peut relancer).
+      final btn = tester.widget<FilledButton>(
+        find.byKey(const Key('btn_support_submit')),
+      );
+      expect(btn.onPressed, isNotNull);
+    });
+
+    testWidgets('bouton désactivé pendant submit', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      final gate = Completer<void>();
+      final supportRepo = _FakeSupportRepository()..submitGate = gate;
+      await tester.pumpWidget(_buildPage(repo: repo, supportRepo: supportRepo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('field_support_subject')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_support_subject')),
+        'Sujet',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_support_message')),
+        'Message',
+      );
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const Key('btn_support_submit')));
+      await tester.pumpAndSettle();
+      // Le submit reste bloqué sur `gate.future` après ce await (même
+      // stratégie que section Sécurité).
+      await tester.tap(find.byKey(const Key('btn_support_submit')));
+      await tester.pump();
+
+      final btn = tester.widget<FilledButton>(
+        find.byKey(const Key('btn_support_submit')),
+      );
+      expect(btn.onPressed, isNull);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      gate.complete();
+      await tester.pumpAndSettle();
     });
   });
 }

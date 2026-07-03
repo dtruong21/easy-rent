@@ -55,3 +55,24 @@ final sessionStateProvider = Provider<SessionState>((ref) {
 final isAuthenticatedProvider = Provider<bool>((ref) {
   return ref.watch(sessionStateProvider) == SessionState.fullyAuthenticated;
 });
+
+/// `true` ssi le [User] courant possède un provider `password` (compte
+/// email, ou social lié ultérieurement à un mot de passe).
+///
+/// Base de gating de la section « Sécurité » du profil (FEAT-025) : le
+/// changement de mot de passe n'a de sens que pour un compte qui en possède
+/// un — rien n'est affiché pour Google, Apple ou une session anonyme.
+///
+/// S'appuie sur [authStateChangesProvider] (`userChanges()`, superset de
+/// `authStateChanges()` — voir commentaire `auth_repository.dart`) plutôt
+/// que sur un simple accès à `currentUser` : un compte social qui **lie**
+/// un mot de passe pendant la session verra la section apparaître sans
+/// reload. Le fallback sur `currentUser` couvre le chargement initial
+/// (même défense que [sessionStateProvider]).
+final hasPasswordProvider = Provider<bool>((ref) {
+  final async = ref.watch(authStateChangesProvider);
+  final user =
+      async.asData?.value ?? ref.read(authRepositoryProvider).currentUser;
+  if (user == null || user.isAnonymous) return false;
+  return user.providerData.any((info) => info.providerId == 'password');
+});

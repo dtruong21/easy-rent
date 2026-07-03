@@ -33,6 +33,10 @@ class AuthErrorMapper {
       case 'too-many-requests':
         return 'Trop de demandes. Réessayez dans quelques minutes.';
 
+      case 'requires-recent-login':
+        return 'Pour des raisons de sécurité, reconnectez-vous puis '
+            'réessayez.';
+
       case 'expired-action-code':
       case 'invalid-action-code':
         return 'Lien de réinitialisation expiré ou invalide. '

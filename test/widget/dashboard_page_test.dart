@@ -145,6 +145,12 @@ class _FakeAuthRepo implements AuthRepository {
 
   @override
   Future<void> signOut() async {}
+
+  @override
+  Future<void> reauthenticateWithPassword(String currentPassword) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
 }
 
 class _FakeInstallController extends InstallPromptController {

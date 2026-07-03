@@ -7,7 +7,8 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 /// Accessible sans login (route `/privacy` publique).
 /// Référencée depuis [LoginPage] et [ProfilePage].
 ///
-/// Dernière mise à jour : juin 2026
+/// Dernière mise à jour : juillet 2026 (v1.1 — collecte demandes de support,
+/// FEAT-025)
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
 
@@ -47,7 +48,7 @@ class _PrivacyContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Version 1.0 — Dernière mise à jour : juin 2026',
+          'Version 1.1 — Dernière mise à jour : juillet 2026',
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 24),
@@ -83,7 +84,12 @@ class _PrivacyContent extends StatelessWidget {
               'du 6 juillet 1989, art. 21).\n\n'
               '• Documents : fichiers uploadés par le bailleur (baux signés, états '
               'des lieux, attestations d\'assurance, etc.) et leurs métadonnées '
-              '(nom du fichier, taille, date d\'upload).',
+              '(nom du fichier, taille, date d\'upload).\n\n'
+              '• Demandes de support : sujet et message que vous nous adressez '
+              'via le formulaire « Nous contacter », associés à votre adresse '
+              'email, un identifiant technique de compte, la version de '
+              'l\'application et l\'environnement — utilisés uniquement pour '
+              'traiter votre demande.',
         ),
 
         // 3. Base légale
@@ -95,7 +101,10 @@ class _PrivacyContent extends StatelessWidget {
               'sont nécessaires à la gestion du contrat de location, au calcul des '
               'loyers et charges, et à la délivrance des quittances.\n\n'
               'L\'authentification du bailleur est fondée sur son intérêt légitime '
-              'à accéder à son espace de gestion locative (art. 6.1.f).',
+              'à accéder à son espace de gestion locative (art. 6.1.f).\n\n'
+              'Le traitement des demandes de support (formulaire « Nous '
+              'contacter ») est fondé sur l\'intérêt légitime à répondre aux '
+              'utilisateurs du service (art. 6.1.f).',
         ),
 
         // 4. Sous-traitants
@@ -148,7 +157,10 @@ class _PrivacyContent extends StatelessWidget {
               'technique Firebase Anonymous UID permet de rattacher les scénarios '
               'à la session en cours. La création d\'un compte pendant la période '
               'de démo préserve les scénarios enregistrés et fait basculer le '
-              'compte en régime standard de conservation.',
+              'compte en régime standard de conservation.\n\n'
+              '• Demandes de support : conservées le temps du traitement de la '
+              'demande, puis au plus 12 mois après le dernier échange (suivi '
+              'qualité), avant suppression.',
         ),
 
         // 6. Sécurité
