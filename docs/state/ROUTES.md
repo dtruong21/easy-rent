@@ -74,6 +74,16 @@
 
 **Note FEAT-025 (2026-07-03)** : + section Sécurité (changement de mot de passe in-app, visible uniquement si `hasPasswordProvider` — comptes email) et section Support (formulaire « Nous contacter » → collection `support_requests` create-only). Politique de confidentialité passée en v1.1.
 
+**Note FEAT-025b (2026-07-03)** : `/profile` est devenu un HUB de réglages (tuiles) ; nouvelles sous-pages empilées, gardées auth globale :
+
+| Route | Page | Notes |
+|---|---|---|
+| `/profile/details` | `ProfileDetailsPage` | Identité bailleur (form complet) |
+| `/profile/password` | `ChangePasswordPage` | Comptes email only (tuile gatée + garde-fou in-page) |
+| `/profile/support` | `SupportPage` | Formulaire « Nous contacter » |
+
+**FEAT-026 (concept, à valider)** : navigation shell adaptative — voir [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md).
+
 ---
 
 ## Anonymous Routes (essai BAILLAN-M1)

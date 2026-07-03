@@ -40,6 +40,11 @@
 - [ ] État des lieux digital (entrée/sortie)
 - [ ] Notifications push (PWA)
 - [ ] Multi-facteur (2FA / TOTP)
+- [ ] **FEAT-026 — Navigation shell adaptative web+mobile** — concept proposé,
+      **prérequis de FEAT-024** (à livrer sur le web juste avant / en J1 de la
+      semaine mobile). `StatefulShellRoute.indexedStack` + NavigationBar (<600px)
+      / NavigationRail (≥600px), dashboard → onglet Accueil. Concept :
+      [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md)
 - [ ] **FEAT-024 — App mobile iOS/Android (Flutter natif)** — planifiée
       semaine du 6 juillet 2026, préparation : [`docs/MOBILE.md`](MOBILE.md)
 

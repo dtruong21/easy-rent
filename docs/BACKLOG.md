@@ -2,13 +2,14 @@
 
 Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-<slug>.md`.
 
-> Dernière mise à jour : 2026-07-03 (FEAT-024 planifiée, préparation faite ; FEAT-025 spec'd)
+> Dernière mise à jour : 2026-07-03 (FEAT-026 concept navigation shell ; FEAT-024 planifiée, préparation faite ; FEAT-025 spec'd)
 
 ## En cours
 
 | ID | Titre | Statut | Doc |
 |---|---|---|---|
-| FEAT-024 | App mobile iOS/Android (Flutter natif) | 🟡 Préparée — dev semaine du 6 juillet 2026 | [`docs/MOBILE.md`](MOBILE.md) (audit portabilité + décisions + plan semaine) |
+| FEAT-026 | Navigation shell adaptative web+mobile | 🟠 Concept proposé — implémentation à valider (décisions §13). Prérequis de FEAT-024 (livrer web avant / J1 mobile) | [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md) (concept complet + plan de migration + critères d'acceptation) |
+| FEAT-024 | App mobile iOS/Android (Flutter natif) | 🟡 Préparée — dev semaine du 6 juillet 2026 (dépend de FEAT-026 pour la nav) | [`docs/MOBILE.md`](MOBILE.md) (audit portabilité + décisions + plan semaine) |
 | FEAT-025 | Écran Profil → vrai paramétrage (password change, contact support) | ✅ Livré staging 2026-07-03 (commits f5734b4 + 0cd54de) — reste : notif email (extension Trigger Email, runbook dans la story) | [`backlog/025-settings-profile.md`](backlog/025-settings-profile.md) |
 
 ## Prochain (P0 — MVP, chaîne bloquante)

@@ -12,6 +12,7 @@ Cet index pointe vers un snapshot à jour du schéma, des routes, des features e
 | Quand tu as besoin de... | Lis ce fichier |
 |---|---|
 | Conventions de code détaillées | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) |
+| Concept navigation & UX web+mobile | [`docs/UX_NAVIGATION.md`](docs/UX_NAVIGATION.md) |
 | Contraintes légales françaises | [`docs/LEGAL.md`](docs/LEGAL.md) |
 | Roadmap MVP et P1/P2 | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | Backlog ordonné | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
