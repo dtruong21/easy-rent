@@ -36,13 +36,22 @@ class FrenchDate {
         '${d.year}';
   }
 
-  /// Formate une string ISO `YYYY-MM-DD` au format `dd/MM/yyyy`.
+  /// Formate une string ISO (`YYYY-MM-DD` ou timestamp complet
+  /// `YYYY-MM-DDTHH:mm:ss.sssZ`) au format `dd/MM/yyyy`.
+  ///
+  /// Un timestamp complet est d'abord converti en heure LOCALE : un bail
+  /// stocké « minuit Europe/Paris » revient de Firestore en UTC la veille à
+  /// 22 h/23 h — découper la chaîne brute affichait un fragment
+  /// (« 30T22:00:00.000Z/06/2026 ») ET le mauvais jour (bug liste + fiche
+  /// locataires, 2026-07-03).
   ///
   /// Retourne [isoDate] inchangée si le format est inattendu, ou une chaîne
   /// vide si l'entrée est vide (comportement défensif — utilisé pour des
   /// affichages de listes où une date manquante ne doit pas crasher).
   static String formatIsoString(String isoDate) {
     if (isoDate.isEmpty) return '';
+    final parsed = DateTime.tryParse(isoDate);
+    if (parsed != null) return format(parsed);
     final parts = isoDate.split('-');
     if (parts.length < 3) return isoDate;
     return '${parts[2]}/${parts[1]}/${parts[0]}';

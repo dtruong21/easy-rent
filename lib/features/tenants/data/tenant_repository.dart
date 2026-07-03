@@ -259,16 +259,15 @@ class FirestoreTenantRepository implements TenantRepository {
       final endDate = lease['endDate'] as Timestamp?;
       String? periodLabel;
       if (startDate != null) {
-        final startStr = FrenchDate.formatIsoString(
-          startDate.toDate().toUtc().toIso8601String(),
-        );
+        // format() (heure locale) directement depuis le Timestamp — le
+        // détour par toUtc().toIso8601String() affichait un fragment ISO
+        // (« 30T22:00:00.000Z/06/2026 ») et le jour UTC, veille du jour
+        // réellement choisi.
+        final startStr = FrenchDate.format(startDate.toDate());
         if (endDate == null) {
           periodLabel = 'Depuis $startStr';
         } else {
-          final endStr = FrenchDate.formatIsoString(
-            endDate.toDate().toUtc().toIso8601String(),
-          );
-          periodLabel = '$startStr → $endStr';
+          periodLabel = '$startStr → ${FrenchDate.format(endDate.toDate())}';
         }
       }
 
