@@ -203,6 +203,20 @@ Pour un **compte complet**, le simulateur reste atteignable :
    SafeArea bottom (notch)              Rail dans SafeArea left
 ```
 
+### 4.3 Rail repliable (implémenté 2026-07-03)
+
+Le rail (≥600 px) est **repliable par l'utilisateur**, pas piloté par la
+largeur : un bouton menu en tête (`Icons.menu` / `Icons.menu_open`) bascule
+**replié** (icônes + libellés courts, `labelType.all`, étroit) ↔ **déplié**
+(`extended: true`, icônes + libellés au large). État **persisté**
+(`railExpandedProvider` → SharedPreferences `nav_rail_expanded`), défaut
+**replié** (place maximale au contenu). Le **simulateur d'investissement** est
+épinglé **en bas du rail** (action secondaire, `go('/simulator')` — hors shell) :
+icône seule (replié, tooltip) ou icône + libellé (déplié). Sur mobile
+(NavigationBar), le simulateur reste accessible depuis l'onglet Accueil (pas
+de 6ᵉ item). Style rail + barre : thème `navigationRailTheme` /
+`navigationBarTheme` à la marque (indicateur olive sourd, encre/papier).
+
 ---
 
 ## 5. Règles de navigation (contrat)

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../breakpoints.dart';
+import 'rail_expanded_provider.dart';
 
 /// Shell de navigation adaptatif Baillan (FEAT-026).
 ///
@@ -10,7 +12,13 @@ import '../breakpoints.dart';
 /// - `< 600 px` : [Scaffold] + [NavigationBar] en bas (idiome mobile / PWA
 ///   étroite).
 /// - `>= 600 px` : `Row(NavigationRail, VerticalDivider, contenu)` (idiome
-///   desktop / tablette / web large).
+///   desktop / tablette / web large). Le rail est **repliable** via un bouton
+///   menu (icône seule ↔ icône + libellé au large), état persisté
+///   ([railExpandedProvider]).
+///
+/// Le simulateur d'investissement (hors shell, accessible aussi aux anonymes)
+/// est épinglé en bas du rail comme action secondaire — c'est le seul
+/// « ailleurs » utile, cf. `docs/UX_NAVIGATION.md` §3.4 / §7.
 ///
 /// Voir `docs/UX_NAVIGATION.md` §8.2 pour le contrat complet. Le breakpoint
 /// (600 px) est celui déjà utilisé ailleurs dans l'app ([Breakpoints.mobile]).
@@ -119,19 +127,20 @@ class _NarrowLayout extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Layout large (>= 600 px) — NavigationRail à gauche
+// Layout large (>= 600 px) — NavigationRail repliable à gauche
 // ---------------------------------------------------------------------------
 
-class _WideLayout extends StatelessWidget {
+class _WideLayout extends ConsumerWidget {
   const _WideLayout({required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
-    // Rail étendu (avec labels visibles) au-delà de la limite tablette pour
-    // laisser de la place au contenu sur les largeurs intermédiaires.
-    final isExtended = MediaQuery.sizeOf(context).width >= Breakpoints.tablet;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Déplié/replié piloté par l'utilisateur (bouton menu), persisté.
+    // extended=true → icône + libellé au large ; extended=false → rail compact
+    // (icône + libellé court). Flutter exige labelType=none quand extended.
+    final expanded = ref.watch(railExpandedProvider);
     return Scaffold(
       body: SafeArea(
         child: Row(
@@ -141,10 +150,22 @@ class _WideLayout extends StatelessWidget {
               selectedIndex: navigationShell.currentIndex,
               onDestinationSelected: (index) =>
                   _onDestinationSelected(navigationShell, index),
-              extended: isExtended,
-              labelType: isExtended
+              extended: expanded,
+              labelType: expanded
                   ? NavigationRailLabelType.none
                   : NavigationRailLabelType.all,
+              // Bouton menu en tête : déplie/replie le rail (façon sidebar).
+              leading: _RailMenuToggle(expanded: expanded),
+              // Simulateur épinglé en bas (action secondaire, hors shell).
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _RailSimulatorAction(expanded: expanded),
+                  ),
+                ),
+              ),
               destinations: [
                 for (final destination in _destinations)
                   NavigationRailDestination(
@@ -157,6 +178,81 @@ class _WideLayout extends StatelessWidget {
             const VerticalDivider(width: 1, thickness: 1),
             Expanded(child: navigationShell),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton menu en tête du rail : bascule déplié ↔ replié.
+class _RailMenuToggle extends ConsumerWidget {
+  const _RailMenuToggle({required this.expanded});
+
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final toggle = ref.read(railExpandedProvider.notifier).toggle;
+    final button = IconButton(
+      key: const Key('rail_menu_toggle'),
+      icon: Icon(expanded ? Icons.menu_open : Icons.menu),
+      tooltip: expanded ? 'Replier le menu' : 'Déplier le menu',
+      onPressed: toggle,
+    );
+    // Aligné à gauche (sur l'axe des icônes) quand déplié, centré sinon —
+    // évite un bouton qui saute horizontalement à la bascule.
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: expanded
+          ? Align(alignment: Alignment.centerLeft, child: button)
+          : button,
+    );
+  }
+}
+
+/// Action « Simuler un investissement » épinglée en bas du rail. Le simulateur
+/// vit hors du shell (accessible aussi aux anonymes) → `go()` (pas `goBranch`).
+class _RailSimulatorAction extends StatelessWidget {
+  const _RailSimulatorAction({required this.expanded});
+
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
+    void go() => context.go('/simulator');
+
+    if (!expanded) {
+      return IconButton(
+        key: const Key('rail_simulator_action'),
+        icon: const Icon(Icons.calculate_outlined),
+        tooltip: 'Simuler un investissement',
+        color: color,
+        onPressed: go,
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: InkWell(
+        key: const Key('rail_simulator_action'),
+        onTap: go,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.calculate_outlined, size: 20, color: color),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  'Simuler un investissement',
+                  style: theme.textTheme.labelLarge?.copyWith(color: color),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

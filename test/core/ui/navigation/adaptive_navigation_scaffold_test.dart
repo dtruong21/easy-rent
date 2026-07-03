@@ -2,21 +2,22 @@
 ///
 /// Le shell est exercé via un [StatefulShellRoute.indexedStack] minimal à 5
 /// branches factices (contenu trivial) — on teste le MÉCANISME du shell
-/// (NavigationBar/Rail selon largeur, goBranch, préservation d'état), pas les
-/// pages métier réelles (couvertes par leurs propres tests + par
-/// `shell_branch_state_test.dart` pour l'intégration avec le vrai routeur).
+/// (NavigationBar/Rail selon largeur, goBranch, préservation d'état, rail
+/// repliable + action simulateur), pas les pages métier réelles (couvertes
+/// par leurs propres tests + par `shell_branch_state_test.dart`).
 library;
 
 import 'package:easyrent/core/ui/navigation/adaptive_navigation_scaffold.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Router de test — 5 branches factices avec un champ de saisie chacune, pour
-// pouvoir prouver la préservation d'état par indexedStack (un TextField
-// gardant sa valeur après changement d'onglet ne serait pas possible avec un
-// ShellRoute simple qui reconstruit le widget à chaque bascule).
+// pouvoir prouver la préservation d'état par indexedStack. + une route plate
+// /simulator (hors shell) pour tester l'action épinglée du rail.
 // ---------------------------------------------------------------------------
 
 Widget _brancheFactice(String label) => Scaffold(
@@ -78,7 +79,19 @@ GoRouter _buildTestRouter() {
           ),
         ],
       ),
+      // Hors shell (comme le vrai routeur) : le simulateur.
+      GoRoute(
+        path: '/simulator',
+        builder: (context, state) =>
+            const Scaffold(body: Text('page simulateur')),
+      ),
     ],
+  );
+}
+
+Future<void> _pumpApp(WidgetTester tester, GoRouter router) {
+  return tester.pumpWidget(
+    ProviderScope(child: MaterialApp.router(routerConfig: router)),
   );
 }
 
@@ -94,6 +107,13 @@ Future<void> _setViewportWidth(WidgetTester tester, double width) async {
 // ---------------------------------------------------------------------------
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    // Rail replié par défaut (aucune préférence persistée).
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group(
     'AdaptiveNavigationScaffold — bascule NavigationBar / NavigationRail',
     () {
@@ -101,9 +121,7 @@ void main() {
         tester,
       ) async {
         await _setViewportWidth(tester, 400);
-        await tester.pumpWidget(
-          MaterialApp.router(routerConfig: _buildTestRouter()),
-        );
+        await _pumpApp(tester, _buildTestRouter());
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('adaptive_nav_bar')), findsOneWidget);
@@ -116,9 +134,7 @@ void main() {
         '>= 600 px → NavigationRail présente, NavigationBar absente',
         (tester) async {
           await _setViewportWidth(tester, 900);
-          await tester.pumpWidget(
-            MaterialApp.router(routerConfig: _buildTestRouter()),
-          );
+          await _pumpApp(tester, _buildTestRouter());
           await tester.pumpAndSettle();
 
           expect(find.byKey(const Key('adaptive_nav_rail')), findsOneWidget);
@@ -132,9 +148,7 @@ void main() {
         tester,
       ) async {
         await _setViewportWidth(tester, 600);
-        await tester.pumpWidget(
-          MaterialApp.router(routerConfig: _buildTestRouter()),
-        );
+        await _pumpApp(tester, _buildTestRouter());
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('adaptive_nav_rail')), findsOneWidget);
@@ -146,9 +160,7 @@ void main() {
   group('AdaptiveNavigationScaffold — 5 destinations avec libellés FR', () {
     testWidgets('NavigationBar affiche les 5 labels français', (tester) async {
       await _setViewportWidth(tester, 400);
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: _buildTestRouter()),
-      );
+      await _pumpApp(tester, _buildTestRouter());
       await tester.pumpAndSettle();
 
       expect(find.text('Accueil'), findsOneWidget);
@@ -158,13 +170,11 @@ void main() {
       expect(find.text('Profil'), findsOneWidget);
     });
 
-    testWidgets('NavigationRail étendu (>= 1024 px) affiche aussi les labels', (
+    testWidgets('NavigationRail replié affiche les libellés (labelType.all)', (
       tester,
     ) async {
       await _setViewportWidth(tester, 1200);
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: _buildTestRouter()),
-      );
+      await _pumpApp(tester, _buildTestRouter());
       await tester.pumpAndSettle();
 
       expect(find.byType(NavigationRail), findsOneWidget);
@@ -178,9 +188,7 @@ void main() {
       tester,
     ) async {
       await _setViewportWidth(tester, 400);
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: _buildTestRouter()),
-      );
+      await _pumpApp(tester, _buildTestRouter());
       await tester.pumpAndSettle();
 
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
@@ -191,9 +199,7 @@ void main() {
       'tap sur « Baux » (NavigationBar) → goBranch(3), contenu change',
       (tester) async {
         await _setViewportWidth(tester, 400);
-        await tester.pumpWidget(
-          MaterialApp.router(routerConfig: _buildTestRouter()),
-        );
+        await _pumpApp(tester, _buildTestRouter());
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('field_accueil')), findsOneWidget);
@@ -213,9 +219,7 @@ void main() {
       tester,
     ) async {
       await _setViewportWidth(tester, 900);
-      await tester.pumpWidget(
-        MaterialApp.router(routerConfig: _buildTestRouter()),
-      );
+      await _pumpApp(tester, _buildTestRouter());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Locataires'));
@@ -227,34 +231,96 @@ void main() {
     });
   });
 
+  group('AdaptiveNavigationScaffold — rail repliable (bouton menu)', () {
+    testWidgets('replié par défaut (extended == false)', (tester) async {
+      await _setViewportWidth(tester, 1200);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.extended, isFalse);
+      expect(find.byKey(const Key('rail_menu_toggle')), findsOneWidget);
+    });
+
+    testWidgets(
+      'tap bouton menu → déplie (extended == true), re-tap → replie',
+      (tester) async {
+        await _setViewportWidth(tester, 1200);
+        await _pumpApp(tester, _buildTestRouter());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('rail_menu_toggle')));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+          isTrue,
+        );
+
+        await tester.tap(find.byKey(const Key('rail_menu_toggle')));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets('préférence persistée « déplié » → rail étendu au montage', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'nav_rail_expanded': true});
+      await _setViewportWidth(tester, 1200);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+        isTrue,
+      );
+    });
+  });
+
+  group('AdaptiveNavigationScaffold — action simulateur (rail)', () {
+    testWidgets('présente dans le rail, absente de la NavigationBar', (
+      tester,
+    ) async {
+      await _setViewportWidth(tester, 900);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('rail_simulator_action')), findsOneWidget);
+    });
+
+    testWidgets('tap → navigue vers /simulator (hors shell)', (tester) async {
+      await _setViewportWidth(tester, 900);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('rail_simulator_action')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page simulateur'), findsOneWidget);
+    });
+  });
+
   group('AdaptiveNavigationScaffold — préservation d\'état par branche', () {
     testWidgets(
       'changer de branche PUIS revenir préserve la saisie (indexedStack)',
       (tester) async {
         await _setViewportWidth(tester, 400);
-        await tester.pumpWidget(
-          MaterialApp.router(routerConfig: _buildTestRouter()),
-        );
+        await _pumpApp(tester, _buildTestRouter());
         await tester.pumpAndSettle();
 
-        // Saisit une valeur dans le champ de la branche Accueil.
         await tester.enterText(
           find.byKey(const Key('field_accueil')),
           'valeur-persistee',
         );
         await tester.pump();
 
-        // Bascule sur Biens.
         await tester.tap(find.text('Biens'));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('field_accueil')), findsNothing);
 
-        // Revient sur Accueil : la valeur saisie doit être intacte —
-        // indexedStack garde le widget vivant (State non détruit), il ne le
-        // reconstruit pas comme le ferait un ShellRoute simple. Le TextField
-        // n'a pas de controller explicite (état interne à l'EditableText),
-        // donc on vérifie le texte affiché à l'écran plutôt que le widget
-        // descriptor.
         await tester.tap(find.text('Accueil'));
         await tester.pumpAndSettle();
 
@@ -270,7 +336,7 @@ void main() {
       (tester) async {
         await _setViewportWidth(tester, 400);
         final router = _buildTestRouter();
-        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await _pumpApp(tester, router);
         await tester.pumpAndSettle();
 
         expect(
@@ -278,9 +344,6 @@ void main() {
           '/accueil',
         );
 
-        // Re-tap sur Accueil (déjà actif) : initialLocation: true → même
-        // route racine, comportement "pop to root" (idempotent ici car pas
-        // de sous-pile factice, mais couvre le contrat de l'API).
         await tester.tap(find.text('Accueil'));
         await tester.pumpAndSettle();
 
