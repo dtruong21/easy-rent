@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../../core/ui/breakpoints.dart';
 import '../../../core/ui/theme/app_spacing.dart';
 import '../../profile/application/landlord_profile_provider.dart';
+import '../../profile/presentation/widgets/section_header.dart';
 import '../../pwa/application/install_prompt_controller.dart';
 import '../../pwa/presentation/install_prompt_banner.dart';
 import '../application/dashboard_provider.dart';
@@ -25,12 +27,18 @@ import 'widgets/shortcuts_row.dart';
 /// - [DashboardHeader] (bonjour + date)
 /// - Contenu conditionnel :
 ///   - Onboarding si 0 biens/locataires/baux → [OnboardingFirstSteps]
-///   - Sinon : [KpiGrid] + [MonthlyBarchart] + [RecentActivitySection]
-/// - [ShortcutsRow] (toujours visible en bas) — réduite au seul CTA
-///   simulateur : Biens/Locataires/Baux sont déjà des destinations du shell
+///   - Sinon : [SectionHeader] « Vue d'ensemble » + [KpiGrid] +
+///     [PortfolioYieldSection] + [MonthlyBarchart] + [RecentActivitySection]
+/// - [ShortcutsRow] (mobile uniquement, en bas) — réduite au seul CTA
+///   simulateur : sur desktop le simulateur est épinglé au rail de
+///   navigation (FEAT-026), le raccourci y serait redondant ; Biens/
+///   Locataires/Baux sont déjà des destinations du shell
 ///   (docs/UX_NAVIGATION.md §7).
 ///
-/// Pull-to-refresh via [RefreshIndicator] + [dashboardProvider].
+/// Pull-to-refresh via [RefreshIndicator] + [dashboardProvider]. Le
+/// graphique « Loyers » a son propre cycle de chargement indépendant
+/// ([monthlyAmountsProvider]) : changer sa période ne relance pas ce
+/// `refresh()`.
 ///
 /// Le dashboard n'est plus le hub de navigation (§2 du doc) : pas de bouton
 /// retour (`showBackButton: false`), et les icônes profil/déconnexion ont
@@ -85,6 +93,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
           builder: (context) {
             final spacing =
                 Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+            // ShortcutsRow (CTA simulateur) : mobile uniquement. Sur desktop
+            // le simulateur est épinglé au rail de navigation (FEAT-026),
+            // le raccourci y serait redondant.
+            final showShortcuts = context.isMobile;
             return ListView(
               padding: EdgeInsets.fromLTRB(
                 spacing.lg,
@@ -96,8 +108,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
                 const InstallPromptBanner(),
                 DashboardHeader(firstName: firstName),
                 _DashboardContent(asyncSnapshot: asyncSnapshot),
-                SizedBox(height: spacing.xl),
-                const ShortcutsRow(),
+                if (showShortcuts) ...[
+                  SizedBox(height: spacing.xl),
+                  const ShortcutsRow(),
+                ],
               ],
             );
           },
@@ -185,11 +199,13 @@ class _DataView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SectionHeader(title: "Vue d'ensemble"),
+        SizedBox(height: spacing.md),
         KpiGrid(snapshot: snapshot),
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
-        MonthlyBarchart(months: snapshot.monthly),
+        const MonthlyBarchart(),
         SizedBox(height: spacing.xl),
         RecentActivitySection(items: snapshot.activity),
       ],

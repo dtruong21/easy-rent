@@ -19,7 +19,10 @@ abstract interface class DashboardRepository {
   Future<RetardsKpi> fetchRetards();
   Future<RenouvellementsKpi> fetchRenouvellements();
   Future<DocsPendingKpi> fetchDocsPending();
-  Future<List<MonthlyAmount>> fetchLast6MonthsAmounts();
+
+  /// Montants mensuels encaissé/dû sur les [months] derniers mois
+  /// (fenêtre glissante : mois courant inclus, donc `now-(months-1) → now`).
+  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months);
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5});
   Future<bool> isLandlordOnboarding();
 }
@@ -166,10 +169,11 @@ class FirestoreDashboardRepository implements DashboardRepository {
   }
 
   @override
-  Future<List<MonthlyAmount>> fetchLast6MonthsAmounts() async {
+  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async {
+    assert(months > 0, 'months doit être strictement positif');
     final uid = _uid;
     final now = DateTime.now();
-    final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
+    final startMonth = DateTime(now.year, now.month - (months - 1), 1);
     final nextMonth = DateTime(now.year, now.month + 1, 1);
 
     final (paymentsQs, leasesQs) = await (
@@ -179,7 +183,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
           .where('deletedAt', isNull: true)
           .where(
             'paidAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(sixMonthsAgo),
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startMonth),
           )
           .where('paidAt', isLessThan: Timestamp.fromDate(nextMonth))
           .get(),
@@ -204,8 +208,8 @@ class FirestoreDashboardRepository implements DashboardRepository {
       encaissedByMonth[key] = (encaissedByMonth[key] ?? 0) + rent + charges;
     }
 
-    final months = <MonthlyAmount>[];
-    for (var i = 5; i >= 0; i--) {
+    final result = <MonthlyAmount>[];
+    for (var i = months - 1; i >= 0; i--) {
       final month = DateTime(now.year, now.month - i, 1);
       final monthKey =
           '${month.year.toString().padLeft(4, '0')}-'
@@ -220,7 +224,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
         final charges = (d.data()['chargesAmountCents'] as num?)?.toInt() ?? 0;
         due += rent + charges;
       }
-      months.add(
+      result.add(
         MonthlyAmount(
           year: month.year,
           month: month.month,
@@ -229,8 +233,8 @@ class FirestoreDashboardRepository implements DashboardRepository {
         ),
       );
     }
-    _log.fine('fetchLast6MonthsAmounts: ${months.length} mois');
-    return months;
+    _log.fine('fetchLastMonthsAmounts($months): ${result.length} mois');
+    return result;
   }
 
   @override

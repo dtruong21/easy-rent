@@ -1,4 +1,5 @@
-/// Format d'affichage du graphique « Loyers — 6 derniers mois ».
+/// Format d'affichage du graphique « Loyers » (période variable, cf.
+/// [ChartPeriod]).
 ///
 /// Choisi via le toggle de [MonthlyBarchart], persisté par
 /// `chartFormatProvider` (localStorage sur le web).

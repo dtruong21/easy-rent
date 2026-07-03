@@ -148,7 +148,7 @@ class _FakeDashboardRepo implements DashboardRepository {
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLast6MonthsAmounts() async => [];
+  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];

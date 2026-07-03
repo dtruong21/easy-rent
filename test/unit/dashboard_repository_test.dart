@@ -55,7 +55,8 @@ class _FakeDashboardRepository implements DashboardRepository {
   Future<DocsPendingKpi> fetchDocsPending() async => _docs;
 
   @override
-  Future<List<MonthlyAmount>> fetchLast6MonthsAmounts() async => _monthly;
+  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async =>
+      _monthly;
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async =>
@@ -128,28 +129,31 @@ void main() {
     });
   });
 
-  group('fetchLast6MonthsAmounts', () {
+  group('fetchLastMonthsAmounts', () {
     test('retourne liste vide par défaut', () async {
       final repo = const _FakeDashboardRepository();
-      final months = await repo.fetchLast6MonthsAmounts();
+      final months = await repo.fetchLastMonthsAmounts(6);
       expect(months, isEmpty);
     });
 
-    test('retourne 6 mois configurés', () async {
-      final sixMonths = List.generate(
-        6,
-        (i) => MonthlyAmount(
-          year: 2026,
-          month: i + 1,
-          encaissedCents: (i + 1) * 10000,
-          dueCents: 90000,
-        ),
-      );
-      final repo = _FakeDashboardRepository(monthly: sixMonths);
-      final months = await repo.fetchLast6MonthsAmounts();
-      expect(months.length, 6);
-      expect(months.first.month, 1);
-    });
+    test(
+      'retourne les mois configurés, quel que soit le paramètre months',
+      () async {
+        final sixMonths = List.generate(
+          6,
+          (i) => MonthlyAmount(
+            year: 2026,
+            month: i + 1,
+            encaissedCents: (i + 1) * 10000,
+            dueCents: 90000,
+          ),
+        );
+        final repo = _FakeDashboardRepository(monthly: sixMonths);
+        final months = await repo.fetchLastMonthsAmounts(6);
+        expect(months.length, 6);
+        expect(months.first.month, 1);
+      },
+    );
   });
 
   group('fetchRecentActivity', () {

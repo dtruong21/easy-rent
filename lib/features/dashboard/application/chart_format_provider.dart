@@ -58,7 +58,7 @@ class ChartFormatNotifier extends StateNotifier<ChartFormat> {
   }
 }
 
-/// Provider du [ChartFormat] du graphique « Loyers — 6 derniers mois ».
+/// Provider du [ChartFormat] du graphique « Loyers » (période variable).
 final chartFormatProvider =
     StateNotifierProvider<ChartFormatNotifier, ChartFormat>(
       (ref) => ChartFormatNotifier(ref.read(chartFormatStorageProvider)),

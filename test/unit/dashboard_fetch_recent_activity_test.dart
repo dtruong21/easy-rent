@@ -60,7 +60,7 @@ class _FakeMultiSourceRepository implements DashboardRepository {
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
   @override
-  Future<List<MonthlyAmount>> fetchLast6MonthsAmounts() async => [];
+  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
   @override
   Future<bool> isLandlordOnboarding() async => false;
 }

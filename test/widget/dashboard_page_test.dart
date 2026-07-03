@@ -69,7 +69,7 @@ class _FakeDashboardRepo implements DashboardRepository {
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLast6MonthsAmounts() async => [];
+  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
@@ -249,10 +249,11 @@ void main() {
     });
 
     testWidgets(
-      'affiche ShortcutsRow réduite au seul CTA simulateur (FEAT-026)',
+      'mobile : affiche ShortcutsRow réduite au seul CTA simulateur (FEAT-026)',
       (tester) async {
-        // Viewport plus grand pour que tout le contenu soit rendu.
-        tester.view.physicalSize = const Size(800, 2400);
+        // Viewport mobile (<600px, cf. core/ui/breakpoints.dart) — ShortcutsRow
+        // n'est montée que sur ce breakpoint (polish dashboard, cf. 2).
+        tester.view.physicalSize = const Size(400, 2400);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
@@ -266,6 +267,22 @@ void main() {
         expect(find.byKey(const Key('shortcut_properties')), findsNothing);
         expect(find.byKey(const Key('shortcut_tenants')), findsNothing);
         expect(find.byKey(const Key('shortcut_leases')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'desktop : masque ShortcutsRow (simulateur déjà épinglé au rail, FEAT-026)',
+      (tester) async {
+        // Viewport desktop (≥600px) — le simulateur est déjà accessible via
+        // le rail de navigation, ShortcutsRow serait redondante.
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
+        expect(find.byType(ShortcutsRow), findsNothing);
       },
     );
   });
@@ -288,7 +305,7 @@ void main() {
 
   group('DashboardPage — empty states (CardEmptyState)', () {
     testWidgets('barchart vide affiche texte CardEmptyState', (tester) async {
-      // Le repo retourne [] pour fetchLast6MonthsAmounts → isEmpty = true.
+      // Le repo retourne [] pour fetchLastMonthsAmounts → isEmpty = true.
       await tester.pumpWidget(_wrap());
       await tester.pumpAndSettle();
       expect(find.text("Pas encore d'historique"), findsOneWidget);

@@ -57,12 +57,19 @@ class _ShortcutCard extends StatelessWidget {
             horizontal: spacing.lg,
             vertical: spacing.md,
           ),
+          // mainAxisSize.min + un Text non contraint provoquait un overflow
+          // sur petits viewports mobiles (<400px) : le libellé complet
+          // ("Simuler un investissement") ne rentrait pas dans la largeur
+          // restante une fois les paddings de la ListView + de la Card
+          // déduits. Flexible laisse le texte s'enrouler sur 2 lignes plutôt
+          // que déborder, sans changer le rendu desktop (où il tient sur 1
+          // ligne).
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, color: theme.colorScheme.primary, size: 20),
               const SizedBox(width: 8),
-              Text(label, style: theme.textTheme.labelLarge),
+              Flexible(child: Text(label, style: theme.textTheme.labelLarge)),
               const SizedBox(width: 4),
               Icon(
                 Icons.chevron_right,

@@ -14,7 +14,6 @@ void main() {
       expect(snapshot.retards.count, 0);
       expect(snapshot.renouvellements.count, 0);
       expect(snapshot.docs.count, 0);
-      expect(snapshot.monthly, isEmpty);
       expect(snapshot.activity, isEmpty);
     });
 

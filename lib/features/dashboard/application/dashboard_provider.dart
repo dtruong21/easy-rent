@@ -3,6 +3,8 @@ import 'package:logging/logging.dart';
 
 import '../data/dashboard_repository.dart';
 import '../domain/dashboard_snapshot.dart';
+import '../domain/monthly_amount.dart';
+import 'chart_period_provider.dart';
 
 final _log = Logger('DashboardController');
 
@@ -10,7 +12,11 @@ final _log = Logger('DashboardController');
 ///
 /// Charge le [DashboardSnapshot] complet en parallèle via records Dart 3
 /// (required #4 — remplace le pattern `as dynamic` non type-safe).
-/// Si [isLandlordOnboarding] est `true`, les 6 autres requêtes sont court-circuitées.
+/// Si [isLandlordOnboarding] est `true`, les 5 autres requêtes sont court-circuitées.
+///
+/// Le graphique « Loyers » (montants mensuels) est chargé séparément par
+/// [monthlyAmountsProvider] : sa période est sélectionnable par l'utilisateur
+/// et un changement de période ne doit PAS recharger les KPI/activité.
 ///
 /// Expose [refresh] pour un pull-to-refresh manuel.
 class DashboardController extends AsyncNotifier<DashboardSnapshot> {
@@ -25,14 +31,13 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
       return DashboardSnapshot.empty(isOnboarding: true);
     }
 
-    // 2) Fan-in parallèle des 6 requêtes — types statiques préservés sans cast.
+    // 2) Fan-in parallèle des 5 requêtes — types statiques préservés sans cast.
     _log.info('DashboardController: chargement parallèle KPI + activité');
-    final (loyers, retards, renouvellements, docs, monthly, activity) = await (
+    final (loyers, retards, renouvellements, docs, activity) = await (
       repo.fetchLoyersMois(),
       repo.fetchRetards(),
       repo.fetchRenouvellements(),
       repo.fetchDocsPending(),
-      repo.fetchLast6MonthsAmounts(),
       // 30 : la section n'en montre que 5 repliés, « Voir tout » déplie le
       // reste sur place sans requête supplémentaire.
       repo.fetchRecentActivity(limit: 30),
@@ -43,7 +48,6 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
       retards: retards,
       renouvellements: renouvellements,
       docs: docs,
-      monthly: monthly,
       activity: activity,
       isOnboarding: false,
     );
@@ -63,3 +67,19 @@ final dashboardProvider =
     AsyncNotifierProvider<DashboardController, DashboardSnapshot>(
       DashboardController.new,
     );
+
+/// Provider des montants mensuels du graphique « Loyers », indépendant du
+/// [dashboardProvider].
+///
+/// Watch [chartPeriodProvider] : changer la période ne refait QUE cette
+/// requête, sans recharger les KPI ni l'activité récente (`autoDispose` —
+/// pas de cache persistant nécessaire, le graphique est la seule
+/// consommatrice).
+final monthlyAmountsProvider = FutureProvider.autoDispose<List<MonthlyAmount>>((
+  ref,
+) async {
+  final repo = ref.watch(dashboardRepositoryProvider);
+  final period = ref.watch(chartPeriodProvider);
+  _log.info('monthlyAmountsProvider: fetch ${period.months} mois');
+  return repo.fetchLastMonthsAmounts(period.months);
+});
