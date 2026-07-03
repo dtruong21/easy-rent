@@ -8,7 +8,7 @@ Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-
 
 | ID | Titre | Statut | Doc |
 |---|---|---|---|
-| FEAT-026 | Navigation shell adaptative web+mobile | 🟠 Concept proposé — implémentation à valider (décisions §13). Prérequis de FEAT-024 (livrer web avant / J1 mobile) | [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md) (concept complet + plan de migration + critères d'acceptation) |
+| FEAT-026 | Navigation shell adaptative web+mobile | ✅ Implémenté + staging 2026-07-03 (commit ca2d10a) — décisions validées : 5 onglets, Profil en onglet, avant la semaine mobile | [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md) |
 | FEAT-024 | App mobile iOS/Android (Flutter natif) | 🟡 Préparée — dev semaine du 6 juillet 2026 (dépend de FEAT-026 pour la nav) | [`docs/MOBILE.md`](MOBILE.md) (audit portabilité + décisions + plan semaine) |
 | FEAT-025 | Écran Profil → vrai paramétrage (password change, contact support) | ✅ Livré staging 2026-07-03 (commits f5734b4 + 0cd54de) — reste : notif email (extension Trigger Email, runbook dans la story) | [`backlog/025-settings-profile.md`](backlog/025-settings-profile.md) |
 

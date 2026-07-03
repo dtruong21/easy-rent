@@ -82,7 +82,7 @@
 | `/profile/password` | `ChangePasswordPage` | Comptes email only (tuile gatée + garde-fou in-page) |
 | `/profile/support` | `SupportPage` | Formulaire « Nous contacter » |
 
-**FEAT-026 (concept, à valider)** : navigation shell adaptative — voir [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md).
+**FEAT-026 (✅ implémenté 2026-07-03, commit ca2d10a)** : navigation shell adaptative — les 5 branches métier (Accueil `/dashboard`, Biens `/properties*`, Locataires `/tenants*`, Baux `/leases*`, Profil `/profile*`) vivent dans un `StatefulShellRoute.indexedStack` (NavigationBar <600px / NavigationRail ≥600px, état préservé par branche, racines sans bouton retour). Landing/auth/légal/simulateur hors shell. Garde 3-états inchangée. Référence : [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md).
 
 ---
 
