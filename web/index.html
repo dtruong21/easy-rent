@@ -93,6 +93,63 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Auto-réparation du cache des assets à nom stable (2026-07-03).
+    //
+    // Flutter Web ne fingerprint AUCUN fichier : noms FIXES, contenus
+    // VARIABLES (main.dart.js à chaque build, subsets d'icônes au gré du
+    // tree-shaking). Ces fichiers ont longtemps été servis avec
+    // Cache-Control immutable : les navigateurs des visiteurs de l'époque
+    // gardent un bundle et des polices figés — icônes manquantes (Simulateur
+    // FEAT-018, toggle Cartes/Tableau FEAT-012) et deploys invisibles sans
+    // hard refresh. Les en-têtes sont corrigés (no-cache, voir firebase.json)
+    // mais une entrée déjà en cache marquée immutable ne sera JAMAIS
+    // revalidée d'elle-même — seul un hard refresh ou ce script la remplace.
+    //
+    // Une fois par navigateur (flag localStorage), on re-télécharge ces
+    // fichiers en contournant le cache HTTP ({cache:'reload'} remplace
+    // l'entrée par la réponse fraîche), AVANT de démarrer Flutter pour que
+    // cette visite charge déjà la version saine. Garde-fou 5 s : si le
+    // réseau rame, l'app démarre quand même (le flag n'étant posé qu'en
+    // succès, la réparation se rejouera à la visite suivante).
+    //
+    // Hors liste : canvaskit/*.wasm (lourds, et périmés seulement lors d'un
+    // upgrade du SDK Flutter). Si un upgrade moteur casse les navigateurs
+    // vétérans, passer le flag en v2 et ajouter les fichiers canvaskit.
+    (function () {
+      var started = false;
+      function startFlutter() {
+        if (started) return;
+        started = true;
+        var s = document.createElement('script');
+        s.src = 'flutter_bootstrap.js';
+        s.async = true;
+        document.body.appendChild(s);
+      }
+
+      var FLAG = 'er_cache_repair_v1';
+      var repaired = false;
+      try { repaired = !!localStorage.getItem(FLAG); } catch (e) {}
+
+      if (repaired || typeof fetch !== 'function') {
+        startFlutter();
+        return;
+      }
+
+      var staleRisk = [
+        'flutter_bootstrap.js',
+        'main.dart.js',
+        'assets/fonts/MaterialIcons-Regular.otf',
+        'assets/packages/cupertino_icons/assets/CupertinoIcons.ttf'
+      ];
+      Promise.all(
+        staleRisk.map(function (u) { return fetch(u, { cache: 'reload' }); })
+      ).then(function () {
+        try { localStorage.setItem(FLAG, '1'); } catch (e) {}
+      }).catch(function () {}).then(startFlutter);
+
+      setTimeout(startFlutter, 5000);
+    })();
+  </script>
 </body>
 </html>

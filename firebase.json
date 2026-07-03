@@ -39,15 +39,8 @@
         ]
       },
       {
-        "//": "JS/wasm + polices EB Garamond (assets bundlés au nom + contenu stables) — long cache immutable.",
-        "source": "**/*.@(js|wasm|mjs|woff|woff2|ttf|otf)",
-        "headers": [
-          {"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}
-        ]
-      },
-      {
-        "//": "Polices d'ICÔNES Material/Cupertino : nom de fichier FIXE mais contenu VARIABLE (tree-shaking = seules les icônes utilisées sont incluses). JAMAIS immutable — sinon un ancien subset mis en cache masque toute icône ajoutée depuis (bug icône Simulateur, ajoutée en FEAT-018 mais absente d'un subset caché depuis FEAT-010 ; 2026-07-03). Revalidation ETag (no-cache) → 304 léger si inchangé. Règle placée APRÈS le glob immutable : Firebase applique la dernière config matchante pour une clé d'en-tête donnée.",
-        "source": "**/@(MaterialIcons-Regular.otf|CupertinoIcons.ttf)",
+        "//": "Flutter Web ne fingerprint AUCUN fichier : noms STABLES, contenus VARIABLES (main.dart.js à chaque build, canvaskit à chaque upgrade SDK, subsets d'icônes au gré du tree-shaking, manifests à chaque build). JAMAIS immutable ici — un contenu variable derrière un nom stable marqué immutable rend les deploys invisibles jusqu'à un hard refresh. Vécu deux fois : subsets d'icônes (icône Simulateur FEAT-018), puis flutter_bootstrap.js/main.dart.js servis immutable car cette règle, placée après, écrasait leur no-cache — Firebase applique la DERNIÈRE config matchante pour une clé donnée (2026-07-03). no-cache = revalidation ETag → 304 léger si inchangé, deploy servi immédiatement sinon.",
+        "source": "**/*.@(js|wasm|mjs|json|bin|woff|woff2|ttf|otf)",
         "headers": [
           {"key": "Cache-Control", "value": "no-cache"}
         ]
