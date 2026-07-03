@@ -11,11 +11,15 @@ final _log = Logger('AuthRepository');
 
 /// Version actuelle du texte de consentement RGPD présenté à l'utilisateur.
 ///
-/// Format : 'vN-YYYY-MM' — à incrémenter à chaque mise à jour du texte de
-/// politique de confidentialité ou des finalités de traitement. Persisté
-/// dans landlords.rgpdConsentVersion (champ immuable post-création).
+/// Format : 'vN-YYYY-MM' — à incrémenter à chaque mise à jour des CGU, du
+/// texte de politique de confidentialité ou des finalités de traitement.
+/// Persisté dans landlords.rgpdConsentVersion (champ immuable post-création).
 /// **Doit rester synchronisé avec functions/src/auth/handle_new_user.ts**.
-const String rgpdConsentVersion = 'v1-2026-06';
+/// Historique :
+/// - v1-2026-06 : politique de confidentialité v1.0 seule
+/// - v2-2026-07 : CGU v1.0 + politique de confidentialité v1.0
+///   (case d'acceptation unique au signup)
+const String rgpdConsentVersion = 'v2-2026-07';
 
 /// Fenêtre d'expiration glissante d'une session anonyme (BAILLAN-M1).
 ///

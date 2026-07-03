@@ -225,7 +225,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
               ),
           ],
           const SizedBox(height: 16),
-          _RgpdCheckbox(
+          _ConsentCheckbox(
             key: _consentKey,
             value: _rgpdConsent,
             enabled: !isSubmitting,
@@ -270,8 +270,12 @@ class _SignupFormState extends ConsumerState<SignupForm> {
   }
 }
 
-class _RgpdCheckbox extends StatefulWidget {
-  const _RgpdCheckbox({
+/// Case d'acceptation unique : CGU (`/terms`) + politique de
+/// confidentialité (`/privacy`). La valeur alimente `rgpdConsent`
+/// (nom de champ Firestore historique) — voir `rgpdConsentVersion` dans
+/// auth_repository.dart pour la traçabilité des versions acceptées.
+class _ConsentCheckbox extends StatefulWidget {
+  const _ConsentCheckbox({
     required this.value,
     required this.enabled,
     required this.onChanged,
@@ -288,16 +292,18 @@ class _RgpdCheckbox extends StatefulWidget {
   final bool hasError;
 
   @override
-  State<_RgpdCheckbox> createState() => _RgpdCheckboxState();
+  State<_ConsentCheckbox> createState() => _ConsentCheckboxState();
 }
 
-class _RgpdCheckboxState extends State<_RgpdCheckbox> {
-  // Stocké en champ pour être disposé proprement et éviter les memory leaks.
-  final _recognizer = TapGestureRecognizer();
+class _ConsentCheckboxState extends State<_ConsentCheckbox> {
+  // Stockés en champs pour être disposés proprement (memory leaks).
+  final _termsRecognizer = TapGestureRecognizer();
+  final _privacyRecognizer = TapGestureRecognizer();
 
   @override
   void dispose() {
-    _recognizer.dispose();
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     super.dispose();
   }
 
@@ -305,7 +311,10 @@ class _RgpdCheckboxState extends State<_RgpdCheckbox> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    _recognizer.onTap = () => context.go('/privacy');
+    // push (pas go) : le formulaire reste dans la pile, le retour depuis la
+    // page légale conserve la saisie en cours.
+    _termsRecognizer.onTap = () => context.push('/terms');
+    _privacyRecognizer.onTap = () => context.push('/privacy');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -334,15 +343,25 @@ class _RgpdCheckboxState extends State<_RgpdCheckbox> {
                     text: TextSpan(
                       style: theme.textTheme.bodyMedium,
                       children: [
-                        const TextSpan(text: "J'accepte la "),
+                        const TextSpan(text: "J'accepte les "),
+                        TextSpan(
+                          text: "conditions générales d'utilisation",
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: _termsRecognizer,
+                        ),
+                        const TextSpan(text: ' et la '),
                         TextSpan(
                           text: 'politique de confidentialité',
                           style: TextStyle(
                             color: colorScheme.primary,
                             decoration: TextDecoration.underline,
                           ),
-                          recognizer: _recognizer,
+                          recognizer: _privacyRecognizer,
                         ),
+                        const TextSpan(text: '.'),
                       ],
                     ),
                   ),
@@ -355,7 +374,8 @@ class _RgpdCheckboxState extends State<_RgpdCheckbox> {
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 12),
             child: Text(
-              'Vous devez accepter la politique de confidentialité.',
+              "Vous devez accepter les conditions générales d'utilisation "
+              'et la politique de confidentialité.',
               key: const Key('rgpd_consent_error'),
               style: TextStyle(color: colorScheme.error, fontSize: 13),
             ),

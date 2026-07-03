@@ -43,7 +43,9 @@ class SignupController extends StateNotifier<SignupPageState> {
     }
     if (!rgpdConsent) {
       state = const SignupPageState.error(
-        message: 'Vous devez accepter la politique de confidentialité',
+        message:
+            "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité',
       );
       return;
     }
@@ -94,7 +96,9 @@ class SignupController extends StateNotifier<SignupPageState> {
   Future<void> signUpWithGoogle({required bool rgpdConsent}) async {
     if (!rgpdConsent) {
       state = const SignupPageState.error(
-        message: 'Vous devez accepter la politique de confidentialité',
+        message:
+            "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité',
       );
       return;
     }
@@ -140,7 +144,9 @@ class SignupController extends StateNotifier<SignupPageState> {
   Future<void> signUpWithApple({required bool rgpdConsent}) async {
     if (!rgpdConsent) {
       state = const SignupPageState.error(
-        message: 'Vous devez accepter la politique de confidentialité',
+        message:
+            "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité',
       );
       return;
     }

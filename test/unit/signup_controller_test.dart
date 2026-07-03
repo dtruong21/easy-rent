@@ -283,7 +283,8 @@ void main() {
         expect(repo.signUpCalled, isFalse);
         expect(
           _errorMsg(ctrl.state),
-          'Vous devez accepter la politique de confidentialité',
+          "Vous devez accepter les conditions générales d'utilisation "
+          'et la politique de confidentialité',
         );
       });
     });
@@ -336,7 +337,8 @@ void main() {
           expect(_isError(ctrl.state), isTrue);
           expect(
             _errorMsg(ctrl.state),
-            'Vous devez accepter la politique de confidentialité',
+            "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité',
           );
         },
       );
@@ -437,7 +439,8 @@ void main() {
           expect(_isError(ctrl.state), isTrue);
           expect(
             _errorMsg(ctrl.state),
-            'Vous devez accepter la politique de confidentialité',
+            "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité',
           );
         },
       );

@@ -6,6 +6,7 @@
 ///    champs (rgpdConsentAt, rgpdConsentVersion).
 library;
 
+import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,18 +15,21 @@ void main() {
   // 1. Version RGPD — format canonique
   // =========================================================================
   group('rgpdConsentVersion — format canonique', () {
-    test('v1-2026-06 suit le format vN-YYYY-MM', () {
-      // La constante _rgpdConsentVersion est package-private.
-      // On vérifie le format de la valeur connue : si la constante change,
-      // ce test force une révision consciente de la version.
-      const expectedVersion = 'v1-2026-06';
+    test('la constante suit le format vN-YYYY-MM', () {
       final versionRegex = RegExp(r'^v\d+-\d{4}-\d{2}$');
       expect(
-        versionRegex.hasMatch(expectedVersion),
+        versionRegex.hasMatch(rgpdConsentVersion),
         isTrue,
         reason:
-            'La version RGPD doit suivre le format vN-YYYY-MM (ex: v1-2026-06)',
+            'La version RGPD doit suivre le format vN-YYYY-MM (ex: v2-2026-07)',
       );
+    });
+
+    test('version courante = v2-2026-07 (CGU 1.0 + PdC 1.0)', () {
+      // Si la constante change, ce test force une révision consciente :
+      // un bump = de nouveaux documents acceptés au signup, à synchroniser
+      // avec handle_new_user.ts et finalize_anonymous_upgrade.ts.
+      expect(rgpdConsentVersion, 'v2-2026-07');
     });
   });
 

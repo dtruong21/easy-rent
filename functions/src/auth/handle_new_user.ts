@@ -20,8 +20,8 @@
  *
  * Garanties (compte non-anonyme) :
  *   - `rgpdConsentAt` = serverTimestamp() (accountability RGPD art. 7.1)
- *   - `rgpdConsentVersion` = version courante du texte de PdC ("v1-2026-06")
- *     correspondant à ce qui a été accepté côté client au signup
+ *   - `rgpdConsentVersion` = version courante des documents acceptés au
+ *     signup — CGU + politique de confidentialité ("v2-2026-07")
  *   - Idempotent (`set({merge:true})`) au cas où le trigger refire
  */
 
@@ -32,13 +32,15 @@ import {beforeUserCreated} from "firebase-functions/v2/identity";
 import type {AuthBlockingEvent} from "firebase-functions/v2/identity";
 
 /**
- * Version courante du texte de consentement RGPD.
+ * Version courante des documents acceptés au signup (CGU + politique de
+ * confidentialité).
  *
- * À incrémenter à chaque mise à jour du texte de politique de confidentialité
- * ou des finalités de traitement (synchroniser avec
- * `lib/features/auth/data/auth_repository.dart::_rgpdConsentVersion`).
+ * À incrémenter à chaque mise à jour des CGU, du texte de politique de
+ * confidentialité ou des finalités de traitement (synchroniser avec
+ * `lib/features/auth/data/auth_repository.dart::rgpdConsentVersion`).
+ * Historique : v1-2026-06 = PdC seule ; v2-2026-07 = CGU 1.0 + PdC 1.0.
  */
-const CURRENT_RGPD_VERSION = "v1-2026-06";
+const CURRENT_RGPD_VERSION = "v2-2026-07";
 
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 

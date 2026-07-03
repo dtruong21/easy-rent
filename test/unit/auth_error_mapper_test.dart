@@ -152,7 +152,8 @@ void main() {
       () {
         expect(
           AuthErrorMapper.fromException(e('baillan/rgpd-consent-declined')),
-          'Vous devez accepter la politique de confidentialité.',
+          "Vous devez accepter les conditions générales d'utilisation "
+          'et la politique de confidentialité.',
         );
       },
     );

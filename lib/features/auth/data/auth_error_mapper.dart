@@ -74,7 +74,8 @@ class AuthErrorMapper {
             'Veuillez d\'abord créer un compte.';
 
       case GoogleAuthErrorCode.consentDeclined:
-        return 'Vous devez accepter la politique de confidentialité.';
+        return "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité.';
 
       case GoogleAuthErrorCode.popupBlocked:
         return 'Votre navigateur a bloqué la fenêtre Google. '
@@ -88,7 +89,8 @@ class AuthErrorMapper {
             'Veuillez d\'abord créer un compte.';
 
       case AppleAuthErrorCode.consentDeclined:
-        return 'Vous devez accepter la politique de confidentialité.';
+        return "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité.';
 
       case AppleAuthErrorCode.popupBlocked:
         return 'Votre navigateur a bloqué la fenêtre Apple. '

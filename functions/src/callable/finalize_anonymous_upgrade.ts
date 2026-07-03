@@ -30,8 +30,9 @@ import {asBag, requireAuthUid} from "../utils/callable_helpers";
 
 /** Doit rester synchronisé avec `lib/features/auth/data/auth_repository.dart`
  * (`rgpdConsentVersion`) et `functions/src/auth/handle_new_user.ts`
- * (`CURRENT_RGPD_VERSION`). */
-export const CURRENT_RGPD_VERSION = "v1-2026-06";
+ * (`CURRENT_RGPD_VERSION`).
+ * Historique : v1-2026-06 = PdC seule ; v2-2026-07 = CGU 1.0 + PdC 1.0. */
+export const CURRENT_RGPD_VERSION = "v2-2026-07";
 
 /**
  * Résout la version de consentement RGPD à persister.

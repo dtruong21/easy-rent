@@ -197,7 +197,10 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Vous devez accepter la politique de confidentialité.'),
+          find.text(
+            "Vous devez accepter les conditions générales d'utilisation "
+            'et la politique de confidentialité.',
+          ),
           findsOneWidget,
         );
       },

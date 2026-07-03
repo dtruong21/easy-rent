@@ -2,6 +2,7 @@ import 'package:easyrent/features/auth/application/signup_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/signup_page_state.dart';
 import 'package:easyrent/features/auth/presentation/signup_page.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,7 +101,11 @@ Widget _buildSignupPage({
       GoRoute(
         path: '/privacy',
         builder: (context, state) =>
-            const Scaffold(body: Text('Politique de confidentialité')),
+            const Scaffold(body: Text('Page politique de confidentialité')),
+      ),
+      GoRoute(
+        path: '/terms',
+        builder: (context, state) => const Scaffold(body: Text('Page CGU')),
       ),
     ],
   );
@@ -226,5 +231,55 @@ void main() {
 
       expect(find.text('Page connexion'), findsOneWidget);
     });
+
+    testWidgets('lien CGU de la case de consentement → navigue vers /terms', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
+      await tester.pumpAndSettle();
+
+      _tapSpan(tester, "conditions générales d'utilisation");
+      await tester.pumpAndSettle();
+
+      expect(find.text('Page CGU'), findsOneWidget);
+    });
+
+    testWidgets(
+      'lien confidentialité de la case de consentement → navigue vers '
+      '/privacy',
+      (tester) async {
+        await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
+        await tester.pumpAndSettle();
+
+        _tapSpan(tester, 'politique de confidentialité');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Page politique de confidentialité'), findsOneWidget);
+      },
+    );
   });
+}
+
+/// Déclenche le recognizer du [TextSpan] dont le texte contient [needle].
+///
+/// Les liens d'un [RichText] ne sont pas des widgets : ils sont
+/// inatteignables par `tester.tap(find...)`, on invoque donc leur
+/// [TapGestureRecognizer] directement.
+void _tapSpan(WidgetTester tester, String needle) {
+  final richTexts = tester.widgetList<RichText>(find.byType(RichText));
+  for (final richText in richTexts) {
+    var fired = false;
+    richText.text.visitChildren((span) {
+      if (span is TextSpan &&
+          (span.text ?? '').contains(needle) &&
+          span.recognizer is TapGestureRecognizer) {
+        (span.recognizer! as TapGestureRecognizer).onTap?.call();
+        fired = true;
+        return false;
+      }
+      return true;
+    });
+    if (fired) return;
+  }
+  fail('Aucun TextSpan cliquable contenant « $needle »');
 }
