@@ -33,7 +33,9 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
       repo.fetchRenouvellements(),
       repo.fetchDocsPending(),
       repo.fetchLast6MonthsAmounts(),
-      repo.fetchRecentActivity(),
+      // 30 : la section n'en montre que 5 repliés, « Voir tout » déplie le
+      // reste sur place sans requête supplémentaire.
+      repo.fetchRecentActivity(limit: 30),
     ).wait;
 
     return DashboardSnapshot(

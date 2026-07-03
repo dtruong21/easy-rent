@@ -10,18 +10,36 @@ import '../../domain/activity_item.dart';
 
 /// Section "Activité récente" du dashboard.
 ///
-/// Affiche jusqu'à 5 [ActivityItem] sous forme de tiles dans un card container.
+/// Affiche les 5 premiers [ActivityItem] repliés ; « Voir tout » déplie sur
+/// place le reste de la liste fournie (jusqu'à 30, voir dashboardProvider)
+/// et devient « Réduire ». Le bouton est masqué à 5 items ou moins.
 /// Si la liste est vide → [CardEmptyState].
-class RecentActivitySection extends StatelessWidget {
+class RecentActivitySection extends StatefulWidget {
   const RecentActivitySection({super.key, required this.items});
 
   final List<ActivityItem> items;
+
+  /// Nombre d'items visibles repliés.
+  static const int collapsedCount = 5;
+
+  @override
+  State<RecentActivitySection> createState() => _RecentActivitySectionState();
+}
+
+class _RecentActivitySectionState extends State<RecentActivitySection> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
     final radii = theme.extension<AppRadii>() ?? const AppRadii();
+
+    final items = widget.items;
+    final hasMore = items.length > RecentActivitySection.collapsedCount;
+    final visible = _expanded
+        ? items
+        : items.take(RecentActivitySection.collapsedCount);
 
     return Container(
       padding: EdgeInsets.all(spacing.cardPaddingStandard),
@@ -37,8 +55,12 @@ class RecentActivitySection extends StatelessWidget {
             children: [
               Text('Activité récente', style: theme.textTheme.titleSmall),
               const Spacer(),
-              // "Voir tout" désactivé en MVP — pas de page dédiée.
-              TextButton(onPressed: null, child: const Text('Voir tout')),
+              if (hasMore)
+                TextButton(
+                  key: const Key('btn_activity_toggle'),
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  child: Text(_expanded ? 'Réduire' : 'Voir tout'),
+                ),
             ],
           ),
           const SizedBox(height: 4),
@@ -49,7 +71,7 @@ class RecentActivitySection extends StatelessWidget {
               message: 'Commencez par enregistrer un paiement.',
             )
           else
-            ...items.map((item) => _ActivityTile(item: item)),
+            ...visible.map((item) => _ActivityTile(item: item)),
         ],
       ),
     );
