@@ -11,6 +11,7 @@ import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
+import '../../features/privacy/presentation/terms_page.dart';
 import '../../features/properties/presentation/properties_list_page.dart';
 import '../../features/properties/presentation/property_detail_page.dart';
 import '../../features/properties/presentation/property_form_page.dart';
@@ -66,6 +67,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/forgot-password',
         '/reset-password',
         '/privacy',
+        '/terms',
       };
 
       // Routes accessibles aux anonymes ET aux comptes complets (le
@@ -169,6 +171,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
           child: const PrivacyPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
+      GoRoute(
+        path: '/terms',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const TermsPage(),
           transition: AppTransition.fade,
         ),
       ),

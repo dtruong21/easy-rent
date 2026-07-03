@@ -8,6 +8,7 @@ import 'package:logging/logging.dart';
 import 'core/config/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'features/auth/application/anon_expiry_renewer.dart';
 import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
 import 'firebase_options.dart';
@@ -58,10 +59,14 @@ class _BaillanAppState extends ConsumerState<BaillanApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    // Thème choisi par l'utilisateur (Profil → Apparence), persisté en
+    // localStorage. Défaut : suit le système.
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'Baillan.',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

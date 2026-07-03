@@ -9,6 +9,7 @@
 /// - Email affiché en lecture seule
 library;
 
+import 'package:easyrent/core/theme/theme_mode_provider.dart';
 import 'package:easyrent/features/profile/application/profile_form_controller.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
@@ -18,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository
@@ -90,6 +92,14 @@ Widget _buildPage({
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (context, state) => const ProfilePage()),
+      GoRoute(
+        path: '/terms',
+        builder: (context, state) => const Scaffold(body: Text('page cgu')),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (context, state) => const Scaffold(body: Text('page privacy')),
+      ),
     ],
   );
 
@@ -276,6 +286,69 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Réessayer'), findsOneWidget);
+    });
+  });
+
+  group('ProfilePage — réglages (apparence, légal, session)', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    testWidgets('sections et contrôles présents', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Apparence'), findsOneWidget);
+      expect(find.byKey(const Key('segments_theme_mode')), findsOneWidget);
+      expect(find.text('Légal'), findsOneWidget);
+      expect(find.byKey(const Key('tile_terms')), findsOneWidget);
+      expect(find.byKey(const Key('tile_privacy')), findsOneWidget);
+      expect(find.byKey(const Key('btn_logout_profile')), findsOneWidget);
+    });
+
+    testWidgets('choisir « Sombre » applique et persiste le thème', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('segments_theme_mode')));
+      await tester.tap(find.text('Sombre'));
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ProfilePage)),
+      );
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('theme_mode'), 'dark');
+    });
+
+    testWidgets('tile CGU → navigue vers /terms', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('tile_terms')));
+      await tester.tap(find.byKey(const Key('tile_terms')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page cgu'), findsOneWidget);
+    });
+
+    testWidgets('tile Confidentialité → navigue vers /privacy', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('tile_privacy')));
+      await tester.tap(find.byKey(const Key('tile_privacy')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page privacy'), findsOneWidget);
     });
   });
 }

@@ -8,15 +8,18 @@ import '../application/profile_form_controller.dart';
 import '../domain/landlord_profile.dart';
 import '../domain/profile_form_state.dart';
 import 'widgets/profile_form.dart';
+import 'widgets/profile_settings_sections.dart';
 
 final _log = Logger('ProfilePage');
 
-/// Page `/profile` — permet au bailleur de compléter son profil.
+/// Page `/profile` — profil du bailleur + réglages de l'app.
 ///
-/// Champs exposés :
-/// - [fullName] : nom complet (obligatoire — loi 1989 art. 21)
-/// - [phone]    : téléphone (facultatif)
-/// - [address]  : adresse postale (obligatoire — loi 1989 art. 21)
+/// Sections :
+/// - Compte : email lecture seule + formulaire (fullName obligatoire —
+///   loi 1989 art. 21, phone facultatif, address obligatoire)
+/// - Apparence : choix du thème (Système / Clair / Sombre), persisté
+/// - Légal : liens CGU (`/terms`) et confidentialité (`/privacy`)
+/// - Session : déconnexion
 ///
 /// L'email est affiché en lecture seule : il est l'identifiant d'auth et
 /// ne peut pas être modifié depuis ce formulaire.
@@ -204,6 +207,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   )
                 : const Text('Enregistrer'),
           ),
+
+          // Réglages de l'app — indépendants du formulaire profil.
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 24),
+          const ProfileAppearanceSection(),
+          const SizedBox(height: 32),
+          const ProfileLegalSection(),
+          const SizedBox(height: 24),
+          const ProfileSessionSection(),
         ],
       ),
     );

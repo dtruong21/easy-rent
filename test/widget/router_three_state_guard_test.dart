@@ -135,6 +135,15 @@ void main() {
       expect(loc, '/login');
     });
 
+    testWidgets('/terms → reste accessible (public)', (tester) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.unauthenticated,
+        location: '/terms',
+      );
+      expect(loc, '/terms');
+    });
+
     testWidgets('/simulator → redirect /login', (tester) async {
       final loc = await _resolvedLocation(
         tester,
@@ -216,6 +225,15 @@ void main() {
         location: '/privacy',
       );
       expect(loc, '/privacy');
+    });
+
+    testWidgets('/terms → reste accessible (public)', (tester) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.anonymous,
+        location: '/terms',
+      );
+      expect(loc, '/terms');
     });
   });
 

@@ -27,6 +27,7 @@
 | `/forgot-password` | `ForgotPasswordPage` | fade | unauthenticated | — | Demande lien reset |
 | `/reset-password` | `ResetPasswordPage` | fade | public (email link) | — | Reste accessible connecté (late-click email) |
 | `/privacy` | `PrivacyPage` | fade | public | — | Mentions RGPD + loi 6 juillet 1989 |
+| `/terms` | `TermsPage` | fade | public | FEAT-023 | CGU v1.0 (2026-07-03) — liée depuis /profile |
 
 **Notas** :
 - `/login` + `/signup` redirigent comptes connectés vers `/dashboard`
@@ -67,7 +68,9 @@
 
 | Route | Page | Transition | Feature |
 |---|---|---|---|
-| `/profile` | `ProfilePage` | standard | FEAT-007, FEAT-012 |
+| `/profile` | `ProfilePage` | standard | FEAT-007, FEAT-012, FEAT-023 |
+
+**Note FEAT-023 (2026-07-03)** : `/profile` porte désormais les réglages app — sélecteur de thème (Système/Clair/Sombre, persisté localStorage via `themeModeProvider`), liens `/terms` + `/privacy`, bouton déconnexion.
 
 ---
 
