@@ -70,7 +70,7 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
         : ref.watch(viewModeProvider('leases'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes baux', fallbackRoute: '/dashboard'),
+      appBar: AppAppBar(title: 'Mes baux', showBackButton: false),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_lease'),
         onPressed: () => context.push('/leases/new'),

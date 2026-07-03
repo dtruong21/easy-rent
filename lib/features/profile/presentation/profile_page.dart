@@ -30,7 +30,7 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppAppBar(title: 'Mon profil', fallbackRoute: '/dashboard'),
+      appBar: AppAppBar(title: 'Mon profil', showBackButton: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(

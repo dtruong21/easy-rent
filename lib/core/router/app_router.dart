@@ -29,6 +29,7 @@ import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
+import '../ui/navigation/adaptive_navigation_scaffold.dart';
 import 'transitions.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -112,6 +113,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // -----------------------------------------------------------------------
       // Landing publique (BAILLAN-M1) — carrefour d'onboarding.
+      // Hors shell (FEAT-026) : plein écran, pas d'onglets.
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/',
@@ -123,19 +125,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // -----------------------------------------------------------------------
-      // Dashboard — déplacé de "/" vers "/dashboard" (BAILLAN-M1).
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/dashboard',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const DashboardPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
       // Routes auth (transition fade — pas de slide)
+      // Hors shell (FEAT-026) : plein écran, pas d'onglets.
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/login',
@@ -187,207 +178,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // -----------------------------------------------------------------------
-      // Routes biens immobiliers (FEAT-003)
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/properties',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const PropertiesListPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/properties/new',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const PropertyFormPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/properties/:id',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: PropertyDetailPage(id: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/properties/:id/edit',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: PropertyEditPage(id: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
-      // Routes locataires (FEAT-004)
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/tenants',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const TenantsListPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/tenants/new',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          // ?picker=1 : ouvert en push depuis un autre formulaire (ex. bail)
-          // → au succès, pop(tenantId) au lieu de go('/tenants').
-          child: TenantFormPage(
-            popOnSuccess: state.uri.queryParameters['picker'] == '1',
-          ),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/tenants/:id',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: TenantDetailPage(id: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/tenants/:id/edit',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: TenantEditPage(id: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
-      // Routes baux (FEAT-005)
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/leases',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          // ?filter=active|renewable|... : drill-down depuis un KPI dashboard.
-          child: LeasesListPage(
-            initialFilter: LeaseFilter.fromQueryParam(
-              state.uri.queryParameters['filter'],
-            ),
-          ),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/leases/new',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const LeaseFormPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/leases/:id',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: LeaseDetailPage(id: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/leases/:id/edit',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: LeaseEditPage(id: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
-      // Routes paiements (FEAT-006)
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/leases/:id/payments/new',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: PaymentFormPage(leaseId: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/leases/:id/payments/:pid/edit',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: PaymentEditPage(
-            leaseId: state.pathParameters['id']!,
-            paymentId: state.pathParameters['pid']!,
-          ),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
-      // Routes quittances (FEAT-007)
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/leases/:id/receipts',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: LeaseReceiptsPage(leaseId: state.pathParameters['id']!),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
-      // Route profil bailleur (FEAT-007 — sous-feature /profile)
-      // Protégée par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/profile',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const ProfilePage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
-      // Sous-pages profil — hub mobile-first (restructuration 2026-07-03).
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
-      // -----------------------------------------------------------------------
-      GoRoute(
-        path: '/profile/details',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const ProfileDetailsPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/profile/password',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const ChangePasswordPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-      GoRoute(
-        path: '/profile/support',
-        pageBuilder: (context, state) => appPage(
-          key: state.pageKey,
-          child: const SupportPage(),
-          transition: AppTransition.standard,
-        ),
-      ),
-
-      // -----------------------------------------------------------------------
       // Simulateur d'investissement (FEAT-018)
-      // Protégées par la garde auth globale : si !isAuthed → redirect /login.
+      // Hors shell (FEAT-026 — docs/UX_NAVIGATION.md §3.4) : accessible aux
+      // anonymes (essai 14j) qui n'ont pas accès aux branches métier ; pour un
+      // compte complet, point d'entrée depuis Accueil (CTA), push plein écran
+      // par-dessus le shell.
       // -----------------------------------------------------------------------
       GoRoute(
         path: '/simulator',
@@ -404,6 +199,254 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: SimulatorPage(scenarioId: state.pathParameters['id']),
           transition: AppTransition.standard,
         ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Shell adaptatif (FEAT-026) — 5 branches à état préservé.
+      // Protégé par la garde auth globale : si !isAuthed → redirect /login.
+      // Un utilisateur anonyme n'atteint jamais une branche (le redirect le
+      // sort avant, cf. la garde 3-états ci-dessus, INCHANGÉE).
+      //
+      // Sous-routes imbriquées (`routes:` sur chaque GoRoute) plutôt que
+      // chemins absolus frères, pour que GoRouter empile dans la bonne
+      // branche. Les segments relatifs (`new`, `:id`, `edit`) se résolvent en
+      // absolu à l'URL — aucune URL publique ne change (docs/UX_NAVIGATION.md
+      // §8.1).
+      // -----------------------------------------------------------------------
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AdaptiveNavigationScaffold(navigationShell: navigationShell),
+        branches: [
+          // --- Branche 0 : Accueil ---------------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/dashboard',
+                pageBuilder: (context, state) => appPage(
+                  key: state.pageKey,
+                  child: const DashboardPage(),
+                  transition: AppTransition.standard,
+                ),
+              ),
+            ],
+          ),
+
+          // --- Branche 1 : Biens (FEAT-003) -------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/properties',
+                pageBuilder: (context, state) => appPage(
+                  key: state.pageKey,
+                  child: const PropertiesListPage(),
+                  transition: AppTransition.standard,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const PropertyFormPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: PropertyDetailPage(
+                        id: state.pathParameters['id']!,
+                      ),
+                      transition: AppTransition.standard,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: PropertyEditPage(
+                            id: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // --- Branche 2 : Locataires (FEAT-004) --------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/tenants',
+                pageBuilder: (context, state) => appPage(
+                  key: state.pageKey,
+                  child: const TenantsListPage(),
+                  transition: AppTransition.standard,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      // ?picker=1 : ouvert en push depuis un autre formulaire
+                      // (ex. bail) → au succès, pop(tenantId) au lieu de
+                      // go('/tenants').
+                      child: TenantFormPage(
+                        popOnSuccess:
+                            state.uri.queryParameters['picker'] == '1',
+                      ),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: TenantDetailPage(id: state.pathParameters['id']!),
+                      transition: AppTransition.standard,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: TenantEditPage(
+                            id: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // --- Branche 3 : Baux (FEAT-005) + paiements/quittances imbriqués
+          // (FEAT-006, FEAT-007) -------------------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/leases',
+                pageBuilder: (context, state) => appPage(
+                  key: state.pageKey,
+                  // ?filter=active|renewable|... : drill-down depuis un KPI
+                  // dashboard.
+                  child: LeasesListPage(
+                    initialFilter: LeaseFilter.fromQueryParam(
+                      state.uri.queryParameters['filter'],
+                    ),
+                  ),
+                  transition: AppTransition.standard,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const LeaseFormPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: LeaseDetailPage(id: state.pathParameters['id']!),
+                      transition: AppTransition.standard,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: LeaseEditPage(id: state.pathParameters['id']!),
+                          transition: AppTransition.standard,
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'payments/new',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: PaymentFormPage(
+                            leaseId: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'payments/:pid/edit',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: PaymentEditPage(
+                            leaseId: state.pathParameters['id']!,
+                            paymentId: state.pathParameters['pid']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'receipts',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: LeaseReceiptsPage(
+                            leaseId: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // --- Branche 4 : Profil (FEAT-007, FEAT-025b) -------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                pageBuilder: (context, state) => appPage(
+                  key: state.pageKey,
+                  child: const ProfilePage(),
+                  transition: AppTransition.standard,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'details',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const ProfileDetailsPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'password',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const ChangePasswordPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'support',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const SupportPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     ],
   );

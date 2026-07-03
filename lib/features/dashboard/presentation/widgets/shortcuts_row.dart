@@ -3,10 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/ui/theme/app_spacing.dart';
 
-/// Raccourcis compacts vers les 3 sections principales.
+/// Point d'entrée compact vers le simulateur d'investissement.
 ///
-/// Remplace les 3 ListTiles de l'ancien dashboard.
-/// Layout : Wrap responsive (cards icône + label sur une ligne).
+/// FEAT-026 : les raccourcis Biens/Locataires/Baux ont disparu — ce sont
+/// désormais des destinations persistantes du shell adaptatif
+/// (docs/UX_NAVIGATION.md §7). Seul le simulateur reste ici : il vit HORS du
+/// shell (accessible aussi aux anonymes, §3.4 du doc), c'est le seul
+/// « ailleurs » utile depuis l'onglet Accueil.
 class ShortcutsRow extends StatelessWidget {
   const ShortcutsRow({super.key});
 
@@ -19,27 +22,9 @@ class ShortcutsRow extends StatelessWidget {
       runSpacing: 8,
       children: const [
         _ShortcutCard(
-          key: Key('shortcut_properties'),
-          icon: Icons.home_outlined,
-          label: 'Mes biens',
-          route: '/properties',
-        ),
-        _ShortcutCard(
-          key: Key('shortcut_tenants'),
-          icon: Icons.people_outline,
-          label: 'Locataires',
-          route: '/tenants',
-        ),
-        _ShortcutCard(
-          key: Key('shortcut_leases'),
-          icon: Icons.description_outlined,
-          label: 'Baux',
-          route: '/leases',
-        ),
-        _ShortcutCard(
           key: Key('shortcut_simulator'),
           icon: Icons.calculate_outlined,
-          label: 'Simulateur',
+          label: 'Simuler un investissement',
           route: '/simulator',
         ),
       ],

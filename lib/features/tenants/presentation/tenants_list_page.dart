@@ -34,7 +34,7 @@ class TenantsListPage extends ConsumerWidget {
         : ref.watch(viewModeProvider('tenants'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes locataires', fallbackRoute: '/dashboard'),
+      appBar: AppAppBar(title: 'Mes locataires', showBackButton: false),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_tenant'),
         onPressed: () => context.push('/tenants/new'),

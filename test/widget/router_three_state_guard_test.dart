@@ -299,5 +299,81 @@ void main() {
       );
       expect(loc, '/reset-password');
     });
+
+    // FEAT-026 : deep links directs vers une SOUS-PAGE d'une branche du
+    // shell — la garde 3-états doit continuer de les laisser passer
+    // (aucune redirection), StatefulShellRoute résolvant la bonne branche
+    // et construisant sa pile jusqu'à la cible (docs/UX_NAVIGATION.md §5.1,
+    // §8.3 étape 7). Couverture d'affichage (pile + bouton retour) dans
+    // `shell_branch_state_test.dart`.
+    testWidgets('/properties/abc (sous-page Biens) → accessible', (
+      tester,
+    ) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.fullyAuthenticated,
+        location: '/properties/abc',
+      );
+      expect(loc, '/properties/abc');
+    });
+
+    testWidgets('/leases/abc/edit (sous-page imbriquée Baux) → accessible', (
+      tester,
+    ) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.fullyAuthenticated,
+        location: '/leases/abc/edit',
+      );
+      expect(loc, '/leases/abc/edit');
+    });
+  });
+
+  group('Router 3-états — FEAT-026 : le shell n\'est jamais atteignable par '
+      'un anonyme', () {
+    // Un anonyme demandant directement une SOUS-PAGE d'une branche (pas
+    // seulement la racine) doit être intercepté par la garde AVANT que
+    // StatefulShellRoute ne tente de résoudre/monter le shell.
+    testWidgets('/properties/abc → redirect / puis /simulator', (tester) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.anonymous,
+        location: '/properties/abc',
+      );
+      expect(loc, '/simulator');
+    });
+
+    testWidgets('/leases/abc/edit → redirect / puis /simulator', (
+      tester,
+    ) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.anonymous,
+        location: '/leases/abc/edit',
+      );
+      expect(loc, '/simulator');
+    });
+
+    testWidgets('/profile/support → redirect / puis /simulator', (
+      tester,
+    ) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.anonymous,
+        location: '/profile/support',
+      );
+      expect(loc, '/simulator');
+    });
+
+    testWidgets('unauthenticated : /properties/abc → redirect /login', (
+      tester,
+    ) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.unauthenticated,
+        location: '/properties/abc',
+      );
+      expect(loc, '/login');
+    });
   });
 }

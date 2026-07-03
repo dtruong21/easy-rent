@@ -162,20 +162,18 @@ class _FakeInstallController extends InstallPromptController {
 // ---------------------------------------------------------------------------
 
 Widget _wrap({bool onboarding = false, int retards = 0}) {
+  // FEAT-026 : dans l'app réelle, DashboardPage vit dans la branche Accueil
+  // du shell adaptatif ; /leases est une AUTRE branche. Ce mock router ne
+  // simule pas le shell (pas nécessaire pour ces tests, qui exercent
+  // DashboardPage seule) — le drill-down KPI reste un `go()` classique, dont
+  // la sémantique (changer de branche via une URL) est couverte au niveau
+  // shell par `shell_branch_state_test.dart`.
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (context, state) => const DashboardPage()),
       GoRoute(
-        path: '/properties/new',
-        builder: (context, state) => const Scaffold(body: Text('props')),
-      ),
-      GoRoute(
-        path: '/tenants/new',
-        builder: (context, state) => const Scaffold(body: Text('tenants')),
-      ),
-      GoRoute(
-        path: '/leases/new',
-        builder: (context, state) => const Scaffold(body: Text('leases')),
+        path: '/simulator',
+        builder: (context, state) => const Scaffold(body: Text('simulator')),
       ),
       GoRoute(
         path: '/leases',
@@ -184,10 +182,6 @@ Widget _wrap({bool onboarding = false, int retards = 0}) {
             'baux filter=${state.uri.queryParameters['filter'] ?? 'none'}',
           ),
         ),
-      ),
-      GoRoute(
-        path: '/profile',
-        builder: (context, state) => const Scaffold(body: Text('profile')),
       ),
     ],
   );
@@ -254,24 +248,41 @@ void main() {
       expect(find.textContaining('Bonjour'), findsOneWidget);
     });
 
-    testWidgets('affiche ShortcutsRow dans le widget tree', (tester) async {
-      // Viewport plus grand pour que tout le contenu soit rendu.
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'affiche ShortcutsRow réduite au seul CTA simulateur (FEAT-026)',
+      (tester) async {
+        // Viewport plus grand pour que tout le contenu soit rendu.
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-      expect(find.byType(ShortcutsRow), findsOneWidget);
-    });
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
+        expect(find.byType(ShortcutsRow), findsOneWidget);
+        expect(find.byKey(const Key('shortcut_simulator')), findsOneWidget);
+        // Biens/Locataires/Baux sont désormais des destinations du shell —
+        // plus de raccourcis redondants sur l'onglet Accueil.
+        expect(find.byKey(const Key('shortcut_properties')), findsNothing);
+        expect(find.byKey(const Key('shortcut_tenants')), findsNothing);
+        expect(find.byKey(const Key('shortcut_leases')), findsNothing);
+      },
+    );
   });
 
   group('DashboardPage — AppBar', () {
-    testWidgets('affiche "Baillan." dans l\'AppBar', (tester) async {
+    testWidgets('affiche "Accueil" dans l\'AppBar (FEAT-026)', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
-      expect(find.text('Baillan.'), findsOneWidget);
+      expect(find.text('Accueil'), findsOneWidget);
+    });
+
+    testWidgets('ne montre plus les icônes profil/déconnexion (portées par '
+        "l'onglet Profil du shell, FEAT-026)", (tester) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.person_outline), findsNothing);
+      expect(find.byIcon(Icons.logout), findsNothing);
     });
   });
 

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
-import '../../auth/application/login_controller.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../pwa/application/install_prompt_controller.dart';
 import '../../pwa/presentation/install_prompt_banner.dart';
@@ -19,7 +17,8 @@ import 'widgets/portfolio_yield_section.dart';
 import 'widgets/recent_activity_section.dart';
 import 'widgets/shortcuts_row.dart';
 
-/// Dashboard principal — cockpit du bailleur Baillan.
+/// Onglet Accueil (branche 0 du shell adaptatif, FEAT-026) — cockpit du
+/// bailleur Baillan.
 ///
 /// Composition :
 /// - [InstallPromptBanner] (conditionnel, en haut)
@@ -27,9 +26,16 @@ import 'widgets/shortcuts_row.dart';
 /// - Contenu conditionnel :
 ///   - Onboarding si 0 biens/locataires/baux → [OnboardingFirstSteps]
 ///   - Sinon : [KpiGrid] + [MonthlyBarchart] + [RecentActivitySection]
-/// - [ShortcutsRow] (toujours visible en bas)
+/// - [ShortcutsRow] (toujours visible en bas) — réduite au seul CTA
+///   simulateur : Biens/Locataires/Baux sont déjà des destinations du shell
+///   (docs/UX_NAVIGATION.md §7).
 ///
 /// Pull-to-refresh via [RefreshIndicator] + [dashboardProvider].
+///
+/// Le dashboard n'est plus le hub de navigation (§2 du doc) : pas de bouton
+/// retour (`showBackButton: false`), et les icônes profil/déconnexion ont
+/// disparu de l'AppBar — l'onglet Profil du shell les porte désormais
+/// (déconnexion : `ProfileSessionSection`).
 ///
 /// BLOCKER-2 : au 1er rendu après login, déclenche [InstallPromptController.evaluate]
 /// avec le flag `isFirstLogin` basé sur SharedPreferences.
@@ -72,23 +78,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         .firstOrNull;
 
     return Scaffold(
-      appBar: AppAppBar(
-        title: 'Baillan.',
-        showBackButton: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Mon profil',
-            onPressed: () => context.go('/profile'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Déconnexion',
-            onPressed: () =>
-                ref.read(loginControllerProvider.notifier).signOut(),
-          ),
-        ],
-      ),
+      appBar: const AppAppBar(title: 'Accueil', showBackButton: false),
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
         child: Builder(
