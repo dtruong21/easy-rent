@@ -40,13 +40,26 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
   @override
   void initState() {
     super.initState();
-    final initial = widget.initialFilter;
-    if (initial != null) {
-      // Post-frame : muter un provider pendant le build initial est interdit.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) ref.read(leaseFilterProvider.notifier).state = initial;
-      });
-    }
+    _applyInitialFilter(oldFilter: null);
+  }
+
+  @override
+  void didUpdateWidget(covariant LeasesListPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // GoRouter réutilise ce State quand on re-navigue vers /leases (pageKey
+    // identique quels que soient les query params) : initState ne rejoue
+    // pas, un nouveau ?filter= (ex. retour du formulaire de création avec
+    // ?filter=all) arrive ici.
+    _applyInitialFilter(oldFilter: oldWidget.initialFilter);
+  }
+
+  void _applyInitialFilter({required LeaseFilter? oldFilter}) {
+    final filter = widget.initialFilter;
+    if (filter == null || filter == oldFilter) return;
+    // Post-frame : muter un provider pendant le build est interdit.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(leaseFilterProvider.notifier).state = filter;
+    });
   }
 
   @override
@@ -83,6 +96,31 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
               ),
               data: (leases) {
                 if (leases.isEmpty) {
+                  final filter = ref.watch(leaseFilterProvider);
+                  final hasAnyLease =
+                      ref.watch(leasesListProvider).valueOrNull?.isNotEmpty ??
+                      false;
+                  // Des baux existent mais le filtre les masque tous : le
+                  // dire explicitement — « Aucun bail enregistré » mentirait
+                  // (ex. bail créé invisible derrière un filtre
+                  // « À renouveler » hérité d'un KPI dashboard).
+                  if (hasAnyLease && filter != LeaseFilter.all) {
+                    return CardEmptyState(
+                      icon: Icons.filter_alt_off_outlined,
+                      title: 'Aucun bail pour ce filtre',
+                      message:
+                          'Le filtre « ${filter.labelFr} » ne correspond '
+                          'à aucun de vos baux.',
+                      action: OutlinedButton.icon(
+                        key: const Key('btn_show_all_leases'),
+                        onPressed: () =>
+                            ref.read(leaseFilterProvider.notifier).state =
+                                LeaseFilter.all,
+                        icon: const Icon(Icons.filter_alt_off),
+                        label: const Text('Afficher tous les baux'),
+                      ),
+                    );
+                  }
                   return CardEmptyState(
                     icon: Icons.description_outlined,
                     title: 'Aucun bail enregistré',

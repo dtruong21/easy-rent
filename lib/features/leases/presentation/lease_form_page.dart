@@ -10,9 +10,11 @@ import '../../../features/properties/application/properties_list_provider.dart';
 import '../../../features/tenants/application/tenants_list_provider.dart';
 import '../application/lease_detail_provider.dart';
 import '../application/lease_form_controller.dart';
+import '../application/leases_filter_provider.dart';
 import '../data/lease_repository.dart';
 import '../../payments/domain/payment_method.dart';
 import '../domain/lease.dart';
+import '../domain/lease_filter.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_type.dart';
 import 'widgets/active_lease_warning_dialog.dart';
@@ -268,7 +270,17 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
           );
-          context.go('/leases');
+          if (isCreating) {
+            // Un filtre hérité d'un drill-down KPI (ex. « À renouveler »)
+            // survit à la navigation et masquerait le bail tout juste créé
+            // (actif) → retour forcé sur la liste non filtrée. Reset direct
+            // du provider : la page /leases sous le formulaire pushé est
+            // réutilisée par GoRouter, le seul query param ne suffirait pas.
+            ref.read(leaseFilterProvider.notifier).state = LeaseFilter.all;
+            context.go('/leases?filter=all');
+          } else {
+            context.go('/leases');
+          }
         },
         error: (msg) {
           _log.warning('LeaseFormPage error state');

@@ -1,6 +1,8 @@
 import 'package:easyrent/features/leases/application/lease_form_controller.dart';
+import 'package:easyrent/features/leases/application/leases_filter_provider.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
+import 'package:easyrent/features/leases/domain/lease_filter.dart';
 import 'package:easyrent/features/leases/domain/lease_form_state.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -677,4 +679,105 @@ void main() {
       expect(find.text('Marie Durand'), findsOneWidget);
     });
   });
+
+  group('LeaseFormPage — retour à la liste après succès (filtre)', () {
+    late _DriveableFormController ctrl;
+
+    ProviderContainer makeContainer() {
+      final container = ProviderContainer(
+        overrides: [
+          leaseRepositoryProvider.overrideWithValue(_FakeLeaseRepo()),
+          propertyRepositoryProvider.overrideWithValue(
+            _FakePropertyRepo(properties: [_makeProperty()]),
+          ),
+          tenantRepositoryProvider.overrideWithValue(
+            _FakeTenantRepo(tenants: [_makeTenant()]),
+          ),
+          leaseFormControllerProvider.overrideWith((ref) {
+            ctrl = _DriveableFormController(ref);
+            return ctrl;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    Widget buildWithRouter({
+      required ProviderContainer container,
+      Lease? initial,
+    }) {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => LeaseFormPage(initial: initial),
+          ),
+          GoRoute(
+            path: '/leases',
+            builder: (context, state) => Scaffold(
+              body: Text(
+                'liste baux filter='
+                '${state.uri.queryParameters['filter'] ?? '-'}',
+              ),
+            ),
+          ),
+        ],
+      );
+      return UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      );
+    }
+
+    testWidgets(
+      'création → filtre reset à « Tous » + navigation /leases?filter=all '
+      '(un filtre KPI hérité masquerait le bail créé)',
+      (tester) async {
+        final container = makeContainer();
+        await tester.pumpWidget(buildWithRouter(container: container));
+        await tester.pumpAndSettle();
+
+        // Filtre hérité d'un drill-down KPI dashboard.
+        container.read(leaseFilterProvider.notifier).state =
+            LeaseFilter.renewable;
+
+        ctrl.emitSuccess(_makeLease());
+        await tester.pumpAndSettle();
+
+        expect(find.text('liste baux filter=all'), findsOneWidget);
+        expect(container.read(leaseFilterProvider), LeaseFilter.all);
+      },
+    );
+
+    testWidgets('édition → filtre conservé + navigation /leases sans param', (
+      tester,
+    ) async {
+      final container = makeContainer();
+      await tester.pumpWidget(
+        buildWithRouter(container: container, initial: _makeLease()),
+      );
+      await tester.pumpAndSettle();
+
+      container.read(leaseFilterProvider.notifier).state =
+          LeaseFilter.terminated;
+
+      ctrl.emitSuccess(_makeLease());
+      await tester.pumpAndSettle();
+
+      expect(find.text('liste baux filter=-'), findsOneWidget);
+      expect(container.read(leaseFilterProvider), LeaseFilter.terminated);
+    });
+  });
+}
+
+/// Contrôleur pilotable depuis le test : expose l'émission d'un état succès
+/// (le setter `state` de [StateNotifier] est protected, accessible en
+/// sous-classe).
+class _DriveableFormController extends LeaseFormController {
+  _DriveableFormController(super.ref);
+
+  void emitSuccess(Lease lease) {
+    state = LeaseFormState.success(lease: lease);
+  }
 }

@@ -361,6 +361,88 @@ void main() {
     );
 
     // -----------------------------------------------------------------------
+    // État vide filtré (baux existants mais tous masqués par le filtre)
+    // -----------------------------------------------------------------------
+    testWidgets(
+      'filtre sans résultat — message dédié + bouton « Afficher tous les baux » '
+      '(pas « Aucun bail enregistré »)',
+      (tester) async {
+        final repo = _FakeRepo(
+          items: [
+            _makeItem(
+              id: 'la',
+              propertyName: 'Bail Actif',
+              status: LeaseStatus.active,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          _buildPage(
+            repo,
+            extraOverrides: [
+              leaseFilterProvider.overrideWith((ref) => LeaseFilter.terminated),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Aucun bail pour ce filtre'), findsOneWidget);
+        expect(find.textContaining('« Terminés »'), findsOneWidget);
+        expect(find.byKey(const Key('btn_show_all_leases')), findsOneWidget);
+        expect(find.text('Aucun bail enregistré'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'filtre sans résultat — tap « Afficher tous les baux » → filtre reset, '
+      'baux visibles',
+      (tester) async {
+        final repo = _FakeRepo(
+          items: [
+            _makeItem(
+              id: 'la',
+              propertyName: 'Bail Actif',
+              status: LeaseStatus.active,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          _buildPage(
+            repo,
+            extraOverrides: [
+              leaseFilterProvider.overrideWith((ref) => LeaseFilter.terminated),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('btn_show_all_leases')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bail Actif'), findsOneWidget);
+        expect(find.text('Aucun bail pour ce filtre'), findsNothing);
+      },
+    );
+
+    testWidgets('aucun bail du tout + filtre actif → état vide standard '
+        '« Aucun bail enregistré »', (tester) async {
+      await tester.pumpWidget(
+        _buildPage(
+          const _FakeRepo(),
+          extraOverrides: [
+            leaseFilterProvider.overrideWith((ref) => LeaseFilter.renewable),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aucun bail enregistré'), findsOneWidget);
+      expect(find.text('Aucun bail pour ce filtre'), findsNothing);
+    });
+
+    // -----------------------------------------------------------------------
     // ViewMode toggle
     // -----------------------------------------------------------------------
     testWidgets('desktop — FilterBar visible avec SegmentedButton filtres', (
@@ -414,6 +496,34 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(container.read(leaseFilterProvider), LeaseFilter.all);
+    });
+
+    testWidgets('initialFilter changé sur State réutilisé → filtre ré-appliqué '
+        '(GoRouter recycle la page /leases, initState ne rejoue pas)', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
+      );
+      addTearDown(container.dispose);
+
+      Widget page(LeaseFilter? filter) => UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: _appTheme(),
+          home: LeasesListPage(initialFilter: filter),
+        ),
+      );
+
+      await tester.pumpWidget(page(LeaseFilter.renewable));
+      await tester.pumpAndSettle();
+      expect(container.read(leaseFilterProvider), LeaseFilter.renewable);
+
+      // Même runtimeType, pas de clé → l'Element (et son State) est
+      // réutilisé, seul widget.initialFilter change → didUpdateWidget.
+      await tester.pumpWidget(page(LeaseFilter.all));
+      await tester.pumpAndSettle();
       expect(container.read(leaseFilterProvider), LeaseFilter.all);
     });
   });
