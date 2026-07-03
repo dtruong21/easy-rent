@@ -75,6 +75,13 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
   final _loanRateCtrl = TextEditingController();
   final _loanDurationCtrl = TextEditingController();
 
+  // ── Pré-remplissage auto du capital emprunté ─────────────────────────────
+  // prix + notaire + travaux − apport (la formule du helper du champ).
+  // Même pattern que les frais de notaire : actif tant que l'utilisateur n'a
+  // pas saisi une valeur à la main ; vider le champ le ré-arme.
+  bool _loanPrincipalAutoFill = true;
+  bool _loanPrincipalSetProgrammatically = false;
+
   // ── Controllers — Revenus ────────────────────────────────────────────────
   final _monthlyRentCtrl = TextEditingController();
 
@@ -105,6 +112,14 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     }
     _purchasePriceCtrl.addListener(_onPurchasePriceChangedForNotary);
     _notaryFeesCtrl.addListener(_onNotaryFieldChanged);
+    // Chaque composante de la formule re-déclenche le pré-remplissage du
+    // capital emprunté (le notaire étant lui-même pré-rempli, une saisie du
+    // prix cascade naturellement : prix → notaire → capital).
+    _purchasePriceCtrl.addListener(_onLoanInputsChangedForPrincipal);
+    _notaryFeesCtrl.addListener(_onLoanInputsChangedForPrincipal);
+    _worksCtrl.addListener(_onLoanInputsChangedForPrincipal);
+    _downPaymentCtrl.addListener(_onLoanInputsChangedForPrincipal);
+    _loanPrincipalCtrl.addListener(_onLoanPrincipalFieldChanged);
     if (widget.scenarioId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadScenario());
     }
@@ -129,6 +144,11 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     _debounce?.cancel();
     _purchasePriceCtrl.removeListener(_onPurchasePriceChangedForNotary);
     _notaryFeesCtrl.removeListener(_onNotaryFieldChanged);
+    _purchasePriceCtrl.removeListener(_onLoanInputsChangedForPrincipal);
+    _notaryFeesCtrl.removeListener(_onLoanInputsChangedForPrincipal);
+    _worksCtrl.removeListener(_onLoanInputsChangedForPrincipal);
+    _downPaymentCtrl.removeListener(_onLoanInputsChangedForPrincipal);
+    _loanPrincipalCtrl.removeListener(_onLoanPrincipalFieldChanged);
     for (final ctrl in _allControllers) {
       ctrl.removeListener(_onFieldChanged);
       ctrl.dispose();
@@ -164,6 +184,37 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     _notarySetProgrammatically = true;
     _notaryFeesCtrl.text = text;
     _notarySetProgrammatically = false;
+  }
+
+  // ── Auto-fill capital emprunté ───────────────────────────────────────────
+
+  void _onLoanPrincipalFieldChanged() {
+    if (_loanPrincipalSetProgrammatically) return;
+    // Saisie manuelle → on fige. Champ vidé → on ré-arme l'auto-fill.
+    _loanPrincipalAutoFill = _loanPrincipalCtrl.text.trim().isEmpty;
+  }
+
+  void _onLoanInputsChangedForPrincipal() {
+    if (_loanPrincipalAutoFill) _applyLoanPrincipalPrefill();
+  }
+
+  void _applyLoanPrincipalPrefill() {
+    final price = MoneyFormat.eurosToCents(_purchasePriceCtrl.text);
+    final String text;
+    if (price == null || price <= 0) {
+      text = '';
+    } else {
+      final notary = MoneyFormat.eurosToCents(_notaryFeesCtrl.text) ?? 0;
+      final works = MoneyFormat.eurosToCents(_worksCtrl.text) ?? 0;
+      final downPayment = MoneyFormat.eurosToCents(_downPaymentCtrl.text) ?? 0;
+      final cents = price + notary + works - downPayment;
+      // Apport ≥ coût total → achat comptant, rien à emprunter.
+      text = cents > 0 ? MoneyFormat.centsToInput(cents) : '';
+    }
+    if (_loanPrincipalCtrl.text == text) return;
+    _loanPrincipalSetProgrammatically = true;
+    _loanPrincipalCtrl.text = text;
+    _loanPrincipalSetProgrammatically = false;
   }
 
   // ── Chargement scénario en mode édition ──────────────────────────────────
@@ -847,7 +898,9 @@ class _FinancementSection extends StatelessWidget {
                 key: const Key('field_loan_principal'),
                 controller: loanPrincipalCtrl,
                 label: 'Capital emprunté',
-                helperText: 'Prix achat + notaire + travaux − apport',
+                helperText:
+                    'Pré-rempli : prix + notaire + travaux − apport — '
+                    'modifiable',
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,

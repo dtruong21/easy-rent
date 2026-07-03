@@ -95,6 +95,21 @@ class _NotifyMeButtonState extends ConsumerState<_NotifyMeButton> {
         .read(paidPlanInterestControllerProvider.notifier)
         .notifyMe(features: _paidPlanFeatures);
     if (!mounted) return;
+
+    // Le contrôleur ne throw jamais (AsyncValue.guard) : relire son state.
+    // Erreur → pas de faux succès, le bouton redevient cliquable.
+    if (ref.read(paidPlanInterestControllerProvider).hasError) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Impossible d\'enregistrer votre intérêt pour le moment. Réessayez.',
+          ),
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Nous vous préviendrons du lancement.')),
     );

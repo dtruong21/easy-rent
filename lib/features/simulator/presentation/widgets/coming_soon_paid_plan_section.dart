@@ -28,26 +28,24 @@ class _ComingSoonPaidPlanSectionState
     extends ConsumerState<ComingSoonPaidPlanSection> {
   bool _isSubmitting = false;
   bool _hasNotified = false;
+  bool _isSubmittingFunding = false;
+  bool _hasFundingInterest = false;
+
+  // NB : le contrôleur passe par AsyncValue.guard — il ne throw JAMAIS,
+  // l'échec atterrit dans son state. Il faut donc relire le provider après
+  // l'await pour distinguer succès et erreur (un try/catch ici serait du
+  // code mort — et afficherait un faux succès sur permission-denied).
 
   Future<void> _notifyMe() async {
     setState(() => _isSubmitting = true);
-    try {
-      await ref
-          .read(paidPlanInterestControllerProvider.notifier)
-          .notifyMe(features: _paidPlanFeatures.map((f) => f.$1).toList());
-      if (!mounted) return;
-      setState(() {
-        _isSubmitting = false;
-        _hasNotified = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vous serez prévenu au lancement.')),
-      );
-    } catch (_) {
-      // Firestore permission-denied, network, ou autre : NE PAS afficher un
-      // faux succès et NE PAS locker le bouton. L'utilisateur doit pouvoir
-      // retenter. Message d'erreur neutre.
-      if (!mounted) return;
+    await ref
+        .read(paidPlanInterestControllerProvider.notifier)
+        .notifyMe(features: _paidPlanFeatures.map((f) => f.$1).toList());
+    if (!mounted) return;
+
+    if (ref.read(paidPlanInterestControllerProvider).hasError) {
+      // NE PAS afficher un faux succès et NE PAS locker le bouton :
+      // l'utilisateur doit pouvoir retenter. Message d'erreur neutre.
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -56,7 +54,47 @@ class _ComingSoonPaidPlanSectionState
           ),
         ),
       );
+      return;
     }
+
+    setState(() {
+      _isSubmitting = false;
+      _hasNotified = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Vous serez prévenu au lancement.')),
+    );
+  }
+
+  Future<void> _expressFundingInterest() async {
+    setState(() => _isSubmittingFunding = true);
+    await ref
+        .read(paidPlanInterestControllerProvider.notifier)
+        .expressFundingInterest();
+    if (!mounted) return;
+
+    if (ref.read(paidPlanInterestControllerProvider).hasError) {
+      // Même politique que _notifyMe : pas de faux succès, retenter possible.
+      setState(() => _isSubmittingFunding = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Impossible d\'enregistrer votre intérêt pour le moment. Réessayez.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingFunding = false;
+      _hasFundingInterest = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Merci pour votre soutien ! Nous vous recontacterons.'),
+      ),
+    );
   }
 
   @override
@@ -105,6 +143,42 @@ class _ComingSoonPaidPlanSectionState
                         ? 'Vous serez prévenu au lancement'
                         : 'M\'avertir du lancement',
                   ),
+          ),
+
+          // ── Soutien / financement ───────────────────────────────────────
+          // Signal d'intérêt uniquement (aucun montant, aucun engagement,
+          // pas une offre financière) : on recontacte les intéressés.
+          const SizedBox(height: 20),
+          Divider(color: theme.colorScheme.outlineVariant, height: 1),
+          const SizedBox(height: 16),
+          Text('Vous aimez Baillan ?', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 6),
+          Text(
+            'Baillan est développé en indépendant. Si le produit vous est '
+            'utile, dites-nous si participer à son financement vous '
+            'intéresserait — sans engagement. Nous vous recontacterons.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('funding_interest_button'),
+            onPressed: (_isSubmittingFunding || _hasFundingInterest)
+                ? null
+                : _expressFundingInterest,
+            icon: _isSubmittingFunding
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.volunteer_activism_outlined, size: 18),
+            label: Text(
+              _hasFundingInterest
+                  ? 'Merci ! Nous vous recontacterons'
+                  : 'Participer au financement m\'intéresse',
+            ),
           ),
         ],
       ),

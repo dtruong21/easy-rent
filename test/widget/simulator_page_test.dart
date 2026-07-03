@@ -523,6 +523,146 @@ void main() {
     });
   });
 
+  group('SimulatorPage — pré-remplissage capital emprunté', () {
+    String principalText(WidgetTester tester) {
+      final editable = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('field_loan_principal')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      return editable.controller.text;
+    }
+
+    testWidgets('prix saisi → capital pré-rempli (prix + notaire auto)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.pumpAndSettle();
+
+      // 200 000 + 16 000 (notaire 8 % auto) — pas d'apport ni travaux.
+      expect(principalText(tester), '216000,00');
+    });
+
+    testWidgets('travaux et apport intégrés à la formule', (tester) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_works_initial')),
+        '10000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_down_payment')),
+        '40000',
+      );
+      await tester.pumpAndSettle();
+
+      // 200 000 + 16 000 + 10 000 − 40 000.
+      expect(principalText(tester), '186000,00');
+    });
+
+    testWidgets('saisie manuelle fige le champ', (tester) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      // L'utilisateur impose sa propre valeur…
+      await tester.enterText(
+        find.byKey(const Key('field_loan_principal')),
+        '150000',
+      );
+      // …un nouveau prix ne doit PAS l'écraser.
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '250000',
+      );
+      await tester.pumpAndSettle();
+
+      expect(principalText(tester), '150000');
+    });
+
+    testWidgets('champ vidé → auto-fill ré-armé au prochain changement', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_loan_principal')),
+        '150000',
+      );
+      await tester.enterText(find.byKey(const Key('field_loan_principal')), '');
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '100000',
+      );
+      await tester.pumpAndSettle();
+
+      // 100 000 + 8 000 (notaire 8 %).
+      expect(principalText(tester), '108000,00');
+    });
+
+    testWidgets('apport ≥ coût total → champ laissé vide (achat comptant)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '100000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_down_payment')),
+        '120000',
+      );
+      await tester.pumpAndSettle();
+
+      expect(principalText(tester), '');
+    });
+
+    testWidgets('mode édition : la valeur sauvée n\'est pas écrasée', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(scenarios: [_fakeScenario]);
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      // Charge le scénario existant (capital sauvé : 160 000 €).
+      await tester.tap(find.text('Scénario existant'));
+      await tester.pumpAndSettle();
+      expect(principalText(tester), '160000,00');
+
+      // Modifier une composante de la formule ne doit pas écraser la
+      // valeur sauvée (auto-fill figé par l'hydratation).
+      await tester.enterText(
+        find.byKey(const Key('field_works_initial')),
+        '5000',
+      );
+      await tester.pumpAndSettle();
+
+      expect(principalText(tester), '160000,00');
+    });
+  });
+
   group('SimulatorPage — mode anonyme (retour + quitter la démo)', () {
     Widget anonPage({
       _FakeRepo? repo,
