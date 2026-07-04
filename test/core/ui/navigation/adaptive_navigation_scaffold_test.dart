@@ -280,6 +280,48 @@ void main() {
     });
   });
 
+  group('AdaptiveNavigationScaffold — marque (logo + wordmark)', () {
+    testWidgets('replié : logo seul (wordmark « Baillan. » absent)', (
+      tester,
+    ) async {
+      await _setViewportWidth(tester, 1200);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('rail_brand_logo')), findsOneWidget);
+      expect(find.byKey(const Key('rail_brand_wordmark')), findsNothing);
+      expect(find.text('Baillan.'), findsNothing);
+    });
+
+    testWidgets('déplié : logo + wordmark « Baillan. »', (tester) async {
+      SharedPreferences.setMockInitialValues({'nav_rail_expanded': true});
+      await _setViewportWidth(tester, 1200);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('rail_brand_logo')), findsOneWidget);
+      expect(find.byKey(const Key('rail_brand_wordmark')), findsOneWidget);
+      expect(find.text('Baillan.'), findsOneWidget);
+    });
+
+    testWidgets('tap sur le logo (replié) → déplie le rail', (tester) async {
+      await _setViewportWidth(tester, 1200);
+      await _pumpApp(tester, _buildTestRouter());
+      await tester.pumpAndSettle();
+
+      // Replié par défaut : le logo porte la bascule (key rail_menu_toggle).
+      expect(find.text('Baillan.'), findsNothing);
+      await tester.tap(find.byKey(const Key('rail_menu_toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Baillan.'), findsOneWidget);
+      expect(
+        tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+        isTrue,
+      );
+    });
+  });
+
   group('AdaptiveNavigationScaffold — action simulateur (rail)', () {
     testWidgets('présente dans le rail, absente de la NavigationBar', (
       tester,

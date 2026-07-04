@@ -154,8 +154,9 @@ class _WideLayout extends ConsumerWidget {
               labelType: expanded
                   ? NavigationRailLabelType.none
                   : NavigationRailLabelType.all,
-              // Bouton menu en tête : déplie/replie le rail (façon sidebar).
-              leading: _RailMenuToggle(expanded: expanded),
+              // En-tête de marque : logo Baillan (+ wordmark si déplié) qui
+              // porte aussi la bascule déplier/replier.
+              leading: _RailBrand(expanded: expanded),
               // Simulateur épinglé en bas (action secondaire, hors shell).
               trailing: Expanded(
                 child: Align(
@@ -184,28 +185,108 @@ class _WideLayout extends ConsumerWidget {
   }
 }
 
-/// Bouton menu en tête du rail : bascule déplié ↔ replié.
-class _RailMenuToggle extends ConsumerWidget {
-  const _RailMenuToggle({required this.expanded});
+/// En-tête de marque du rail — maximise la présence Baillan dans la
+/// navigation, et porte la bascule déplier/replier :
+/// - **Replié** : le logo seul (« que le logo »), cliquable pour déplier.
+/// - **Déplié** : logo + wordmark « Baillan. » + bouton replier.
+class _RailBrand extends ConsumerWidget {
+  const _RailBrand({required this.expanded});
 
   final bool expanded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final toggle = ref.read(railExpandedProvider.notifier).toggle;
-    final button = IconButton(
-      key: const Key('rail_menu_toggle'),
-      icon: Icon(expanded ? Icons.menu_open : Icons.menu),
-      tooltip: expanded ? 'Replier le menu' : 'Déplier le menu',
-      onPressed: toggle,
-    );
-    // Aligné à gauche (sur l'axe des icônes) quand déplié, centré sinon —
-    // évite un bouton qui saute horizontalement à la bascule.
+
+    if (!expanded) {
+      // Replié : logo seul, tap = déplier (tooltip pour la découvrabilité).
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Tooltip(
+          message: 'Déplier le menu',
+          child: InkWell(
+            key: const Key('rail_menu_toggle'),
+            onTap: toggle,
+            borderRadius: BorderRadius.circular(10),
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: _BrandMark(size: 32),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Déplié : logo + wordmark + bouton replier.
+    // mainAxisSize.min + aucun enfant flex (Expanded/Spacer) : le `leading`
+    // d'un NavigationRail étendu est mesuré sous contrainte de largeur NON
+    // bornée — un flex y déclenche un RenderFlex unbounded.
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
-      child: expanded
-          ? Align(alignment: Alignment.centerLeft, child: button)
-          : button,
+      padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _BrandMark(size: 32),
+          const SizedBox(width: 10),
+          Text(
+            'Baillan.',
+            key: const Key('rail_brand_wordmark'),
+            maxLines: 1,
+            style: TextStyle(
+              fontFamily: 'EB Garamond',
+              fontFamilyFallback: const ['Georgia', 'serif'],
+              fontWeight: FontWeight.w500,
+              fontSize: 22,
+              height: 1.0,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            key: const Key('rail_menu_toggle'),
+            icon: const Icon(Icons.menu_open),
+            tooltip: 'Replier le menu',
+            onPressed: toggle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Marque Baillan : carré arrondi (encre / `onSurface`) + « B » sérif crème
+/// (`surface`) — écho typographique du favicon, aucun asset image. S'inverse
+/// proprement en dark mode (carré clair, « B » encre).
+class _BrandMark extends StatelessWidget {
+  const _BrandMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const Key('rail_brand_logo'),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: colorScheme.onSurface,
+        borderRadius: BorderRadius.circular(size * 0.22),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        'B',
+        style: TextStyle(
+          fontFamily: 'EB Garamond',
+          fontFamilyFallback: const ['Georgia', 'serif'],
+          fontStyle: FontStyle.italic,
+          fontWeight: FontWeight.w500,
+          fontSize: size * 0.62,
+          height: 1.0,
+          color: colorScheme.surface,
+        ),
+      ),
     );
   }
 }
