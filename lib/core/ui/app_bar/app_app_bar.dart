@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../branding/brand_mark.dart';
+import '../breakpoints.dart';
+
 /// AppBar réutilisable Baillan.
 ///
 /// Gère automatiquement le bouton retour selon le contexte :
@@ -50,8 +53,20 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedLeading = _resolveLeading(context);
+    // Marque dans l'AppBar sur mobile uniquement (<600 px) : là où il n'y a
+    // pas de rail de navigation pour la porter (le rail l'affiche déjà sur
+    // desktop). Maximise la présence de marque sur toutes les tailles.
+    final isMobile = MediaQuery.sizeOf(context).width < Breakpoints.mobile;
     return AppBar(
-      title: Text(title),
+      title: isMobile
+          ? Row(
+              children: [
+                const BrandMark(key: Key('appbar_brand_logo'), size: 24),
+                const SizedBox(width: 10),
+                Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+              ],
+            )
+          : Text(title),
       // On prend entièrement en charge le leading via _resolveLeading.
       // En désactivant l'implication automatique, AppBar ne peut pas insérer
       // son propre BackButton — ce qui garantit que showBackButton: false

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../branding/brand_mark.dart';
 import '../breakpoints.dart';
 import 'rail_expanded_provider.dart';
 
@@ -211,7 +212,7 @@ class _RailBrand extends ConsumerWidget {
             borderRadius: BorderRadius.circular(10),
             child: const Padding(
               padding: EdgeInsets.all(4),
-              child: _BrandMark(size: 32),
+              child: BrandMark(key: Key('rail_brand_logo'), size: 32),
             ),
           ),
         ),
@@ -227,7 +228,7 @@ class _RailBrand extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const _BrandMark(size: 32),
+          const BrandMark(key: Key('rail_brand_logo'), size: 32),
           const SizedBox(width: 10),
           Text(
             'Baillan.',
@@ -250,42 +251,6 @@ class _RailBrand extends ConsumerWidget {
             onPressed: toggle,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Marque Baillan : carré arrondi (encre / `onSurface`) + « B » sérif crème
-/// (`surface`) — écho typographique du favicon, aucun asset image. S'inverse
-/// proprement en dark mode (carré clair, « B » encre).
-class _BrandMark extends StatelessWidget {
-  const _BrandMark({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      key: const Key('rail_brand_logo'),
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: colorScheme.onSurface,
-        borderRadius: BorderRadius.circular(size * 0.22),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'B',
-        style: TextStyle(
-          fontFamily: 'EB Garamond',
-          fontFamilyFallback: const ['Georgia', 'serif'],
-          fontStyle: FontStyle.italic,
-          fontWeight: FontWeight.w500,
-          fontSize: size * 0.62,
-          height: 1.0,
-          color: colorScheme.surface,
-        ),
       ),
     );
   }
