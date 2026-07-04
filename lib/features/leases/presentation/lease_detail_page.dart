@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -95,6 +96,19 @@ class _LeaseDetailContent extends ConsumerWidget {
     final propertyAddress = asyncProperty.valueOrNull?.address ?? '';
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
 
+    // FEAT-028 : le retard est calculé au niveau de la liste (l'info
+    // paiement n'est pas portée par le Lease seul). On réutilise le cache
+    // de leasesListProvider — déjà chargé si l'utilisateur vient de
+    // /leases — pour retrouver l'item correspondant sans dupliquer la
+    // logique de calcul dans LeaseRepository.getById(). Défaut `false` si
+    // absent (liste pas encore chargée, ou bail nouvellement créé).
+    final leasesAsync = ref.watch(leasesListProvider);
+    final isLate =
+        leasesAsync.valueOrNull
+            ?.firstWhereOrNull((item) => item.lease.id == lease.id)
+            ?.isLate ??
+        false;
+
     return Scaffold(
       appBar: AppAppBar(
         title: 'Bail',
@@ -119,7 +133,7 @@ class _LeaseDetailContent extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _StatusCard(lease: lease),
+            _StatusCard(lease: lease, isLate: isLate),
             const SizedBox(height: 16),
             _InfoCard(lease: lease),
             const SizedBox(height: 16),
@@ -231,14 +245,20 @@ class _LeaseDetailContent extends ConsumerWidget {
 
 /// Card statut du bail.
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.lease});
+  const _StatusCard({required this.lease, this.isLate = false});
 
   final Lease lease;
+
+  /// Vrai si le bail est en retard de paiement (FEAT-028). Prime sur le
+  /// statut `active` standard — priorité la plus haute, cf.
+  /// `lease_status_mapper.dart::leaseStatusPill`.
+  final bool isLate;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final (label, tone) = switch (lease.status) {
+      LeaseStatus.active when isLate => ('En retard', StatusPillTone.danger),
       LeaseStatus.active => ('Actif', StatusPillTone.success),
       LeaseStatus.terminated => ('Terminé', StatusPillTone.neutral),
       LeaseStatus.archived => ('Archivé', StatusPillTone.neutral),

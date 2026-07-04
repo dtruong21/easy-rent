@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/firestore_helpers.dart';
+import '../../leases/domain/lease.dart';
+import '../../leases/domain/lease_lateness.dart';
+import '../../payments/domain/payment.dart';
 import '../domain/activity_item.dart';
 import '../domain/dashboard_kpi.dart';
 import '../domain/monthly_amount.dart';
@@ -87,23 +91,43 @@ class FirestoreDashboardRepository implements DashboardRepository {
   Future<RetardsKpi> fetchRetards() async {
     final uid = _uid;
     final now = DateTime.now();
-    final cutoff = now.subtract(const Duration(days: 35));
 
+    // FEAT-028 : PAS de filtre `startDate <= now-35j` ici — c'était le bug
+    // qui rendait invisibles les baux récents dont la 1ʳᵉ échéance est déjà
+    // dépassée (cas le plus urgent : nouveau locataire, premier test de
+    // paiement). On charge TOUS les baux actifs, quelle que soit leur
+    // ancienneté, et on délègue la détection de retard à `isLeaseLate()`
+    // (couverture de période + délai de grâce de 5 jours, cf.
+    // lease_lateness.dart).
     final leasesQs = await _firestore
         .collection('leases')
         .where('landlordId', isEqualTo: uid)
         .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
-        .where('startDate', isLessThanOrEqualTo: Timestamp.fromDate(cutoff))
         .get();
 
     if (leasesQs.docs.isEmpty) return const RetardsKpi(count: 0);
 
-    final leaseIds = leasesQs.docs.map((d) => d.id).toList();
+    final leases = leasesQs.docs
+        .map(
+          (d) => Lease.fromJson(firestoreDocToSnakeJson(d.data(), docId: d.id)),
+        )
+        .toList();
+    final leaseIds = leases.map((l) => l.id).toList();
 
-    // Pour chaque lease, on cherche le dernier paiement.
-    // Firestore ne supporte pas WHERE IN avec >30 valeurs — on chunke.
-    final lastPaymentByLease = <String, DateTime>{};
+    // Charge TOUT l'historique de paiements par bail (pas juste le
+    // dernier) — nécessaire pour tester le recouvrement de période, pas
+    // seulement la date du dernier paiement enregistré. Firestore ne
+    // supporte pas WHERE IN avec >30 valeurs — on chunke (pattern existant).
+    //
+    // TODO(P2) : charge actuellement TOUT l'historique de paiements de
+    // chaque bail actif (pas de borne temporelle) pour TOUS les baux du
+    // landlord — OK pour le MVP, mais coûteux en lectures Firestore si le
+    // portefeuille grossit (baux anciens avec des dizaines de paiements)
+    // alors que seul le mois dû courant (± marge de recouvrement
+    // d'intervalle) importe pour `isLeaseLate()`. Borner avec un filtre
+    // `periodEnd >= début du mois dû − marge` quand le volume le justifiera.
+    final paymentsByLease = <String, List<Payment>>{};
     for (var i = 0; i < leaseIds.length; i += 30) {
       final chunk = leaseIds.sublist(
         i,
@@ -114,26 +138,24 @@ class FirestoreDashboardRepository implements DashboardRepository {
           .where('landlordId', isEqualTo: uid)
           .where('deletedAt', isNull: true)
           .where('leaseId', whereIn: chunk)
-          .orderBy('paidAt', descending: true)
           .get();
       for (final d in paymentsQs.docs) {
-        final leaseId = d.data()['leaseId'] as String?;
-        if (leaseId == null) continue;
-        if (lastPaymentByLease.containsKey(leaseId)) continue;
-        final paidAt = d.data()['paidAt'];
-        if (paidAt is Timestamp) {
-          lastPaymentByLease[leaseId] = paidAt.toDate();
-        }
+        final payment = Payment.fromJson(
+          firestoreDocToSnakeJson(d.data(), docId: d.id),
+        );
+        paymentsByLease.putIfAbsent(payment.leaseId, () => []).add(payment);
       }
     }
 
-    int retards = 0;
-    for (final leaseId in leaseIds) {
-      final lastPaid = lastPaymentByLease[leaseId];
-      if (lastPaid == null || lastPaid.isBefore(cutoff)) {
-        retards++;
-      }
-    }
+    final retards = leases
+        .where(
+          (lease) => isLeaseLate(
+            lease: lease,
+            payments: paymentsByLease[lease.id] ?? const [],
+            now: now,
+          ),
+        )
+        .length;
     _log.fine('fetchRetards: count=$retards');
     return RetardsKpi(count: retards);
   }

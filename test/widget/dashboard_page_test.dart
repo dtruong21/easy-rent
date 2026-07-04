@@ -371,14 +371,14 @@ void main() {
       expect(find.text('baux filter=active'), findsOneWidget);
     });
 
-    testWidgets('tap « Retards » → /leases?filter=active', (tester) async {
+    testWidgets('tap « Retards » → /leases?filter=late', (tester) async {
       await tester.pumpWidget(_wrap(retards: 2));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('kpi_retards')));
       await tester.pumpAndSettle();
 
-      expect(find.text('baux filter=active'), findsOneWidget);
+      expect(find.text('baux filter=late'), findsOneWidget);
     });
 
     testWidgets('tap « Baux à renouveler » → /leases?filter=renewable', (

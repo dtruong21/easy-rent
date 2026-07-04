@@ -104,7 +104,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
 
   DataRow _buildRow(BuildContext context, LeaseListItem item) {
     final lease = item.lease;
-    final pillData = leaseStatusPill(lease);
+    final pillData = leaseStatusPill(lease, isLate: item.isLate);
 
     return DataRow(
       onSelectChanged: (_) => context.push('/leases/${lease.id}'),

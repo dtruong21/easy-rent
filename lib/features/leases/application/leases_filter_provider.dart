@@ -28,12 +28,20 @@ final filteredLeasesProvider = Provider<AsyncValue<List<LeaseListItem>>>((ref) {
     final now = DateTime.now();
     return leases.where((item) {
       final lease = item.lease;
+      // Priorité d'affichage (FEAT-028) : late > renewable > active. Un bail
+      // en retard ne doit apparaître ni dans `active` ni dans `renewable` —
+      // sinon il serait démultiplié entre plusieurs onglets de filtre.
       return switch (filter) {
         LeaseFilter.all => true,
         LeaseFilter.active =>
-          lease.status == LeaseStatus.active && !_isRenewable(lease, now),
+          lease.status == LeaseStatus.active &&
+              !item.isLate &&
+              !_isRenewable(lease, now),
         LeaseFilter.renewable =>
-          lease.status == LeaseStatus.active && _isRenewable(lease, now),
+          lease.status == LeaseStatus.active &&
+              !item.isLate &&
+              _isRenewable(lease, now),
+        LeaseFilter.late => lease.status == LeaseStatus.active && item.isLate,
         LeaseFilter.terminated => lease.status == LeaseStatus.terminated,
       };
     }).toList();

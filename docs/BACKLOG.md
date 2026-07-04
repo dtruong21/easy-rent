@@ -2,7 +2,7 @@
 
 Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-<slug>.md`.
 
-> Dernière mise à jour : 2026-07-03 (FEAT-026 concept navigation shell ; FEAT-024 planifiée, préparation faite ; FEAT-025 spec'd)
+> Dernière mise à jour : 2026-07-04 (FEAT-028 spec'd — retards de paiement)
 
 ## En cours
 
@@ -11,6 +11,7 @@ Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-
 | FEAT-026 | Navigation shell adaptative web+mobile | ✅ Implémenté + staging 2026-07-03 (commit ca2d10a) — décisions validées : 5 onglets, Profil en onglet, avant la semaine mobile | [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md) |
 | FEAT-024 | App mobile iOS/Android (Flutter natif) | 🟡 Préparée — dev semaine du 6 juillet 2026 (dépend de FEAT-026 pour la nav) | [`docs/MOBILE.md`](MOBILE.md) (audit portabilité + décisions + plan semaine) |
 | FEAT-025 | Écran Profil → vrai paramétrage (password change, contact support) | ✅ Livré staging 2026-07-03 (commits f5734b4 + 0cd54de) — reste : notif email (extension Trigger Email, runbook dans la story) | [`backlog/025-settings-profile.md`](backlog/025-settings-profile.md) |
+| FEAT-028 | Détection et affichage des retards de paiement (correction KPI dashboard) | 📋 Spec'd 2026-07-04 — décisions ouvertes : délai de grâce (5j proposé), proratisation 1er mois | [`backlog/028-retards-paiement.md`](backlog/028-retards-paiement.md) |
 
 ## Prochain (P0 — MVP, chaîne bloquante)
 
@@ -96,4 +97,8 @@ FEAT-001 (auth)
 
 ## Plus tard (P1, P2)
 
-Voir [`docs/ROADMAP.md`](ROADMAP.md) — charges récupérables, crédits, régularisation annuelle, état des lieux digital, rappels automatiques, export comptable (FEC), multi-utilisateurs, notifications push PWA, OCR, intégration bancaire.
+| ID | Titre | Story | Statut |
+|---|---|---|---|
+| FEAT-029 | Charges copropriété exceptionnelles + régularisation annuelle des charges | [`backlog/029-charges-regularisation.md`](backlog/029-charges-regularisation.md) | 📋 Cadré (2026-07-03) — scope V1 réduit (bail nu, doc `documents` réutilisé), décisions ouvertes avant chiffrage, risque `firestore.rules`/`functions/` signalé |
+
+Voir aussi [`docs/ROADMAP.md`](ROADMAP.md) — crédits, état des lieux digital, rappels automatiques, export comptable (FEC), multi-utilisateurs, notifications push PWA, OCR, intégration bancaire.

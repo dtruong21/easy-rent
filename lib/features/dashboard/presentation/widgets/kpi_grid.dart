@@ -70,10 +70,10 @@ class KpiGrid extends StatelessWidget {
     final docsColor = docs.count > 0 ? colors.info.solid : colors.neutral.solid;
 
     // Drill-down : chaque KPI (sauf Documents, faute de page globale) ouvre
-    // la liste des baux pré-filtrée. Loyers et Retards mènent aux baux actifs
-    // — c'est là que vivent paiements et quittances ; la distinction fine
-    // (vue paiements dédiée, filtre « retard ») viendra quand LeaseListItem
-    // portera l'info paiement. Renouvellements a un filtre exact (renewable).
+    // la liste des baux pré-filtrée. Loyers mène aux baux actifs — c'est là
+    // que vivent paiements et quittances. Retards mène désormais au filtre
+    // dédié `late` (FEAT-028, LeaseListItem porte l'info paiement).
+    // Renouvellements a un filtre exact (renewable).
     return [
       KpiCard(
         key: const Key('kpi_loyers'),
@@ -93,7 +93,7 @@ class KpiGrid extends StatelessWidget {
             ? 'locataire(s) en retard'
             : 'Tout est à jour',
         semanticColor: retardsColor,
-        onTap: () => context.go('/leases?filter=active'),
+        onTap: () => context.go('/leases?filter=late'),
       ),
       KpiCard(
         key: const Key('kpi_renouvellements'),

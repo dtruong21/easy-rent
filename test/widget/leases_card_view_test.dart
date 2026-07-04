@@ -44,10 +44,12 @@ LeaseListItem _makeItem({
   String tenantName = 'Marie Martin',
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
+  bool isLate = false,
 }) => LeaseListItem(
   lease: _makeLease(id: id, status: status, endDate: endDate),
   propertyName: propertyName,
   tenantDisplayName: tenantName,
+  isLate: isLate,
 );
 
 Widget _buildCardView(List<LeaseListItem> items) {
@@ -166,5 +168,38 @@ void main() {
 
       expect(find.text('À renouveler'), findsOneWidget);
     });
+
+    testWidgets('bail en retard (isLate=true) → pill "En retard" visible '
+        '(FEAT-028)', (tester) async {
+      final lateItem = _makeItem(
+        id: 'll',
+        propertyName: 'Bien En Retard',
+        isLate: true,
+      );
+
+      await tester.pumpWidget(_buildCardView([lateItem]));
+      await tester.pumpAndSettle();
+
+      expect(find.text('En retard'), findsOneWidget);
+    });
+
+    testWidgets(
+      'bail en retard ET renouvelable → pill "En retard" prime sur "À '
+      'renouveler" (FEAT-028, priorité late > renewable)',
+      (tester) async {
+        final item = _makeItem(
+          id: 'llr',
+          propertyName: 'Bien Retard Et Renouvelable',
+          endDate: DateTime.now().add(const Duration(days: 30)),
+          isLate: true,
+        );
+
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
+
+        expect(find.text('En retard'), findsOneWidget);
+        expect(find.text('À renouveler'), findsNothing);
+      },
+    );
   });
 }

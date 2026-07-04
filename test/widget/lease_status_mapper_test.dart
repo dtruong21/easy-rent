@@ -101,5 +101,48 @@ void main() {
       expect(result.tone.name, 'neutral');
       expect(result.icon, Icons.archive_outlined);
     });
+
+    // -------------------------------------------------------------------
+    // FEAT-028 : priorité `late` (danger "En retard")
+    // -------------------------------------------------------------------
+
+    test('active, isLate=true, endDate=null → danger "En retard"', () {
+      final result = leaseStatusPill(_makeLease(), now: _now, isLate: true);
+
+      expect(result.label, 'En retard');
+      expect(result.tone.name, 'danger');
+      expect(result.icon, Icons.warning_amber_outlined);
+    });
+
+    test('active, isLate=true ET endDate proche (<60j, renouvelable) → '
+        '"En retard" prime sur "À renouveler" (priorité late > renewable)', () {
+      final result = leaseStatusPill(
+        _makeLease(endDate: _now.add(const Duration(days: 30))),
+        now: _now,
+        isLate: true,
+      );
+
+      expect(result.label, 'En retard');
+      expect(result.tone.name, 'danger');
+    });
+
+    test('active, isLate=false (défaut) → comportement inchangé "Actif"', () {
+      final result = leaseStatusPill(_makeLease(), now: _now);
+
+      expect(result.label, 'Actif');
+      expect(result.tone.name, 'success');
+    });
+
+    test('terminated, isLate=true → reste "Terminé" (isLate ignoré hors '
+        'status active)', () {
+      final result = leaseStatusPill(
+        _makeLease(status: LeaseStatus.terminated),
+        now: _now,
+        isLate: true,
+      );
+
+      expect(result.label, 'Terminé');
+      expect(result.tone.name, 'neutral');
+    });
   });
 }

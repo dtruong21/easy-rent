@@ -5,9 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/firestore_helpers.dart';
+import '../../payments/domain/payment.dart';
 import '../../payments/domain/payment_method.dart';
 import '../domain/lease.dart';
+import '../domain/lease_lateness.dart';
 import '../domain/lease_list_item.dart';
+import '../domain/lease_status.dart';
 import '../domain/lease_type.dart';
 
 final _log = Logger('LeaseRepository');
@@ -103,10 +106,24 @@ class FirestoreLeaseRepository implements LeaseRepository {
         .limit(200)
         .get();
 
+    final leases = qs.docs
+        .map(
+          (d) => Lease.fromJson(firestoreDocToSnakeJson(d.data(), docId: d.id)),
+        )
+        .toList();
+
+    // FEAT-028 : le retard de paiement (pastille + filtre `late`) ne
+    // concerne que les baux actifs — pas la peine de charger les paiements
+    // des baux terminés/archivés (isLeaseLate() renvoie false direct dessus).
+    final activeLeaseIds = leases
+        .where((l) => l.status == LeaseStatus.active)
+        .map((l) => l.id)
+        .toList();
+    final paymentsByLease = await _fetchPaymentsByLease(activeLeaseIds);
+
+    final now = DateTime.now();
     final items = qs.docs.map((d) {
-      final lease = Lease.fromJson(
-        firestoreDocToSnakeJson(d.data(), docId: d.id),
-      );
+      final lease = leases.firstWhere((l) => l.id == d.id);
       final data = d.data();
       final propertyName =
           (data['propertyName'] as String?) ?? '(bien archivé)';
@@ -115,10 +132,16 @@ class FirestoreLeaseRepository implements LeaseRepository {
       final tenantDisplayName = firstName.isEmpty && lastName.isEmpty
           ? '(locataire archivé)'
           : '$firstName $lastName'.trim();
+      final isLate = isLeaseLate(
+        lease: lease,
+        payments: paymentsByLease[lease.id] ?? const [],
+        now: now,
+      );
       return LeaseListItem(
         lease: lease,
         propertyName: propertyName,
         tenantDisplayName: tenantDisplayName,
+        isLate: isLate,
       );
     }).toList();
 
@@ -129,6 +152,48 @@ class FirestoreLeaseRepository implements LeaseRepository {
       return sa.compareTo(sb);
     });
     return items;
+  }
+
+  /// Charge tous les paiements (non soft-supprimés) des baux [leaseIds],
+  /// groupés par `leaseId`.
+  ///
+  /// Firestore ne supporte pas `whereIn` avec >30 valeurs — on chunke, comme
+  /// le fait déjà `DashboardRepository.fetchRetards()`. Filtrage du
+  /// recouvrement d'intervalle (`periodStart`/`periodEnd`) fait côté client
+  /// par `isLeaseLate()` — pas de nouvel index composite requis.
+  ///
+  /// TODO(P2) : charge actuellement TOUT l'historique de paiements de
+  /// chaque bail actif (pas de borne temporelle) — OK pour le MVP (volume
+  /// faible par bail), mais coûteux en lectures Firestore si un portefeuille
+  /// grossit avec des baux anciens ayant des dizaines de paiements alors que
+  /// seul le mois dû courant (± quelques mois de marge pour le recouvrement
+  /// d'intervalle) importe pour `isLeaseLate()`. Borner avec un filtre
+  /// `periodEnd >= début du mois dû − marge` quand le volume le justifiera.
+  Future<Map<String, List<Payment>>> _fetchPaymentsByLease(
+    List<String> leaseIds,
+  ) async {
+    final result = <String, List<Payment>>{};
+    if (leaseIds.isEmpty) return result;
+
+    for (var i = 0; i < leaseIds.length; i += 30) {
+      final chunk = leaseIds.sublist(
+        i,
+        i + 30 > leaseIds.length ? leaseIds.length : i + 30,
+      );
+      final paymentsQs = await _firestore
+          .collection('payments')
+          .where('landlordId', isEqualTo: _uid)
+          .where('deletedAt', isNull: true)
+          .where('leaseId', whereIn: chunk)
+          .get();
+      for (final d in paymentsQs.docs) {
+        final payment = Payment.fromJson(
+          firestoreDocToSnakeJson(d.data(), docId: d.id),
+        );
+        result.putIfAbsent(payment.leaseId, () => []).add(payment);
+      }
+    }
+    return result;
   }
 
   @override

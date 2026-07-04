@@ -14,18 +14,37 @@ typedef LeaseStatusPillData = ({
 
 /// Mappe un [Lease] vers les propriétés d'affichage d'un [StatusPill].
 ///
-/// Priorité descendante :
-/// 1. `active` ET endDate − today < 60 jours → warning "À renouveler"
-/// 2. `active` (par défaut) → success "Actif"
-/// 3. `terminated` → neutral "Terminé"
-/// 4. `archived` → neutral "Archivé"
+/// Priorité descendante (FEAT-028 ajoute `late` en tête — un impayé est
+/// plus urgent qu'une échéance de renouvellement) :
+/// 1. `active` ET [isLate] → danger "En retard"
+/// 2. `active` ET endDate − today < 60 jours → warning "À renouveler"
+/// 3. `active` (par défaut) → success "Actif"
+/// 4. `terminated` → neutral "Terminé"
+/// 5. `archived` → neutral "Archivé"
+///
+/// [isLate] doit être calculé en amont par l'appelant (cf.
+/// `lease_lateness.dart::isLeaseLate`, qui a besoin de l'historique des
+/// paiements du bail — non disponible depuis un [Lease] seul). Défaut
+/// `false` pour ne pas casser les appelants qui n'ont pas encore cette info.
 ///
 /// Le paramètre [now] est injectable pour les tests (évite la dépendance
 /// à `DateTime.now()` dans les tests unitaires).
-LeaseStatusPillData leaseStatusPill(Lease lease, {DateTime? now}) {
+LeaseStatusPillData leaseStatusPill(
+  Lease lease, {
+  DateTime? now,
+  bool isLate = false,
+}) {
   final today = now ?? DateTime.now();
 
   if (lease.status == LeaseStatus.active) {
+    if (isLate) {
+      return (
+        tone: StatusPillTone.danger,
+        label: 'En retard',
+        icon: Icons.warning_amber_outlined,
+      );
+    }
+
     final end = lease.endDate;
     if (end != null) {
       final daysUntilEnd = end.difference(today).inDays;

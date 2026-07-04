@@ -107,6 +107,7 @@ LeaseListItem _makeItem({
   LeaseStatus status = LeaseStatus.active,
   DateTime? startDate,
   DateTime? endDate,
+  bool isLate = false,
 }) => LeaseListItem(
   lease: _makeLease(
     id: id,
@@ -116,6 +117,7 @@ LeaseListItem _makeItem({
   ),
   propertyName: propertyName,
   tenantDisplayName: tenantName,
+  isLate: isLate,
 );
 
 Widget _buildPage(
@@ -325,6 +327,77 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
+    // Filtre « En retard » (FEAT-028)
+    // -----------------------------------------------------------------------
+    testWidgets(
+      'filtre "En retard" — affiche uniquement les baux avec isLate=true',
+      (tester) async {
+        final repo = _FakeRepo(
+          items: [
+            _makeItem(
+              id: 'll',
+              propertyName: 'Bail En Retard',
+              status: LeaseStatus.active,
+              isLate: true,
+            ),
+            _makeItem(
+              id: 'la',
+              propertyName: 'Bail Actif À Jour',
+              status: LeaseStatus.active,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          _buildPage(
+            repo,
+            extraOverrides: [
+              leaseFilterProvider.overrideWith((ref) => LeaseFilter.late),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bail En Retard'), findsOneWidget);
+        expect(find.text('Bail Actif À Jour'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'filtre "Actifs" — exclut les baux en retard (priorité late > active)',
+      (tester) async {
+        final repo = _FakeRepo(
+          items: [
+            _makeItem(
+              id: 'll',
+              propertyName: 'Bail En Retard',
+              status: LeaseStatus.active,
+              isLate: true,
+            ),
+            _makeItem(
+              id: 'la',
+              propertyName: 'Bail Actif À Jour',
+              status: LeaseStatus.active,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          _buildPage(
+            repo,
+            extraOverrides: [
+              leaseFilterProvider.overrideWith((ref) => LeaseFilter.active),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bail Actif À Jour'), findsOneWidget);
+        expect(find.text('Bail En Retard'), findsNothing);
+      },
+    );
+
+    // -----------------------------------------------------------------------
     // Filtre
     // -----------------------------------------------------------------------
     testWidgets(
@@ -532,6 +605,7 @@ void main() {
     test('parse les valeurs connues', () {
       expect(LeaseFilter.fromQueryParam('active'), LeaseFilter.active);
       expect(LeaseFilter.fromQueryParam('renewable'), LeaseFilter.renewable);
+      expect(LeaseFilter.fromQueryParam('late'), LeaseFilter.late);
       expect(LeaseFilter.fromQueryParam('terminated'), LeaseFilter.terminated);
       expect(LeaseFilter.fromQueryParam('all'), LeaseFilter.all);
     });

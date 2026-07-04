@@ -113,9 +113,8 @@ Widget _buildMobile(ProviderContainer container) {
 
 void main() {
   group('LeasesFilterBar', () {
-    testWidgets('desktop — SegmentedButton visible avec 4 segments', (
-      tester,
-    ) async {
+    testWidgets('desktop — SegmentedButton visible avec 5 segments '
+        '(FEAT-028 ajoute « En retard »)', (tester) async {
       final container = ProviderContainer(
         overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
       );
@@ -128,8 +127,27 @@ void main() {
       expect(find.text('Tous'), findsOneWidget);
       expect(find.text('Actifs'), findsOneWidget);
       expect(find.text('À renouveler'), findsOneWidget);
+      expect(find.text('En retard'), findsOneWidget);
       expect(find.text('Terminés'), findsOneWidget);
     });
+
+    testWidgets(
+      'desktop — sélection segment "En retard" → état provider = late',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_buildDesktop(container));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('En retard'));
+        await tester.pumpAndSettle();
+
+        expect(container.read(leaseFilterProvider), LeaseFilter.late);
+      },
+    );
 
     testWidgets('mobile — DropdownButton visible (pas SegmentedButton)', (
       tester,

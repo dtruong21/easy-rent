@@ -6,11 +6,19 @@ enum LeaseFilter {
   /// Tous les baux (aucun filtre).
   all,
 
-  /// Baux actifs uniquement (status == active, non renouvelables).
+  /// Baux actifs uniquement (status == active, non renouvelables, non en
+  /// retard).
   active,
 
-  /// Baux actifs dont la date de fin est dans moins de 60 jours.
+  /// Baux actifs dont la date de fin est dans moins de 60 jours (et non en
+  /// retard — `late` prime sur `renewable`, cf. FEAT-028).
   renewable,
+
+  /// Baux actifs en retard de paiement au titre du mois dû courant
+  /// (FEAT-028, cf. `lease_lateness.dart`). Priorité d'affichage la plus
+  /// haute : un bail en retard n'apparaît jamais dans `active` ni
+  /// `renewable`.
+  late,
 
   /// Baux terminés.
   terminated;
@@ -20,6 +28,7 @@ enum LeaseFilter {
     LeaseFilter.all => 'Tous',
     LeaseFilter.active => 'Actifs',
     LeaseFilter.renewable => 'À renouveler',
+    LeaseFilter.late => 'En retard',
     LeaseFilter.terminated => 'Terminés',
   };
 

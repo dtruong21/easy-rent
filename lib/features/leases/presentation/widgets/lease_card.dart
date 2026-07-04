@@ -30,7 +30,7 @@ class LeaseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lease = item.lease;
-    final pillData = leaseStatusPill(lease);
+    final pillData = leaseStatusPill(lease, isLate: item.isLate);
 
     return EntityCard(
       onTap: onTap,
