@@ -100,3 +100,6 @@ skills-lock.json
 
 # Backups (FEAT-019 migration)
 backups/
+
+# Config de preview locale (par développeur)
+.claude/launch.json
