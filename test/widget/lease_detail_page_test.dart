@@ -49,6 +49,7 @@ class _FakeRepo implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async => throw UnimplementedError();
 
   @override
@@ -110,13 +111,16 @@ Lease _makeLease({
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
   LeaseType leaseType = LeaseType.unfurnished,
+  int chargesAmountCents = 5000,
+  int nonRecoverableChargesCents = 0,
 }) => Lease(
   id: id,
   landlordId: 'owner-1',
   propertyId: 'prop-1',
   tenantId: 'tenant-1',
   rentAmountCents: 85000,
-  chargesAmountCents: 5000,
+  chargesAmountCents: chargesAmountCents,
+  nonRecoverableChargesCents: nonRecoverableChargesCents,
   startDate: DateTime(2024, 1, 1),
   endDate: endDate,
   status: status,
@@ -218,6 +222,97 @@ void main() {
       // 85000 centimes = 850,00 €
       expect(find.textContaining('850'), findsWidgets);
     });
+
+    // -----------------------------------------------------------------------
+    // FEAT-036 — ventilation charges récupérables / non récupérables (AC-4)
+    // -----------------------------------------------------------------------
+    testWidgets('affiche le libellé "Charges récupérables"', (tester) async {
+      final lease = _makeLease();
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Charges récupérables'), findsOneWidget);
+    });
+
+    testWidgets(
+      'affiche "Charges non récupérables" TOUJOURS, même quand la valeur est 0',
+      (tester) async {
+        final lease = _makeLease(nonRecoverableChargesCents: 0);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Charges non récupérables'), findsOneWidget);
+      },
+    );
+
+    testWidgets('affiche le montant non récupérable formaté quand > 0', (
+      tester,
+    ) async {
+      final lease = _makeLease(nonRecoverableChargesCents: 2000);
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 2000 centimes = 20,00 €
+      expect(find.textContaining('20,00'), findsOneWidget);
+    });
+
+    testWidgets('affiche "Total charges" = récupérable + non récupérable', (
+      tester,
+    ) async {
+      final lease = _makeLease(
+        chargesAmountCents: 5000,
+        nonRecoverableChargesCents: 2000,
+      );
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total charges'), findsOneWidget);
+      // 5000 + 2000 = 7000 centimes = 70,00 €
+      expect(find.textContaining('70,00'), findsOneWidget);
+    });
+
+    testWidgets(
+      '"Loyer CC" reste inchangé (loyer + récupérable seul, PAS le total)',
+      (tester) async {
+        final lease = _makeLease(
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 2000,
+        );
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loyer CC'), findsOneWidget);
+        // rent(85000) + récupérable(5000) = 90000 centimes = 900,00 €
+        // (PAS 920,00 € qui inclurait le non-récupérable).
+        expect(find.textContaining('900,00'), findsOneWidget);
+        expect(find.textContaining('920,00'), findsNothing);
+      },
+    );
 
     testWidgets('affiche la date de début au format DD/MM/YYYY', (
       tester,

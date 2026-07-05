@@ -56,6 +56,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async {
     if (createError != null) throw createError!;
     createdLease = _buildLease(
@@ -63,6 +64,7 @@ class _FakeLeaseRepo implements LeaseRepository {
       tenantId: tenantId,
       rentAmountCents: rentAmountCents,
       chargesAmountCents: chargesAmountCents,
+      nonRecoverableChargesCents: nonRecoverableChargesCents,
       startDate: startDate,
       endDate: endDate,
     );
@@ -95,6 +97,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     required int chargesAmountCents,
     required DateTime startDate,
     DateTime? endDate,
+    int nonRecoverableChargesCents = 0,
   }) => Lease(
     id: 'new-lease-id',
     landlordId: 'owner-1',
@@ -102,6 +105,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     tenantId: tenantId,
     rentAmountCents: rentAmountCents,
     chargesAmountCents: chargesAmountCents,
+    nonRecoverableChargesCents: nonRecoverableChargesCents,
     startDate: startDate,
     endDate: endDate,
     status: LeaseStatus.active,
@@ -350,6 +354,100 @@ void main() {
 
       expect(find.byKey(const Key('field_charges')), findsOneWidget);
     });
+
+    // -----------------------------------------------------------------------
+    // FEAT-036 — ventilation récupérable / non récupérable
+    // -----------------------------------------------------------------------
+    testWidgets('mode création — champ charges relabellisé "récupérables"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Charges récupérables'), findsOneWidget);
+    });
+
+    testWidgets('mode création — champ charges non récupérables présent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('field_non_recoverable_charges')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Charges non récupérables'), findsOneWidget);
+    });
+
+    testWidgets(
+      'mode création — les 2 champs charges sont saisissables indépendamment',
+      (tester) async {
+        await tester.pumpWidget(_buildForm());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byKey(const Key('field_charges')), '50');
+        await tester.enterText(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          '20',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('50'), findsOneWidget);
+        expect(find.text('20'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'validation — charges non récupérables négatives → erreur inline',
+      (tester) async {
+        await tester.pumpWidget(_buildForm());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          '-20',
+        );
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_submit_lease_form')),
+        );
+        await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Les charges non récupérables ne peuvent pas être négatives',
+            skipOffstage: false,
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('mode édition — champ non récupérable pré-rempli si > 0', (
+      tester,
+    ) async {
+      final lease = _makeLease().copyWith(nonRecoverableChargesCents: 2000);
+      await tester.pumpWidget(_buildForm(initial: lease));
+      await tester.pumpAndSettle();
+
+      // 2000 centimes → "20,00"
+      expect(find.text('20,00'), findsOneWidget);
+    });
+
+    testWidgets(
+      'mode édition — champ non récupérable VIDE si == 0 (pas "0,00")',
+      (tester) async {
+        final lease = _makeLease(); // nonRecoverableChargesCents défaut = 0
+        await tester.pumpWidget(_buildForm(initial: lease));
+        await tester.pumpAndSettle();
+
+        final field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_non_recoverable_charges')),
+        );
+        expect(field.controller?.text, isEmpty);
+      },
+    );
 
     testWidgets('mode création — champ date de début présent', (tester) async {
       await tester.pumpWidget(_buildForm());

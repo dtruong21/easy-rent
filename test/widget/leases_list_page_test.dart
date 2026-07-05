@@ -53,6 +53,7 @@ class _FakeRepo implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async => throw UnimplementedError();
 
   @override

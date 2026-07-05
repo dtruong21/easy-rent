@@ -432,10 +432,31 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.add_circle_outline,
-              label: 'Charges',
-              value: MoneyFormat.formatEurosFromCents(lease.chargesAmountCents),
+              label: 'Charges récupérables',
+              value: MoneyFormat.formatEurosFromCents(
+                lease.recoverableChargesCents,
+              ),
             ),
             const Divider(height: 24),
+            // FEAT-036 : toujours affichée (même à 0) pour lever
+            // l'ambiguïté — un 0 masqué pourrait être lu comme une donnée
+            // manquante plutôt qu'une absence réelle de charge bailleur.
+            _InfoRow(
+              icon: Icons.remove_circle_outline,
+              label: 'Charges non récupérables',
+              value: MoneyFormat.formatEurosFromCents(
+                lease.nonRecoverableChargesCents,
+              ),
+            ),
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.calculate_outlined,
+              label: 'Total charges',
+              value: MoneyFormat.formatEurosFromCents(lease.totalChargesCents),
+            ),
+            const Divider(height: 24),
+            // Loyer réellement dû par le locataire (rent + récupérable) —
+            // INCHANGÉ par FEAT-036, ne doit PAS inclure le non-récupérable.
             _InfoRow(
               icon: Icons.euro,
               label: 'Loyer CC',
