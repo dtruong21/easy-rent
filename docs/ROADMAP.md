@@ -28,25 +28,37 @@
 - [x] Déploiement prod Firebase Hosting (workflows + checklist + runbook)
 - [x] Tests utilisateurs + code review
 
-## Post-MVP — P1
+## Post-MVP M1 — ✅ COMPLÉTÉE 2026-07-05 (staging, feature-complete)
 
-- [ ] **FEAT-012** : Password change endpoint + profil utilisateur
-- [ ] **FEAT-013** : Rappels automatiques de paiement (cron Edge Function)
-- [ ] **FEAT-014** : Export comptable (CSV / FEC)
-- [ ] **FEAT-015** : Multi-utilisateurs (mandataires, comptable)
-- [ ] Gestion des charges récupérables / non-récupérables
-- [ ] Gestion des crédits (avances, trop-perçus)
-- [ ] Régularisation annuelle des charges
-- [ ] État des lieux digital (entrée/sortie)
-- [ ] Notifications push (PWA)
-- [ ] Multi-facteur (2FA / TOTP)
-- [ ] **FEAT-026 — Navigation shell adaptative web+mobile** — concept proposé,
-      **prérequis de FEAT-024** (à livrer sur le web juste avant / en J1 de la
-      semaine mobile). `StatefulShellRoute.indexedStack` + NavigationBar (<600px)
-      / NavigationRail (≥600px), dashboard → onglet Accueil. Concept :
-      [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md)
+- [x] **FEAT-023** : Réglages app (thème clair/sombre + liens légaux + version)
+- [x] **FEAT-025 / FEAT-025b** : Sécurité (changement mot de passe) + support in-app + hub `/profile`
+- [x] **FEAT-026** : Navigation shell adaptative web+mobile (`StatefulShellRoute.indexedStack`, NavigationBar <600px / NavigationRail ≥600px). Concept : [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md)
+- [x] **FEAT-027** : Dashboard — période graphique sélectionnable (6 / 12 / 24 mois)
+- [x] **FEAT-028** : Détection des retards de paiement (règle métier + KPI drill-down + pastilles)
+- [x] **FEAT-029 / FEAT-029b** : Charges — motif de paiement + régularisation annuelle (bail nu). V1 sans archivage.
+- [x] **FEAT-030** : Navigation retour corrigée (audit QA F-1..F-4)
+
+## En cours / imminent
+
 - [ ] **FEAT-024 — App mobile iOS/Android (Flutter natif)** — planifiée
-      semaine du 6 juillet 2026, préparation : [`docs/MOBILE.md`](MOBILE.md)
+      semaine du 6 juillet 2026. Prérequis FEAT-026 (nav shell adaptative) ✅ livré.
+      Préparation : [`docs/MOBILE.md`](MOBILE.md)
+
+## Post-MVP P1 — backlog à prioriser
+
+> Priorisation par le Product Owner → détail ordonné dans [`docs/BACKLOG.md`](BACKLOG.md).
+> L'utilisateur décide quelles features lancer (cycle `build-feature` complet chacune).
+
+- [ ] Rappels automatiques de paiement (Cloud Function planifiée + email)
+- [ ] Export comptable (CSV / FEC)
+- [ ] Multi-utilisateurs (mandataires, comptable) — permissions + invite flow
+- [ ] Gestion des charges récupérables / non-récupérables
+- [ ] Archivage de la régularisation de charges (FEAT-029 V2 — Cloud Function async)
+- [ ] Gestion des crédits (avances, trop-perçus)
+- [ ] État des lieux digital (entrée / sortie)
+- [ ] Notifications push (PWA)
+- [ ] Profil avancé : avatar (changement de mot de passe déjà livré via FEAT-025)
+- [ ] Multi-facteur (2FA / TOTP)
 
 ## P2 (nice-to-have)
 
