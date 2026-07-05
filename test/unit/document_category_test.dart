@@ -35,6 +35,13 @@ void main() {
       );
     });
 
+    test('expense_receipt', () {
+      expect(
+        DocumentCategory.fromSql('expense_receipt'),
+        DocumentCategory.expenseReceipt,
+      );
+    });
+
     test('autre', () {
       expect(DocumentCategory.fromSql('autre'), DocumentCategory.autre);
     });
@@ -62,6 +69,10 @@ void main() {
 
     test('quittanceScannee → quittance_scannee', () {
       expect(DocumentCategory.quittanceScannee.sqlValue, 'quittance_scannee');
+    });
+
+    test('expenseReceipt → expense_receipt', () {
+      expect(DocumentCategory.expenseReceipt.sqlValue, 'expense_receipt');
     });
 
     test('autre → autre', () {
@@ -104,6 +115,10 @@ void main() {
 
     test('quittance_scannee ne nécessite pas legal_hold', () {
       expect(DocumentCategory.quittanceScannee.requiresLegalHold, false);
+    });
+
+    test('expense_receipt (FEAT-041b) nécessite legal_hold', () {
+      expect(DocumentCategory.expenseReceipt.requiresLegalHold, true);
     });
 
     test('autre ne nécessite pas legal_hold', () {

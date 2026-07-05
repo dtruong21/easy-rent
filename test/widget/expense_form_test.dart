@@ -14,6 +14,7 @@ import 'package:easyrent/features/expenses/domain/expense_nature.dart';
 import 'package:easyrent/features/expenses/presentation/expense_form.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -36,23 +37,26 @@ Widget _buildExpenseForm({
 }) {
   final gk = GlobalKey<FormState>();
   final wk = formKey ?? GlobalKey<ExpenseFormWidgetState>();
-  return MaterialApp(
-    home: Scaffold(
-      body: SingleChildScrollView(
-        child: ExpenseForm(
-          key: wk,
-          formKey: gk,
-          amountController: amountCtrl,
-          leases: leases,
-          initialLeaseId: initialLeaseId,
-          initialExpenseDate: initialExpenseDate,
-          initialNature: initialNature,
-          initialCategory: initialCategory,
-          initialCategoryOverridden: initialCategoryOverridden,
-          initialPeriodStart: initialPeriodStart,
-          initialPeriodEnd: initialPeriodEnd,
-          initialNotes: initialNotes,
-          enabled: enabled,
+  return ProviderScope(
+    child: MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: ExpenseForm(
+            key: wk,
+            formKey: gk,
+            amountController: amountCtrl,
+            leases: leases,
+            propertyId: 'property-1',
+            initialLeaseId: initialLeaseId,
+            initialExpenseDate: initialExpenseDate,
+            initialNature: initialNature,
+            initialCategory: initialCategory,
+            initialCategoryOverridden: initialCategoryOverridden,
+            initialPeriodStart: initialPeriodStart,
+            initialPeriodEnd: initialPeriodEnd,
+            initialNotes: initialNotes,
+            enabled: enabled,
+          ),
         ),
       ),
     ),

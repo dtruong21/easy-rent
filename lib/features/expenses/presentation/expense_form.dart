@@ -5,6 +5,7 @@ import '../../../core/utils/french_date.dart';
 import '../../leases/domain/lease.dart';
 import '../domain/expense_category.dart';
 import '../domain/expense_nature.dart';
+import 'expense_receipt_field.dart';
 
 /// Champs partagés du formulaire dépense.
 ///
@@ -20,8 +21,8 @@ import '../domain/expense_nature.dart';
 ///   risque juridique décret n°87-713.
 /// - La période de rattachement est dérivée de la date de dépense par
 ///   défaut, mais reste corrigeable — obligatoire si `recoverable`.
-///
-/// ⚠️ FEAT-041a : PAS d'upload de justificatif ici (réservé FEAT-041b).
+/// - Le justificatif est **recommandé mais non bloquant** (FEAT-041b,
+///   décision produit #8) — voir [ExpenseReceiptField].
 ///
 /// Séparé de [ExpenseFormPage] pour la testabilité unitaire.
 class ExpenseForm extends StatefulWidget {
@@ -30,6 +31,7 @@ class ExpenseForm extends StatefulWidget {
     required this.formKey,
     required this.amountController,
     required this.leases,
+    required this.propertyId,
     this.initialLeaseId,
     this.initialExpenseDate,
     this.initialNature,
@@ -46,6 +48,10 @@ class ExpenseForm extends StatefulWidget {
 
   /// Baux disponibles pour ce bien (dropdown optionnel).
   final List<Lease> leases;
+
+  /// Bien parent — transmis au champ justificatif (`createDocument`
+  /// alternative au bail).
+  final String propertyId;
 
   final String? initialLeaseId;
   final DateTime? initialExpenseDate;
@@ -409,6 +415,14 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
           ),
           const SizedBox(height: 16),
 
+          // --- Justificatif (recommandé, non bloquant) ---
+          ExpenseReceiptField(
+            propertyId: widget.propertyId,
+            leaseId: _leaseId,
+            enabled: widget.enabled,
+          ),
+          const SizedBox(height: 16),
+
           // --- Notes ---
           TextFormField(
             key: const Key('field_notes'),
@@ -423,9 +437,6 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             maxLength: 2000,
             validator: (v) => ExpenseFormValidators.validateNotes(v),
           ),
-
-          // TODO(FEAT-041b) : champ upload de justificatif (recommandé, non
-          // bloquant) — pas câblé dans ce bloc CRUD.
         ],
       ),
     );

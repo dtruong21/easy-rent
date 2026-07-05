@@ -21,8 +21,10 @@ const int _kMaxExpensesPerList = 500;
 /// Lecture directe Firestore (streams filtrés `landlordId==uid &&
 /// deletedAt==null`), voir `docs/plans/FEAT-041-depenses.md` § b)/h).
 ///
-/// ⚠️ Ce bloc (FEAT-041a) NE câble PAS l'upload de justificatif — `documentId`
-/// n'est jamais envoyé à `createExpense` ici (réservé à FEAT-041b).
+/// [documentId] (FEAT-041b) : justificatif optionnel, uploadé au préalable
+/// via `DocumentsRepository.upload` (catégorie `expense_receipt`) — voir
+/// § g) du plan. **Recommandé, non bloquant** : une dépense peut être créée
+/// sans justificatif (décision produit #8).
 abstract interface class ExpensesRepository {
   /// Liste (one-shot) les dépenses actives d'un bien, triées par
   /// `expenseDate DESC`.
@@ -36,9 +38,8 @@ abstract interface class ExpensesRepository {
 
   /// Crée une nouvelle dépense via la Callable `createExpense`.
   ///
-  /// [documentId] : TODO FEAT-041b — l'upload de justificatif n'est pas
-  /// câblé dans ce bloc. Le paramètre existe pour ne pas re-signer la
-  /// méthode plus tard, mais n'est jamais renseigné par l'UI FEAT-041a.
+  /// [documentId] : justificatif optionnel (déjà uploadé — voir
+  /// `ExpenseReceiptUploadController`), transmis tel quel à la Callable.
   Future<Expense> create({
     required String propertyId,
     String? leaseId,
@@ -156,8 +157,6 @@ class FirestoreExpensesRepository implements ExpensesRepository {
       'periodStart': periodStart?.toUtc().toIso8601String(),
       'periodEnd': periodEnd?.toUtc().toIso8601String(),
       'periodYear': periodYear,
-      // TODO(FEAT-041b) : câbler l'upload de justificatif — documentId n'est
-      // volontairement jamais envoyé par l'UI FEAT-041a.
       'documentId': documentId,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
     });

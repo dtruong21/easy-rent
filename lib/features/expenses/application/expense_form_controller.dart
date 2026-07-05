@@ -17,8 +17,9 @@ final _log = Logger('ExpenseFormController');
 /// Sur succès : invalide [propertyExpensesProvider(propertyId)] pour que
 /// l'historique et le résumé de la fiche bien soient à jour.
 ///
-/// ⚠️ FEAT-041a : `documentId` n'est jamais transmis (upload justificatif =
-/// FEAT-041b, hors périmètre de ce bloc).
+/// [documentId] (FEAT-041b) : transmis si un justificatif a été uploadé
+/// avant la soumission (recommandé, non bloquant — cf.
+/// `docs/plans/FEAT-041-depenses.md` § g).
 ///
 /// Utilise [autoDispose] pour réinitialiser l'état entre deux ouvertures
 /// du formulaire.
@@ -42,6 +43,7 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    String? documentId,
     String? notes,
   }) async {
     state = const ExpenseFormState.submitting();
@@ -62,6 +64,7 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
           periodStart: periodStart,
           periodEnd: periodEnd,
           periodYear: periodYear,
+          documentId: documentId,
           notes: notes,
         );
         _log.info('expense created id=${result.id}');
@@ -77,6 +80,7 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
           periodStart: periodStart,
           periodEnd: periodEnd,
           periodYear: periodYear ?? initial.periodYear,
+          documentId: documentId ?? initial.documentId,
           notes: notes,
         );
         result = await repo.update(updated);

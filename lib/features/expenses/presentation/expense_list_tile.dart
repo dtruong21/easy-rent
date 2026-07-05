@@ -8,12 +8,13 @@ import '../domain/expense_category.dart';
 /// Tuile d'une dépense dans l'historique d'un bien.
 ///
 /// Affiche : icône de nature, libellé nature, chip catégorie
-/// récupérable/non-récupérable, montant, date, accès au justificatif s'il
-/// existe.
+/// récupérable/non-récupérable, montant, date, indicateur visuel de
+/// justificatif s'il existe ([Expense.hasDocument]).
 ///
-/// ⚠️ FEAT-041a : l'accès au justificatif (signed URL `getDocumentDownloadUrl`)
-/// sera câblé en FEAT-041b — ce bloc affiche seulement un indicateur visuel
-/// si [Expense.hasDocument] est vrai.
+/// ⚠️ L'ouverture du justificatif (signed URL `getDocumentDownloadUrl`)
+/// reste un follow-up : ce bloc affiche seulement l'icône de présence, le
+/// justificatif se consulte pour l'instant via la fiche d'édition
+/// (`documentId` transmis, FEAT-041b).
 class ExpenseListTile extends StatelessWidget {
   const ExpenseListTile({super.key, required this.expense, this.onTap});
 

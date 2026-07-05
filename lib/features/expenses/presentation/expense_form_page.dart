@@ -8,9 +8,11 @@ import '../../../core/utils/money_format.dart';
 import '../../properties/application/property_detail_provider.dart';
 import '../application/expense_detail_provider.dart';
 import '../application/expense_form_controller.dart';
+import '../application/expense_receipt_upload_controller.dart';
 import '../application/property_leases_provider.dart';
 import '../domain/expense.dart';
 import '../domain/expense_form_state.dart';
+import '../domain/expense_receipt_upload_state.dart';
 import 'expense_form.dart';
 
 final _log = Logger('ExpenseFormPage');
@@ -25,8 +27,10 @@ final _log = Logger('ExpenseFormPage');
 /// FEAT-030) — sauf en création directe sans page précédente, où l'on
 /// retombe sur la fiche bien via `go()`.
 ///
-/// ⚠️ FEAT-041a : PAS d'upload de justificatif (réservé FEAT-041b) —
-/// `createExpense` est appelé sans `documentId`.
+/// Justificatif (FEAT-041b) : si un fichier a été uploadé via
+/// [ExpenseReceiptField] avant la soumission, son `documentId` est transmis
+/// à `createExpense`/`updateExpense`. **Recommandé, non bloquant** — la
+/// dépense peut être créée sans justificatif (décision produit #8).
 class ExpenseFormPage extends ConsumerStatefulWidget {
   const ExpenseFormPage({
     super.key,
@@ -93,6 +97,26 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
       return;
     }
 
+    // Justificatif recommandé, non bloquant (décision produit #8) : on
+    // n'attend qu'un upload déjà terminé — un upload EN COURS bloque la
+    // soumission (évite de créer la dépense sans le documentId attendu par
+    // l'utilisateur qui vient de joindre un fichier).
+    final receiptState = ref.read(expenseReceiptUploadControllerProvider);
+    if (receiptState is ReceiptUploading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Envoi du justificatif en cours — patientez quelques secondes.',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+        ),
+      );
+      return;
+    }
+    final documentId = receiptState is ReceiptSuccess
+        ? receiptState.documentId
+        : widget.initial?.documentId;
+
     final periodStart = formState.currentPeriodStart;
     final periodEnd = formState.currentPeriodEnd;
     final notes = formState.currentNotes;
@@ -110,6 +134,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
           periodStart: periodStart,
           periodEnd: periodEnd,
           periodYear: (periodStart ?? expenseDate).year,
+          documentId: documentId,
           notes: notes.isEmpty ? null : notes,
         );
   }
@@ -196,6 +221,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
               formKey: _formKey,
               amountController: _amountCtrl,
               leases: leases,
+              propertyId: widget.propertyId,
               initialLeaseId: leaseId,
               initialExpenseDate: initial?.expenseDate,
               initialNature: initial?.nature,
