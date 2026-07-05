@@ -1,277 +1,361 @@
 # Schéma Firestore — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions. **Dernière sync** : 2026-07-05 (FEAT-025 support_requests, FEAT-029 payment.notes). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore.
+> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-05 (FEAT-036 + FEAT-041 V1 merged, `expenses` collection). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
 
-## Collections (10 total)
+## Collections (11 total)
 
-| Collection | Type | Access | Indexing | Trigger |
-|---|---|---|---|---|
-| `landlords` | singleton | CRUD compte | 1 composite | setUpdatedAt |
-| `properties` | multi | CRUD account | 2 composite | setUpdatedAt |
-| `tenants` | multi | CRUD account | 2 composite | setUpdatedAt |
-| `leases` | multi | CF only | 5 composite | setUpdatedAt |
-| `payments` | multi | CF only | 3 composite | setUpdatedAt |
-| `receipts` | multi | rules only | 3 composite | setUpdatedAt + recomputeReceiptStale |
-| `documents` | multi | CF only | 3 composite | setUpdatedAt |
-| `investment_scenarios` | multi | CRUD signed | 1 composite | setUpdatedAt |
-| `paid_plan_interest` | singleton | CRUD account | — | — |
-| **`support_requests`** | multi | **create-only** | **—** | **—** |
+| Collection | Type | Access | Trigger |
+|---|---|---|---|
+| `landlords` | singleton (uid) | CRUD account | setUpdatedAt |
+| `properties` | multi | CRUD account (isFullyAuthed) | setUpdatedAt |
+| `tenants` | multi | CRUD account | setUpdatedAt |
+| `leases` | multi | CF exclusive | setUpdatedAt |
+| `payments` | multi | CF exclusive | setUpdatedAt |
+| `receipts` | multi | rules read-only | setUpdatedAt + recomputeReceiptStale |
+| `documents` | multi | CF exclusive | setUpdatedAt |
+| `expenses` | multi | **CF exclusive (FEAT-041)** | setUpdatedAt |
+| `investment_scenarios` | multi | CRUD signed | setUpdatedAt |
+| `paid_plan_interest` | singleton (uid) | CRUD account | — |
+| `support_requests` | multi | create-only (FEAT-025) | — |
 
 ---
 
 ### `landlords/{uid}` — docId = Firebase Auth UID
 
-Authentication + account tiers (anonymous/free/pro).
+Authentication + account tiers (anonymous/free/pro). BAILLAN-M1 3-state system.
 
 | Champ | Type | Valeur | Immuable | RLS |
 |---|---|---|---|---|
 | `id` | string | Firebase Auth UID | ✅ | isOwner(uid) |
-| `email` | string? | null (anon) / email (compte) | ✅ | — |
+| `email` | string\|null | null (anon) / email (compte) | ✅ | — |
 | `fullName` | string | '' (anon) / nom complet | ✅ | — |
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ | — |
 | `subscriptionTier` | string | 'anonymous' / 'free' / 'pro' | ✅ | — |
 | `anonExpiresAt` | timestamp | Expiration essai (14j) | — | — |
-| `rgpdConsentAt` | timestamp? | null (anon) / date signature | ✅ | — |
-| `rgpdConsentVersion` | string | Numéro contrat RGPD | ✅ | — |
+| `rgpdConsentAt` | timestamp\|null | null (anon) / date signature | ✅ | — |
+| `rgpdConsentVersion` | string | v1-2026-06 → v2-2026-07 | ✅ | — |
 | `createdAt` | timestamp | Création compte | ✅ | — |
 | `updatedAt` | timestamp | Dernière modification | — | CF trigger |
-| `deletedAt` | timestamp? | null (actif) / suppression | — | isActive(rsc) |
+| `deletedAt` | timestamp\|null | null (actif) / soft-delete | — | isActive(rsc) |
 
 **RLS Rules** :
-- `get` : isOwner(uid) && isActive(resource)
-- `create` (compte) : isFullyAuthed() + RGPD consent obligatoire
-- `create` (anonyme) : isAnonymous() + anonExpiresAt valide
+- `get` : isOwner(uid) && (resource==null \|\| isActive(resource))
+- `create` (compte complet) : isFullyAuthed() + RGPD consent v2-2026-07
+- `create` (anonyme) : isAnonymous() + anonExpiresAt <= now+15j
 - `update` (compte) : isFullyAuthed() && preservesImmutables()
-- `update` (anonyme) : isAnonymous() && anonExpiresAt <= now + 15j
-- `delete` : interdit (soft-delete via CF `softDeleteLandlord`)
+- `update` (anonyme) : isAnonymous() && anonExpiresAt valide
+- `delete` : interdit (soft-delete via CF `softDeleteLandlord` + scheduled `cleanupExpiredAnon`)
 
-**Indexes** :
-- `isAnonymous, anonExpiresAt ASC` (cleanup expiration)
-
-**Triggers** :
-- setUpdatedAt (CF)
+**Triggers** : setUpdatedAt (CF)
 
 ---
 
-### `properties/{id}` — CRUD direct
+### `properties/{id}` — CRUD direct, isFullyAuthed only
 
-Bien immobilier (appartement, maison, etc).
+Bien immobilier (appartement, maison, etc). Anonyme N/A.
 
 | Champ | Type | Notes |
 |---|---|---|
 | `id` | string | UUID, docId |
-| `landlordId` | string | FK → landlords.id |
+| `landlordId` | string | FK → landlords.id, immuable |
 | `name` | string | Adresse ou nom |
 | `address` | string | Complète (rue + code postal) |
-| `type` | string | 'appartement' / 'maison' / 'studio' / 'autre' |
-| `activeLeaseCount` | int | Denormalisé (CF) — CRUD client refusé |
-| `createdAt` | timestamp | Création |
+| `type` | string | 'appartement' \| 'maison' \| 'studio' \| 'autre' |
+| `activeLeaseCount` | int | Denormalisé (CF increment/decrement) — client read-only |
+| `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger |
-| `deletedAt` | timestamp? | Soft-delete |
+| `deletedAt` | timestamp\|null | Soft-delete, isActive filter |
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(resource)
-- `create` : isFullyAuthed() + activeLeaseCount==0 à la création
-- `update` : isFullyAuthed() + preservesImmutables()
-- `delete` : interdit
+- `create` : isFullyAuthed() && landlordId==uid && activeLeaseCount==0 à la création
+- `update` : isFullyAuthed() && isOwner(landlordId) && preservesImmutables()
+- `delete` : interdit (soft-delete CF exclusive)
 
 **Indexes** :
 - landlordId, deletedAt, name
 - landlordId, deletedAt, createdAt DESC
 
+**Triggers** : setUpdatedAt (CF)
+
 ---
 
-### `tenants/{id}` — CRUD direct
+### `tenants/{id}` — CRUD direct, isFullyAuthed only
 
-Locataire.
+Locataire. Anonyme N/A.
 
 | Champ | Type | Notes |
 |---|---|---|
 | `id` | string | UUID |
-| `landlordId` | string | FK → landlords.id |
+| `landlordId` | string | FK → landlords.id, immuable |
 | `firstName` | string | Prénom |
 | `lastName` | string | Nom |
-| `email` | string | Valide regex |
-| `activeLeaseCount` | int | Denormalisé |
-| `createdAt` | timestamp | — |
+| `email` | string | Email regex ^[^@\s]+@[^@\s]+\.[^@\s]+$ |
+| `activeLeaseCount` | int | Denormalisé (CF) — client read-only |
+| `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger |
-| `deletedAt` | timestamp? | Soft-delete |
+| `deletedAt` | timestamp\|null | Soft-delete, isActive filter |
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(resource)
-- `create` : isFullyAuthed() + activeLeaseCount==0
-- `update` : isFullyAuthed() + preservesImmutables()
+- `create` : isFullyAuthed() && landlordId==uid && activeLeaseCount==0
+- `update` : isFullyAuthed() && isOwner(landlordId) && preservesImmutables()
 - `delete` : interdit
 
 **Indexes** :
+- landlordId, deletedAt, firstName
 - landlordId, deletedAt, lastName
-- landlordId, deletedAt, createdAt DESC
+
+**Triggers** : setUpdatedAt (CF)
 
 ---
 
-### `leases/{id}` — CROSS-ENTITY (CF exclusive)
+### `leases/{id}` — CF exclusive (FEAT-036, FEAT-006)
 
-Bail (lien bien ↔ locataire).
+Bail d'habitation. **CROSS-ENTITY** : propertyId + tenantId doivent appartenir au même landlord + validation ownership. Charges = `chargesAmountCents` (récupérable FEAT-036) + `nonRecoverableChargesCents` (informatif bailleur, FEAT-036).
 
 | Champ | Type | Notes |
 |---|---|---|
-| `id` | string | UUID |
-| `landlordId` | string | FK → landlords.id |
-| `propertyId` | string | FK → properties.id |
-| `tenantId` | string | FK → tenants.id |
-| `status` | string | 'ongoing' / 'upcoming' / 'ended' |
-| `startDate` | date | Date début bail |
-| `endDate` | date | Date fin bail |
-| `monthlyRent` | int | En centimes |
-| `charges` | int | En centimes |
-| `createdAt` | timestamp | — |
+| `id` | string | UUID, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `propertyId` | string | FK → properties.id, immuable, validation CF |
+| `tenantId` | string | FK → tenants.id, immuable, validation CF |
+| `propertyName` | string | Snapshot properties.name (dénorm) |
+| `propertyAddress` | string | Snapshot properties.address |
+| `tenantFirstName` | string | Snapshot tenants.firstName |
+| `tenantLastName` | string | Snapshot tenants.lastName |
+| `tenantEmail` | string | Snapshot tenants.email |
+| `rentAmountCents` | int | Loyer mensuel (en centimes) |
+| `chargesAmountCents` | int | Part RÉCUPÉRABLE (FEAT-036) — bilancée au locataire via paiement + régularisation |
+| `nonRecoverableChargesCents` | int | Part NON-RÉCUPÉRABLE (FEAT-036) — informatif bailleur, jamais bilancée |
+| `startDate` | timestamp | Début bail |
+| `endDate` | timestamp\|null | Fin bail |
+| `status` | string | 'active' \| 'terminated' \| 'archived' |
+| `leaseType` | string | 'unfurnished' \| 'furnished' \| 'mobility' \| 'student' |
+| `depositAmountCents` | int\|null | Dépôt garantie |
+| `paymentDay` | int | Jour versement (1..28) |
+| `paymentMethod` | string | 'virement' \| 'cheque' \| 'especes' \| 'prelevement' \| 'autre' |
+| `irlIndexValue` | number\|null | Indice IRL de révision |
+| `irlQuarterRef` | string\|null | T[1-4]-YYYY (ex: T4-2025) |
+| `agencyFeesCents` | int | Frais agence |
+| `solidarityClause` | bool | Clause de solidarité |
+| `entryInventoryDone` | bool | Etat des lieux entrée réalisé |
+| `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger |
-| `deletedAt` | timestamp? | Soft-delete |
+| `deletedAt` | timestamp\|null | Soft-delete, isActive filter |
+
+**Mutable fields** (updateLease) : rentAmountCents, chargesAmountCents, nonRecoverableChargesCents, endDate, status, leaseType, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone.
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(resource)
-- `create/update/delete` : interdit (CF exclusive)
+- `create/update/delete` : CF exclusive via `createLease`, `updateLease`, `softDeleteEntity`
 
-**Indexes** (composite) :
-- landlordId, deletedAt, status, startDate DESC
-- landlordId, propertyId, deletedAt
-- landlordId, tenantId, deletedAt
-- landlordId, status, endDate ASC
+**Indexes** :
+- landlordId, deletedAt, status
 - landlordId, deletedAt, startDate DESC
-- deletedAt, landlordId, status, endDate
-- deletedAt, landlordId, status, startDate
-- deletedAt, landlordId, tenantId, startDate DESC
+- landlordId, deletedAt, status, startDate DESC
+- propertyId, tenantId (unicity check)
+- tenantId, deletedAt, status
+
+**Triggers** :
+- setUpdatedAt (CF)
+- activeLeaseCount increment/decrement (createLease/updateLease/softDelete transactionnel)
 
 ---
 
-### `payments/{id}` — CROSS-ENTITY (CF exclusive)
+### `payments/{id}` — CF exclusive (FEAT-006)
 
-Paiement de loyer.
+Paiement loyer/charges. **CROSS-ENTITY** : leaseId doit appartenir au même landlord. Motif libre sur reçu (FEAT-029).
 
 | Champ | Type | Notes |
 |---|---|---|
-| `id` | string | UUID |
-| `landlordId` | string | FK → landlords.id |
-| `leaseId` | string | FK → leases.id |
-| `amount` | int | Montant en centimes |
-| `paidAt` | timestamp | Date/heure paiement |
-| `periodStart` | date | Début période couverte |
-| `periodEnd` | date | Fin période couverte |
-| `notes` | string? | **Motif paiement libre (FEAT-029)** — affiché quittance PDF |
-| `createdAt` | timestamp | — |
+| `id` | string | UUID, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `leaseId` | string | FK → leases.id, immuable, validation CF |
+| `propertyId` | string | Snapshot leases.propertyId (dénorm) |
+| `tenantLastName` | string | Snapshot leases.tenantLastName |
+| `rentAmountCents` | int | Portion loyer versée |
+| `chargesAmountCents` | int | Portion charges (= leases.chargesAmountCents prorate) versée |
+| `amountCents` | int | Total versé (rentAmountCents + chargesAmountCents) |
+| `paidDate` | timestamp | Date de versement |
+| `paymentMethod` | string | 'virement' \| 'cheque' \| 'especes' \| 'prelevement' \| 'autre' |
+| `notes` | string\|null | Motif libre (FEAT-029) → PDF |
+| `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger |
-| `deletedAt` | timestamp? | Soft-delete |
+| `deletedAt` | timestamp\|null | Soft-delete |
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(resource)
-- `create/update/delete` : interdit (CF exclusive)
+- `create/update/delete` : CF exclusive
 
 **Indexes** :
-- landlordId, deletedAt, paidAt DESC
-- landlordId, leaseId, deletedAt, paidAt DESC
-- landlordId, leaseId, deletedAt, periodStart DESC
-- landlordId, deletedAt, periodStart DESC
-- deletedAt, landlordId, createdAt DESC
-- deletedAt, landlordId, periodStart ASC
-- deletedAt, landlordId, paidAt ASC
+- landlordId, deletedAt, leaseId, paidDate DESC
+- leaseId, deletedAt, paidDate DESC
+
+**Triggers** :
+- setUpdatedAt (CF)
+- recomputeReceiptStale (leases/receipts) si payment.amountCents change
 
 ---
 
-### `receipts/{id}` — IMMUABLES (CF exclusive)
+### `receipts/{id}` — CF exclusive (FEAT-007)
 
-Quittance de paiement (loi 6 juillet 1989 — rétention 5 ans).
+Quittance loyer (loi 6 juillet 1989). **IMMUABLE** : jamais soft-delete (rétention légale 5 ans). Voiding via Callable `voidReceipt` (logique métier).
 
 | Champ | Type | Notes |
 |---|---|---|
-| `id` | string | UUID |
-| `landlordId` | string | FK → landlords.id |
-| `leaseId` | string | FK → leases.id |
-| `paymentId` | string | FK → payments.id |
-| `amount` | int | Montant en centimes |
-| `periodStart` | date | Début période |
-| `periodEnd` | date | Fin période |
-| `isVoided` | bool | Annulé = création nouvelle + soft-delete paiment |
-| `isStale` | bool | Périmé (recalc CF si paiement annulé ou loyer change) |
-| `pdfUrl` | string? | Lien Storage (CF remplit) |
-| `sentAt` | timestamp? | Envoi par email |
-| `createdAt` | timestamp | — |
-| `updatedAt` | timestamp | CF trigger |
+| `id` | string | UUID, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `leaseId` | string | FK → leases.id, immuable |
+| `paymentId` | string\|null | FK → payments.id (null si générée manuellement) |
+| `propertyName` | string | Snapshot properties.name |
+| `tenantName` | string | Snapshot tenants lastName |
+| `amountCents` | int | Montant |
+| `periodStart` | timestamp | Début période |
+| `periodEnd` | timestamp | Fin période |
+| `receiptNumber` | string | Numéro séquentiel |
+| `status` | string | 'generated' \| 'voided' \| 'sent' (markers non-exclusifs, bits) |
+| `receiptDate` | timestamp | Date édition |
+| `voidReason` | string\|null | Raison annulation (si voided) |
+| `createdAt` | timestamp | Immuable |
+| `updatedAt` | timestamp | CF trigger (status only) |
+| `deletedAt` | timestamp\|null | null (jamais supprimée en practice, marquée voided) |
 
 **RLS** :
-- `get/list` : isOwner(landlordId) (pas de deletedAt filtré — audit trail)
-- `create/update/delete` : interdit (CF exclusive)
+- `get/list` : isOwner(landlordId) (pas de filtrage isActive — voided restent lisibles audit)
+- `create/update/delete` : CF exclusive via `generateReceipt`, `voidReceipt`, `markReceiptAsSent`
 
 **Indexes** :
-- landlordId, leaseId, periodStart DESC
-- landlordId, periodStart DESC
-- landlordId, isVoided, periodStart DESC
-- landlordId, isStale, periodStart DESC
+- landlordId, leaseId, receiptDate DESC
+- landlordId, status, receiptDate DESC
+
+**Triggers** :
+- setUpdatedAt (CF, status seulement)
+- recomputeReceiptStale (si la lease/payment change, flags staleness)
 
 ---
 
-### `documents/{id}` — CF exclusive
+### `documents/{id}` — CF exclusive (FEAT-008, FEAT-041b)
 
-Document (bail scanned, état des lieux, etc).
+Justificatifs (contrats, baux scannés, attestations d'assurance, **FEAT-041b : reçus de dépenses** avec catégorie `expense_receipt`). **Dénormalisation** : `legalHold` dérivée serveur depuis `category` (immuable après création).
 
 | Champ | Type | Notes |
 |---|---|---|
-| `id` | string | UUID |
-| `landlordId` | string | FK → landlords.id |
-| `leaseId` | string? | FK → leases.id (optionnel) |
-| `category` | string | 'lease' / 'inventory' / 'other' |
-| `legalHold` | bool | true = non-supprimable (rétention 3–7 ans) |
-| `title` | string | Nom affichage |
-| `storageUrl` | string | Lien Storage (CF) |
-| `uploadedAt` | timestamp | — |
-| `createdAt` | timestamp | — |
+| `id` | string | UUID, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `leaseId` | string\|null | FK → leases.id (optionnel), immuable |
+| `propertyId` | string\|null | FK → properties.id (optionnel, for context), immuable |
+| `expenseId` | string\|null | FK → expenses.id (optionnel, FEAT-041b), immuable |
+| `category` | string | 'lease_scan' \| 'insurance' \| 'expense_receipt' \| 'other' — dérivé catégorie juridique |
+| `legalHold` | bool | true (lease_scan, insurance) / false (other) — immuable, verrouille soft-delete |
+| `fileName` | string | Nom fichier original |
+| `fileUrl` | string | Signed URL (5 min, renouvellement @ access) |
+| `fileSizeBytes` | int | Taille (validation < 25 MB) |
+| `mimeType` | string | 'image/jpeg' \| 'application/pdf' \| … |
+| `uploadedDate` | timestamp | Date chargement |
+| `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger |
-| `deletedAt` | timestamp? | Soft-delete (refusé si legalHold==true) |
+| `deletedAt` | timestamp\|null | Soft-delete refusée si legalHold==true |
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(resource)
-- `create/update/delete` : interdit (CF exclusive)
+- `create/update/delete` : CF exclusive via `createDocument`, `softDeleteDocument`
 
 **Indexes** :
-- landlordId, leaseId, deletedAt, uploadedAt DESC
+- landlordId, deletedAt, leaseId
+- landlordId, deletedAt, expenseId (FEAT-041b)
 - landlordId, deletedAt, category
-- deletedAt, landlordId, uploadedAt DESC
+
+**Triggers** : setUpdatedAt (CF)
 
 ---
 
-### `investment_scenarios/{id}` — CRUD direct
+### `expenses/{id}` — CF exclusive (FEAT-041a, FEAT-041b, FEAT-041c)
 
-Simulateur d'investissement (accessible anonymes).
+Dépenses immobilières. **NEW FEAT-041** : registre unifié (nature + catégorie + régularisation + documents). **CROSS-ENTITY** : propertyId (obligatoire) + leaseId (optionnel, cohérence lease.propertyId) + documentId (optionnel). **Dénorm** : propertyName, tenantLastName (snapshots, rafraîchis @ update). **Juridique** : `category` dérivée immuable depuis `nature` (décret 87-713), sauf override tracé via `categoryOverridden` (pas de verrouillage natif).
 
 | Champ | Type | Notes |
 |---|---|---|
-| `id` | string | UUID |
-| `landlordId` | string | FK → landlords.id |
-| `name` | string | Nom scénario (120 chars max) |
-| `schemaVersion` | int | Version structure JSON |
-| `scenarioJson` | map | Inputs simulateur sérialisés |
-| `createdAt` | timestamp | — |
+| `id` | string | UUID, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `propertyId` | string | FK → properties.id (obligatoire), immuable, validation CF |
+| `propertyName` | string | Snapshot properties.name (dénorm, rafraîchie @ update) |
+| `leaseId` | string\|null | FK → leases.id (optionnel), immuable si fourni, validation CF |
+| `tenantLastName` | string\|null | Snapshot leases.tenantLastName (dénorm) |
+| `documentId` | string\|null | FK → documents.id (optionnel, justificatif), immuable |
+| `amountCents` | int | Montant (centimes, ≥ 1) |
+| `expenseDate` | timestamp | Date engagement dépense |
+| `nature` | string | 'condo_charges' \| 'property_tax' \| 'insurance_pno' \| 'management_fees' \| 'works' \| 'repair_maintenance' \| 'other' — enum immuable (redérivation @ nature change) |
+| `category` | string | 'recoverable' (recoupée au locataire) \| 'non_recoverable' (à charge bailleur) — **dérivée serveur depuis nature** |
+| `categoryOverridden` | bool | true si override autorisé par nature.locked==false |
+| `periodYear` | int | Exercice fiscal (année de rattachement) — dérivé, configurable |
+| `periodStart` | timestamp\|null | Début période (obligatoire si category==recoverable, FEAT-041c) |
+| `periodEnd` | timestamp\|null | Fin période (obligatoire si category==recoverable) |
+| `notes` | string\|null | Notes internes (≤ 2000 chars) |
+| `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger |
-| `deletedAt` | timestamp? | Soft-delete |
+| `deletedAt` | timestamp\|null | Soft-delete |
+
+**Nature → Category mapping (NATURE_DEFAULT_CATEGORY, décret 87-713)** :
+- `condo_charges` → recoverable (locked: false, override OK)
+- `property_tax` → non_recoverable (locked: true)
+- `insurance_pno` → non_recoverable (locked: true)
+- `management_fees` → non_recoverable (locked: true)
+- `works` → non_recoverable (locked: false)
+- `repair_maintenance` → non_recoverable (locked: false)
+- `other` → non_recoverable (locked: false)
+
+**Mutable fields** (updateExpense) : amountCents, expenseDate, nature, category, periodStart, periodEnd, periodYear, documentId, notes. **Re-dérivation** @ nature/category change : category applique verrouillage.
 
 **RLS** :
-- `get/list` : isSignedIn() (anonymes + comptes)
-- `create` : isSignedIn() (anonymes + comptes)
-- `update` : isOwner(landlordId) + preservesImmutables()
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create/update/delete` : CF exclusive via `createExpense`, `updateExpense`, `softDeleteEntity`
+
+**Indexes** :
+- landlordId, deletedAt, propertyId
+- landlordId, deletedAt, category, periodYear
+- propertyId, deletedAt, category, periodStart DESC
+
+**Triggers** :
+- setUpdatedAt (CF)
+- recomputeChargeRegularization (FEAT-041c, alimente lease.nonRecoverableCharges si nature change ou category==recoverable → periodStart/periodEnd utilisés pour drill-down)
+
+---
+
+### `investment_scenarios/{id}` — CRUD direct (FEAT-018)
+
+Simulateur immobilier. Accessible anonymes + comptes (CRUD direct).
+
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `name` | string | Nom scénario (≤ 120 chars) |
+| `schemaVersion` | int | Version données (versionning) |
+| `scenarioJson` | object | Snapshot séralisé |
+| `createdAt` | timestamp | Immuable |
+| `updatedAt` | timestamp | CF trigger |
+| `deletedAt` | timestamp\|null | Soft-delete |
+
+**RLS** :
+- `get/list` : isOwner(landlordId) && isActive(resource)
+- `create` : isSignedIn() (anon OK) && landlordId==uid
+- `update` : isOwner(landlordId) && preservesImmutables()
 - `delete` : interdit
 
-**Indexes** :
-- landlordId, deletedAt, updatedAt DESC
+**Triggers** : setUpdatedAt (CF)
 
 ---
 
-### `paid_plan_interest/{uid}` — BAILLAN-M1
+### `paid_plan_interest/{uid}` — docId = Firebase Auth UID, BAILLAN-M1
 
-Marque d'intérêt futur Plan Pro (docId = Firebase Auth UID).
+Marque d'intérêt futur Plan Pro. Singleton par utilisateur complet (anonyme non élligible). **CREATE-ONLY** depuis le KPI dashboard.
 
 | Champ | Type | Notes |
 |---|---|---|
-| `features` | array | Features souhaitées |
-| `createdAt` | timestamp | — |
+| `uid` | string | Firebase Auth UID, docId, immuable |
+| `features` | array[string] | Features intéressantes (ex: ['reminders', 'ocr']) |
+| `createdAt` | timestamp | Immuable |
 
 **RLS** :
 - `get` : isOwner(uid)
@@ -282,96 +366,115 @@ Marque d'intérêt futur Plan Pro (docId = Firebase Auth UID).
 
 ### `support_requests/{id}` — CREATE-ONLY (FEAT-025)
 
-Formulaire « Nous contacter ». Client écrit demande à son propre nom ; pas de back-office in-app V1. Traitement via Admin SDK / console + Trigger Email extension (notifications, V2).
+Formulaire « Nous contacter ». Capture email, subject, message, appVersion, appEnv. Traitement via Admin SDK / console (pas de back-office in-app V1).
 
-| Champ | Type | Valeur | Immuable | Validation |
-|---|---|---|---|---|
-| `id` | string | UUID, docId | ✅ | auto |
-| `landlordId` | string | Firebase Auth UID | ✅ | == request.auth.uid |
-| `email` | string | Adresse email | ✅ | size() > 0 |
-| `subject` | string | Objet message | ✅ | 0 < size() ≤ 120 |
-| `message` | string | Corps message | ✅ | 0 < size() ≤ 2000 |
-| `appVersion` | string | Version app (v1.0.0+BUILD) | ✅ | size() > 0 |
-| `appEnv` | string | Environment (dev/staging/prod) | ✅ | size() > 0 |
-| `status` | string | État traitement | ✅ | == 'new' (création) |
-| `createdAt` | timestamp | Soumission | ✅ | == request.time |
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | UUID, docId, immuable |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `email` | string | Adresse contact |
+| `subject` | string | Objet (≤ 120 chars) |
+| `message` | string | Contenu (≤ 2000 chars) |
+| `appVersion` | string | Version app (ex: 1.0.0+1) |
+| `appEnv` | string | Environnement (dev, staging, prod) |
+| `status` | string | 'new' (initial, jamais changé client) |
+| `createdAt` | timestamp | request.time, immuable |
 
 **RLS** :
-- `get` : false (pas relecture client)
-- `list` : false
-- `create` : isFullyAuthed() + isOwner(landlordId) + validations ci-dessus
-- `update` : false
-- `delete` : false
-
-**Indexes** :
-- None (V1 — pas de requêtes optimisées, accès Admin console/Cloud Function)
-
-**Traitement V2** (post-M1) :
-- Cloud Function listener sur `support_requests` create
-- Appel Trigger Email extension → email propriétaire
-- Update status → 'acknowledged' / 'resolved' (Admin SDK)
+- `get/list` : false (l'utilisateur ne relit jamais ses demandes V1)
+- `create` : isFullyAuthed() && landlordId==uid + validations subject/message bornes
+- `update/delete` : false
 
 ---
 
-## Règles de sécurité (firestore.rules)
+## Composite Indexes (28 total)
 
-**3 couches** :
-1. **Rules** (ce fichier) — ownership self + immuabilité base + soft-delete filter
-2. **Callable Cloud Functions** — mutations cross-entity + soft-delete + denormalization
-3. **Triggers Firestore** — setUpdatedAt + recomputeReceiptStale + propagation denorm
+Tous les indices sont **Collection > Composite** sauf indication. Filtrages soft-delete systématiques (deletedAt ASC/DESC pour isActive()).
 
-**Helpers clés** :
-- `isSignedIn()` : user authentifié
-- `isAnonymous()` : firebase.sign_in_provider == 'anonymous'
-- `isFullyAuthed()` : signé && !anonyme
-- `isOwner(uid)` : auth.uid == uid
-- `isActive(rsc)` : rsc.data.deletedAt == null
-- `preservesImmutables(rsc)` : landlordId, createdAt, deletedAt non modifiés
+### Soft-Delete Patterns (23 indexes)
 
-**Défense en profondeur** :
-- Anonymes : jamais CRUD collections métier (properties, leases, etc.) — simulateur uniquement
-- Immutables : landlordId, createdAt immuables côté client (CF bypass via Admin SDK)
-- Soft-delete : aucune route client ne crée `deletedAt` (CF exclusive)
-- Anonexpiresät : plafond now + 15j (tolérance décalage horloge vs renouvellement 14j CF)
-
----
-
-## Cloud Functions (callables + triggers)
-
-| Fonction | Type | Rôle |
+| Chemin | Composition | Usage |
 |---|---|---|
-| `handleNewUser` | auth trigger | Provisionne doc landlord post-signup |
-| `setUpdatedAt*` | triggers (7×) | Maintient updatedAt à chaque write |
-| `recomputeReceiptStale` | trigger | Marque quittances périmées |
-| `createLease` | callable | Valide FK + crée lease + incrémente activeLeaseCount |
-| `updateLease` | callable | Maj lease + recalc status |
-| `createPayment` | callable | Crée payment + trigger generateReceipt |
-| `updatePayment` | callable | Maj payment (rare — idempotent) |
-| `generateReceipt` | callable | PDF + storage URL |
-| `voidReceipt` | callable | Marque isVoided + crée remplacement |
-| `markReceiptAsSent` | callable | Marque sentAt |
-| `createDocument` | callable | Upload Storage + legalHold depuis category |
-| `getDocumentDownloadUrl` | callable | Signe URL Storage (5 min) |
-| `softDeleteEntity` | callable | Marque deletedAt (refus si legalHold==true) |
-| `finalizeAnonymousUpgrade` | callable | Upgrade anon → fully authed (tier change + RGPD consent) |
-| `cleanupExpiredAnon` | scheduled (cron) | Purge landlords anonymes expirés |
+| properties | landlordId ↑, deletedAt ↑, name ↑ | List actives par bailleur |
+| properties | landlordId ↑, deletedAt ↑, createdAt ↓ | Recent first |
+| tenants | landlordId ↑, deletedAt ↑, firstName ↑ | List search |
+| tenants | landlordId ↑, deletedAt ↑, lastName ↑ | List search |
+| leases | landlordId ↑, deletedAt ↑, status ↑ | Filter status (active/terminated) |
+| leases | landlordId ↑, deletedAt ↑, startDate ↓ | Recent first |
+| leases | landlordId ↑, deletedAt ↑, status ↑, startDate ↓ | KPI drill-down |
+| leases | tenantId ↑, deletedAt ↑, status ↑ | Tenants leases |
+| payments | landlordId ↑, deletedAt ↑, leaseId ↑, paidDate ↓ | Payment history |
+| payments | leaseId ↑, deletedAt ↑, paidDate ↓ | Payment timeline |
+| receipts | landlordId ↑, leaseId ↑, receiptDate ↓ | Receipt archiving (no isActive, voided lisible) |
+| receipts | landlordId ↑, status ↑, receiptDate ↓ | Status tracking |
+| documents | landlordId ↑, deletedAt ↑, leaseId ↑ | Lease documents |
+| documents | landlordId ↑, deletedAt ↑, expenseId ↑ | Expense receipts (FEAT-041b) |
+| documents | landlordId ↑, deletedAt ↑, category ↑ | Category archiving |
+| expenses | landlordId ↑, deletedAt ↑, propertyId ↑ | Property expenses |
+| expenses | landlordId ↑, deletedAt ↑, category ↑, periodYear ↑ | Tax year categorization |
+| expenses | propertyId ↑, deletedAt ↑, category ↑, periodStart ↓ | Regularization feed |
+| investment_scenarios | landlordId ↑, deletedAt ↑, createdAt ↓ | Scenarios list |
+| landlords | isAnonymous ↑, anonExpiresAt ↑ | Expiration cleanup |
+
+### Cross-Entity Indexes (5 indexes)
+
+| Chemin | Composition | Usage |
+|---|---|---|
+| leases | propertyId ↑, tenantId ↑ | Unicity check (CF validation) |
+| leases | propertyId ↑, deletedAt ↑ | Property lease count |
+| leases | tenantId ↑, deletedAt ↑, status ↑ | Tenant active leases |
 
 ---
 
-## Notes d'architecture
+## Rules Architecture (3 couches)
 
-**Piège isEqualTo: null** :
-- Firestore refus WHERE field == null sans index composite.
-- Solution : `WHERE field == null` génère error ; utilise CF pour filtrer isActive() côté code.
-- Tous les soft-deletes couverts par composite index (deletedAt, [autres fields]).
-- Commits référence : 61a5956, 52a09c9, 85f1be2.
+### Couche 1 : Firestore Security Rules (ce fichier)
 
-**Dénormalisation** :
-- `activeLeaseCount` (properties, tenants) = recalc CF post create/soft-delete lease
-- Quittances : `isStale` recalculé CF si paiement change
-- Indexing : 28 composites documentent dépendance cf. firestore.indexes.json
+**Stratégie** : default deny + allowlist explicite. Aucune mutation cross-entity côté client (leases, payments, receipts, documents, expenses = CF exclusive).
 
-**Anonyme (BAILLAN-M1)** :
-- Essai 14j gratuit, renouvellable avant expiration
-- Accès simulateur uniquement, pas de CRUD métier
-- Upgrade → création compte full (transactionnel CF `finalizeAnonymousUpgrade`)
+- **isOwner(uid)** : claim auth.uid == document.landlordId
+- **isActive(rsc)** : resource.data.deletedAt == null (filtrage systématique)
+- **preservesImmutables(rsc)** : Garde-fou mutations (landlordId, createdAt, deletedAt jamais changés client)
+- **isFullyAuthed()** : Compte complet (email/password, Google, Apple) — isSignedIn() && !isAnonymous()
+- **isAnonymous()** : Custom claim firebase.sign_in_provider == 'anonymous' (BAILLAN-M1)
+
+### Couche 2 : Callable Cloud Functions
+
+6 functions cross-entity + cross-tenant :
+- `createLease`, `updateLease` : validation propertyId/tenantId ownership + activeLeaseCount transactionnel
+- `createPayment`, `updatePayment` : validation leaseId ownership + denorm snapshots
+- `generateReceipt`, `voidReceipt`, `markReceiptAsSent` : immuabilité + status tracking
+- `createDocument`, `softDeleteDocument` : legalHold dérivée + locking
+- `createExpense`, `updateExpense` : cross-entity + juridique category dérivation (FEAT-041)
+- `softDeleteEntity` : soft-delete unifié (landlords, properties, tenants, leases, payments, documents, expenses, investment_scenarios)
+- `finalize_anonymous_upgrade` : transition anon → compte (subscriptionTier)
+
+### Couche 3 : Firestore Triggers
+
+8 triggers setUpdatedAt + metadata recomputation :
+- **setUpdatedAt×7** : landlords, properties, tenants, leases, payments, documents, expenses, investment_scenarios, receipts
+- **recomputeReceiptStale** : Si payment/lease changent → marked stale (audit denorm)
+- **recomputeChargeRegularization** : (FEAT-041c, planné) Si expense.category==recoverable → alimente lease charge regularization feed
+
+**Note** : delete triggers = soft-delete logic CF (aucun hard-delete sauf purge anonyme 14j).
+
+---
+
+## Erreurs & Inconsistencies (audit 2026-07-05)
+
+✅ **Cohérent** :
+- 11 collections déclarées, mappées 1:1 aux routes + features
+- 28+ composite indexes couvrent tous les soft-delete + cross-filters
+- 3-couche RLS : rules + CF + triggers, zéro WHERE field==null sans index
+- Dénormalisation (propertyName, tenantLastName, propertyId snapshots) systématique (pattern `payments` appliqué partout)
+- FEAT-041 (expenses) intégré : CF exclusive + juridique category.locked + categoryOverridden trace + FEAT-041c (regularization feed) prévu
+
+⚠️ **À surveiller** :
+- FEAT-041c (recomputeChargeRegularization trigger) planné, pas encore déployé (attendre V1.1)
+- FEAT-033 (snapshot figé dépense) **absorbé** par FEAT-041 V1 (categoryOverridden + nature enum = version immuable du contexte juridique)
+
+---
+
+## Cloud Functions & Triggers Callables
+
+Cf. [`FUNCTIONS.md`](FUNCTIONS.md) pour détail (signatures TypeScript, error handling, tests).

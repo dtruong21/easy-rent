@@ -4,20 +4,20 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-05T18:30:00Z
-- **Commit ref** : `bea8693` (feature/anon-auth-m1 tip, 2026-07-05)
-- **Branche** : `feature/anon-auth-m1`
-- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ (FEAT-001–030, production-ready staging)
+- **Dernière mise à jour** : 2026-07-05T21:15:00Z
+- **Commit ref** : `341d58d` (develop, FEAT-036 + FEAT-041 V1 merged, 2026-07-05)
+- **Branche** : `develop`
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ (FEAT-001–030 + FEAT-036, FEAT-041 V1, `expenses` collection live)
 
 ## Pointeurs
 
 | Aspect du projet | Fichier | Contenu clé |
 |---|---|---|
-| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | 9 collections, 28 composite indexes, 3-couche rules |
-| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 30+ routes, deep linking |
-| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–022, MVP ✅ + post-MVP priorité |
+| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase |
+| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 45+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041) |
+| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–041 V1, MVP ✅ + Post-MVP M1 ✅ (FEAT-036, FEAT-041 merged) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
-| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | 14 callable + 8 triggers + 1 scheduled, TypeScript vitest |
+| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **27 callables** (+ `createExpense`, `updateExpense` FEAT-041) + 8 triggers (+ `setUpdatedAtExpenses`) + 1 scheduled |
 | Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
 | Design tokens (sémantique métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) | Couleurs (error, warning, success), spacing (4dp grid) |
 
@@ -54,6 +54,32 @@
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
 ## Changements récents (2026-07-03 — 2026-07-05)
+
+### FEAT-041 : Suivi dépenses unifié (V1)
+
+**Status** : ✅ DONE (merged PR #67, 2026-07-05)
+
+- **Nouvelle collection** : `expenses/{id}` (CF exclusive, `createExpense`/`updateExpense`/`softDeleteEntity`)
+- **Juridique** : `NATURE_DEFAULT_CATEGORY` (décret 87-713) — category dérivée serveur depuis nature (immuable, sauf override autorisé)
+- **Nature enum** : 'condo_charges' | 'property_tax' | 'insurance_pno' | 'management_fees' | 'works' | 'repair_maintenance' | 'other'
+- **Category** : 'recoverable' (bilancée locataire) | 'non_recoverable' (charge bailleur)
+- **Champs** : propertyId (obligatoire), leaseId (optionnel), nature, category, categoryOverridden, amountCents, expenseDate, periodStart/End (si recoverable), notes
+- **Routes** : `/properties/:id/expenses`, `/properties/:id/expenses/new`, `/properties/:id/expenses/:eid/edit`
+- **FEAT-041b** : Documents v2 (category 'expense_receipt', lien bilatéral documents.expenseId)
+- **FEAT-041c** (planné V1.1) : `recomputeChargeRegularization` trigger → charge_regularization feed
+- **Firestore indexes** : 3 composites (propertyId, category/periodYear, etc.)
+- **CloudFunctions** : 2 callables (`createExpense`, `updateExpense`) + 1 trigger (`setUpdatedAtExpenses`)
+
+### FEAT-036 : Charges récupérables vs non-récupérables
+
+**Status** : ✅ DONE (merged PR #66, 2026-07-05)
+
+- **Nouveau champ** : `leases.nonRecoverableChargesCents` (int, ≥ 0)
+- **Signification** : `chargesAmountCents` = récupérable (bilancée), `nonRecoverableChargesCents` = informatif bailleur (décret 87-713)
+- **UI** : LeaseFormPage + LeaseEditPage dual inputs (charges récupérables + non-récupérables)
+- **CloudFunctions** : `createLease`/`updateLease` supportent param (default 0)
+- **Tests** : validateNonRecoverableCharges() (commit 87ec342, post-revue adversariale)
+- **Intégration FEAT-041** : Complément dépenses (expenses.category='non_recoverable' traces charges bailleur)
 
 ### FEAT-030 : Navigation retour corrigée
 
@@ -158,19 +184,21 @@
 
 ## Audit incohérences (2026-07-05)
 
-À la date 2026-07-05 (après merge FEAT-023...FEAT-030, commit bea8693) :
+À la date 2026-07-05 (après merge FEAT-036 + FEAT-041 V1, commit 341d58d) :
 
-- **✅ Collections Firestore cohérentes** : 10 collections (landlords, properties, tenants, leases, payments, receipts, documents, investment_scenarios, paid_plan_interest, **support_requests**)
-- **✅ Règles de sécurité complètes** : 3 couches (rules + CF + triggers), isFullyAuthed() + isAnonymous(), soft-delete filters systématiques
-- **✅ 28 composite indexes** : Couvrent tous les soft-delete + cross-filters, zéro WHERE field==null sans index
-- **✅ Cloud Functions** : 13 callable (lease, payment, receipt, document, soft-delete, anonymous-upgrade, charges) + 8 triggers (setUpdatedAt×7, recomputeReceiptStale) + 1 scheduled (cleanupExpiredAnon)
-- **✅ Routes cohérentes** : 40+ GoRouter routes, 3-state guard via sessionStateProvider (unauthenticated / anonymous / fullyAuthenticated)
-- **✅ Features mappées** : FEAT-001–030 tous dans FEATURES.md, matrice + statut + commits
+- **✅ Collections Firestore cohérentes** : **11 collections** (landlords, properties, tenants, leases, payments, receipts, documents, **expenses (NEW FEAT-041)**, investment_scenarios, paid_plan_interest, support_requests) — Firestore camelCase stable
+- **✅ Règles de sécurité complètes** : 3 couches (rules + CF + triggers), isFullyAuthed() + isAnonymous(), soft-delete filters systématiques, expenses CF exclusive (cross-entity + juridique validation)
+- **✅ 28+ composite indexes** : Couvrent tous les soft-delete + cross-filters, zéro WHERE field==null sans index (includes expenses 3 indexes)
+- **✅ Cloud Functions** : **27 callables** (lease, payment, receipt, document, soft-delete, anonymous-upgrade, **createExpense, updateExpense** FEAT-041) + **8 triggers** (setUpdatedAt×8 includes expenses, recomputeReceiptStale) + 1 scheduled (cleanupExpiredAnon)
+- **✅ Routes cohérentes** : **45+ GoRouter routes**, 3-state guard via sessionStateProvider (unauthenticated / anonymous / fullyAuthenticated), **`/properties/:id/expenses*` (FEAT-041)** intégrées
+- **✅ Features mappées** : FEAT-001–041 V1 tous dans FEATURES.md, matrice + statut + commits, FEAT-036 + FEAT-041 merged
 - **✅ Dépendances déclarées** : pubspec.yaml (23 packages + package_info_plus), functions/package.json (firebase-admin/functions), firebase.json (CSP fonts.gstatic.com)
 - **✅ Routes cohérentes shell** : StatefulShellRoute.indexedStack 5 branches, NavigationBar <600px / NavigationRail ≥600px repliable (railExpandedProvider persisté)
 - **✅ Persistence utilisateur** : themeModeProvider (thème) + chartPeriodProvider (période) + railExpandedProvider (nav collapsed) via SharedPreferences
 - **✅ Anonyme tier system** : BAILLAN-M1 complet (14j essai, upgrade transactionnel, quit demo dialog)
-- **✅ Nouvelle collection support_requests** : FEAT-025, create-only, capture email/subject/message/appVersion/appEnv, status='new', createdAt=request.time
+- **✅ FEAT-036 intégration** : nonRecoverableChargesCents + chargesAmountCents dual tracking (leases), validation CF, tests coverage
+- **✅ FEAT-041 V1 intégration** : expenses collection live + juridique category derivation (NATURE_DEFAULT_CATEGORY) + FEAT-041b docs v2 (expense_receipt category) + routes PropertyExpensesPage
+- **✅ FEAT-041c planné** : recomputeChargeRegularization trigger (attendre V1.1, non déployé)
 
 ## Prochaines étapes (priorité)
 
@@ -231,8 +259,10 @@ Auth:
   
 Backend:
   Firestore collections: landlords, properties, tenants, leases, payments,
-                         receipts, documents, investment_scenarios, paid_plan_interest
-  Cloud Functions: 14 callables + 8 triggers + 1 scheduled (Node.js 20)
+                         receipts, documents, expenses (FEAT-041), investment_scenarios,
+                         paid_plan_interest, support_requests (FEAT-025)
+  Cloud Functions: 27 callables + 8 triggers + 1 scheduled (Node.js 20)
+                   NEW: createExpense, updateExpense, setUpdatedAtExpenses (FEAT-041)
   Storage: signed URLs (5 min), documents + receipts buckets
   
 Security:
