@@ -61,7 +61,12 @@ service cloud.firestore {
     // landlords/{uid}   — docId = Firebase Auth UID
     // ====================================================================
     match /landlords/{uid} {
-      allow get: if isOwner(uid) && isActive(resource);
+      // `resource == null` : un owner peut constater que SON doc n'existe
+      // pas encore (get → exists=false). Indispensable au pattern
+      // get-then-create des provisionings client (anonyme, Google, Apple) —
+      // sans ça, isActive(resource) accède resource.data sur null → erreur
+      // → deny, et le create qui suit n'est jamais tenté.
+      allow get: if isOwner(uid) && (resource == null || isActive(resource));
       allow list: if false; // chaque user ne voit que son propre doc
 
       // CREATE (compte complet) : autorisé côté client juste après
