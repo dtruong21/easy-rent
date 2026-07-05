@@ -1,8 +1,23 @@
 # Schéma Firestore — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions. **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore.
+> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions. **Dernière sync** : 2026-07-05 (FEAT-025 support_requests, FEAT-029 payment.notes). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore.
 
-## Collections
+## Collections (10 total)
+
+| Collection | Type | Access | Indexing | Trigger |
+|---|---|---|---|---|
+| `landlords` | singleton | CRUD compte | 1 composite | setUpdatedAt |
+| `properties` | multi | CRUD account | 2 composite | setUpdatedAt |
+| `tenants` | multi | CRUD account | 2 composite | setUpdatedAt |
+| `leases` | multi | CF only | 5 composite | setUpdatedAt |
+| `payments` | multi | CF only | 3 composite | setUpdatedAt |
+| `receipts` | multi | rules only | 3 composite | setUpdatedAt + recomputeReceiptStale |
+| `documents` | multi | CF only | 3 composite | setUpdatedAt |
+| `investment_scenarios` | multi | CRUD signed | 1 composite | setUpdatedAt |
+| `paid_plan_interest` | singleton | CRUD account | — | — |
+| **`support_requests`** | multi | **create-only** | **—** | **—** |
+
+---
 
 ### `landlords/{uid}` — docId = Firebase Auth UID
 
@@ -142,6 +157,7 @@ Paiement de loyer.
 | `paidAt` | timestamp | Date/heure paiement |
 | `periodStart` | date | Début période couverte |
 | `periodEnd` | date | Fin période couverte |
+| `notes` | string? | **Motif paiement libre (FEAT-029)** — affiché quittance PDF |
 | `createdAt` | timestamp | — |
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp? | Soft-delete |
@@ -261,6 +277,39 @@ Marque d'intérêt futur Plan Pro (docId = Firebase Auth UID).
 - `get` : isOwner(uid)
 - `create/update` : isFullyAuthed() && isOwner(uid)
 - `delete` : interdit
+
+---
+
+### `support_requests/{id}` — CREATE-ONLY (FEAT-025)
+
+Formulaire « Nous contacter ». Client écrit demande à son propre nom ; pas de back-office in-app V1. Traitement via Admin SDK / console + Trigger Email extension (notifications, V2).
+
+| Champ | Type | Valeur | Immuable | Validation |
+|---|---|---|---|---|
+| `id` | string | UUID, docId | ✅ | auto |
+| `landlordId` | string | Firebase Auth UID | ✅ | == request.auth.uid |
+| `email` | string | Adresse email | ✅ | size() > 0 |
+| `subject` | string | Objet message | ✅ | 0 < size() ≤ 120 |
+| `message` | string | Corps message | ✅ | 0 < size() ≤ 2000 |
+| `appVersion` | string | Version app (v1.0.0+BUILD) | ✅ | size() > 0 |
+| `appEnv` | string | Environment (dev/staging/prod) | ✅ | size() > 0 |
+| `status` | string | État traitement | ✅ | == 'new' (création) |
+| `createdAt` | timestamp | Soumission | ✅ | == request.time |
+
+**RLS** :
+- `get` : false (pas relecture client)
+- `list` : false
+- `create` : isFullyAuthed() + isOwner(landlordId) + validations ci-dessus
+- `update` : false
+- `delete` : false
+
+**Indexes** :
+- None (V1 — pas de requêtes optimisées, accès Admin console/Cloud Function)
+
+**Traitement V2** (post-M1) :
+- Cloud Function listener sur `support_requests` create
+- Appel Trigger Email extension → email propriétaire
+- Update status → 'acknowledged' / 'resolved' (Admin SDK)
 
 ---
 

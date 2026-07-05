@@ -1,6 +1,6 @@
 # Cloud Functions et Triggers — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
+> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Dernière sync** : 2026-07-05 (handleNewUser supprimé ADR 0001, FEAT-030). **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
 
 ## Architecture 3-couches
 
@@ -10,51 +10,32 @@
 
 ---
 
-## Auth Trigger
+## Auth Trigger (ADR 0001 : GCIP désactivé)
 
-### `handleNewUser`
+### `handleNewUser` — ⚠️ SUPPRIMÉ (FEAT-030, commit 90eb86f)
 
-> ⚠️ **INACTIVE EN PRATIQUE (ADR 0001)** : les blocking functions
-> `beforeUserCreated` exigent GCIP/Identity Platform, **non activé** sur le
-> projet. Cette fonction existe dans le code (encore exportée dans
-> `index.ts` — incohérence relevée par bug-hunter 2026-07-02, un
-> `firebase deploy --only functions` échouerait) mais **ne se déclenche
-> jamais** : le provisioning du doc landlord est **100 % client**
-> (`auth_repository.dart`, chemins signUp*/link*/signInAnonymously).
+> **Status** : REMOVED (2026-07-05)
+> 
+> **Raison** : ADR 0001 — GCIP/Identity Platform **non activé** sur le projet.
+> Le blocking function `beforeUserCreated` n'existait qu'en code (jamais
+> déclenché). **Provisioning landlord 100 % client** (`auth_repository.dart`).
 
-**Type** : Firebase Identity Platform blocking function (`beforeUserCreated`)
+**Ancien fonctionnement (archive)** :
+- Type : Firebase Identity Platform blocking function (`beforeUserCreated`)
+- Déclencheur : Post-signup (email, Google, Apple)
+- Logique : créait doc `landlords/{uid}` avec consent RGPD
 
-**Déclencheur** : Post-signup (email, Google, Apple)
+**Nouveau fonctionnement** (2026-07-05) :
+- Provisioning **entièrement côté client** (Riverpod)
+- Chemins : `signUpWithEmail`, `linkGoogle`, `linkApple`, `signInAnonymously`
+- Chaque chemin crée `landlords/{uid}` doc directement (Firestore rules allow)
+- Idempotent : GET-then-create pattern
+- Même schéma — **cohérence garantie**
 
-**Logique** :
-1. Vérifie `uid` disponible (GET /landlords/{uid} retourne 404)
-2. Lit custom claims de `raw_user_meta_data` :
-   - `rgpd_consent_version` (ex: 'v1-2026-07')
-   - `email`, `fullName`
-3. Provision doc `landlords/{uid}` :
-   - `id` = uid
-   - `email` = user.email (ou null anonyme)
-   - `fullName` = user.displayName (ou '' anonyme)
-   - `isAnonymous` = user.isAnonymous
-   - `subscriptionTier` = 'free' (compte) / 'anonymous' (essai)
-   - `rgpdConsentAt` = now()
-   - `rgpdConsentVersion` = custom claim (fallback 'legacy-1')
-   - `anonExpiresAt` = now + 14 jours (anonyme) / null (compte)
-   - `createdAt` = now()
-   - `deletedAt` = null
-4. Status code 200 → Auth continue
-
-**Idempotence** :
-- Relance (double trigger) → doc existe → GET retourne doc → skip creation
-- OR : set({merge:true}) rend création + update atomique
-
-**Fallback si Identity Platform off** :
-- Riverpod provisioning côté client après login (check doc exists, create si missing)
-- Même schéma — garantit cohérence
-
-**Fichier** : `functions/src/auth/handle_new_user.ts`
-
-**Tests** : `functions/src/__tests__/handle_new_user.test.ts` (vitest)
+**Impact déploiement** :
+- Avant : `firebase deploy --only functions` échouait (fonction introuvable)
+- Après : `npm run build && firebase deploy --only functions` exit 0
+- Build : `tsc -p tsconfig.build.json` (tsconfig.build.json, pas de beforeUserCreated)
 
 ---
 
@@ -82,6 +63,15 @@
 - investment_scenarios
 
 **Fichier** : `functions/src/triggers/set_updated_at.ts`
+
+**Exports** (7 variants) :
+- `setUpdatedAtLandlords`
+- `setUpdatedAtProperties`
+- `setUpdatedAtTenants`
+- `setUpdatedAtLeases`
+- `setUpdatedAtPayments`
+- `setUpdatedAtDocuments`
+- `setUpdatedAtInvestmentScenarios`
 
 ### `recomputeReceiptStale`
 

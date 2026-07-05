@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `functions/package.json` + `firebase.json`. **Pivot** : FEAT-019 (2026-07-02) — Firebase Auth + Firestore + Cloud Functions (Node.js 20).
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `functions/package.json` + `firebase.json`. **Dernière sync** : 2026-07-05 (FEAT-023 package_info_plus +9.0.1, functions build = tsc -p tsconfig.build.json). **Pivot** : FEAT-019 (2026-07-02) — Firebase Auth + Firestore + Cloud Functions (Node.js 20).
 
 ## Flutter (pubspec.yaml)
 
@@ -9,33 +9,34 @@
 - Dart : `^3.11.0`
 - Flutter : latest stable
 
-### Dépendances runtime (20 packages)
+### Dépendances runtime (23 packages)
 
-| Package | Version | Usage | Ajoutée |
-|---|---|---|---|
-| `firebase_core` | `^3.6.0` | Init Firebase client (FEAT-019 pivot) | FEAT-019 |
-| `firebase_auth` | `^5.3.1` | Auth email/password/Google/Apple (FEAT-019 pivot) | FEAT-019 |
-| `cloud_firestore` | `^5.4.4` | DB read/write (FEAT-019 pivot) | FEAT-019 |
-| `firebase_storage` | `^12.3.2` | Storage documents (FEAT-019 pivot) | FEAT-019 |
-| `cloud_functions` | `^5.1.3` | Callable Cloud Functions (FEAT-019 pivot) | FEAT-019 |
-| `flutter_riverpod` | `^2.6.0` | State management, providers | FEAT-001 |
-| `go_router` | `^14.6.0` | Navigation + deep linking + redirect guards | FEAT-001 |
-| `freezed_annotation` | `^2.4.4` | Modèles immutables (code generation) | FEAT-002 |
-| `json_annotation` | `^4.9.0` | JSON serialization (code generation) | FEAT-002 |
-| `pdf` | `^3.11.0` | Génération PDF quittances (PDF building) | FEAT-007 |
-| `printing` | `^5.13.0` | Affichage/print/download PDF | FEAT-007 |
-| `intl` | `^0.19.0` | Locale FR (dates, devise, formats) | FEAT-003 |
-| `logging` | `^1.3.0` | Logs structurés client-side | FEAT-001 |
-| `uuid` | `^4.5.0` | Génération UUIDs client | FEAT-002 |
-| `collection` | `^1.18.0` | Helpers de collection (List, Map) | FEAT-002 |
-| `cupertino_icons` | `^1.0.8` | Icons (compat iOS Material) | bootstrap |
-| `url_launcher` | `^6.3.2` | Ouvre links externes (privacy policy, mailto) | FEAT-010 |
-| `file_picker` | `^11.0.2` | Sélection fichiers multi-platform (Web bytes) | FEAT-009 |
-| `mime` | `^2.0.0` | Détection MIME côté client (defense in depth) | FEAT-009 |
-| `fl_chart` | `^0.69.0` | Barchart 6 mois encaissé/dû | FEAT-010 |
-| `shared_preferences` | `^2.3.5` | Persist PWA install prompt dismiss (1 week TTL) | FEAT-010 |
-| `flutter_svg` | `^2.0.10+1` | Rendu SVG (logo Google auth buttons) | FEAT-019 |
-| `web` | `^1.1.0` | JS interop (install prompt, Web Share API) | FEAT-010, FEAT-008 |
+| Package | Version | Usage | Ajoutée | Update FEAT |
+|---|---|---|---|---|
+| `firebase_core` | `^3.6.0` | Init Firebase client (FEAT-019 pivot) | FEAT-019 | — |
+| `firebase_auth` | `^5.3.1` | Auth email/password/Google/Apple (FEAT-019 pivot) | FEAT-019 | — |
+| `cloud_firestore` | `^5.4.4` | DB read/write (FEAT-019 pivot) | FEAT-019 | — |
+| `firebase_storage` | `^12.3.2` | Storage documents (FEAT-019 pivot) | FEAT-019 | — |
+| `cloud_functions` | `^5.1.3` | Callable Cloud Functions (FEAT-019 pivot) | FEAT-019 | — |
+| `flutter_riverpod` | `^2.6.0` | State management, providers | FEAT-001 | — |
+| `go_router` | `^14.6.0` | Navigation + deep linking + redirect guards | FEAT-001 | — |
+| `freezed_annotation` | `^2.4.4` | Modèles immutables (code generation) | FEAT-002 | — |
+| `json_annotation` | `^4.9.0` | JSON serialization (code generation) | FEAT-002 | — |
+| `pdf` | `^3.11.0` | Génération PDF quittances (PDF building) | FEAT-007 | — |
+| `printing` | `^5.13.0` | Affichage/print/download PDF | FEAT-007 | — |
+| `intl` | `^0.19.0` | Locale FR (dates, devise, formats) | FEAT-003 | — |
+| `logging` | `^1.3.0` | Logs structurés client-side | FEAT-001 | — |
+| `uuid` | `^4.5.0` | Génération UUIDs client | FEAT-002 | — |
+| `collection` | `^1.18.0` | Helpers de collection (List, Map) | FEAT-002 | — |
+| `cupertino_icons` | `^1.0.8` | Icons (compat iOS Material) | bootstrap | — |
+| `url_launcher` | `^6.3.2` | Ouvre links externes (privacy policy, mailto) | FEAT-010 | — |
+| `file_picker` | `^11.0.2` | Sélection fichiers multi-platform (Web bytes) | FEAT-009 | — |
+| `mime` | `^2.0.0` | Détection MIME côté client (defense in depth) | FEAT-009 | — |
+| `fl_chart` | `^0.69.0` | Barchart 6 mois encaissé/dû | FEAT-010 | — |
+| `shared_preferences` | `^2.3.5` | Persist PWA install prompt + thème + période + rail | FEAT-010 | FEAT-023/027/026 |
+| `flutter_svg` | `^2.0.10+1` | Rendu SVG (logo Google auth buttons) | FEAT-019 | — |
+| `web` | `^1.1.0` | JS interop (install prompt, Web Share API) | FEAT-010, FEAT-008 | — |
+| **`package_info_plus`** | **^9.0.1** | **Version app (version.json web, manifest natif)** | **FEAT-023** | — |
 
 **Removed (Supabase pivot → Firebase)** :
 - `supabase_flutter` (2.12.4) — remplacée firebase_*
@@ -64,6 +65,14 @@
 
 **Recommandation** : Attendre sprint dédié (MVP complet → versions mineures ensuite).
 
+### Dépendances P2 backlog (version upgrades)
+
+| Package | Current | Latest | Status | Raison |
+|---|---|---|---|---|
+| `flutter_riverpod` | 2.6.0 | 3.x | P2 backlog | Breaking changes, codegen refactor |
+| `go_router` | 14.6.0 | 17.x | P2 backlog | Breaking changes, API reshaping |
+| `freezed` | 2.5.7 | 3.x | P2 backlog | Breaking changes, output format |
+
 ### Assets et fonts
 
 **Flutter build** :
@@ -74,6 +83,18 @@
 - `EB Garamond` (Regular, Medium, Italic, SemiBoldItalic) — sérif éditorial Baillan (FEAT-020)
 - License : OFL (assets/fonts/OFL.txt)
 - Subset : latin (~63 Ko par style)
+
+---
+
+### Version app (pubspec.yaml)
+
+```
+version: 1.0.0+1
+```
+
+- **Sémantique** : 1.0.0 (MVP complet, juillet 2026)
+- **BUILD number** : injecté CI (GitHub run_number), local (git rev-list --count HEAD)
+- **Affichage** : ProfilePage « À propos » via package_info_plus → « Baillan v1.0.0 (build 123) »
 
 ---
 
@@ -111,7 +132,7 @@
 ### Scripts
 
 ```bash
-npm run build          # Compile TypeScript → lib/
+npm run build          # tsc -p tsconfig.build.json → lib/ (FEAT-030: handleNewUser removed)
 npm run build:watch   # Watch mode
 npm run serve         # Emulators (functions, firestore, auth)
 npm run lint          # ESLint check
@@ -120,6 +141,13 @@ npm run test:watch    # Watch mode
 npm run deploy        # Deploy functions only
 npm run logs          # Stream logs
 ```
+
+### Build (tsconfig.build.json)
+
+**FEAT-030 change** : ADR 0001 (GCIP non activé) — `handleNewUser` blocking trigger **supprimé** (2026-07-05, commit 90eb86f).
+- Ancien : export 14 callable + handleNewUser beforeUserCreated trigger → deploy échouait si beforeUserCreated inactive
+- Nouveau : export 13 callable + 8 triggers + 1 scheduled → deploy exit 0
+- Provisioning landlord **100 % client** (auth_repository.dart)
 
 ---
 

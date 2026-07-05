@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-02T14:00:00Z
-- **Commit ref** : `8300d07` (Merge branch 'feature/anon-auth-m1' into claude/friendly-gates-07efcd)
-- **Branche** : `claude/friendly-gates-07efcd` (worktree, tip feature/anon-auth-m1)
-- **Phase projet** : MVP ✅ complet (FEAT-001–018), Pivot Firebase FEAT-019 ✅, Rebrand FEAT-020 ✅, Auth refinement FEAT-021 ✅, Router redesign FEAT-022 ✅
+- **Dernière mise à jour** : 2026-07-05T18:30:00Z
+- **Commit ref** : `bea8693` (feature/anon-auth-m1 tip, 2026-07-05)
+- **Branche** : `feature/anon-auth-m1`
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ (FEAT-001–030, production-ready staging)
 
 ## Pointeurs
 
@@ -53,41 +53,101 @@
 | **Hosting** | Firebase Hosting | Staging + prod channels, CSP (fonts.gstatic.com) |
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
-## Changements récents (2026-06-30 — 2026-07-02)
+## Changements récents (2026-07-03 — 2026-07-05)
 
-### FEAT-022 : Redesign login "La Page du Registre"
+### FEAT-030 : Navigation retour corrigée
 
-**Status** : 🟢 READY (landing public, routes mergées)
+**Status** : ✅ DONE (commit 7db144d)
 
-- Landing page `/` publique (carrefour onboarding)
-- 3-state router (unauthenticated → /login | anonymous → /simulator | fullyAuthenticated → /dashboard)
-- Simulator accessible anonymes + comptes (investment_scenarios CRUD)
-- Quit demo dialog + action logout
-- AppAppBar absent landing (standalone page)
+- Formulaires → pop() (retour fiche, pas index list)
+- Tuiles Accueil → push() (stack conservée)
+- Bouton Profil retiré de la fiche bail
+- Simulateur → push() par-dessus shell
 
-### FEAT-021 : Vérification email post-signup
+### FEAT-029b : Découvrabilité régularisation
+
+**Status** : ✅ DONE (commit 514666f)
+
+- Menu « Régulariser les charges » sur carte/ligne bail nu
+- `/leases/:id?action=regularize` auto-ouvre dialog
+
+### FEAT-029 V1 : Charges — motif + régularisation
+
+**Status** : ✅ DONE (commit 871ebff)
+
+- Motif libre sur reçu (payment.notes → PDF)
+- Régularisation annuelle (bail nu) : `lib/features/charge_regularization/**`
+- Calcul provisions client + avis PDF partagé (Web Share)
+- PAS d'archivage (V2, dépend functions)
+
+### FEAT-028 : Détection retards corrigée
+
+**Status** : ✅ DONE (commit 7ac1d03)
+
+- `lease_lateness.dart` : isLeaseLate() testable, règle métier (grâce 5j, pas prorata 1ᵉʳ mois, couverture périodes)
+- LeaseFilter.late + KPI drill-down
+- Pastille « En retard » sur cartes/tableau/fiche
+- Priority affichage : en retard > renewable > active
+
+### FEAT-027 : Dashboard — période graphique sélectionnable
+
+**Status** : ✅ DONE (commit ba7c12d)
+
+- chartPeriodProvider (6/12/24 mois) persisté SharedPreferences
+- monthlyAmountsProvider découplé
+- UI ✅, polish Accueil ✅
+
+### FEAT-026 : Navigation shell adaptative
+
+**Status** : ✅ DONE (commit ca2d10a)
+
+- StatefulShellRoute.indexedStack 5 branches (Accueil/Biens/Locataires/Baux/Profil)
+- Responsive : NavigationBar <600px / NavigationRail ≥600px repliable
+- railExpandedProvider persisté
+- Marque Baillan en tête (BrandMark logo + wordmark)
+- Simulateur + landing + auth + légal hors shell (3-états inchangée)
+
+### FEAT-025b : /profile HUB de réglages
+
+**Status** : ✅ DONE (commit 16ebc77)
+
+- ProfilePage tuiles + sous-pages mobil-first
+- `/profile/details`, `/profile/password`, `/profile/support`
+- Sécurité + support injectées
+
+### FEAT-025 : Sécurité + support
+
+**Status** : ✅ DONE (commits 0cd54de, f5734b4)
+
+- Changement de mot de passe in-app (reauthenticateWithPassword + updatePassword, gate hasPasswordProvider)
+- Support : formulaire « Nous contacter » → **nouvelle collection `support_requests`** (create-only, rules : isFullyAuthed + landlordId==uid + bornes sujet≤120/message≤2000 + status 'new' + createdAt==request.time)
+- Politique de confidentialité v1.1
+
+### FEAT-023 : Réglages app
 
 **Status** : ✅ DONE
 
-- Firebase Auth email verification link (auto post-signup)
-- Cloud Function `handleNewUser` provision landlord doc
+- Thème Système/Clair/Sombre persisté (themeModeProvider, SharedPreferences)
+- Liens légaux (/terms + /privacy)
+- Section « À propos » (version via package_info_plus)
 
-### FEAT-020 : Rebrand EasyRent → Baillan
+### CGU v2-2026-07
 
-**Status** : ✅ DONE (commit e5076c9)
+**Status** : ✅ DONE
 
-- Logo Baillan, palette indigo, EB Garamond serif (assets/fonts/)
-- Package name interne conservé (imports non-cassés)
+- Page `/terms` (publique, FEAT-023)
+- Acceptation CGU + confidentialité au signup
+- rgpdConsentVersion bumpé : `v1-2026-06` → `v2-2026-07`
+- Sync : auth_repository.dart + functions finalize_anonymous_upgrade
 
-### FEAT-019 : Migration Supabase → Firebase (3 phases)
+### Functions : handleNewUser supprimé
 
-**Status** : ✅ DONE (commits 61a5956–85f1be2)
+**Status** : ✅ DONE (commit 90eb86f)
 
-**Phase 1** : Firestore collections (9) + rules + indexes (28 composite)
-**Phase 2** : Cloud Functions callables (14) + triggers (8) + scheduled (1)
-**Phase 3** : Client integration (Riverpod + CRUD UI, no breaking changes)
-
-**Piège soft-delete** : Firestore refus WHERE field==null sans index → solution systematic indexing (commits 61a5956, 85f1be2).
+- ADR 0001 : GCIP non activé (assumé)
+- handleNewUser (beforeUserCreated blocking trigger) **supprimé** → deploy functions débloqué
+- Provisioning landlord **100 % client** (auth_repository.dart, signUp*/link*/signInAnonymously)
+- build = tsc -p tsconfig.build.json
 
 ### FEAT-018 : Simulateur investissement
 
@@ -96,33 +156,41 @@
 - `/simulator` (list/create) + `/simulator/:id` (edit)
 - Accessible anonymes + comptes (investment_scenarios CRUD direct)
 
-## Audit incohérences (2026-07-02)
+## Audit incohérences (2026-07-05)
 
-À la date 2026-07-02 (après merge FEAT-019 + BAILLAN-M1, commit 8300d07) :
+À la date 2026-07-05 (après merge FEAT-023...FEAT-030, commit bea8693) :
 
-- **✅ Collections Firestore cohérentes** : 9 collections (landlords, properties, tenants, leases, payments, receipts, documents, investment_scenarios, paid_plan_interest)
+- **✅ Collections Firestore cohérentes** : 10 collections (landlords, properties, tenants, leases, payments, receipts, documents, investment_scenarios, paid_plan_interest, **support_requests**)
 - **✅ Règles de sécurité complètes** : 3 couches (rules + CF + triggers), isFullyAuthed() + isAnonymous(), soft-delete filters systématiques
 - **✅ 28 composite indexes** : Couvrent tous les soft-delete + cross-filters, zéro WHERE field==null sans index
-- **✅ Cloud Functions** : 14 callable (lease, payment, receipt, document, soft-delete, anonymous-upgrade) + 8 triggers (setUpdatedAt×7, recomputeReceiptStale) + 1 scheduled (cleanupExpiredAnon)
-- **✅ Routes cohérentes** : 30+ GoRouter routes, 3-state guard via sessionStateProvider (unauthenticated / anonymous / fullyAuthenticated)
-- **✅ Features mappées** : FEAT-001–022 tous dans FEATURES.md, matrice + statut + commits
-- **✅ Dépendances déclarées** : pubspec.yaml (23 packages), functions/package.json (firebase-admin/functions), firebase.json (CSP fonts.gstatic.com)
-- **✅ Aucune route sans feature** : 30 routes couverts par features implémentées
+- **✅ Cloud Functions** : 13 callable (lease, payment, receipt, document, soft-delete, anonymous-upgrade, charges) + 8 triggers (setUpdatedAt×7, recomputeReceiptStale) + 1 scheduled (cleanupExpiredAnon)
+- **✅ Routes cohérentes** : 40+ GoRouter routes, 3-state guard via sessionStateProvider (unauthenticated / anonymous / fullyAuthenticated)
+- **✅ Features mappées** : FEAT-001–030 tous dans FEATURES.md, matrice + statut + commits
+- **✅ Dépendances déclarées** : pubspec.yaml (23 packages + package_info_plus), functions/package.json (firebase-admin/functions), firebase.json (CSP fonts.gstatic.com)
+- **✅ Routes cohérentes shell** : StatefulShellRoute.indexedStack 5 branches, NavigationBar <600px / NavigationRail ≥600px repliable (railExpandedProvider persisté)
+- **✅ Persistence utilisateur** : themeModeProvider (thème) + chartPeriodProvider (période) + railExpandedProvider (nav collapsed) via SharedPreferences
 - **✅ Anonyme tier system** : BAILLAN-M1 complet (14j essai, upgrade transactionnel, quit demo dialog)
-- **✅ Router refresh fix** : 07f20a3 couvre signe-in chaud regression (ref.listen sessionStateProvider vs GoRouterRefreshStream brut)
+- **✅ Nouvelle collection support_requests** : FEAT-025, create-only, capture email/subject/message/appVersion/appEnv, status='new', createdAt=request.time
 
 ## Prochaines étapes (priorité)
 
-### P1 (post-MVP)
+### P1 (Post-MVP M1, juillet 2026)
 
-- **FEAT-012 Phase 1.5** : LeaseCard polish (denorm loyer+charges dans la card)
-- **Staging dédié** : GitHub Actions manual channel deploy (actuellement sur main)
-- **Password change + 2FA** : ProfilePage + Firebase Auth password API
-- **Rappels paiement** : Cloud Scheduler cron + email notifications
+- **FEAT-031** : Notifications email paiements retard (Cloud Scheduler + Trigger Email extension)
+- **FEAT-032** : Dashboard — graphique « Trésorerie » (encaissé vs dû, détection retards intégré)
+- **FEAT-033** : Archivage régularisations charges (V2, dépend functions)
+- **FEAT-034** : Import multi-colonnes (properties CSV, tenants CSV, leases CSV)
 
-### P2 (nice-to-have)
+### P2 (Post-MVP M2, août 2026)
 
-- **Riverpod 3.x upgrade** : Breaking changes, codegen refactor (attendre sprint dédié)
+- **FEAT-035** : 2FA TOTP (authenticator) — ProfilePage security section
+- **FEAT-036** : Audit trail (logs immuables, Firestore subcollection)
+- **FEAT-037** : Web Share amélioré (fallback email + clipboard copy)
+- **Staging dédié** : GitHub Actions manual channel deploy (actuellement main)
+
+### P3 (nice-to-have)
+
+- **Riverpod 3.x upgrade** : Breaking changes, codegen refactor
 - **GoRouter 17.x upgrade** : API reshaping, breaking navigation changes
 - **OCR de baux scannés** : Firebase ML Kit + document ingestion
 - **App native Capacitor** : iOS + Android distribution

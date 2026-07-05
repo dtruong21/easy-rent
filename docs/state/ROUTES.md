@@ -1,6 +1,6 @@
 # Routes Flutter — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Pivot** : FEAT-020 + BAILLAN-M1 (2026-07-02) — landing publique `/`, simulator accessible anonymes, garde 3-états (unauthenticated / anonymous / fullyAuthenticated).
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-07-05 (FEAT-023...FEAT-030 ✅ mergées) — landing publique `/`, simulator accessible anonymes, garde 3-états (unauthenticated / anonymous / fullyAuthenticated), shell adaptatif FEAT-026.
 
 ## Garde d'accès (redirects)
 
@@ -56,33 +56,53 @@
 | `/leases/:id` | `LeaseDetailPage` | standard | — | FEAT-005 |
 | `/leases/:id/edit` | `LeaseEditPage` | standard | — | FEAT-005 |
 
-### Nested Routes (payments, receipts)
+### Lease Sub-Routes (Branche 3, FEAT-005...FEAT-030)
 
 | Route | Page | Transition | Feature | Parents |
 |---|---|---|---|---|
-| `/leases/:id/payments/new` | `PaymentFormPage` | standard | FEAT-006 | LeaseDetailPage |
-| `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | standard | FEAT-006 | LeaseDetailPage |
-| `/leases/:id/receipts` | `LeaseReceiptsPage` | standard | FEAT-007 | LeaseDetailPage |
+| `/leases/:id/edit` | `LeaseEditPage` | standard | FEAT-005 | LeaseDetailPage |
+| `/leases/:id/payments/new` | `PaymentFormPage` | standard | FEAT-006, FEAT-029 | LeaseDetailPage |
+| `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | standard | FEAT-006, FEAT-029 | LeaseDetailPage |
+| `/leases/:id/receipts` | `LeaseReceiptsPage` | standard | FEAT-007, FEAT-029 | LeaseDetailPage |
 
-### User Routes
+**FEAT-029b (2026-07-04)** : Query param `/leases/:id?action=regularize` ouvre auto dialog charge_regularization (page détail + FEAT-029 button on card/list line).
 
-| Route | Page | Transition | Feature |
-|---|---|---|---|
-| `/profile` | `ProfilePage` | standard | FEAT-007, FEAT-012, FEAT-023 |
+**FEAT-030 (2026-07-04)** : Navigation retour fixée :
+- Formulaires → `pop()` retour fiche (ex. PropertyEditPage → PropertyDetailPage)
+- Tuiles Accueil → `push()` (stack conservée)
+- Simulateur → `push()` par-dessus shell
 
-**Note FEAT-023 (2026-07-03)** : `/profile` porte désormais les réglages app — sélecteur de thème (Système/Clair/Sombre, persisté localStorage via `themeModeProvider`), liens `/terms` + `/privacy`, bouton déconnexion.
+### User Routes (Shell, 5 branches FEAT-026)
 
-**Note FEAT-025 (2026-07-03)** : + section Sécurité (changement de mot de passe in-app, visible uniquement si `hasPasswordProvider` — comptes email) et section Support (formulaire « Nous contacter » → collection `support_requests` create-only). Politique de confidentialité passée en v1.1.
+| Route | Page | Transition | Feature | Branche |
+|---|---|---|---|---|
+| `/dashboard` | `DashboardPage` | standard | FEAT-010, FEAT-027, FEAT-028 | Accueil |
+| `/properties` (+ sub-routes) | `PropertiesListPage` | standard | FEAT-003 | Biens |
+| `/tenants` (+ sub-routes) | `TenantsListPage` | standard | FEAT-004 | Locataires |
+| `/leases` (+ sub-routes) | `LeasesListPage` | standard | FEAT-005, FEAT-028, FEAT-029b | Baux |
+| `/profile` | `ProfilePage` | standard | FEAT-023, FEAT-025, FEAT-025b | Profil |
 
-**Note FEAT-025b (2026-07-03)** : `/profile` est devenu un HUB de réglages (tuiles) ; nouvelles sous-pages empilées, gardées auth globale :
+**FEAT-026 (2026-07-03, commit ca2d10a)** : Navigation shell adaptative — `StatefulShellRoute.indexedStack` 5 branches, état préservé par branche :
+- **Desktop** (≥600px) : `NavigationRail` repliable (icônes + libellés compact/étendu, `railExpandedProvider` persisté SharedPreferences)
+- **Mobile** (<600px) : `NavigationBar` en bas (5 destinations)
+- **Marque** : Logo Baillan en tête (replié : icône / déplié : wordmark)
+- Landing/auth/légal/simulateur hors shell (3-états inchangée)
+- Référence : [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md)
+
+### Profile Sub-Routes (Branche 4, FEAT-025b)
 
 | Route | Page | Notes |
 |---|---|---|
+| `/profile` | `ProfilePage` | Hub tuiles (détails, password, support, légal, à propos) |
 | `/profile/details` | `ProfileDetailsPage` | Identité bailleur (form complet) |
-| `/profile/password` | `ChangePasswordPage` | Comptes email only (tuile gatée + garde-fou in-page) |
-| `/profile/support` | `SupportPage` | Formulaire « Nous contacter » |
+| `/profile/password` | `ChangePasswordPage` | Comptes email only (gate `hasPasswordProvider` + reauthenticateWithPassword) |
+| `/profile/support` | `SupportPage` | Formulaire « Nous contacter » → collection `support_requests` create-only (FEAT-025) |
 
-**FEAT-026 (✅ implémenté 2026-07-03, commit ca2d10a)** : navigation shell adaptative — les 5 branches métier (Accueil `/dashboard`, Biens `/properties*`, Locataires `/tenants*`, Baux `/leases*`, Profil `/profile*`) vivent dans un `StatefulShellRoute.indexedStack` (NavigationBar <600px / NavigationRail ≥600px, état préservé par branche, racines sans bouton retour). Landing/auth/légal/simulateur hors shell. Garde 3-états inchangée. Référence : [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md).
+**FEAT-023 (2026-07-03)** : ProfilePage tuiles réglages app :
+- Thème Système/Clair/Sombre (`themeModeProvider`, SharedPreferences)
+- Liens `/terms` + `/privacy` 
+- Bouton déconnexion
+- Section « À propos » (version via `package_info_plus` → v1.0.0+BUILD)
 
 ---
 
