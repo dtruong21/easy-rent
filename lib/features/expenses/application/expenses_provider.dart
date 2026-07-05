@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 
 import '../data/expenses_repository.dart';
 import '../domain/expense.dart';
+import '../domain/expense_category.dart';
 import '../domain/expense_filter.dart';
 
 final _log = Logger('PropertyExpensesProvider');
@@ -31,6 +32,34 @@ final filteredPropertyExpensesProvider = Provider.autoDispose
     >((ref, args) {
       final async = ref.watch(propertyExpensesProvider(args.propertyId));
       return async.whenData(args.filter.apply);
+    });
+
+/// Paramètres de [recoverableExpensesProvider] — bien obligatoire, bail
+/// optionnel (`null` = pas de filtre par bail).
+///
+/// Type record plutôt que classe dédiée : Riverpod compare les records par
+/// valeur (`==` structurel natif Dart), donc deux appels avec les mêmes
+/// `(propertyId, leaseId)` partagent le même cache sans codegen freezed
+/// supplémentaire pour un simple couple de paramètres.
+typedef RecoverableExpensesArgs = ({String propertyId, String? leaseId});
+
+/// Stream des dépenses **récupérables** (FEAT-041c — alimentation de la
+/// régularisation FEAT-029) d'un bien, filtrées optionnellement par bail.
+///
+/// Dérivé de [propertyExpensesProvider] (même stream sous-jacent, un seul
+/// listener Firestore par bien) plutôt qu'une nouvelle requête dédiée — la
+/// collection `expenses` n'expose pas d'index composite
+/// `category + leaseId` qui justifierait une requête serveur séparée pour
+/// ce volume (mono-bailleur, cf. `docs/plans/FEAT-041-depenses.md` § b).
+final recoverableExpensesProvider = Provider.autoDispose
+    .family<AsyncValue<List<Expense>>, RecoverableExpensesArgs>((ref, args) {
+      final async = ref.watch(propertyExpensesProvider(args.propertyId));
+      return async.whenData(
+        (expenses) => expenses
+            .where((e) => e.category == ExpenseCategory.recoverable)
+            .where((e) => args.leaseId == null || e.leaseId == args.leaseId)
+            .toList(),
+      );
     });
 
 /// Totaux récupérable / non-récupérable calculés à partir d'une liste de

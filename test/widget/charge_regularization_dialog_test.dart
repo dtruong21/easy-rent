@@ -16,6 +16,10 @@ import 'dart:typed_data';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/utils/money_format.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
+import 'package:easyrent/features/expenses/data/expenses_repository.dart';
+import 'package:easyrent/features/expenses/domain/expense.dart';
+import 'package:easyrent/features/expenses/domain/expense_category.dart';
+import 'package:easyrent/features/expenses/domain/expense_nature.dart';
 import 'package:easyrent/features/payments/data/payment_repository.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
@@ -71,6 +75,48 @@ class _FakePaymentRepo implements PaymentRepository {
 }
 
 // ---------------------------------------------------------------------------
+// Fake ExpensesRepository (FEAT-041c) — pilote le stream de dépenses
+// récupérables consommé par `recoverableExpensesProvider`.
+// ---------------------------------------------------------------------------
+
+class _FakeExpensesRepo implements ExpensesRepository {
+  const _FakeExpensesRepo([this._expenses = const []]);
+
+  final List<Expense> _expenses;
+
+  @override
+  Stream<List<Expense>> watchForProperty(String propertyId) =>
+      Stream.value(_expenses);
+
+  @override
+  Future<List<Expense>> listForProperty(String propertyId) async => _expenses;
+
+  @override
+  Future<Expense> getById(String id) async => throw UnimplementedError();
+
+  @override
+  Future<Expense> create({
+    required String propertyId,
+    String? leaseId,
+    required int amountCents,
+    required DateTime expenseDate,
+    required ExpenseNature nature,
+    ExpenseCategory? category,
+    DateTime? periodStart,
+    DateTime? periodEnd,
+    int? periodYear,
+    String? documentId,
+    String? notes,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Expense> update(Expense expense) async => throw UnimplementedError();
+
+  @override
+  Future<void> archive(String id) async {}
+}
+
+// ---------------------------------------------------------------------------
 // Mock WebShareService — jamais réellement invoqué dans ces tests (on ne
 // clique pas "Générer et partager"), mais requis pour que le provider soit
 // résolvable si le widget le lit de façon anticipée.
@@ -120,14 +166,43 @@ Payment _makePayment({
   updatedAt: DateTime(2024),
 );
 
+Expense _makeExpense({
+  required String id,
+  String propertyId = 'prop-1',
+  String? leaseId = 'lease-1',
+  required DateTime periodStart,
+  required DateTime periodEnd,
+  required int amountCents,
+  ExpenseCategory category = ExpenseCategory.recoverable,
+}) => Expense(
+  id: id,
+  landlordId: 'landlord-1',
+  propertyId: propertyId,
+  leaseId: leaseId,
+  amountCents: amountCents,
+  expenseDate: periodStart,
+  nature: ExpenseNature.condoCharges,
+  category: category,
+  periodYear: periodStart.year,
+  periodStart: periodStart,
+  periodEnd: periodEnd,
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+);
+
 Widget _buildDialog({
   required List<Payment> payments,
+  List<Expense> expenses = const [],
   PaymentRepository? paymentRepository,
+  ExpensesRepository? expensesRepository,
 }) {
   return ProviderScope(
     overrides: [
       paymentRepositoryProvider.overrideWithValue(
         paymentRepository ?? _FakePaymentRepo(payments),
+      ),
+      expensesRepositoryProvider.overrideWithValue(
+        expensesRepository ?? _FakeExpensesRepo(expenses),
       ),
       webShareServiceProvider.overrideWithValue(const _MockWebShare()),
     ],
@@ -142,6 +217,7 @@ Widget _buildDialog({
               context: context,
               builder: (_) => const ChargeRegularizationDialog(
                 leaseId: 'lease-1',
+                propertyId: 'prop-1',
                 landlordFullName: 'Marie Martin',
                 landlordAddress: '1 rue de Paris, 75001 Paris',
                 tenantFullName: 'Jean Dupont',
@@ -445,5 +521,171 @@ void main() {
         await tester.pumpAndSettle();
       },
     );
+  });
+
+  group('ChargeRegularizationDialog — FEAT-041c : pré-remplissage depuis '
+      'les dépenses récupérables', () {
+    testWidgets(
+      'dépenses récupérables couvrant la période → champ "Dépenses réelles" '
+      'pré-rempli avec leur somme',
+      (tester) async {
+        final now = DateTime.now();
+        final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+        final expenses = [
+          _makeExpense(
+            id: 'exp-1',
+            periodStart: periodStart,
+            periodEnd: DateTime(now.year, now.month, now.day),
+            amountCents: 45000,
+          ),
+          _makeExpense(
+            id: 'exp-2',
+            periodStart: periodStart,
+            periodEnd: DateTime(now.year, now.month, now.day),
+            amountCents: 15000,
+          ),
+        ];
+
+        await tester.pumpWidget(
+          _buildDialog(payments: const [], expenses: expenses),
+        );
+        await tester.tap(find.text('ouvrir'));
+        await tester.pumpAndSettle();
+
+        final field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_actual_expenses')),
+        );
+        expect(field.controller?.text, MoneyFormat.centsToInput(60000));
+        expect(
+          find.text('Pré-rempli depuis 2 dépenses — modifiable.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('dépense non-récupérable uniquement → EXCLUE, champ reste vide '
+        '(pré-remplissage à 0 == valeur initiale, aucune écriture, comme V1)', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+      final expenses = [
+        _makeExpense(
+          id: 'exp-non-recoverable',
+          periodStart: periodStart,
+          periodEnd: DateTime(now.year, now.month, now.day),
+          amountCents: 99900,
+          category: ExpenseCategory.nonRecoverable,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _buildDialog(payments: const [], expenses: expenses),
+      );
+      await tester.tap(find.text('ouvrir'));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextFormField>(
+        find.byKey(const Key('field_actual_expenses')),
+      );
+      expect(field.controller?.text, isEmpty);
+      expect(
+        find.byKey(const Key('text_charge_regularization_prefill_hint')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+      'saisie manuelle après pré-remplissage → conservée malgré le stream '
+      'de dépenses (garde _userEditedExpenses)',
+      (tester) async {
+        final now = DateTime.now();
+        final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+        final expenses = [
+          _makeExpense(
+            id: 'exp-1',
+            periodStart: periodStart,
+            periodEnd: DateTime(now.year, now.month, now.day),
+            amountCents: 60000,
+          ),
+        ];
+
+        await tester.pumpWidget(
+          _buildDialog(payments: const [], expenses: expenses),
+        );
+        await tester.tap(find.text('ouvrir'));
+        await tester.pumpAndSettle();
+
+        // Pré-rempli à 600,00 € au départ.
+        var field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_actual_expenses')),
+        );
+        expect(field.controller?.text, MoneyFormat.centsToInput(60000));
+
+        // L'utilisateur écrase la valeur pré-remplie.
+        await tester.enterText(
+          find.byKey(const Key('field_actual_expenses')),
+          '250,00',
+        );
+        await tester.pumpAndSettle();
+
+        field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_actual_expenses')),
+        );
+        expect(field.controller?.text, '250,00');
+
+        // Un nouveau build (ex. changement de période) ne doit PAS écraser
+        // la saisie manuelle avec le pré-remplissage automatique.
+        await tester.tap(
+          find.ancestor(
+            of: find.text('Début de période'),
+            matching: find.byType(InputDecorator),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(10, 10)); // Ferme sans sélectionner.
+        await tester.pumpAndSettle();
+
+        field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_actual_expenses')),
+        );
+        expect(
+          field.controller?.text,
+          '250,00',
+          reason:
+              'Une fois éditée manuellement, la saisie ne doit plus être '
+              'écrasée par le pré-remplissage automatique.',
+        );
+      },
+    );
+
+    testWidgets('0 dépense récupérable → NON-RÉGRESSION : champ reste à 0,00, '
+        'comportement V1 strictement inchangé', (tester) async {
+      await tester.pumpWidget(_buildDialog(payments: const []));
+      await tester.tap(find.text('ouvrir'));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextFormField>(
+        find.byKey(const Key('field_actual_expenses')),
+      );
+      expect(field.controller?.text, isEmpty);
+      expect(
+        find.byKey(const Key('text_charge_regularization_prefill_hint')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('tile_charge_regularization_expenses_detail')),
+        findsNothing,
+      );
+
+      // La saisie manuelle à 0 reste fonctionnellement identique à avant
+      // FEAT-041c : le solde se calcule normalement.
+      await tester.enterText(
+        find.byKey(const Key('field_actual_expenses')),
+        '0',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('aucun solde'), findsOneWidget);
+    });
   });
 }
