@@ -9,6 +9,8 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/expenses/presentation/expense_form_page.dart';
+import '../../features/expenses/presentation/property_expenses_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/privacy/presentation/terms_page.dart';
@@ -269,6 +271,46 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           ),
                           transition: AppTransition.standard,
                         ),
+                      ),
+                      // --- Dépenses (FEAT-041a) -------------------------
+                      GoRoute(
+                        path: 'expenses',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: PropertyExpensesPage(
+                            propertyId: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: 'new',
+                            pageBuilder: (context, state) => appPage(
+                              key: state.pageKey,
+                              // extra: {'leaseId': ...} — pré-remplissage
+                              // depuis la fiche bail (point d'entrée
+                              // secondaire, cf. plan § h).
+                              child: ExpenseFormPage(
+                                propertyId: state.pathParameters['id']!,
+                                preselectedLeaseId:
+                                    (state.extra as Map?)?['leaseId']
+                                        as String?,
+                              ),
+                              transition: AppTransition.standard,
+                            ),
+                          ),
+                          GoRoute(
+                            path: ':eid/edit',
+                            pageBuilder: (context, state) => appPage(
+                              key: state.pageKey,
+                              child: ExpenseEditPage(
+                                propertyId: state.pathParameters['id']!,
+                                expenseId: state.pathParameters['eid']!,
+                              ),
+                              transition: AppTransition.standard,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
