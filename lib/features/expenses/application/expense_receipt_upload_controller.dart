@@ -106,6 +106,16 @@ class ExpenseReceiptUploadController
   /// simplement n'envoie plus ce `documentId` à `createExpense`.
   void reset() => state = const ExpenseReceiptUploadState.idle();
 
+  /// Retire explicitement le justificatif **déjà attaché** à la dépense en
+  /// édition (`initial.documentId`) — correctif review FEAT-041, finding 6.
+  ///
+  /// Distinct de [reset] : ce document n'est jamais passé par ce
+  /// contrôleur (il a été uploadé lors d'une soumission précédente), donc il
+  /// n'y a rien à "annuler" côté état d'upload — on marque simplement
+  /// l'intention explicite de ne plus le transmettre à `updateExpense`. Comme
+  /// [reset], ne supprime rien côté serveur (`legalHold`).
+  void removeExisting() => state = const ExpenseReceiptUploadState.removed();
+
   bool _isAllowedMime(String filename, String providedMime) {
     if (kAllowedMimeTypes.contains(providedMime)) return true;
     final inferred = lookupMimeType(filename);

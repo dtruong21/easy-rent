@@ -688,4 +688,194 @@ void main() {
       expect(find.text('aucun solde'), findsOneWidget);
     });
   });
+
+  group('ChargeRegularizationDialog — correctif review FEAT-041 (finding 2, '
+      'MAJOR) : rattachement bail des dépenses récupérables', () {
+    testWidgets('dépense récupérable SANS bail rattaché → INCLUSE dans le '
+        'pré-remplissage (cas nominal décompte syndic)', (tester) async {
+      final now = DateTime.now();
+      final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+      // Dialog ouvert pour `leaseId: 'lease-1'` (cf. `_buildDialog`) —
+      // cette dépense n'a AUCUN bail rattaché.
+      final expenses = [
+        _makeExpense(
+          id: 'exp-no-lease',
+          leaseId: null,
+          periodStart: periodStart,
+          periodEnd: DateTime(now.year, now.month, now.day),
+          amountCents: 45000,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _buildDialog(payments: const [], expenses: expenses),
+      );
+      await tester.tap(find.text('ouvrir'));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextFormField>(
+        find.byKey(const Key('field_actual_expenses')),
+      );
+      expect(
+        field.controller?.text,
+        MoneyFormat.centsToInput(45000),
+        reason:
+            'une dépense sans bail rattaché doit être incluse dans la '
+            "régularisation d'un bail — le décompte syndic n'a "
+            'généralement pas de bail associé (finding 2).',
+      );
+    });
+
+    testWidgets('dépense récupérable rattachée à un AUTRE bail → EXCLUE du '
+        'pré-remplissage', (tester) async {
+      final now = DateTime.now();
+      final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+      final expenses = [
+        _makeExpense(
+          id: 'exp-other-lease',
+          leaseId: 'lease-other',
+          periodStart: periodStart,
+          periodEnd: DateTime(now.year, now.month, now.day),
+          amountCents: 99900,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _buildDialog(payments: const [], expenses: expenses),
+      );
+      await tester.tap(find.text('ouvrir'));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextFormField>(
+        find.byKey(const Key('field_actual_expenses')),
+      );
+      expect(
+        field.controller?.text,
+        isEmpty,
+        reason:
+            "une dépense rattachée à un AUTRE bail que celui régularisé "
+            'ne doit jamais être incluse.',
+      );
+    });
+
+    testWidgets(
+      'mix dépense sans bail + dépense du bail courant + dépense d\'un '
+      'autre bail → seules les deux premières comptent',
+      (tester) async {
+        final now = DateTime.now();
+        final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+        final periodEnd = DateTime(now.year, now.month, now.day);
+        final expenses = [
+          _makeExpense(
+            id: 'exp-no-lease',
+            leaseId: null,
+            periodStart: periodStart,
+            periodEnd: periodEnd,
+            amountCents: 20000,
+          ),
+          _makeExpense(
+            id: 'exp-same-lease',
+            leaseId: 'lease-1',
+            periodStart: periodStart,
+            periodEnd: periodEnd,
+            amountCents: 10000,
+          ),
+          _makeExpense(
+            id: 'exp-other-lease',
+            leaseId: 'lease-other',
+            periodStart: periodStart,
+            periodEnd: periodEnd,
+            amountCents: 99900,
+          ),
+        ];
+
+        await tester.pumpWidget(
+          _buildDialog(payments: const [], expenses: expenses),
+        );
+        await tester.tap(find.text('ouvrir'));
+        await tester.pumpAndSettle();
+
+        final field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_actual_expenses')),
+        );
+        expect(field.controller?.text, MoneyFormat.centsToInput(30000));
+        expect(
+          find.text('Pré-rempli depuis 2 dépenses — modifiable.'),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('ChargeRegularizationDialog — correctif review FEAT-041 (findings 1 & '
+      '7, MAJOR) : détail cohérent avec le total (filtré par période)', () {
+    testWidgets(
+      'détail dépliable ne montre QUE les dépenses de la période — une '
+      'dépense hors période n\'apparaît pas dans le détail ni dans le '
+      'compteur',
+      (tester) async {
+        final now = DateTime.now();
+        final periodStart = DateTime(now.year - 1, now.month, now.day + 1);
+        final periodEnd = DateTime(now.year, now.month, now.day);
+        final expenses = [
+          _makeExpense(
+            id: 'exp-inside',
+            periodStart: periodStart,
+            periodEnd: periodEnd,
+            amountCents: 45000,
+          ),
+          // Entièrement hors de la fenêtre par défaut (12 derniers mois
+          // glissants) — ne doit apparaître ni dans le total, ni dans le
+          // compteur, ni dans le détail dépliable.
+          _makeExpense(
+            id: 'exp-outside',
+            periodStart: DateTime(2015, 1, 1),
+            periodEnd: DateTime(2015, 1, 31),
+            amountCents: 999900,
+          ),
+        ];
+
+        await tester.pumpWidget(
+          _buildDialog(payments: const [], expenses: expenses),
+        );
+        await tester.tap(find.text('ouvrir'));
+        await tester.pumpAndSettle();
+
+        // Total pré-rempli : seule `exp-inside` compte.
+        final field = tester.widget<TextFormField>(
+          find.byKey(const Key('field_actual_expenses')),
+        );
+        expect(field.controller?.text, MoneyFormat.centsToInput(45000));
+
+        // Compteur cohérent avec le total : 1 dépense, pas 2.
+        expect(
+          find.text('Pré-rempli depuis 1 dépense — modifiable.'),
+          findsOneWidget,
+          reason:
+              'le compteur doit porter sur les mêmes dépenses que le '
+              'total — la dépense hors période ne doit pas être comptée '
+              '(finding 1 & 7).',
+        );
+
+        // Détail déplié : seule `exp-inside` doit être listée.
+        await tester.tap(
+          find.byKey(const Key('tile_charge_regularization_expenses_detail')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('regularization_exp-inside')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('regularization_exp-outside')),
+          findsNothing,
+          reason:
+              'la dépense hors période ne doit pas apparaître dans le '
+              'détail dépliable, cohérent avec son exclusion du total '
+              '(finding 1 & 7).',
+        );
+      },
+    );
+  });
 }

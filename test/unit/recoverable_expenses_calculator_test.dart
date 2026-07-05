@@ -451,4 +451,330 @@ void main() {
       });
     },
   );
+
+  group(
+    'sumRecoverableExpensesForPeriod — cas de bord civil fuseau horaire '
+    '(correctif review FEAT-041, finding 8 : test probant même sur CI UTC)',
+    () {
+      // Les tests round-trip ci-dessus ne sont PAS probants sur un runner CI
+      // dont le fuseau local est UTC : `toLocal()` y est un no-op, donc le
+      // test « passerait » même si l'implémentation oubliait `.toLocal()`
+      // (il testerait alors UTC contre UTC, jamais un vrai décalage de jour
+      // civil). Ce groupe construit un cas de bord qui bascule de jour civil
+      // dans TOUS les fuseaux UTC-négatifs à UTC-positifs plausibles
+      // (Amérique jusqu'à Asie) — le test dérive lui-même la date locale
+      // attendue via `.toLocal()` sur l'instant UTC testé (l'oracle), plutôt
+      // que de coder en dur "1er janvier" qui ne serait vrai qu'en
+      // Europe/Paris. Ainsi le test échoue si `_dateOnly` cesse d'appliquer
+      // `.toLocal()` avant de tronquer, quel que soit le fuseau du runner.
+      test('dépense d\'un seul jour, instant UTC proche de minuit '
+          '(2024-12-31T23:00:00Z) rattachée à sa date CIVILE LOCALE, pas à '
+          'sa date UTC', () {
+        final instantUtc = DateTime.utc(2024, 12, 31, 23);
+        expect(
+          instantUtc.isUtc,
+          isTrue,
+          reason:
+              'précondition : reproduit un DateTime tel que relu depuis '
+              'Firestore (.toUtc().toIso8601String() reparsé)',
+        );
+
+        // Oracle : la date civile locale que `_dateOnly` doit produire pour
+        // cet instant — recalculée ici avec le MÊME `.toLocal()` que
+        // l'implémentation, pas codée en dur, pour rester probante quel
+        // que soit le fuseau du runner (UTC sur CI, Europe/Paris en local).
+        final localDay = instantUtc.toLocal();
+        final expectedLocalDate = DateTime(
+          localDay.year,
+          localDay.month,
+          localDay.day,
+        );
+
+        // Dépense d'un SEUL jour (periodStart == periodEnd == le même
+        // instant UTC) : indispensable pour que le test soit probant — avec
+        // un `periodStart` antérieur distinct, la période de la dépense
+        // engloberait la veille ET le jour suivant quel que soit
+        // l'arrondi, masquant tout oubli de `.toLocal()`.
+        final expense = _makeExpense(
+          periodStart: instantUtc,
+          periodEnd: instantUtc,
+          amountCents: 5000,
+        );
+
+        // Référence de période bornée exactement à `expectedLocalDate` :
+        // si (et seulement si) l'implémentation tronque bien en date civile
+        // LOCALE, la dépense recouvre cette référence d'un jour pile et
+        // doit être incluse.
+        final totalIncluded = sumRecoverableExpensesForPeriod(
+          expenses: [expense],
+          referenceStart: expectedLocalDate,
+          referenceEnd: expectedLocalDate,
+        );
+        expect(
+          totalIncluded,
+          5000,
+          reason:
+              'la dépense doit recouvrir sa date civile LOCALE dérivée de '
+              "l'instant UTC — régression si `_dateOnly` omet `.toLocal()`.",
+        );
+
+        // Référence bornée à la veille ET au lendemain de
+        // `expectedLocalDate` : une dépense d'un seul jour civil local ne
+        // doit recouvrir NI l'un NI l'autre.
+        final dayBefore = expectedLocalDate.subtract(const Duration(days: 1));
+        final dayAfter = expectedLocalDate.add(const Duration(days: 1));
+        expect(
+          sumRecoverableExpensesForPeriod(
+            expenses: [expense],
+            referenceStart: dayBefore,
+            referenceEnd: dayBefore,
+          ),
+          0,
+          reason:
+              'la veille de la date civile locale ne doit présenter aucun '
+              'recouvrement.',
+        );
+        expect(
+          sumRecoverableExpensesForPeriod(
+            expenses: [expense],
+            referenceStart: dayAfter,
+            referenceEnd: dayAfter,
+          ),
+          0,
+          reason:
+              'le lendemain de la date civile locale ne doit présenter '
+              'aucun recouvrement.',
+        );
+      });
+
+      test('filterRecoverableExpensesForPeriod applique le même rattachement '
+          'civil local que sumRecoverableExpensesForPeriod (cohérence detail '
+          '/ total, findings 1 & 7)', () {
+        final instantUtc = DateTime.utc(2024, 12, 31, 23);
+        final localDay = instantUtc.toLocal();
+        final expectedLocalDate = DateTime(
+          localDay.year,
+          localDay.month,
+          localDay.day,
+        );
+
+        final expense = _makeExpense(
+          periodStart: instantUtc,
+          periodEnd: instantUtc,
+          amountCents: 5000,
+        );
+
+        final filtered = filterRecoverableExpensesForPeriod(
+          expenses: [expense],
+          referenceStart: expectedLocalDate,
+          referenceEnd: expectedLocalDate,
+        );
+        expect(filtered, hasLength(1));
+
+        final dayBefore = expectedLocalDate.subtract(const Duration(days: 1));
+        final filteredExcluded = filterRecoverableExpensesForPeriod(
+          expenses: [expense],
+          referenceStart: dayBefore,
+          referenceEnd: dayBefore,
+        );
+        expect(filteredExcluded, isEmpty);
+      });
+    },
+  );
+
+  group(
+    'expenseAppliesToLease — correctif review FEAT-041 (finding 2, MAJOR)',
+    () {
+      test('leaseId null (pas de filtre bail) → toujours vrai', () {
+        expect(
+          expenseAppliesToLease(
+            _makeExpense(
+              leaseId: 'lease-a',
+              periodStart: DateTime(2025, 1, 1),
+              periodEnd: DateTime(2025, 1, 31),
+            ),
+            null,
+          ),
+          isTrue,
+        );
+      });
+
+      test('dépense SANS bail (leaseId == null) → INCLUSE pour un bail donné '
+          '(cas nominal décompte syndic)', () {
+        expect(
+          expenseAppliesToLease(
+            _makeExpense(
+              leaseId: null,
+              periodStart: DateTime(2025, 1, 1),
+              periodEnd: DateTime(2025, 1, 31),
+            ),
+            'lease-a',
+          ),
+          isTrue,
+        );
+      });
+
+      test('dépense du MÊME bail → INCLUSE', () {
+        expect(
+          expenseAppliesToLease(
+            _makeExpense(
+              leaseId: 'lease-a',
+              periodStart: DateTime(2025, 1, 1),
+              periodEnd: DateTime(2025, 1, 31),
+            ),
+            'lease-a',
+          ),
+          isTrue,
+        );
+      });
+
+      test('dépense d\'un AUTRE bail → EXCLUE', () {
+        expect(
+          expenseAppliesToLease(
+            _makeExpense(
+              leaseId: 'lease-b',
+              periodStart: DateTime(2025, 1, 1),
+              periodEnd: DateTime(2025, 1, 31),
+            ),
+            'lease-a',
+          ),
+          isFalse,
+        );
+      });
+    },
+  );
+
+  group(
+    'sumRecoverableExpensesForPeriod — correctif review FEAT-041 (finding 2, '
+    'MAJOR) : dépenses sans bail incluses dans la régularisation d\'un bail',
+    () {
+      test('dépense récupérable SANS bail, période couvrante, leaseId fourni '
+          '→ INCLUSE (cas nominal décompte syndic)', () {
+        final expenses = [
+          _makeExpense(
+            id: 'no-lease',
+            leaseId: null,
+            periodStart: DateTime(2025, 3, 1),
+            periodEnd: DateTime(2025, 3, 31),
+            amountCents: 45000,
+          ),
+        ];
+        final total = sumRecoverableExpensesForPeriod(
+          expenses: expenses,
+          referenceStart: DateTime(2025, 1, 1),
+          referenceEnd: DateTime(2025, 12, 31),
+          leaseId: 'lease-1',
+        );
+        expect(total, 45000);
+      });
+
+      test('mix dépense sans bail + dépense d\'un AUTRE bail → seule celle '
+          'sans bail compte (celle de l\'autre bail est EXCLUE)', () {
+        final expenses = [
+          _makeExpense(
+            id: 'no-lease',
+            leaseId: null,
+            periodStart: DateTime(2025, 3, 1),
+            periodEnd: DateTime(2025, 3, 31),
+            amountCents: 45000,
+          ),
+          _makeExpense(
+            id: 'other-lease',
+            leaseId: 'lease-other',
+            periodStart: DateTime(2025, 3, 1),
+            periodEnd: DateTime(2025, 3, 31),
+            amountCents: 99900,
+          ),
+        ];
+        final total = sumRecoverableExpensesForPeriod(
+          expenses: expenses,
+          referenceStart: DateTime(2025, 1, 1),
+          referenceEnd: DateTime(2025, 12, 31),
+          leaseId: 'lease-1',
+        );
+        expect(total, 45000);
+      });
+    },
+  );
+
+  group('filterRecoverableExpensesForPeriod — correctif review FEAT-041 '
+      '(findings 1 & 7, MAJOR)', () {
+    test('ne retient que les dépenses récupérables qui recouvrent la '
+        'période (même sémantique que la somme)', () {
+      final inside = _makeExpense(
+        id: 'inside',
+        periodStart: DateTime(2025, 6, 1),
+        periodEnd: DateTime(2025, 6, 30),
+        amountCents: 5000,
+      );
+      final outside = _makeExpense(
+        id: 'outside',
+        periodStart: DateTime(2026, 6, 1),
+        periodEnd: DateTime(2026, 6, 30),
+        amountCents: 9999,
+      );
+      final nonRecoverable = _makeExpense(
+        id: 'non-recoverable',
+        periodStart: DateTime(2025, 6, 1),
+        periodEnd: DateTime(2025, 6, 30),
+        amountCents: 9999,
+        category: ExpenseCategory.nonRecoverable,
+      );
+
+      final filtered = filterRecoverableExpensesForPeriod(
+        expenses: [inside, outside, nonRecoverable],
+        referenceStart: DateTime(2025, 1, 1),
+        referenceEnd: DateTime(2025, 12, 31),
+      );
+
+      expect(filtered.map((e) => e.id), ['inside']);
+
+      final total = sumRecoverableExpensesForPeriod(
+        expenses: [inside, outside, nonRecoverable],
+        referenceStart: DateTime(2025, 1, 1),
+        referenceEnd: DateTime(2025, 12, 31),
+      );
+      expect(
+        total,
+        filtered.fold<int>(0, (sum, e) => sum + e.amountCents),
+        reason:
+            'la somme et la liste filtrée doivent porter EXACTEMENT sur '
+            'les mêmes dépenses (correctif findings 1 & 7).',
+      );
+    });
+
+    test('applique le même filtre leaseId que sumRecoverableExpensesForPeriod '
+        '(dépense sans bail incluse, dépense d\'un autre bail exclue)', () {
+      final noLease = _makeExpense(
+        id: 'no-lease',
+        leaseId: null,
+        periodStart: DateTime(2025, 3, 1),
+        periodEnd: DateTime(2025, 3, 31),
+        amountCents: 5000,
+      );
+      final otherLease = _makeExpense(
+        id: 'other-lease',
+        leaseId: 'lease-other',
+        periodStart: DateTime(2025, 3, 1),
+        periodEnd: DateTime(2025, 3, 31),
+        amountCents: 9999,
+      );
+      final sameLease = _makeExpense(
+        id: 'same-lease',
+        leaseId: 'lease-1',
+        periodStart: DateTime(2025, 3, 1),
+        periodEnd: DateTime(2025, 3, 31),
+        amountCents: 7000,
+      );
+
+      final filtered = filterRecoverableExpensesForPeriod(
+        expenses: [noLease, otherLease, sameLease],
+        referenceStart: DateTime(2025, 1, 1),
+        referenceEnd: DateTime(2025, 12, 31),
+        leaseId: 'lease-1',
+      );
+
+      expect(filtered.map((e) => e.id).toSet(), {'no-lease', 'same-lease'});
+    });
+  });
 }

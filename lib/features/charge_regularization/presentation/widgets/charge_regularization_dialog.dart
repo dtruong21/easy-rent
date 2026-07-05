@@ -25,9 +25,11 @@ import 'charge_regularization_form.dart';
 ///    que les paiements du bail sont chargés — [sumChargeProvisionsForPeriod].
 /// 3. Dépenses réelles **pré-remplies** (FEAT-041c) depuis la somme des
 ///    dépenses récupérables du bien/bail sur la période —
-///    [sumRecoverableExpensesForPeriod] — mais restent **modifiables** : dès
-///    que le bailleur édite le champ à la main, le pré-remplissage
-///    automatique ne l'écrase plus (garde [_userEditedExpenses]).
+///    [filterRecoverableExpensesForPeriod] (dépenses sans bail incluses,
+///    dépenses d'un AUTRE bail exclues — correctif review finding 2) — mais
+///    restent **modifiables** : dès que le bailleur édite le champ à la
+///    main, le pré-remplissage automatique ne l'écrase plus (garde
+///    [_userEditedExpenses]).
 /// 4. Solde recalculé en direct à chaque changement — voir
 ///    [ChargeRegularizationForm].
 /// 5. Bouton "Générer et partager" → PDF + Web Share (pas de persistance
@@ -72,7 +74,7 @@ class _ChargeRegularizationDialogState
 
   /// Vrai dès que le bailleur a modifié manuellement le champ "Dépenses
   /// réelles" — à partir de là, le pré-remplissage automatique
-  /// (FEAT-041c, [sumRecoverableExpensesForPeriod]) ne doit **plus** écraser
+  /// (FEAT-041c, [filterRecoverableExpensesForPeriod]) ne doit **plus** écraser
   /// sa saisie, y compris si la période de référence change ensuite ou si le
   /// stream de dépenses recharge une valeur différente. Reste `false` tant
   /// que l'utilisateur n'a fait qu'observer le pré-remplissage automatique —
@@ -157,13 +159,26 @@ class _ChargeRegularizationDialogState
     // via [_userEditedExpenses]). En l'absence de dépense (liste vide ou
     // encore en chargement), la somme vaut 0 → comportement V1 strictement
     // préservé (non-régression).
+    //
+    // Correctif review FEAT-041 (findings 1 & 7, MAJOR) : la liste passée au
+    // form (compteur « N dépenses » + détail dépliable) est désormais filtrée
+    // par [filterRecoverableExpensesForPeriod] — EXACTEMENT le même
+    // recouvrement de période (et la même sémantique de rattachement bail,
+    // finding 2) que la somme pré-remplie. Avant ce correctif, la liste
+    // complète (non filtrée par période) était passée telle quelle, ce qui
+    // faisait diverger le compteur/détail affiché du total réellement
+    // sommé.
     final recoverableExpenses =
         asyncRecoverableExpenses.valueOrNull ?? const [];
-    final prefilledExpensesCents = sumRecoverableExpensesForPeriod(
+    final expensesForPeriod = filterRecoverableExpensesForPeriod(
       expenses: recoverableExpenses,
       referenceStart: _periodStart,
       referenceEnd: _periodEnd,
       leaseId: widget.leaseId,
+    );
+    final prefilledExpensesCents = expensesForPeriod.fold<int>(
+      0,
+      (sum, e) => sum + e.amountCents,
     );
     _applyPrefill(prefilledExpensesCents);
 
@@ -195,7 +210,7 @@ class _ChargeRegularizationDialogState
               payments: payments,
               actualExpensesController: _actualExpensesController,
               actualExpensesCents: _actualExpensesCents,
-              recoverableExpenses: recoverableExpenses,
+              recoverableExpenses: expensesForPeriod,
               onPeriodStartChanged: (d) => setState(() => _periodStart = d),
               onPeriodEndChanged: (d) => setState(() => _periodEnd = d),
               onActualExpensesChanged: (cents) => setState(() {

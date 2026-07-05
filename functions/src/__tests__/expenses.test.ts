@@ -68,6 +68,16 @@ describe("deriveExpenseCategory", () => {
     });
   });
 
+  it("accepte une category explicite identique au défaut sur une nature VERROUILLÉE sans lever (property_tax)", () => {
+    // Cas discriminant : `requestedCategory === rule.category` doit court-
+    // circuiter AVANT toute vérification de `locked` — même sur une nature
+    // verrouillée, fournir explicitement le défaut ne doit jamais lever.
+    expect(deriveExpenseCategory("property_tax", "non_recoverable")).toEqual({
+      category: "non_recoverable",
+      categoryOverridden: false,
+    });
+  });
+
   it("refuse l'override sur une nature verrouillée (property_tax)", () => {
     expect(() =>
       deriveExpenseCategory("property_tax", "recoverable"),
@@ -146,6 +156,36 @@ describe("deriveExpensePeriodYear", () => {
     expect(
       deriveExpensePeriodYear({periodYear: null, periodStart: null, expenseDate}),
     ).toBe(2026);
+  });
+
+  it("cas bord d'année : periodStart 2024-12-31T23:00:00Z est traité en UTC (getUTCFullYear)", () => {
+    // 2024-12-31T23:00:00Z reste le 31/12/2024 en UTC (pas de bascule en
+    // 2025) : on documente explicitement que la dérivation utilise
+    // `getUTCFullYear()` et non l'heure locale du serveur (qui pourrait
+    // faire basculer sur 2025 selon le fuseau d'exécution).
+    const edgePeriodStart = Timestamp.fromDate(
+      new Date("2024-12-31T23:00:00Z"),
+    );
+    expect(
+      deriveExpensePeriodYear({
+        periodYear: null,
+        periodStart: edgePeriodStart,
+        expenseDate,
+      }),
+    ).toBe(2024);
+  });
+
+  it("cas bord d'année : expenseDate 2024-12-31T23:00:00Z (sans periodStart) reste 2024 en UTC", () => {
+    const edgeExpenseDate = Timestamp.fromDate(
+      new Date("2024-12-31T23:00:00Z"),
+    );
+    expect(
+      deriveExpensePeriodYear({
+        periodYear: null,
+        periodStart: null,
+        expenseDate: edgeExpenseDate,
+      }),
+    ).toBe(2024);
   });
 });
 
@@ -548,6 +588,58 @@ describe("updateExpense", () => {
     expect(stored?.categoryOverridden).toBe(false);
   });
 
+  it("re-dérive category DISCRIMINANT : condo_charges/recoverable -> property_tax flippe vers non_recoverable", async () => {
+    // Cas discriminant (contrairement à works->property_tax, tous deux
+    // non_recoverable) : on part d'une dépense RECOVERABLE (condo_charges,
+    // avec période) et on bascule vers une nature verrouillée
+    // non_recoverable (property_tax). Si la re-dérivation ne fonctionnait
+    // pas, `category` resterait figée à 'recoverable' — ce test le
+    // détecterait alors que le test existant works->property_tax ne le
+    // peut pas.
+    seedExpense("exp-1", {
+      nature: "condo_charges",
+      category: "recoverable",
+      categoryOverridden: false,
+      periodStart: Timestamp.fromDate(new Date("2025-01-01T00:00:00Z")),
+      periodEnd: Timestamp.fromDate(new Date("2025-12-31T00:00:00Z")),
+    });
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {id: "exp-1", patch: {nature: "property_tax"}}),
+    );
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.nature).toBe("property_tax");
+    expect(stored?.category).toBe("non_recoverable");
+    expect(stored?.categoryOverridden).toBe(false);
+  });
+
+  it("re-dérive category DISCRIMINANT (sens inverse) : works/non_recoverable -> condo_charges flippe vers recoverable (période fournie)", async () => {
+    // Sens inverse du cas précédent : nature ajustable non_recoverable ->
+    // nature dont le défaut est recoverable. Prouve que la re-dérivation
+    // fonctionne dans les deux sens, pas seulement non_recoverable ->
+    // non_recoverable.
+    seedExpense("exp-1", {
+      nature: "works",
+      category: "non_recoverable",
+      categoryOverridden: false,
+    });
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {
+        id: "exp-1",
+        patch: {
+          nature: "condo_charges",
+          periodStart: "2025-01-01T00:00:00Z",
+          periodEnd: "2025-12-31T00:00:00Z",
+        },
+      }),
+    );
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.nature).toBe("condo_charges");
+    expect(stored?.category).toBe("recoverable");
+    expect(stored?.categoryOverridden).toBe(false);
+  });
+
   it("refuse un override de category incompatible avec la nouvelle nature verrouillée", async () => {
     seedExpense("exp-1", {nature: "works", category: "non_recoverable"});
 
@@ -601,6 +693,118 @@ describe("updateExpense", () => {
       makeRequest(LANDLORD_A, {id: "exp-1", patch: {documentId: "doc-3"}}),
     );
     expect(fakeDb.peek("expenses/exp-1")?.documentId).toBe("doc-3");
+  });
+
+  it("patch periodStart sans periodYear -> periodYear recalculé depuis periodStart", async () => {
+    seedExpense("exp-1", {
+      nature: "condo_charges",
+      category: "recoverable",
+      periodStart: Timestamp.fromDate(new Date("2025-01-01T00:00:00Z")),
+      periodEnd: Timestamp.fromDate(new Date("2025-12-31T00:00:00Z")),
+      periodYear: 2025,
+    });
+
+    // periodEnd existant (2025-12-31) reste > le nouveau periodStart
+    // (2025-03-01) : seule periodYear doit se recalculer, sans toucher à
+    // periodEnd.
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {
+        id: "exp-1",
+        patch: {periodStart: "2025-03-01T00:00:00Z"},
+      }),
+    );
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.periodStart).toEqual(
+      Timestamp.fromDate(new Date("2025-03-01T00:00:00Z")),
+    );
+    expect(stored?.periodYear).toBe(2025);
+  });
+
+  it("patch periodStart qui change d'année sans periodYear -> periodYear recalculé (nouvelle année)", async () => {
+    seedExpense("exp-1", {
+      nature: "condo_charges",
+      category: "recoverable",
+      periodStart: Timestamp.fromDate(new Date("2025-01-01T00:00:00Z")),
+      periodEnd: Timestamp.fromDate(new Date("2027-12-31T00:00:00Z")),
+      periodYear: 2025,
+    });
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {
+        id: "exp-1",
+        patch: {periodStart: "2027-03-01T00:00:00Z"},
+      }),
+    );
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.periodStart).toEqual(
+      Timestamp.fromDate(new Date("2027-03-01T00:00:00Z")),
+    );
+    expect(stored?.periodYear).toBe(2027);
+  });
+
+  it("patch periodYear explicite (2030) -> persisté tel quel (priorité sur periodStart)", async () => {
+    seedExpense("exp-1", {
+      nature: "condo_charges",
+      category: "recoverable",
+      periodStart: Timestamp.fromDate(new Date("2025-01-01T00:00:00Z")),
+      periodEnd: Timestamp.fromDate(new Date("2025-12-31T00:00:00Z")),
+      periodYear: 2025,
+    });
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {id: "exp-1", patch: {periodYear: 2030}}),
+    );
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.periodYear).toBe(2030);
+  });
+
+  it("refuse un patch qui rend la dépense recoverable avec periodEnd <= periodStart", async () => {
+    seedExpense("exp-1", {
+      nature: "condo_charges",
+      category: "recoverable",
+      periodStart: Timestamp.fromDate(new Date("2025-01-01T00:00:00Z")),
+      periodEnd: Timestamp.fromDate(new Date("2025-12-31T00:00:00Z")),
+      periodYear: 2025,
+    });
+
+    await expect(
+      updateExpense.run(
+        makeRequest(LANDLORD_A, {
+          id: "exp-1",
+          patch: {
+            periodStart: "2025-06-01T00:00:00Z",
+            periodEnd: "2025-01-01T00:00:00Z",
+          },
+        }),
+      ),
+    ).rejects.toMatchObject({code: "invalid-argument"});
+  });
+
+  it("accepte un patch periodStart/periodEnd valides sur une dépense recoverable et les persiste", async () => {
+    seedExpense("exp-1", {
+      nature: "condo_charges",
+      category: "recoverable",
+      periodStart: Timestamp.fromDate(new Date("2025-01-01T00:00:00Z")),
+      periodEnd: Timestamp.fromDate(new Date("2025-12-31T00:00:00Z")),
+      periodYear: 2025,
+    });
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {
+        id: "exp-1",
+        patch: {
+          periodStart: "2026-01-01T00:00:00Z",
+          periodEnd: "2026-06-30T00:00:00Z",
+        },
+      }),
+    );
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.periodStart).toEqual(
+      Timestamp.fromDate(new Date("2026-01-01T00:00:00Z")),
+    );
+    expect(stored?.periodEnd).toEqual(
+      Timestamp.fromDate(new Date("2026-06-30T00:00:00Z")),
+    );
   });
 
   it("re-snapshot propertyName si le nom du bien a changé", async () => {

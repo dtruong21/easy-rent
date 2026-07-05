@@ -113,9 +113,16 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
       );
       return;
     }
-    final documentId = receiptState is ReceiptSuccess
-        ? receiptState.documentId
-        : widget.initial?.documentId;
+    // Correctif review FEAT-041 (finding 6) : un retrait explicite du
+    // justificatif déjà attaché (`ReceiptRemoved`, cf.
+    // `ExpenseReceiptField`) doit envoyer `documentId: null` — sans ce cas,
+    // `widget.initial?.documentId` restait transmis même après un clic sur
+    // "Retirer le justificatif" en édition.
+    final documentId = switch (receiptState) {
+      ReceiptSuccess(:final documentId) => documentId,
+      ReceiptRemoved() => null,
+      _ => widget.initial?.documentId,
+    };
 
     final periodStart = formState.currentPeriodStart;
     final periodEnd = formState.currentPeriodEnd;
@@ -230,6 +237,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
               initialPeriodStart: initial?.periodStart,
               initialPeriodEnd: initial?.periodEnd,
               initialNotes: initial?.notes,
+              initialDocumentId: initial?.documentId,
               enabled: !isSubmitting,
             ),
             if (errorMessage != null) ...[

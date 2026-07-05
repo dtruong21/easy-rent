@@ -35,4 +35,13 @@ sealed class ExpenseReceiptUploadState with _$ExpenseReceiptUploadState {
     required String filename,
     required String message,
   }) = ReceiptError;
+
+  /// Le bailleur a explicitement retiré le justificatif déjà attaché à la
+  /// dépense en édition (`initial.documentId`) — correctif review FEAT-041,
+  /// finding 6. Distinct de [idle] : `idle` peut aussi signifier "aucune
+  /// interaction pour l'instant, le justificatif existant reste attaché"
+  /// (voir `ExpenseReceiptField.existingDocumentId`), alors que [removed]
+  /// signifie explicitement "ne plus transmettre ce documentId à la
+  /// soumission".
+  const factory ExpenseReceiptUploadState.removed() = ReceiptRemoved;
 }

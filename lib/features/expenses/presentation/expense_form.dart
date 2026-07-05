@@ -40,6 +40,7 @@ class ExpenseForm extends StatefulWidget {
     this.initialPeriodStart,
     this.initialPeriodEnd,
     this.initialNotes,
+    this.initialDocumentId,
     this.enabled = true,
   });
 
@@ -61,6 +62,11 @@ class ExpenseForm extends StatefulWidget {
   final DateTime? initialPeriodStart;
   final DateTime? initialPeriodEnd;
   final String? initialNotes;
+
+  /// `documentId` du justificatif déjà attaché (édition) — voir
+  /// [ExpenseReceiptField.existingDocumentId] (correctif review FEAT-041,
+  /// finding 6).
+  final String? initialDocumentId;
   final bool enabled;
 
   @override
@@ -420,6 +426,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             propertyId: widget.propertyId,
             leaseId: _leaseId,
             enabled: widget.enabled,
+            existingDocumentId: widget.initialDocumentId,
           ),
           const SizedBox(height: 16),
 

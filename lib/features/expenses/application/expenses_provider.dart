@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../charge_regularization/application/recoverable_expenses_calculator.dart';
 import '../data/expenses_repository.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
@@ -51,13 +52,23 @@ typedef RecoverableExpensesArgs = ({String propertyId, String? leaseId});
 /// collection `expenses` n'expose pas d'index composite
 /// `category + leaseId` qui justifierait une requête serveur séparée pour
 /// ce volume (mono-bailleur, cf. `docs/plans/FEAT-041-depenses.md` § b).
+///
+/// Filtre par bail via [expenseAppliesToLease] (correctif review FEAT-041,
+/// finding 2) — **pas** une égalité stricte `e.leaseId == args.leaseId` :
+/// une dépense sans bail rattaché (`leaseId == null`, cas nominal du
+/// décompte syndic) doit rester incluse dans la régularisation d'un bail
+/// donné, alors qu'une dépense rattachée à un AUTRE bail doit être exclue.
+/// Même prédicat que `sumRecoverableExpensesForPeriod`/
+/// `filterRecoverableExpensesForPeriod` — centralisé dans
+/// `recoverable_expenses_calculator.dart` pour éviter toute divergence de
+/// sémantique entre le provider et les calculs de régularisation.
 final recoverableExpensesProvider = Provider.autoDispose
     .family<AsyncValue<List<Expense>>, RecoverableExpensesArgs>((ref, args) {
       final async = ref.watch(propertyExpensesProvider(args.propertyId));
       return async.whenData(
         (expenses) => expenses
             .where((e) => e.category == ExpenseCategory.recoverable)
-            .where((e) => args.leaseId == null || e.leaseId == args.leaseId)
+            .where((e) => expenseAppliesToLease(e, args.leaseId))
             .toList(),
       );
     });

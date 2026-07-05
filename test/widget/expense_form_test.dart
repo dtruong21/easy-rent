@@ -32,6 +32,7 @@ Widget _buildExpenseForm({
   DateTime? initialPeriodStart,
   DateTime? initialPeriodEnd,
   String? initialNotes,
+  String? initialDocumentId,
   bool enabled = true,
   GlobalKey<ExpenseFormWidgetState>? formKey,
 }) {
@@ -55,6 +56,7 @@ Widget _buildExpenseForm({
             initialPeriodStart: initialPeriodStart,
             initialPeriodEnd: initialPeriodEnd,
             initialNotes: initialNotes,
+            initialDocumentId: initialDocumentId,
             enabled: enabled,
           ),
         ),
@@ -468,5 +470,48 @@ void main() {
       expect(wk.currentState?.currentNotes, 'décompte syndic');
       amountCtrl.dispose();
     });
+  });
+
+  group('ExpenseForm — justificatif existant transmis au champ (correctif '
+      'review FEAT-041, finding 6)', () {
+    testWidgets(
+      'initialDocumentId fourni (édition) → ExpenseReceiptField affiche '
+      '"justificatif déjà attaché"',
+      (tester) async {
+        final amountCtrl = TextEditingController();
+        await tester.pumpWidget(
+          _buildExpenseForm(
+            amountCtrl: amountCtrl,
+            initialDocumentId: 'doc-existing-1',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('text_expense_receipt_existing')),
+          findsOneWidget,
+        );
+        amountCtrl.dispose();
+      },
+    );
+
+    testWidgets(
+      'initialDocumentId == null (création) → bouton "Joindre" classique',
+      (tester) async {
+        final amountCtrl = TextEditingController();
+        await tester.pumpWidget(_buildExpenseForm(amountCtrl: amountCtrl));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_pick_expense_receipt')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('text_expense_receipt_existing')),
+          findsNothing,
+        );
+        amountCtrl.dispose();
+      },
+    );
   });
 }

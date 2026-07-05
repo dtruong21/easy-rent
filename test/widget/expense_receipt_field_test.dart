@@ -68,13 +68,19 @@ class _FakeDocumentsRepository implements DocumentsRepository {
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _buildField({required ProviderContainer container}) {
+Widget _buildField({
+  required ProviderContainer container,
+  String? existingDocumentId,
+}) {
   return UncontrolledProviderScope(
     container: container,
-    child: const MaterialApp(
+    child: MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
-          child: ExpenseReceiptField(propertyId: 'property-1'),
+          child: ExpenseReceiptField(
+            propertyId: 'property-1',
+            existingDocumentId: existingDocumentId,
+          ),
         ),
       ),
     ),
@@ -239,6 +245,112 @@ void main() {
       expect(
         find.byKey(const Key('btn_retry_expense_receipt')),
         findsOneWidget,
+      );
+    });
+  });
+
+  group('ExpenseReceiptField — édition, justificatif déjà attaché (correctif '
+      'review FEAT-041, finding 6)', () {
+    testWidgets(
+      'existingDocumentId fourni + état idle → affiche "justificatif déjà '
+      'attaché" plutôt que le bouton "Joindre"',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            documentsRepositoryProvider.overrideWithValue(
+              _FakeDocumentsRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          _buildField(
+            container: container,
+            existingDocumentId: 'doc-existing-1',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('text_expense_receipt_existing')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('btn_pick_expense_receipt')),
+          findsNothing,
+          reason:
+              'le bouton "Joindre" laisserait croire, à tort, qu\'aucun '
+              'justificatif n\'est associé à la dépense en édition.',
+        );
+        expect(
+          find.byKey(const Key('btn_replace_expense_receipt')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('btn_remove_existing_expense_receipt')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'existingDocumentId == null (création, ou édition sans justificatif) '
+      '→ bouton "Joindre" classique, pas l\'état "déjà attaché"',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            documentsRepositoryProvider.overrideWithValue(
+              _FakeDocumentsRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_buildField(container: container));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_pick_expense_receipt')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('text_expense_receipt_existing')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('bouton "Retirer" sur le justificatif existant → passe le '
+        'contrôleur à ReceiptRemoved et fait réapparaître le bouton '
+        '"Joindre"', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          documentsRepositoryProvider.overrideWithValue(
+            _FakeDocumentsRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        _buildField(container: container, existingDocumentId: 'doc-existing-1'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('btn_remove_existing_expense_receipt')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(expenseReceiptUploadControllerProvider),
+        const ExpenseReceiptUploadState.removed(),
+      );
+      expect(find.byKey(const Key('btn_pick_expense_receipt')), findsOneWidget);
+      expect(
+        find.byKey(const Key('text_expense_receipt_existing')),
+        findsNothing,
       );
     });
   });
