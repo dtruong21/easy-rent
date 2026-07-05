@@ -172,6 +172,34 @@ export class FakeFirestore {
 }
 
 /**
+ * Fake Storage minimal — couvre le sous-ensemble utilisé par
+ * `documents.ts` : `admin.storage().bucket().file(path).exists()` et
+ * `.getSignedUrl()`. Par défaut tous les fichiers "existent" (upload
+ * réputé réussi) ; `existingPaths` permet de simuler un upload manquant
+ * pour les tests qui exercent ce garde-fou.
+ */
+export class FakeStorage {
+  existingPaths: Set<string> | null = null; // null = tout existe
+
+  bucket(): {
+    file: (path: string) => {
+      exists: () => Promise<[boolean]>;
+      getSignedUrl: (opts: unknown) => Promise<[string]>;
+    };
+    } {
+    return {
+      file: (path: string) => ({
+        exists: () =>
+          Promise.resolve([
+            this.existingPaths === null || this.existingPaths.has(path),
+          ]),
+        getSignedUrl: () => Promise.resolve([`https://fake-signed-url/${path}`]),
+      }),
+    };
+  }
+}
+
+/**
  * Holder mutable partagé avec le mock `vi.mock("firebase-admin", ...)`.
  *
  * Le factory passé à `vi.mock` est hoisted par vitest au-dessus des
@@ -182,18 +210,24 @@ export class FakeFirestore {
  * de l'appel — d'où cet objet exporté plutôt qu'une variable module-level
  * classique.
  */
-export const fakeAdminFirestoreHolder: {db: FakeFirestore | undefined} = {
+export const fakeAdminFirestoreHolder: {
+  db: FakeFirestore | undefined;
+  storage: FakeStorage | undefined;
+} = {
   db: undefined,
+  storage: undefined,
 };
 
 /** Factory prête à l'emploi pour `vi.mock("firebase-admin", makeFakeAdminModule)`. */
 export function makeFakeAdminModule(): {
   firestore: (() => FakeFirestore | undefined) & {FieldValue: typeof fakeFieldValue};
+  storage: () => FakeStorage | undefined;
   } {
   return {
     firestore: Object.assign(
       () => fakeAdminFirestoreHolder.db,
       {FieldValue: fakeFieldValue},
     ),
+    storage: () => fakeAdminFirestoreHolder.storage,
   };
 }
