@@ -48,6 +48,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
   // Section 2 controllers
   late final TextEditingController _rentCtrl;
   late final TextEditingController _chargesCtrl;
+  late final TextEditingController _nonRecoverableChargesCtrl;
   late final TextEditingController _depositCtrl;
   late final TextEditingController _agencyFeesCtrl;
 
@@ -70,6 +71,11 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     _chargesCtrl = TextEditingController(
       text: lease != null
           ? MoneyFormat.centsToInput(lease.chargesAmountCents)
+          : '',
+    );
+    _nonRecoverableChargesCtrl = TextEditingController(
+      text: lease != null && lease.nonRecoverableChargesCents > 0
+          ? MoneyFormat.centsToInput(lease.nonRecoverableChargesCents)
           : '',
     );
     _depositCtrl = TextEditingController(
@@ -97,6 +103,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
   void dispose() {
     _rentCtrl.dispose();
     _chargesCtrl.dispose();
+    _nonRecoverableChargesCtrl.dispose();
     _depositCtrl.dispose();
     _agencyFeesCtrl.dispose();
     _paymentDayCtrl.dispose();
@@ -143,6 +150,10 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     final agencyFeesCents = _agencyFeesCtrl.text.trim().isEmpty
         ? 0
         : (MoneyFormat.eurosToCents(_agencyFeesCtrl.text) ?? 0);
+    final nonRecoverableChargesCents =
+        _nonRecoverableChargesCtrl.text.trim().isEmpty
+        ? 0
+        : (MoneyFormat.eurosToCents(_nonRecoverableChargesCtrl.text) ?? 0);
 
     // Section 4 — payment day
     final paymentDayRaw = _paymentDayCtrl.text.trim();
@@ -193,6 +204,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
             paymentMethod: formState.currentPaymentMethod,
             solidarityClause: formState.currentSolidarityClause,
             entryInventoryDone: formState.currentEntryInventoryDone,
+            nonRecoverableChargesCents: nonRecoverableChargesCents,
           ),
         ),
       );
@@ -213,6 +225,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
         paymentMethod: formState.currentPaymentMethod,
         solidarityClause: formState.currentSolidarityClause,
         entryInventoryDone: formState.currentEntryInventoryDone,
+        nonRecoverableChargesCents: nonRecoverableChargesCents,
       );
     }
   }
@@ -233,6 +246,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     required PaymentMethod paymentMethod,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async {
     await ref
         .read(leaseFormControllerProvider.notifier)
@@ -253,6 +267,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           agencyFeesCents: agencyFeesCents,
           solidarityClause: solidarityClause,
           entryInventoryDone: entryInventoryDone,
+          nonRecoverableChargesCents: nonRecoverableChargesCents,
         );
   }
 
@@ -349,6 +364,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               tenants: tenants,
               rentController: _rentCtrl,
               chargesController: _chargesCtrl,
+              nonRecoverableChargesController: _nonRecoverableChargesCtrl,
               depositController: _depositCtrl,
               agencyFeesController: _agencyFeesCtrl,
               paymentDayController: _paymentDayCtrl,

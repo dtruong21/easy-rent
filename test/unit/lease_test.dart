@@ -12,6 +12,7 @@ Lease _buildLease({
   String tenantId = 'tenant-1',
   int rentAmountCents = 85000,
   int chargesAmountCents = 5000,
+  int nonRecoverableChargesCents = 0,
   DateTime? startDate,
   DateTime? endDate,
   LeaseStatus status = LeaseStatus.active,
@@ -24,6 +25,7 @@ Lease _buildLease({
     tenantId: tenantId,
     rentAmountCents: rentAmountCents,
     chargesAmountCents: chargesAmountCents,
+    nonRecoverableChargesCents: nonRecoverableChargesCents,
     startDate: startDate ?? DateTime(2024, 1, 1),
     endDate: endDate,
     status: status,
@@ -124,6 +126,53 @@ void main() {
       final lease = _buildLease();
       expect(lease.deletedAt, isNull);
     });
+
+    // -------------------------------------------------------------------
+    // FEAT-036 — nonRecoverableChargesCents
+    // -------------------------------------------------------------------
+    test(
+      'fromJson SANS non_recoverable_charges_cents (bail pré-036) → 0 (AC-3)',
+      () {
+        final json = {
+          'id': 'lease-legacy',
+          'landlord_id': 'lld-1',
+          'property_id': 'prop-1',
+          'tenant_id': 'ten-1',
+          'rent_amount_cents': 90000,
+          'charges_amount_cents': 10000,
+          'start_date': '2024-01-01',
+          'end_date': null,
+          'status': 'active',
+          'created_at': '2024-01-01T10:00:00Z',
+          'updated_at': '2024-01-01T10:00:00Z',
+          'deleted_at': null,
+        };
+        final lease = Lease.fromJson(json);
+        expect(lease.nonRecoverableChargesCents, 0);
+        // Le montant existant reste conservé et interprété comme récupérable.
+        expect(lease.chargesAmountCents, 10000);
+      },
+    );
+
+    test('fromJson AVEC non_recoverable_charges_cents → valeur lue', () {
+      final json = {
+        'id': 'lease-036',
+        'landlord_id': 'lld-1',
+        'property_id': 'prop-1',
+        'tenant_id': 'ten-1',
+        'rent_amount_cents': 90000,
+        'charges_amount_cents': 10000,
+        'non_recoverable_charges_cents': 2000,
+        'start_date': '2024-01-01',
+        'end_date': null,
+        'status': 'active',
+        'created_at': '2024-01-01T10:00:00Z',
+        'updated_at': '2024-01-01T10:00:00Z',
+        'deleted_at': null,
+      };
+      final lease = Lease.fromJson(json);
+      expect(lease.nonRecoverableChargesCents, 2000);
+    });
   });
 
   group('LeaseExtension — getters calculés', () {
@@ -134,6 +183,51 @@ void main() {
       );
       expect(lease.totalAmountCents, 90000);
     });
+
+    // -------------------------------------------------------------------
+    // FEAT-036 — ventilation récupérable / non récupérable
+    // -------------------------------------------------------------------
+    test('recoverableChargesCents == chargesAmountCents (alias)', () {
+      final lease = _buildLease(chargesAmountCents: 5000);
+      expect(lease.recoverableChargesCents, lease.chargesAmountCents);
+      expect(lease.recoverableChargesCents, 5000);
+    });
+
+    test(
+      'totalChargesCents == chargesAmountCents + nonRecoverableChargesCents',
+      () {
+        final lease = _buildLease(
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 2000,
+        );
+        expect(lease.totalChargesCents, 7000);
+      },
+    );
+
+    test(
+      'totalChargesCents == chargesAmountCents quand non-récupérable = 0',
+      () {
+        final lease = _buildLease(
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 0,
+        );
+        expect(lease.totalChargesCents, 5000);
+      },
+    );
+
+    test(
+      'totalAmountCents INCHANGÉ par FEAT-036 — n\'inclut PAS le non-récupérable',
+      () {
+        final lease = _buildLease(
+          rentAmountCents: 85000,
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 2000,
+        );
+        // Loyer CC = loyer + récupérable SEUL (90000), pas 92000.
+        expect(lease.totalAmountCents, 90000);
+        expect(lease.totalAmountCents, isNot(lease.totalChargesCents + 85000));
+      },
+    );
 
     test('isActive true quand status=active et deletedAt=null', () {
       final lease = _buildLease(status: LeaseStatus.active);

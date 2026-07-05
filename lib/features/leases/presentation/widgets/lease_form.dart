@@ -27,6 +27,7 @@ class LeaseForm extends StatefulWidget {
     required this.tenants,
     required this.rentController,
     required this.chargesController,
+    required this.nonRecoverableChargesController,
     required this.depositController,
     required this.agencyFeesController,
     required this.paymentDayController,
@@ -55,6 +56,7 @@ class LeaseForm extends StatefulWidget {
   // --- Section 2 controllers ---
   final TextEditingController rentController;
   final TextEditingController chargesController;
+  final TextEditingController nonRecoverableChargesController;
   final TextEditingController depositController;
   final TextEditingController agencyFeesController;
 
@@ -113,6 +115,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   int _tenantFieldGeneration = 0;
   bool _rentTouched = false;
   bool _chargesTouched = false;
+  bool _nonRecoverableChargesTouched = false;
   bool _depositTouched = false;
   bool _agencyFeesTouched = false;
   bool _startDateTouched = false;
@@ -213,6 +216,8 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           _buildRentField(),
           const SizedBox(height: 16),
           _buildChargesField(),
+          const SizedBox(height: 16),
+          _buildNonRecoverableChargesField(),
           const SizedBox(height: 16),
           _buildDepositField(),
           const SizedBox(height: 16),
@@ -433,8 +438,11 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     controller: widget.chargesController,
     enabled: widget.enabled,
     decoration: const InputDecoration(
-      labelText: 'Charges (€) *',
+      labelText: 'Charges récupérables (€) *',
       hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
+      helperText:
+          'Provisions mensuelles refacturables au locataire '
+          '(décret n°87-713)',
       suffixText: '€',
       border: OutlineInputBorder(),
     ),
@@ -449,6 +457,33 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     validator: (v) {
       if (!_chargesTouched) return null;
       return LeaseFormValidators.validateChargesAmount(v);
+    },
+  );
+
+  Widget _buildNonRecoverableChargesField() => TextFormField(
+    key: const Key('field_non_recoverable_charges'),
+    controller: widget.nonRecoverableChargesController,
+    enabled: widget.enabled,
+    decoration: const InputDecoration(
+      labelText: 'Charges non récupérables (€)',
+      hintText: 'Ex. : 20,00 (saisir 0 si aucune)',
+      helperText:
+          'À la charge du bailleur — non refacturable au locataire. '
+          'Saisir 0 si aucune.',
+      suffixText: '€',
+      border: OutlineInputBorder(),
+    ),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    onChanged: (_) {
+      if (_nonRecoverableChargesTouched) setState(() {});
+    },
+    onEditingComplete: () {
+      setState(() => _nonRecoverableChargesTouched = true);
+      FocusScope.of(context).nextFocus();
+    },
+    validator: (v) {
+      if (!_nonRecoverableChargesTouched) return null;
+      return LeaseFormValidators.validateNonRecoverableCharges(v);
     },
   );
 
@@ -618,6 +653,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       _tenantTouched = true;
       _rentTouched = true;
       _chargesTouched = true;
+      _nonRecoverableChargesTouched = true;
       _depositTouched = true;
       _agencyFeesTouched = true;
       _startDateTouched = true;

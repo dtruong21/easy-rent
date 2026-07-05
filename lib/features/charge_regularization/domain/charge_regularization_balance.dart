@@ -39,10 +39,22 @@ enum ChargeRegularizationBalanceDirection {
 /// un paiement classique », cf. backlog FEAT-029). Sert uniquement à piloter
 /// l'affichage écran et le contenu du PDF généré.
 ///
-/// ⚠️ Ne mélange QUE les charges récupérables (`payments.chargesAmountCents`).
-/// `properties.condoFeesNonRecoverableCents` (charges non récupérables, côté
-/// rentabilité bailleur) est hors périmètre de ce calcul — le mélanger
-/// exposerait à une sur-facturation illégale au locataire (décret 87-713).
+/// ⚠️ Ne mélange QUE les charges récupérables (`payments.chargesAmountCents`,
+/// lui-même pré-rempli depuis `leases.chargesAmountCents` = la part
+/// récupérable du bail — FEAT-036).
+///
+/// **Deux notions distinctes de « non récupérable » coexistent dans le
+/// projet, aucune n'entre dans ce solde** (FEAT-036) :
+/// - `leases.nonRecoverableChargesCents` : ventilation des charges DU BAIL
+///   (saisie sur le formulaire bail, affichée sur la fiche bail). Distinct
+///   du récupérable (`leases.chargesAmountCents`), jamais sommé ici.
+/// - `properties.condoFeesNonRecoverableCents` : charges de copropriété non
+///   récupérables DU BIEN (rentabilité bailleur, simulateur), sans lien avec
+///   un bail précis.
+///
+/// Mélanger l'une ou l'autre dans ce calcul exposerait à une sur-facturation
+/// illégale au locataire (décret 87-713) — la régularisation ne doit régler
+/// que le récupérable réellement encaissé via les provisions du bail.
 class ChargeRegularizationBalance {
   const ChargeRegularizationBalance({
     required this.periodStart,

@@ -376,6 +376,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async => throw UnimplementedError();
 
   @override
@@ -765,6 +766,89 @@ void _createPrefillTests() {
         expect(find.text('850,00'), findsNothing);
       },
     );
+
+    // -------------------------------------------------------------------
+    // FEAT-036 — revue adversariale, Finding 2 (AC-2) : le pré-remplissage
+    // du champ charges DOIT être calqué sur `lease.chargesAmountCents` (le
+    // récupérable), jamais sur `lease.totalChargesCents` (récupérable +
+    // non récupérable). Avec `nonRecoverableChargesCents == 0` (cas des
+    // autres tests de ce fichier), les deux valeurs coïncident et ne
+    // discriminent PAS le bug — ce test utilise un bail avec un
+    // non-récupérable strictement positif pour lever l'ambiguïté.
+    // -------------------------------------------------------------------
+    Lease makeLeaseWithNonRecoverable() => Lease(
+      id: 'lease-nr',
+      landlordId: 'landlord-1',
+      propertyId: 'prop-1',
+      tenantId: 'tenant-1',
+      rentAmountCents: 85000,
+      chargesAmountCents: 5000, // récupérable
+      nonRecoverableChargesCents: 4000, // non récupérable — doit être ignoré
+      startDate: DateTime(2024, 1, 1),
+      status: LeaseStatus.active,
+      createdAt: DateTime(2024),
+      updatedAt: DateTime(2024),
+    );
+
+    testWidgets(
+      'FEAT-036 AC-2 — bail avec non-récupérable > 0 : le champ charges '
+      'est pré-rempli avec chargesAmountCents (50,00), PAS '
+      'totalChargesCents (90,00)',
+      (tester) async {
+        final lease = makeLeaseWithNonRecoverable();
+        // Garde-fou : si cette assertion casse, le reste du test est
+        // sans objet (les deux valeurs ne discrimineraient plus rien).
+        expect(lease.chargesAmountCents, 5000);
+        expect(lease.totalChargesCents, 9000);
+
+        await tester.pumpWidget(_buildCreatePage(lease: lease));
+        await tester.pumpAndSettle();
+
+        // Récupérable seul (50,00 €) — pré-rempli.
+        expect(find.text('50,00'), findsOneWidget);
+        // Total récupérable + non récupérable (90,00 €) — ne doit PAS
+        // apparaître dans le champ charges.
+        expect(find.text('90,00'), findsNothing);
+      },
+    );
+
+    testWidgets('FEAT-036 AC-2 — même invariant lorsque le bail est passé '
+        'directement au constructeur (PaymentFormPage.lease), chemin '
+        "initState (pas _seedAmountsFromLease)", (tester) async {
+      final lease = makeLeaseWithNonRecoverable();
+
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) =>
+                PaymentFormPage(leaseId: lease.id, lease: lease),
+          ),
+          GoRoute(
+            path: '/leases/:id',
+            builder: (_, state) =>
+                Scaffold(body: Text('lease ${state.pathParameters['id']}')),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            leaseRepositoryProvider.overrideWithValue(_FakeLeaseRepo(lease)),
+            paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
+            paymentFormControllerProvider.overrideWith(
+              PaymentFormController.new,
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('50,00'), findsOneWidget);
+      expect(find.text('90,00'), findsNothing);
+    });
   });
 }
 
