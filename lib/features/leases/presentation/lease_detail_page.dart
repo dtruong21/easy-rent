@@ -10,6 +10,7 @@ import '../../../core/ui/cards/status_pill_tone.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
+import '../../charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
@@ -24,21 +25,36 @@ import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_status.dart';
+import '../domain/lease_type.dart';
 import 'widgets/close_lease_dialog.dart';
 
 final _log = Logger('LeaseDetailPage');
 
 /// Fiche lecture d'un bail.
 ///
-/// Route : `/leases/:id`
+/// Route : `/leases/:id` — accepte le query param optionnel
+/// `?action=regularize` (raccourci FEAT-030 depuis la liste Baux, action
+/// visible uniquement pour les baux nus). Quand présent, la fiche ouvre
+/// automatiquement le dialog de régularisation des charges une fois ses
+/// données chargées (cf. [_LeaseDetailContent]).
 ///
 /// Affiche toutes les informations + boutons "Modifier", "Clôturer" (si actif)
 /// et "Archiver".
 /// Section paiements : placeholder "Disponible après FEAT-006".
 class LeaseDetailPage extends ConsumerWidget {
-  const LeaseDetailPage({super.key, required this.id});
+  const LeaseDetailPage({
+    super.key,
+    required this.id,
+    this.openRegularizationOnLoad = false,
+  });
 
   final String id;
+
+  /// Vrai si la fiche doit ouvrir le dialog de régularisation dès que ses
+  /// données sont chargées (raccourci `?action=regularize` résolu par
+  /// `app_router.dart`). Si le chargement du bail échoue, le dialog ne
+  /// s'ouvre jamais — on reste sur `_NotFoundPage` sans crash.
+  final bool openRegularizationOnLoad;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,19 +64,40 @@ class LeaseDetailPage extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => const _NotFoundPage(),
-      data: (lease) => _LeaseDetailContent(lease: lease),
+      data: (lease) => _LeaseDetailContent(
+        lease: lease,
+        openRegularizationOnLoad: openRegularizationOnLoad,
+      ),
     );
   }
 }
 
 /// Vue principale quand le bail est chargé.
-class _LeaseDetailContent extends ConsumerWidget {
-  const _LeaseDetailContent({required this.lease});
+class _LeaseDetailContent extends ConsumerStatefulWidget {
+  const _LeaseDetailContent({
+    required this.lease,
+    this.openRegularizationOnLoad = false,
+  });
 
   final Lease lease;
+  final bool openRegularizationOnLoad;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LeaseDetailContent> createState() =>
+      _LeaseDetailContentState();
+}
+
+class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
+  /// Garde anti-ré-ouverture : le dialog de régularisation ne doit s'ouvrir
+  /// qu'une seule fois par montage de la page, même si `build()` est
+  /// ré-invoqué plusieurs fois (ex. changement des AsyncValue tenant/property
+  /// /profile pendant que le bail reste chargé).
+  bool _regularizationDialogOpened = false;
+
+  Lease get lease => widget.lease;
+
+  @override
+  Widget build(BuildContext context) {
     // Écouter l'état du contrôleur de clôture pour les feedbacks.
     ref.listen<LeaseFormState>(leaseFormControllerProvider, (_, next) {
       next.whenOrNull(
@@ -113,6 +150,35 @@ class _LeaseDetailContent extends ConsumerWidget {
             ?.isLate ??
         false;
 
+    // Raccourci FEAT-030 (`?action=regularize` depuis la liste Baux) :
+    // ouvrir le dialog de régularisation une fois cette frame posée, une
+    // seule fois par montage (garde `_regularizationDialogOpened`). Le gate
+    // légal (bail nu uniquement) est revérifié ici en plus du gate déjà
+    // appliqué à la construction du raccourci dans la liste — défense en
+    // profondeur si l'URL est partagée/tapée manuellement sur un bail non
+    // nu. `addPostFrameCallback` : on ne doit pas appeler `showDialog`
+    // pendant `build()`.
+    if (widget.openRegularizationOnLoad &&
+        !_regularizationDialogOpened &&
+        lease.leaseType == LeaseType.unfurnished) {
+      _regularizationDialogOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        showDialog<void>(
+          context: context,
+          builder: (_) => ChargeRegularizationDialog(
+            leaseId: lease.id,
+            landlordFullName: landlordFullName,
+            landlordAddress: landlordAddress,
+            tenantFullName: tenantFullName,
+            tenantFirstName: tenantFirstName,
+            propertyAddress: propertyAddress,
+            tenantEmail: tenantEmail,
+          ),
+        );
+      });
+    }
+
     return Scaffold(
       appBar: AppAppBar(
         title: 'Bail',
@@ -139,8 +205,10 @@ class _LeaseDetailContent extends ConsumerWidget {
           children: [
             _StatusCard(lease: lease, isLate: isLate),
             const SizedBox(height: 16),
-            _InfoCard(lease: lease),
-            const SizedBox(height: 16),
+            // FEAT-030 : remontée juste après le statut — la régularisation
+            // des charges était auparavant enterrée après _InfoCard (3ᵉ
+            // carte), peu visible pour qui arrive par navigation normale
+            // (pas via le raccourci liste ci-dessus).
             ChargeRegularizationSection(
               lease: lease,
               landlordFullName: landlordFullName,
@@ -150,6 +218,8 @@ class _LeaseDetailContent extends ConsumerWidget {
               propertyAddress: propertyAddress,
               tenantEmail: tenantEmail,
             ),
+            const SizedBox(height: 16),
+            _InfoCard(lease: lease),
             const SizedBox(height: 16),
             PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 16),

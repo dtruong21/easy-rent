@@ -109,6 +109,7 @@ Lease _makeLease({
   String id = 'lease-1',
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
+  LeaseType leaseType = LeaseType.unfurnished,
 }) => Lease(
   id: id,
   landlordId: 'owner-1',
@@ -119,6 +120,7 @@ Lease _makeLease({
   startDate: DateTime(2024, 1, 1),
   endDate: endDate,
   status: status,
+  leaseType: leaseType,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -127,12 +129,16 @@ Widget _buildDetailPage({
   required String leaseId,
   required _FakeRepo repo,
   _FakePaymentRepo? paymentRepo,
+  bool openRegularizationOnLoad = false,
 }) {
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, _) => LeaseDetailPage(id: leaseId),
+        builder: (context, _) => LeaseDetailPage(
+          id: leaseId,
+          openRegularizationOnLoad: openRegularizationOnLoad,
+        ),
       ),
       GoRoute(
         path: '/leases',
@@ -481,5 +487,163 @@ void main() {
       // inkWells reference used above for the test
       expect(inkWells, isNotNull);
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Raccourci "Régulariser les charges" (FEAT-030) — ouverture auto du dialog
+  // ---------------------------------------------------------------------------
+  group('LeaseDetailPage — ouverture auto régularisation (?action=regularize)', () {
+    testWidgets(
+      'openRegularizationOnLoad=true + bail nu → dialog ouvert automatiquement',
+      (tester) async {
+        final lease = _makeLease(leaseType: LeaseType.unfurnished);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('openRegularizationOnLoad=false (défaut) → dialog PAS ouvert', (
+      tester,
+    ) async {
+      final lease = _makeLease(leaseType: LeaseType.unfurnished);
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('btn_charge_regularization_generate')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+      'openRegularizationOnLoad=true + bail meublé → dialog PAS ouvert '
+      '(gate légal revérifié en défense en profondeur)',
+      (tester) async {
+        final lease = _makeLease(leaseType: LeaseType.furnished);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'openRegularizationOnLoad=true + bail mobilité → dialog PAS ouvert',
+      (tester) async {
+        final lease = _makeLease(leaseType: LeaseType.mobility);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'openRegularizationOnLoad=true + bail étudiant → dialog PAS ouvert',
+      (tester) async {
+        final lease = _makeLease(leaseType: LeaseType.student);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'pas de double-ouverture — un seul dialog après plusieurs rebuilds',
+      (tester) async {
+        final lease = _makeLease(leaseType: LeaseType.unfurnished);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsOneWidget,
+        );
+
+        // Rebuild supplémentaire (ex. changement d'une AsyncValue annexe
+        // tenant/property/profile) — ne doit pas ré-ouvrir un second dialog
+        // par-dessus le premier.
+        await tester.pump();
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsOneWidget,
+        );
+        expect(find.byType(AlertDialog), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'bail introuvable (échec de chargement) → pas de crash, dialog PAS ouvert',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: 'foreign-lease-id',
+            repo: const _FakeRepo(notFound: true),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pas de crash — la page "Bail introuvable" s'affiche normalement.
+        expect(find.text('Bail introuvable'), findsOneWidget);
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsNothing,
+        );
+      },
+    );
   });
 }

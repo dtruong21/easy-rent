@@ -7,10 +7,19 @@ import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
+import '../../domain/lease_type.dart';
 import 'lease_status_mapper.dart';
 
 /// Colonnes triables du tableau baux.
 enum _LeaseTableSort { property, tenant, startDate, amount }
+
+/// Seule action du menu overflow "Régulariser les charges" (FEAT-030). Enum
+/// à une valeur plutôt que `PopupMenuButton<void>` — `PopupMenuButton`
+/// interprète une valeur sélectionnée `null` comme une ANNULATION (cf.
+/// `PopupMenuButtonState.showButtonMenu` dans le SDK Flutter), donc
+/// `onSelected` ne serait jamais appelé avec `PopupMenuItem<void>` (dont la
+/// `value` par défaut est aussi `null`).
+enum _LeaseTableMenuAction { regularizeCharges }
 
 /// Vue en tableau (DataTable M3) pour la liste des baux.
 ///
@@ -171,6 +180,27 @@ class _LeasesTableViewState extends State<LeasesTableView> {
                 tooltip: 'Ajouter paiement',
                 visualDensity: VisualDensity.compact,
               ),
+              // Raccourci "Régulariser les charges" (FEAT-030) — gate légal :
+              // uniquement les baux nus, cf. commentaire équivalent dans
+              // lease_card.dart. Navigue vers la fiche qui ouvre le dialog
+              // automatiquement (les données riches requises ne sont pas
+              // portées par LeaseListItem).
+              if (lease.leaseType == LeaseType.unfurnished)
+                PopupMenuButton<_LeaseTableMenuAction>(
+                  key: Key('table_menu_${lease.id}'),
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  tooltip: 'Actions',
+                  padding: EdgeInsets.zero,
+                  onSelected: (_) =>
+                      context.push('/leases/${lease.id}?action=regularize'),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      key: Key('table_menu_item_regularize_charges'),
+                      value: _LeaseTableMenuAction.regularizeCharges,
+                      child: Text('Régulariser les charges'),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

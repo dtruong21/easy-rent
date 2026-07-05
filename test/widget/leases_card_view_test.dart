@@ -3,6 +3,7 @@ import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/leases/presentation/widgets/lease_card.dart';
 import 'package:easyrent/features/leases/presentation/widgets/leases_card_view.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ Lease _makeLease({
   String id = 'l1',
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
+  LeaseType leaseType = LeaseType.unfurnished,
 }) => Lease(
   id: id,
   landlordId: 'owner',
@@ -34,6 +36,7 @@ Lease _makeLease({
   startDate: DateTime(2024, 1, 1),
   endDate: endDate,
   status: status,
+  leaseType: leaseType,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -45,14 +48,25 @@ LeaseListItem _makeItem({
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
   bool isLate = false,
+  LeaseType leaseType = LeaseType.unfurnished,
 }) => LeaseListItem(
-  lease: _makeLease(id: id, status: status, endDate: endDate),
+  lease: _makeLease(
+    id: id,
+    status: status,
+    endDate: endDate,
+    leaseType: leaseType,
+  ),
   propertyName: propertyName,
   tenantDisplayName: tenantName,
   isLate: isLate,
 );
 
+/// Capture la dernière URI naviguée (query params inclus) — utilisé pour
+/// vérifier le raccourci "Régulariser les charges" (`?action=regularize`).
+final List<String> _navigatedUris = [];
+
 Widget _buildCardView(List<LeaseListItem> items) {
+  _navigatedUris.clear();
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -61,8 +75,10 @@ Widget _buildCardView(List<LeaseListItem> items) {
       ),
       GoRoute(
         path: '/leases/:id',
-        builder: (_, state) =>
-            Scaffold(body: Text('detail ${state.pathParameters['id']}')),
+        builder: (_, state) {
+          _navigatedUris.add(state.uri.toString());
+          return Scaffold(body: Text('detail ${state.pathParameters['id']}'));
+        },
       ),
       GoRoute(
         path: '/leases/:id/receipts',
@@ -199,6 +215,76 @@ void main() {
 
         expect(find.text('En retard'), findsOneWidget);
         expect(find.text('À renouveler'), findsNothing);
+      },
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Raccourci "Régulariser les charges" (FEAT-030)
+  // ---------------------------------------------------------------------------
+  group('LeaseCard — menu "Régulariser les charges"', () {
+    testWidgets('bail nu — menu overflow visible', (tester) async {
+      final item = _makeItem(id: 'ln', leaseType: LeaseType.unfurnished);
+
+      await tester.pumpWidget(_buildCardView([item]));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('lease_menu_ln')), findsOneWidget);
+    });
+
+    testWidgets('bail meublé — menu overflow ABSENT', (tester) async {
+      final item = _makeItem(id: 'lf', leaseType: LeaseType.furnished);
+
+      await tester.pumpWidget(_buildCardView([item]));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('lease_menu_lf')), findsNothing);
+    });
+
+    testWidgets('bail mobilité — menu overflow ABSENT', (tester) async {
+      final item = _makeItem(id: 'lm', leaseType: LeaseType.mobility);
+
+      await tester.pumpWidget(_buildCardView([item]));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('lease_menu_lm')), findsNothing);
+    });
+
+    testWidgets('bail étudiant — menu overflow ABSENT', (tester) async {
+      final item = _makeItem(id: 'ls', leaseType: LeaseType.student);
+
+      await tester.pumpWidget(_buildCardView([item]));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('lease_menu_ls')), findsNothing);
+    });
+
+    testWidgets(
+      'tap "Régulariser les charges" → navigue vers /leases/:id?action=regularize '
+      '(sans déclencher le tap de la carte parente)',
+      (tester) async {
+        final item = _makeItem(
+          id: 'lease-reg',
+          propertyName: 'Bien Régularisation',
+          leaseType: LeaseType.unfurnished,
+        );
+
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('lease_menu_lease-reg')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byKey(const Key('menu_item_regularize_charges')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('detail lease-reg'), findsOneWidget);
+        expect(_navigatedUris, contains('/leases/lease-reg?action=regularize'));
       },
     );
   });

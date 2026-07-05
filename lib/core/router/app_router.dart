@@ -357,7 +357,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: ':id',
                     pageBuilder: (context, state) => appPage(
                       key: state.pageKey,
-                      child: LeaseDetailPage(id: state.pathParameters['id']!),
+                      // ?action=regularize : raccourci FEAT-030 depuis la
+                      // liste Baux (action visible uniquement pour les baux
+                      // nus) — la fiche ouvre le dialog de régularisation dès
+                      // que ses données sont chargées.
+                      child: LeaseDetailPage(
+                        id: state.pathParameters['id']!,
+                        openRegularizationOnLoad:
+                            state.uri.queryParameters['action'] == 'regularize',
+                      ),
                       transition: AppTransition.standard,
                     ),
                     routes: [

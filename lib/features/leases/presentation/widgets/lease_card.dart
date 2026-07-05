@@ -9,17 +9,20 @@ import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
+import '../../domain/lease_type.dart';
 import 'lease_status_mapper.dart';
 
 /// Card v2 représentant un bail dans la liste.
 ///
 /// Utilise [EntityCard] pour le layout cohérent avec les autres entités.
-/// Header : nom du bien + [StatusPill] statut.
+/// Header : nom du bien + [StatusPill] statut + menu overflow (bail nu
+/// uniquement, FEAT-030).
 /// Body : locataire, période, loyer CC.
 /// Footer : boutons "Quittances" et "+ Paiement".
 ///
 /// Le tap sur la carte entière navigue vers le détail du bail.
-/// Les boutons footer sont indépendants (hit-testing Flutter natif).
+/// Les boutons footer et le menu overflow sont indépendants (hit-testing
+/// Flutter natif).
 class LeaseCard extends StatelessWidget {
   const LeaseCard({super.key, required this.item, required this.onTap});
 
@@ -44,11 +47,24 @@ class LeaseCard extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: StatusPill(
-          tone: pillData.tone,
-          label: pillData.label,
-          icon: pillData.icon,
-          size: StatusPillSize.sm,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StatusPill(
+              tone: pillData.tone,
+              label: pillData.label,
+              icon: pillData.icon,
+              size: StatusPillSize.sm,
+            ),
+            // Raccourci "Régulariser les charges" (FEAT-030) — gate légal :
+            // uniquement les baux nus (art. 23 loi du 6 juillet 1989, cf.
+            // ChargeRegularizationSection). Les données riches requises par
+            // le dialog (adresses, email, nom bailleur) ne sont PAS portées
+            // par LeaseListItem — on navigue vers la fiche qui les charge et
+            // ouvre le dialog automatiquement.
+            if (lease.leaseType == LeaseType.unfurnished)
+              _RegularizeChargesMenu(leaseId: lease.id),
+          ],
         ),
       ),
       body: Column(
@@ -155,6 +171,58 @@ class _LeaseCardFooter extends StatelessWidget {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             textStyle: Theme.of(context).textTheme.labelSmall,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Seule action du menu overflow (FEAT-030). Enum à une valeur plutôt que
+/// `PopupMenuButton<void>` : `PopupMenuButton` interprète une valeur
+/// sélectionnée `null` comme une ANNULATION (cf.
+/// `PopupMenuButtonState.showButtonMenu` — `if (newValue == null) {
+/// onCanceled?.call(); return; }`), donc `onSelected` ne serait jamais
+/// appelé avec `PopupMenuItem<void>` (dont la `value` par défaut est aussi
+/// `null`) — piège découvert en test (le tap "réussissait" sans jamais
+/// déclencher la navigation).
+enum _LeaseCardMenuAction { regularizeCharges }
+
+/// Menu overflow "Régulariser les charges" (FEAT-030).
+///
+/// Navigue vers la fiche du bail avec `?action=regularize` — la fiche
+/// (chargée avec toutes les données riches requises par le dialog) ouvre
+/// automatiquement le dialog de régularisation. Le tap sur ce bouton ne doit
+/// PAS propager au tap de la carte parente (hit-testing Flutter natif via
+/// [PopupMenuButton], même mécanisme que les boutons du footer).
+class _RegularizeChargesMenu extends StatelessWidget {
+  const _RegularizeChargesMenu({required this.leaseId});
+
+  final String leaseId;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_LeaseCardMenuAction>(
+      key: Key('lease_menu_$leaseId'),
+      icon: const Icon(Icons.more_vert, size: 18),
+      tooltip: 'Actions',
+      // Bouton icône compact : le tap target Material par défaut (48×48,
+      // ConstrainedBox interne kMinInteractiveDimension) fait déborder le
+      // header de EntityCard, dont la hauteur est dictée par le StatusPill
+      // (20dp en taille sm) — cf. RenderFlex overflow détecté par
+      // shell_branch_state_test.dart. `style` est transmis tel quel à
+      // l'IconButton interne (cf. `PopupMenuButtonState.build` du SDK).
+      padding: EdgeInsets.zero,
+      splashRadius: 16,
+      style: IconButton.styleFrom(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
+      onSelected: (_) => context.push('/leases/$leaseId?action=regularize'),
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          key: Key('menu_item_regularize_charges'),
+          value: _LeaseCardMenuAction.regularizeCharges,
+          child: Text('Régulariser les charges'),
         ),
       ],
     );
