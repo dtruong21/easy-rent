@@ -164,14 +164,22 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ListTile(
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 0),
-      leading: Icon(icon, color: theme.colorScheme.primary, size: 20),
-      title: Text(title, style: theme.textTheme.bodyMedium),
-      subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
-      trailing: const Icon(Icons.chevron_right, size: 16),
-      onTap: onTap,
+    // Material(transparency) : le parent (Container à fond coloré dans
+    // RecentActivitySection) reste seul responsable du fond visuel ; on
+    // fournit juste l'ancêtre Material requis par ListTile pour l'InkWell
+    // et pour satisfaire l'assertion Flutter « ListTile dans un
+    // DecoratedBox coloré doit avoir un Material entre les deux ».
+    return Material(
+      type: MaterialType.transparency,
+      child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0),
+        leading: Icon(icon, color: theme.colorScheme.primary, size: 20),
+        title: Text(title, style: theme.textTheme.bodyMedium),
+        subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
+        trailing: const Icon(Icons.chevron_right, size: 16),
+        onTap: onTap,
+      ),
     );
   }
 }
