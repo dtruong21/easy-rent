@@ -60,6 +60,11 @@ export {
   createDocument,
   getDocumentDownloadUrl,
 } from "./callable/documents";
+export {
+  createExpense,
+  updateExpense,
+  setUpdatedAtExpenses,
+} from "./callable/expenses";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 
 // ---------- Scheduled ----------

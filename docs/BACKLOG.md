@@ -100,6 +100,7 @@ FEAT-001 (auth)
 | ID | Titre | Story | Statut |
 |---|---|---|---|
 | FEAT-029 | Charges copropriété exceptionnelles + régularisation annuelle des charges | [`backlog/029-charges-regularisation.md`](backlog/029-charges-regularisation.md) | 📋 Cadré (2026-07-03) — scope V1 réduit (bail nu, doc `documents` réutilisé), décisions ouvertes avant chiffrage, risque `firestore.rules`/`functions/` signalé |
+| FEAT-041 | Dépenses — entité first-class (CRUD + catégorisation + justificatif + alimentation régularisation) | [`backlog/041-depenses.md`](backlog/041-depenses.md) | 📋 Cadré (2026-07-05) — absorbe FEAT-033 (archivage régularisation) ; V1.1 = rentabilité sur dépenses réelles (FEAT-017) ; 7 décisions produit ouvertes avant chiffrage |
 
 ---
 

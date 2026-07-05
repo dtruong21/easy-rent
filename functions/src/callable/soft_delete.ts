@@ -14,6 +14,9 @@
  *   - leases : autorisé (les payments restent visibles)
  *   - landlords : suppression de compte → cascade gérée séparément (RGPD)
  *   - investment_scenarios : autorisé
+ *   - expenses : autorisé, aucune garde métier propre (FEAT-041a). Le
+ *     justificatif lié (`documentId`) sous `legalHold` reste protégé de
+ *     son côté — soft-delete d'une dépense n'efface pas son document.
  *   - receipts, payments : refuse (immuables ou via flow dédié)
  *
  * Idempotent : si `deletedAt` est déjà non-null, retourne {alreadyDeleted: true}.
@@ -35,6 +38,7 @@ const SOFT_DELETABLE: ReadonlySet<string> = new Set([
   "leases",
   "documents",
   "investment_scenarios",
+  "expenses",
 ]);
 
 export const softDeleteEntity = onCall(

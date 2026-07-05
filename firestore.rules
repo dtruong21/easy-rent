@@ -267,6 +267,25 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // expenses/{id}   — CROSS-ENTITY (property + lease optionnel) → CF exclusive
+    //
+    // FEAT-041a. Création/modification doivent valider que propertyId
+    // (obligatoire) et leaseId (optionnel) appartiennent au même landlord,
+    // ET dériver/valider `category` depuis `nature` (garde-fou juridique
+    // décret 87-713, cf. docs/plans/FEAT-041-depenses.md §b). Impossible à
+    // exprimer proprement dans les rules — même famille que leases/payments.
+    // ====================================================================
+    match /expenses/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn(); // filtré côté requête .where landlordId==uid && deletedAt==null
+
+      // Tout passe par Callable `createExpense`/`updateExpense` +
+      // `softDeleteEntity`. Un anonyme n'accède jamais au registre de
+      // dépenses (flux isFullyAuthed uniquement, comme properties/leases).
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
     // investment_scenarios/{id}   — CRUD direct (pas de cross-entity)
     // ====================================================================
     match /investment_scenarios/{id} {

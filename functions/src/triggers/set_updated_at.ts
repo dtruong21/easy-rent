@@ -28,7 +28,7 @@ function toMillis(t: unknown): number {
   return 0;
 }
 
-function makeSetUpdatedAt(collection: string) {
+export function makeSetUpdatedAt(collection: string) {
   return onDocumentUpdated(
     {document: `${collection}/{id}`, region: "europe-west1"},
     async (event) => {

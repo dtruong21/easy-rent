@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/utils/money_validators.dart';
+import '../../../expenses/domain/expense.dart';
+import '../../../expenses/presentation/expense_list_tile.dart';
 import '../../../payments/domain/payment.dart';
 import '../../application/charge_provisions_calculator.dart';
 import '../../domain/charge_regularization_balance.dart';
@@ -9,7 +11,8 @@ import 'charge_regularization_balance_summary.dart';
 import 'charge_regularization_period_picker.dart';
 
 /// Corps du formulaire de régularisation — période de référence, provisions
-/// calculées automatiquement, dépenses réelles saisies manuellement, solde
+/// calculées automatiquement, dépenses réelles pré-remplies depuis le
+/// registre des dépenses récupérables (FEAT-041c) mais modifiables, solde
 /// en direct.
 ///
 /// Extrait de [ChargeRegularizationDialog] pour lisibilité (règle
@@ -26,6 +29,7 @@ class ChargeRegularizationForm extends StatelessWidget {
     required this.onPeriodStartChanged,
     required this.onPeriodEndChanged,
     required this.onActualExpensesChanged,
+    this.recoverableExpenses = const [],
   });
 
   final DateTime periodStart;
@@ -36,6 +40,12 @@ class ChargeRegularizationForm extends StatelessWidget {
   final void Function(DateTime) onPeriodStartChanged;
   final void Function(DateTime) onPeriodEndChanged;
   final void Function(int) onActualExpensesChanged;
+
+  /// Dépenses récupérables ayant servi au pré-remplissage (FEAT-041c) —
+  /// affichées dans la section dépliable "Voir le détail". Vide par défaut
+  /// (non-régression V1 : sans dépense, aucun détail à afficher, comportement
+  /// identique à avant FEAT-041c).
+  final List<Expense> recoverableExpenses;
 
   /// Vrai si la période de référence est inversée ou nulle (fin <= début) —
   /// produirait un avis légal incohérent et un calcul de provisions faux
@@ -107,9 +117,62 @@ class ChargeRegularizationForm extends StatelessWidget {
                 '(saisir 0 si aucune)',
           ),
         ),
+        if (recoverableExpenses.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            key: const Key('text_charge_regularization_prefill_hint'),
+            'Pré-rempli depuis ${recoverableExpenses.length} '
+            'dépense${recoverableExpenses.length > 1 ? 's' : ''} — '
+            'modifiable.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          _RecoverableExpensesDetail(expenses: recoverableExpenses),
+        ],
         const SizedBox(height: 16),
         ChargeRegularizationBalanceSummary(balance: balance),
       ],
+    );
+  }
+}
+
+/// Section dépliable listant les dépenses récupérables ayant servi au
+/// pré-remplissage des "Dépenses réelles" (FEAT-041c).
+///
+/// Repliée par défaut — évite d'alourdir le dialog quand le bailleur n'a
+/// pas besoin de vérifier le détail ligne par ligne. Réutilise
+/// [ExpenseListTile] (même rendu que l'historique du bien) pour la
+/// cohérence visuelle.
+class _RecoverableExpensesDetail extends StatelessWidget {
+  const _RecoverableExpensesDetail({required this.expenses});
+
+  final List<Expense> expenses;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      // Retire le divider par défaut de l'ExpansionTile — cohérent avec le
+      // reste du formulaire qui n'utilise pas de séparateurs horizontaux.
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: const Key('tile_charge_regularization_expenses_detail'),
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        title: Text(
+          'Voir le détail (${expenses.length} '
+          'dépense${expenses.length > 1 ? 's' : ''})',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        children: [
+          for (final expense in expenses)
+            ExpenseListTile(
+              key: Key('regularization_${expense.id}'),
+              expense: expense,
+            ),
+        ],
+      ),
     );
   }
 }

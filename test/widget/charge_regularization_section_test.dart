@@ -10,6 +10,10 @@ library;
 
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_section.dart';
+import 'package:easyrent/features/expenses/data/expenses_repository.dart';
+import 'package:easyrent/features/expenses/domain/expense.dart';
+import 'package:easyrent/features/expenses/domain/expense_category.dart';
+import 'package:easyrent/features/expenses/domain/expense_nature.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
@@ -57,6 +61,46 @@ class _FakePaymentRepo implements PaymentRepository {
 }
 
 // ---------------------------------------------------------------------------
+// Fake ExpensesRepository (requis par ChargeRegularizationDialog en aval,
+// FEAT-041c : le dialog watch recoverableExpensesProvider dès son
+// ouverture — override nécessaire pour éviter une dépendance Firebase non
+// initialisée en test widget).
+// ---------------------------------------------------------------------------
+
+class _FakeExpensesRepo implements ExpensesRepository {
+  @override
+  Stream<List<Expense>> watchForProperty(String propertyId) =>
+      Stream.value(const []);
+
+  @override
+  Future<List<Expense>> listForProperty(String propertyId) async => const [];
+
+  @override
+  Future<Expense> getById(String id) async => throw UnimplementedError();
+
+  @override
+  Future<Expense> create({
+    required String propertyId,
+    String? leaseId,
+    required int amountCents,
+    required DateTime expenseDate,
+    required ExpenseNature nature,
+    ExpenseCategory? category,
+    DateTime? periodStart,
+    DateTime? periodEnd,
+    int? periodYear,
+    String? documentId,
+    String? notes,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Expense> update(Expense expense) async => throw UnimplementedError();
+
+  @override
+  Future<void> archive(String id) async {}
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -79,6 +123,7 @@ Widget _buildSection(Lease lease) {
   return ProviderScope(
     overrides: [
       paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
+      expensesRepositoryProvider.overrideWithValue(_FakeExpensesRepo()),
     ],
     child: MaterialApp(
       // AppTheme.light requis : StatusPill (utilisé dans le résumé du solde

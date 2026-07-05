@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/money_format.dart';
+import '../../../expenses/application/expenses_provider.dart';
 import '../../../payments/application/lease_payments_provider.dart';
 import '../../../payments/domain/payment.dart';
 import '../../application/charge_provisions_calculator.dart';
 import '../../application/charge_regularization_share_controller.dart';
+import '../../application/recoverable_expenses_calculator.dart';
 import '../../domain/charge_regularization_balance.dart';
 import '../../domain/charge_regularization_share_state.dart';
 import 'charge_regularization_form.dart';
@@ -20,7 +23,13 @@ import 'charge_regularization_form.dart';
 ///    (aujourd'hui − 1 an + 1 jour → aujourd'hui), modifiable.
 /// 2. Provisions encaissées calculées automatiquement (lecture seule) dès
 ///    que les paiements du bail sont chargés — [sumChargeProvisionsForPeriod].
-/// 3. Dépenses réelles saisies manuellement par le bailleur.
+/// 3. Dépenses réelles **pré-remplies** (FEAT-041c) depuis la somme des
+///    dépenses récupérables du bien/bail sur la période —
+///    [filterRecoverableExpensesForPeriod] (dépenses sans bail incluses,
+///    dépenses d'un AUTRE bail exclues — correctif review finding 2) — mais
+///    restent **modifiables** : dès que le bailleur édite le champ à la
+///    main, le pré-remplissage automatique ne l'écrase plus (garde
+///    [_userEditedExpenses]).
 /// 4. Solde recalculé en direct à chaque changement — voir
 ///    [ChargeRegularizationForm].
 /// 5. Bouton "Générer et partager" → PDF + Web Share (pas de persistance
@@ -29,6 +38,7 @@ class ChargeRegularizationDialog extends ConsumerStatefulWidget {
   const ChargeRegularizationDialog({
     super.key,
     required this.leaseId,
+    required this.propertyId,
     required this.landlordFullName,
     required this.landlordAddress,
     required this.tenantFullName,
@@ -38,6 +48,10 @@ class ChargeRegularizationDialog extends ConsumerStatefulWidget {
   });
 
   final String leaseId;
+
+  /// Bien rattaché au bail — nécessaire pour charger les dépenses
+  /// récupérables du bien (FEAT-041c, [recoverableExpensesProvider]).
+  final String propertyId;
   final String landlordFullName;
   final String landlordAddress;
   final String tenantFullName;
@@ -57,6 +71,17 @@ class _ChargeRegularizationDialogState
   final TextEditingController _actualExpensesController =
       TextEditingController();
   int _actualExpensesCents = 0;
+
+  /// Vrai dès que le bailleur a modifié manuellement le champ "Dépenses
+  /// réelles" — à partir de là, le pré-remplissage automatique
+  /// (FEAT-041c, [filterRecoverableExpensesForPeriod]) ne doit **plus** écraser
+  /// sa saisie, y compris si la période de référence change ensuite ou si le
+  /// stream de dépenses recharge une valeur différente. Reste `false` tant
+  /// que l'utilisateur n'a fait qu'observer le pré-remplissage automatique —
+  /// **non-régression V1** : avec 0 dépense récupérable, la somme
+  /// pré-remplie vaut 0, exactement le comportement par défaut d'avant
+  /// FEAT-041c (`_actualExpensesCents` initialisé à 0 ci-dessus).
+  bool _userEditedExpenses = false;
 
   @override
   void initState() {
@@ -79,6 +104,31 @@ class _ChargeRegularizationDialogState
     super.dispose();
   }
 
+  /// Applique le pré-remplissage des "Dépenses réelles" calculé depuis les
+  /// dépenses récupérables (FEAT-041c) — appelé à chaque `build()` tant que
+  /// l'utilisateur n'a pas repris la main manuellement
+  /// ([_userEditedExpenses]). Se réévalue aussi quand la période de
+  /// référence change (le montant pré-rempli doit suivre la période tant que
+  /// l'utilisateur ne l'a pas ajustée à la main).
+  ///
+  /// N'appelle jamais `setState` pendant `build()` — la valeur est appliquée
+  /// après la frame courante (`addPostFrameCallback`), pattern déjà utilisé
+  /// ailleurs dans ce fichier (raccourci `?action=regularize` de
+  /// `LeaseDetailPage`).
+  void _applyPrefill(int prefilledCents) {
+    if (_userEditedExpenses) return;
+    if (_actualExpensesCents == prefilledCents) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _userEditedExpenses) return;
+      setState(() {
+        _actualExpensesCents = prefilledCents;
+        _actualExpensesController.text = MoneyFormat.centsToInput(
+          prefilledCents,
+        );
+      });
+    });
+  }
+
   /// Vrai si la période de référence est inversée ou nulle (fin <= début) —
   /// même règle que [ChargeRegularizationForm.isPeriodInvalid], dupliquée
   /// volontairement ici (garde triviale à une ligne) car ce state n'a pas
@@ -91,11 +141,46 @@ class _ChargeRegularizationDialogState
   @override
   Widget build(BuildContext context) {
     final asyncPayments = ref.watch(leasePaymentsProvider(widget.leaseId));
+    final asyncRecoverableExpenses = ref.watch(
+      recoverableExpensesProvider((
+        propertyId: widget.propertyId,
+        leaseId: widget.leaseId,
+      )),
+    );
 
     ref.listen<ChargeRegularizationShareState>(
       chargeRegularizationShareControllerProvider,
       (_, next) => _handleStateChange(context, ref, next),
     );
+
+    // FEAT-041c : dès que les dépenses récupérables sont chargées, applique
+    // (ou réapplique si la période a changé) le pré-remplissage — sans effet
+    // si l'utilisateur a déjà édité le champ ([_applyPrefill] court-circuite
+    // via [_userEditedExpenses]). En l'absence de dépense (liste vide ou
+    // encore en chargement), la somme vaut 0 → comportement V1 strictement
+    // préservé (non-régression).
+    //
+    // Correctif review FEAT-041 (findings 1 & 7, MAJOR) : la liste passée au
+    // form (compteur « N dépenses » + détail dépliable) est désormais filtrée
+    // par [filterRecoverableExpensesForPeriod] — EXACTEMENT le même
+    // recouvrement de période (et la même sémantique de rattachement bail,
+    // finding 2) que la somme pré-remplie. Avant ce correctif, la liste
+    // complète (non filtrée par période) était passée telle quelle, ce qui
+    // faisait diverger le compteur/détail affiché du total réellement
+    // sommé.
+    final recoverableExpenses =
+        asyncRecoverableExpenses.valueOrNull ?? const [];
+    final expensesForPeriod = filterRecoverableExpensesForPeriod(
+      expenses: recoverableExpenses,
+      referenceStart: _periodStart,
+      referenceEnd: _periodEnd,
+      leaseId: widget.leaseId,
+    );
+    final prefilledExpensesCents = expensesForPeriod.fold<int>(
+      0,
+      (sum, e) => sum + e.amountCents,
+    );
+    _applyPrefill(prefilledExpensesCents);
 
     final shareState = ref.watch(chargeRegularizationShareControllerProvider);
     final isPreparing = shareState is ChargeRegularizationSharePreparing;
@@ -125,10 +210,13 @@ class _ChargeRegularizationDialogState
               payments: payments,
               actualExpensesController: _actualExpensesController,
               actualExpensesCents: _actualExpensesCents,
+              recoverableExpenses: expensesForPeriod,
               onPeriodStartChanged: (d) => setState(() => _periodStart = d),
               onPeriodEndChanged: (d) => setState(() => _periodEnd = d),
-              onActualExpensesChanged: (cents) =>
-                  setState(() => _actualExpensesCents = cents),
+              onActualExpensesChanged: (cents) => setState(() {
+                _userEditedExpenses = true;
+                _actualExpensesCents = cents;
+              }),
             ),
           ),
         ),

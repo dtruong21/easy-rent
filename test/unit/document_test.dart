@@ -16,10 +16,13 @@ Document _makeDoc({
   String mimeType = 'application/pdf',
   int sizeBytes = 1048576, // 1 Mo
   bool legalHold = false,
+  String? leaseId = 'lease-1',
+  String? propertyId,
 }) => Document(
   id: id,
   landlordId: 'landlord-1',
-  leaseId: 'lease-1',
+  leaseId: leaseId,
+  propertyId: propertyId,
   category: category,
   filename: filename,
   storagePath: 'prod/landlord-1/documents/$id.pdf',
@@ -37,10 +40,13 @@ Map<String, dynamic> _makeJson({
   String mimeType = 'application/pdf',
   int sizeBytes = 1048576,
   bool legalHold = false,
+  String? leaseId = 'lease-1',
+  String? propertyId,
 }) => {
   'id': id,
   'landlord_id': 'landlord-1',
-  'lease_id': 'lease-1',
+  'lease_id': leaseId,
+  'property_id': propertyId,
   'category': category,
   'filename': 'contrat.pdf',
   'storage_path': 'prod/landlord-1/documents/$id.pdf',
@@ -199,5 +205,66 @@ void main() {
       expect(updated.category, DocumentCategory.bailSigne);
       expect(updated.id, doc.id);
     });
+  });
+
+  // ---------------------------------------------------------------------
+  // FEAT-041b : leaseId devient optionnel, propertyId apparaît en
+  // alternative (justificatif de dépense sans bail).
+  // ---------------------------------------------------------------------
+  group('Document — leaseId nullable / propertyId (FEAT-041b)', () {
+    test('leaseId peut être null si propertyId est fourni', () {
+      final doc = _makeDoc(leaseId: null, propertyId: 'property-1');
+      expect(doc.leaseId, isNull);
+      expect(doc.propertyId, 'property-1');
+    });
+
+    test('propertyId est null par défaut (rétrocompat leaseId seul)', () {
+      final doc = _makeDoc();
+      expect(doc.leaseId, 'lease-1');
+      expect(doc.propertyId, isNull);
+    });
+
+    test('les deux peuvent être fournis simultanément', () {
+      final doc = _makeDoc(leaseId: 'lease-1', propertyId: 'property-1');
+      expect(doc.leaseId, 'lease-1');
+      expect(doc.propertyId, 'property-1');
+    });
+
+    test('fromJson désérialise lease_id: null et property_id renseigné', () {
+      final doc = Document.fromJson(
+        _makeJson(leaseId: null, propertyId: 'property-1'),
+      );
+      expect(doc.leaseId, isNull);
+      expect(doc.propertyId, 'property-1');
+    });
+
+    test('toJson sérialise lease_id et property_id nullables', () {
+      final doc = _makeDoc(leaseId: null, propertyId: 'property-1');
+      final json = doc.toJson();
+      expect(json['lease_id'], isNull);
+      expect(json['property_id'], 'property-1');
+    });
+
+    test('round-trip avec leaseId null + propertyId renseigné', () {
+      final original = _makeDoc(leaseId: null, propertyId: 'property-1');
+      final restored = Document.fromJson(original.toJson());
+      expect(restored, original);
+      expect(restored.leaseId, isNull);
+      expect(restored.propertyId, 'property-1');
+    });
+
+    test(
+      'category expense_receipt + legalHold=true (justificatif de dépense)',
+      () {
+        final doc = _makeDoc(
+          leaseId: null,
+          propertyId: 'property-1',
+          category: DocumentCategory.expenseReceipt,
+          legalHold: true,
+        );
+        expect(doc.category, DocumentCategory.expenseReceipt);
+        expect(doc.legalHold, true);
+      },
+    );
   });
 }

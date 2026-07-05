@@ -6,6 +6,7 @@ import 'package:logging/logging.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
+import '../../expenses/presentation/widgets/expenses_history_section.dart';
 import '../application/properties_list_provider.dart';
 import '../application/property_detail_provider.dart';
 import '../data/property_repository.dart';
@@ -74,6 +75,10 @@ class _PropertyDetailContent extends ConsumerWidget {
 
             // Section rentabilité (FEAT-017)
             PropertyProfitabilityCard(propertyId: property.id),
+            const SizedBox(height: 24),
+
+            // Section dépenses (FEAT-041a)
+            ExpensesHistorySection(propertyId: property.id),
             const SizedBox(height: 24),
 
             // Section baux — stub V1

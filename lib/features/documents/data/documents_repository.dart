@@ -17,13 +17,16 @@ final _log = Logger('DocumentsRepository');
 
 const int _kMaxDocumentsPerList = 500;
 
-/// Documents = fichiers utilisateur (bail signé, état des lieux, attestations).
+/// Documents = fichiers utilisateur (bail signé, état des lieux, attestations,
+/// justificatifs de dépense).
 ///
-/// Architecture FEAT-019 :
+/// Architecture FEAT-019, étendue FEAT-041b :
 /// - Upload Firebase Storage direct (Rules autorisent
 ///   `documents/{landlordId}/...`)
-/// - Métadonnées Firestore via Callable `createDocument` (valide lease
-///   ownership + calcule legalHold depuis category)
+/// - Métadonnées Firestore via Callable `createDocument` v2 (valide lease
+///   et/ou bien ownership + calcule legalHold depuis category — au moins un
+///   de `leaseId`/`propertyId` requis, voir
+///   `docs/plans/FEAT-041-depenses.md` § g)
 /// - Download via signed URL générée côté serveur (`getDocumentDownloadUrl`)
 /// - Soft-delete via Callable `softDeleteEntity` (refus si legalHold=true)
 abstract interface class DocumentsRepository {
@@ -34,10 +37,16 @@ abstract interface class DocumentsRepository {
   /// Pipeline upload :
   /// 1. Génère un docId Firestore
   /// 2. Upload bytes vers `documents/{uid}/{docId}.{ext}` via Storage SDK
-  /// 3. Appelle Callable `createDocument` (valide lease + calcule legalHold)
+  /// 3. Appelle Callable `createDocument` v2 (valide lease et/ou propriété,
+  ///    calcule legalHold) — voir `docs/plans/FEAT-041-depenses.md` § g)
   /// 4. Si étape 3 échoue, supprime le fichier Storage (best-effort rollback)
+  ///
+  /// [leaseId] et [propertyId] sont tous deux optionnels mais **au moins un
+  /// des deux est requis** (validé côté serveur) — un justificatif de
+  /// dépense (`expense_receipt`) peut n'avoir aucun bail.
   Future<Document> upload({
-    required String leaseId,
+    String? leaseId,
+    String? propertyId,
     required DocumentCategory category,
     required String filename,
     required Uint8List bytes,
@@ -131,15 +140,22 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
 
   @override
   Future<Document> upload({
-    required String leaseId,
+    String? leaseId,
+    String? propertyId,
     required DocumentCategory category,
     required String filename,
     required Uint8List bytes,
     required String mimeType,
     void Function(double progress)? onProgress,
   }) async {
+    if (leaseId == null && propertyId == null) {
+      throw ArgumentError(
+        'upload() requires at least one of leaseId or propertyId',
+      );
+    }
     _log.info(
-      'upload(leaseId=$leaseId, filename=$filename, mimeType=$mimeType)',
+      'upload(leaseId=$leaseId, propertyId=$propertyId, filename=$filename, '
+      'mimeType=$mimeType)',
     );
     final uid = _uid;
     final docRef = _col.doc(); // génère docId Firestore
@@ -176,6 +192,7 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
     try {
       await _callable('createDocument').call(<String, dynamic>{
         'leaseId': leaseId,
+        'propertyId': propertyId,
         'category': category.sqlValue,
         'filename': filename,
         'storagePath': storagePath,

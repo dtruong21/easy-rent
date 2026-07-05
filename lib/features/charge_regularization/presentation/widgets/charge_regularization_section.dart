@@ -28,6 +28,9 @@ class ChargeRegularizationSection extends StatelessWidget {
     this.tenantEmail,
   });
 
+  /// Bien rattaché au bail — transmis au dialog pour charger les dépenses
+  /// récupérables (FEAT-041c). Lu directement depuis [lease.propertyId],
+  /// pas de paramètre séparé nécessaire.
   final Lease lease;
   final String landlordFullName;
   final String landlordAddress;
@@ -80,6 +83,7 @@ class ChargeRegularizationSection extends StatelessWidget {
       context: context,
       builder: (_) => ChargeRegularizationDialog(
         leaseId: lease.id,
+        propertyId: lease.propertyId,
         landlordFullName: landlordFullName,
         landlordAddress: landlordAddress,
         tenantFullName: tenantFullName,
