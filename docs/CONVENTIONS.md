@@ -4,7 +4,7 @@
 
 - Structure : `lib/features/<feature>/{data,domain,presentation}`
 - State : **Riverpod** (pas de `setState` pour app state)
-- Navigation : **go_router**
+- Navigation : **go_router** (shell adaptatif, voir « Navigation & UX » ci-dessous)
 - Modèles : **freezed** + **json_serializable**
 - Format : `dart format .` avant commit, `flutter analyze` zéro warning
 - Logs : `package:logging`, jamais `print()`
@@ -28,6 +28,31 @@
 - Soft-delete (`deleted_at`) plutôt que DELETE pour les entités à rétention légale
 - Storage : buckets privés, paths préfixés par `auth.uid()`
 - Edge Functions : Deno + TypeScript, validation Zod, vérif JWT
+
+## Navigation & UX (FEAT-026)
+
+> Concept complet et faisant autorité : [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md).
+> Résumé des règles d'or à respecter dans tout code de navigation :
+
+1. **Destinations persistantes.** Navigation via un **shell adaptatif**
+   (`StatefulShellRoute.indexedStack`) : `NavigationBar` en bas < 600 px,
+   `NavigationRail` à gauche ≥ 600 px. 5 branches : Accueil, Biens, Locataires,
+   Baux, Profil. Même structure web et mobile.
+2. **Pas de hub obligatoire.** Le dashboard est l'onglet **Accueil**, pas un
+   passage forcé. Ne jamais `go('/dashboard')` pour « revenir au menu ».
+3. **`goBranch` pour changer d'onglet, `push` pour approfondir.** `go()` est
+   réservé aux deep links et au drill-down KPI (reset de pile voulu).
+4. **Formulaires & détails = sous-pages empilées** (`push`), jamais des
+   destinations. Pattern de référence : le hub `/profile` (FEAT-025b) → tuiles
+   qui `push()` vers `/profile/{details,password,support}`.
+5. **Breakpoint 600 px** pour l'idiome mobile ↔ desktop. Respecter `SafeArea`
+   (NavigationBar au-dessus du home indicator ; prépare FEAT-024).
+6. **Racines de branche sans bouton retour** (`showBackButton: false`) ;
+   sous-pages avec retour natif (`BackButton` qui `pop()` dans la branche,
+   `fallbackRoute` = racine de la branche en filet deep-link).
+7. **Hors shell** : landing, écrans d'auth, `/privacy`, `/terms`, et le
+   **simulateur** (accessible aux anonymes, plein écran) — jamais dans la barre
+   d'onglets.
 
 ## Git
 

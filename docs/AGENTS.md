@@ -46,6 +46,7 @@ Ce document décrit le système d'agents qui développe EasyRent de la discovery
 | `security-auditor` | RLS coverage, RGPD, secrets, RGPD | **opus** | Quality |
 | `bug-hunter` | Scan proactif du codebase pour bugs/dette | **opus** | Quality |
 | `state-keeper` | Maintient le cache d'état projet (docs/state/) | haiku | Maintenance |
+| `ticket-triage` | Lit les issues GitHub, valide, route vers le bon pipeline | haiku | Ticketing |
 | `deployer` | Firebase + Supabase deploy, GitHub Actions | haiku | Delivery |
 
 ## Slash commands d'orchestration
@@ -59,6 +60,7 @@ Ce document décrit le système d'agents qui développe EasyRent de la discovery
 | `/deliver staging\|prod` | Déploie après vérifs finales | deployer |
 | `/auto-loop` | Mode autonome (cycle complet auto) | scout → choix → build → staging |
 | `/refresh-state` | Rafraîchit le cache d'état projet | state-keeper |
+| `/process-tickets` | Traite manuellement les tickets GitHub mûrs (>3h) | ticket-triage → /fix-bug ou /build-feature |
 
 ## Mode automatique — 3 niveaux
 

@@ -18,22 +18,71 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="EasyRent — Outil de gestion locative pour propriétaires : quittances, loyers, locataires, documents.">
+  <meta name="description" content="Baillan. — Tenir registre. En cas de doute, sortez le registre. Outil pour bailleurs : quittances, loyers, locataires, documents.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0F766E">
+  <meta name="theme-color" content="#1B1A17">
 
   <!-- iOS PWA -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="EasyRent">
+  <meta name="apple-mobile-web-app-title" content="Baillan">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
+  <!-- Favicon — SVG inline + fallback PNG. Le SVG fait office d'icône
+       Baillan jusqu'à régénération des PNGs (icon B paraphe sur fond ink). -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFCMUExNyIgcng9IjgiLz48dGV4dCB4PSI1MCIgeT0iNzQiIGZvbnQtZmFtaWx5PSdDb2NoaW4sIFBhbGF0aW5vIExpbm90eXBlLCBQYWxhdGlubywgc2VyaWYnIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSI4NCIgZmlsbD0iI0Y3RjRFRCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QjwvdGV4dD48cGF0aCBkPSJNIDIyIDg0IFEgNTAgOTggNzggODQiIHN0cm9rZT0iI0I1Qjg5RCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=" />
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>EasyRent</title>
+  <title>Baillan.</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Fond papier cohérent avec le splash screen Baillan pendant le chargement Flutter */
+    body {
+      background: #F7F4ED;
+      margin: 0;
+    }
+  </style>
+  <script>
+    // PWA update strategy (FEAT-019).
+    //
+    // Combinée aux headers Cache-Control configurés dans firebase.json
+    // (no-cache sur index.html / flutter_bootstrap.js / flutter_service_worker.js,
+    // long-cache sur les assets hashés), ce script garantit qu'un nouveau
+    // déploiement est servi aux utilisateurs sans qu'ils aient à vider leur
+    // cache manuellement — y compris sur Brave / Chrome / Safari iOS PWA.
+    //
+    // Comportement :
+    // 1. Au chargement, on désenregistre TOUT Service Worker existant et on
+    //    purge le cache. Le rebuild courant utilise --pwa-strategy=none donc
+    //    aucun SW n'est ré-installé. Conséquence : les visiteurs ayant un SW
+    //    obsolète (avant FEAT-019) sont auto-nettoyés à leur prochaine visite,
+    //    UNE SEULE FOIS, sans intervention.
+    // 2. Une fois le cleanup fait, on pose un flag dans sessionStorage pour
+    //    éviter de re-rouler l'init coûteuse à chaque navigation interne.
+    // 3. Si on ré-active le SW en prod plus tard (offline-first), retirer la
+    //    branche `unregister` et remplacer par un update() + reload on
+    //    controllerchange (pattern standard pour activer le nouveau SW vite).
+    if ('serviceWorker' in navigator && !sessionStorage.getItem('er_sw_cleanup')) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        var hadSw = regs.length > 0;
+        var unregs = regs.map(function(r) { return r.unregister(); });
+        return Promise.all(unregs).then(function() {
+          if (typeof caches !== 'undefined' && caches.keys) {
+            return caches.keys().then(function(names) {
+              return Promise.all(names.map(function(n) { return caches.delete(n); }));
+            });
+          }
+        }).then(function() {
+          sessionStorage.setItem('er_sw_cleanup', '1');
+          // Si on a effectivement viré un SW, on recharge pour servir le
+          // bundle frais (sans ça, l'ancien fetch interceptor traîne encore
+          // tant que la page n'est pas naviguée).
+          if (hadSw) window.location.reload();
+        });
+      }).catch(function() {});
+    }
+  </script>
 </head>
 <body>
   <!--
@@ -44,6 +93,63 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Auto-réparation du cache des assets à nom stable (2026-07-03).
+    //
+    // Flutter Web ne fingerprint AUCUN fichier : noms FIXES, contenus
+    // VARIABLES (main.dart.js à chaque build, subsets d'icônes au gré du
+    // tree-shaking). Ces fichiers ont longtemps été servis avec
+    // Cache-Control immutable : les navigateurs des visiteurs de l'époque
+    // gardent un bundle et des polices figés — icônes manquantes (Simulateur
+    // FEAT-018, toggle Cartes/Tableau FEAT-012) et deploys invisibles sans
+    // hard refresh. Les en-têtes sont corrigés (no-cache, voir firebase.json)
+    // mais une entrée déjà en cache marquée immutable ne sera JAMAIS
+    // revalidée d'elle-même — seul un hard refresh ou ce script la remplace.
+    //
+    // Une fois par navigateur (flag localStorage), on re-télécharge ces
+    // fichiers en contournant le cache HTTP ({cache:'reload'} remplace
+    // l'entrée par la réponse fraîche), AVANT de démarrer Flutter pour que
+    // cette visite charge déjà la version saine. Garde-fou 5 s : si le
+    // réseau rame, l'app démarre quand même (le flag n'étant posé qu'en
+    // succès, la réparation se rejouera à la visite suivante).
+    //
+    // Hors liste : canvaskit/*.wasm (lourds, et périmés seulement lors d'un
+    // upgrade du SDK Flutter). Si un upgrade moteur casse les navigateurs
+    // vétérans, passer le flag en v2 et ajouter les fichiers canvaskit.
+    (function () {
+      var started = false;
+      function startFlutter() {
+        if (started) return;
+        started = true;
+        var s = document.createElement('script');
+        s.src = 'flutter_bootstrap.js';
+        s.async = true;
+        document.body.appendChild(s);
+      }
+
+      var FLAG = 'er_cache_repair_v1';
+      var repaired = false;
+      try { repaired = !!localStorage.getItem(FLAG); } catch (e) {}
+
+      if (repaired || typeof fetch !== 'function') {
+        startFlutter();
+        return;
+      }
+
+      var staleRisk = [
+        'flutter_bootstrap.js',
+        'main.dart.js',
+        'assets/fonts/MaterialIcons-Regular.otf',
+        'assets/packages/cupertino_icons/assets/CupertinoIcons.ttf'
+      ];
+      Promise.all(
+        staleRisk.map(function (u) { return fetch(u, { cache: 'reload' }); })
+      ).then(function () {
+        try { localStorage.setItem(FLAG, '1'); } catch (e) {}
+      }).catch(function () {}).then(startFlutter);
+
+      setTimeout(startFlutter, 5000);
+    })();
+  </script>
 </body>
 </html>

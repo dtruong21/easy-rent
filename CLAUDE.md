@@ -12,10 +12,15 @@ Cet index pointe vers un snapshot à jour du schéma, des routes, des features e
 | Quand tu as besoin de... | Lis ce fichier |
 |---|---|
 | Conventions de code détaillées | [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) |
+| Concept navigation & UX web+mobile | [`docs/UX_NAVIGATION.md`](docs/UX_NAVIGATION.md) |
 | Contraintes légales françaises | [`docs/LEGAL.md`](docs/LEGAL.md) |
 | Roadmap MVP et P1/P2 | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | Backlog ordonné | [`docs/BACKLOG.md`](docs/BACKLOG.md) |
 | Pipeline d'agents | [`docs/AGENTS.md`](docs/AGENTS.md) |
+| Système de ticketing (GitHub Issues + agents) | [`docs/TICKETING.md`](docs/TICKETING.md) |
+| Git Flow (branches, releases, hotfixes) | [`docs/GITFLOW.md`](docs/GITFLOW.md) |
+| Stratégie multi-environnement (dev/prod sur 1 projet) | [`docs/ENVIRONMENTS.md`](docs/ENVIRONMENTS.md) |
+| Gestion des secrets et sécurité | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | Schéma Supabase courant | [`docs/state/SCHEMA.md`](docs/state/SCHEMA.md) |
 | Routes Flutter courantes | [`docs/state/ROUTES.md`](docs/state/ROUTES.md) |
 | Features implémentées | [`docs/state/FEATURES.md`](docs/state/FEATURES.md) |
@@ -35,3 +40,4 @@ Cet index pointe vers un snapshot à jour du schéma, des routes, des features e
 - **Pas de deploy prod sans confirmation utilisateur**
 - **Quittances** : mentions légales loi 6 juillet 1989
 - **RGPD** : consentement, export, droit à l'effacement
+- **Secrets** : voir [`docs/SECURITY.md`](docs/SECURITY.md) — jamais de `sb_secret_*` / `service_role` / `re_*` côté client

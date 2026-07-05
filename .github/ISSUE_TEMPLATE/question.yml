@@ -1,0 +1,17 @@
+name: ❓ Question
+description: Pour les questions, doutes, demandes d'éclaircissement. NON traité automatiquement par les agents.
+title: "[QUESTION] "
+labels: ["question", "agent-skip"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ℹ️ Note
+        Les questions sont labellisées `agent-skip` automatiquement → les agents ne les traiteront pas. Si tu retires ce label, l'agent les considérera comme une feature request.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Ta question
+    validations:
+      required: true

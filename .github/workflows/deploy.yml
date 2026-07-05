@@ -1,0 +1,192 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Force target (dev or prod)'
+        required: false
+        type: choice
+        options:
+          - auto
+          - dev
+          - prod
+        default: auto
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  determine-env:
+    name: Determine target environment
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set.outputs.env_name }}
+      app_env: ${{ steps.set.outputs.app_env }}
+      firebase_channel: ${{ steps.set.outputs.firebase_channel }}
+    steps:
+      - id: set
+        run: |
+          OVERRIDE="${{ github.event.inputs.target }}"
+          BRANCH="${{ github.ref_name }}"
+
+          if [ "$OVERRIDE" = "prod" ] || ([ "$OVERRIDE" = "auto" ] && [ "$BRANCH" = "main" ]); then
+            echo "env_name=production" >> $GITHUB_OUTPUT
+            echo "app_env=prod" >> $GITHUB_OUTPUT
+            echo "firebase_channel=live" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+            echo "app_env=dev" >> $GITHUB_OUTPUT
+            echo "firebase_channel=staging" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-deploy:
+    name: Build & Deploy (${{ needs.determine-env.outputs.env_name }})
+    needs: determine-env
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-env.outputs.env_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install deps
+        run: flutter pub get
+
+      - name: Generate code (freezed / json_serializable)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build web (release)
+        # En staging on désactive le service worker pour éviter le piège de cache PWA
+        # quand un nouveau build est déployé (l'ancien SW continue sinon de servir l'ancien
+        # bundle pendant des heures, même après hard reload). En production on garde le SW
+        # par défaut (offline-first) — comportement PWA attendu pour les utilisateurs réels.
+        #
+        # Firebase config (apiKey, projectId, etc.) est embarquée dans
+        # lib/firebase_options.dart — pas besoin de dart-defines (les Firebase
+        # Web keys sont publiques par design, sécurité via Rules + App Check).
+        # --build-number : numéro de run GitHub → version.json → affiché dans
+        # Profil → À propos (identifie le déploiement exact).
+        run: |
+          flutter build web --release \
+            ${{ needs.determine-env.outputs.env_name == 'staging' && '--pwa-strategy=none' || '' }} \
+            --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
+            --build-number=${{ github.run_number }}
+
+      # Déploiement Firebase Hosting via firebase-tools CLI direct.
+      #
+      # Pourquoi PAS l'action FirebaseExtended/action-hosting-deploy@v0 :
+      # cette action a un bug connu de retry handling — sur erreur réseau
+      # « premature close » pendant le POST /channels/<ch>/releases, le
+      # client retry, mais le 1er POST a en fait réussi côté serveur. Le 2e
+      # POST reçoit HTTP 400 FAILED_PRECONDITION « supplied version ... is
+      # the current active version ». L'action exit 1 alors que le contenu
+      # EST déployé. Observé 4× consécutivement sur develop le 2026-06-30
+      # (runs 28457605436, 28462827564, 28464397651, 28465482241).
+      #
+      # Tentative précédente de tolerance via parsing des logs cross-step
+      # (gh run view --log / gh api .../jobs/{id}/logs) abandonnée car
+      # GitHub Actions n'expose PAS les logs d'un run/job in-progress —
+      # l'endpoint zip-archive ne sert qu'après fin du run.
+      #
+      # Solution adoptée : on appelle firebase-tools nous-mêmes dans la même
+      # step, on capture stderr inline, on grep dans la même bash session.
+      # Si l'erreur est exactement la signature retry race connue, on succeed
+      # avec un warning (le contenu est déployé, c'est juste un faux fail).
+      # Toute autre erreur fait remonter l'exit code.
+      #
+      # À retirer / simplifier dès que firebase-tools patche son retry —
+      # suivre https://github.com/firebase/firebase-tools/issues
+      - name: Deploy to Firebase Hosting
+        id: firebase_deploy
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
+        run: |
+          set +e
+          # Service account credentials (Google Application Default Credentials).
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
+
+          OUT="$RUNNER_TEMP/firebase-deploy.log"
+
+          # Channel "live" = production (commande différente).
+          if [ "$FIREBASE_CHANNEL" = "live" ]; then
+            npx -y firebase-tools@latest deploy --only hosting \
+              --project "$FIREBASE_PROJECT_ID" \
+              --non-interactive 2>&1 | tee "$OUT"
+            EXIT=${PIPESTATUS[0]}
+          else
+            npx -y firebase-tools@latest hosting:channel:deploy "$FIREBASE_CHANNEL" \
+              --expires 7d \
+              --project "$FIREBASE_PROJECT_ID" \
+              --non-interactive 2>&1 | tee "$OUT"
+            EXIT=${PIPESTATUS[0]}
+          fi
+
+          # Cleanup credentials immédiatement (defense in depth).
+          rm -f "$SA_FILE"
+
+          if [ $EXIT -eq 0 ]; then
+            exit 0
+          fi
+
+          # Exit non-zero : on regarde si c'est le retry race connu.
+          if grep -qF "is the current active version" "$OUT"; then
+            echo "::warning::Firebase retry-race detected (FAILED_PRECONDITION 'current active version'). Content WAS deployed — the first POST succeeded server-side; only the retry POST failed. Treating job as success."
+            exit 0
+          fi
+
+          # Toute autre erreur propage.
+          echo "::error::Firebase deploy failed for an UNKNOWN reason (not the retry race). See log above."
+          exit $EXIT
+
+      # Loggue l'URL du channel après un deploy réussi (ou toléré). La CLI
+      # firebase-tools n'imprime PAS l'URL du channel quand le POST /releases
+      # errore (retry race), donc on la récupère via channel:list — l'URL du
+      # channel est stable dans le temps (hash aléatoire assigné à la
+      # création, jamais rechangé). Le CLI channel:list ne fait qu'un GET
+      # inoffensif, aucun risque même si le déploiement principal a hoqueté.
+      - name: Log Firebase channel URL
+        if: always() && steps.firebase_deploy.outcome != 'skipped'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
+          FIREBASE_ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+        run: |
+          set +e
+          SA_FILE="$RUNNER_TEMP/firebase-sa-url.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
+
+          if [ "$FIREBASE_CHANNEL" = "live" ]; then
+            URL="https://$FIREBASE_PROJECT_ID.web.app"
+          else
+            URL=$(npx -y firebase-tools@latest hosting:channel:list \
+              --project "$FIREBASE_PROJECT_ID" --json 2>/dev/null \
+              | jq -r --arg ch "$FIREBASE_CHANNEL" '.result.channels[] | select(.name | endswith("/channels/" + $ch)) | .url' \
+              | head -n1)
+          fi
+
+          rm -f "$SA_FILE"
+
+          if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+            echo "::notice title=Deploy URL::$FIREBASE_ENV_NAME → $URL"
+            {
+              echo "## Deploy — $FIREBASE_ENV_NAME"
+              echo ""
+              echo "**Channel** : \`$FIREBASE_CHANNEL\`"
+              echo "**URL** : $URL"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Could not resolve channel URL for $FIREBASE_CHANNEL — check Firebase Console."
+          fi

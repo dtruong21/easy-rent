@@ -1,0 +1,347 @@
+rules_version = '2';
+
+// EasyRent — Firestore security rules.
+//
+// FEAT-019 — Migration Supabase RLS → Firestore Security Rules.
+// Référence : docs/plans/FEAT-019-firestore-rules.md
+//
+// Stratégie 3 couches :
+//   1. Rules (ce fichier)         — ownership self + immutabilité de base + soft-delete filter
+//   2. Callable Cloud Functions   — toutes les mutations cross-entity (lease, payment, receipt,
+//                                   document), soft-delete (qui touche deletedAt), generate/void
+//                                   receipt, mark sent.
+//   3. Triggers Firestore         — setUpdatedAt, recomputeReceiptStale, denorm propagation.
+//
+// Convention : les rules bloquent tout par défaut. Chaque collection liste explicitement
+// les opérations autorisées. Quand `if false`, la seule voie d'accès est une Callable
+// Cloud Function avec Admin SDK (qui bypasse les rules).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ====================================================================
+    // Helpers
+    // ====================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // BAILLAN-M1 — Firebase Anonymous Auth (« essai sans compte »). Le
+    // provider de sign-in est exposé dans le custom claim standard
+    // `firebase.sign_in_provider` du token ID.
+    function isAnonymous() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    // Compte complet : signé ET pas anonyme (email/password vérifié, Google,
+    // Apple). Toutes les collections métier (properties, tenants, leases,
+    // payments, receipts, documents) sont réservées à isFullyAuthed() —
+    // un anonyme ne peut PAS y écrire (seul le simulateur lui est ouvert).
+    function isFullyAuthed() {
+      return isSignedIn() && !isAnonymous();
+    }
+
+    function isOwner(landlordId) {
+      return isSignedIn() && request.auth.uid == landlordId;
+    }
+
+    function isActive(rsc) {
+      return rsc.data.deletedAt == null;
+    }
+
+    // Garde-fou commun aux update : landlordId, createdAt, deletedAt jamais touchés
+    // côté client (les soft-delete et transferts éventuels passent par Callable).
+    function preservesImmutables(rsc) {
+      return request.resource.data.landlordId == rsc.data.landlordId
+        && request.resource.data.createdAt == rsc.data.createdAt
+        && request.resource.data.deletedAt == rsc.data.deletedAt;
+    }
+
+    // ====================================================================
+    // landlords/{uid}   — docId = Firebase Auth UID
+    // ====================================================================
+    match /landlords/{uid} {
+      // `resource == null` : un owner peut constater que SON doc n'existe
+      // pas encore (get → exists=false). Indispensable au pattern
+      // get-then-create des provisionings client (anonyme, Google, Apple) —
+      // sans ça, isActive(resource) accède resource.data sur null → erreur
+      // → deny, et le create qui suit n'est jamais tenté.
+      allow get: if isOwner(uid) && (resource == null || isActive(resource));
+      allow list: if false; // chaque user ne voit que son propre doc
+
+      // CREATE (compte complet) : autorisé côté client juste après
+      // createUserWithEmailAndPassword, avec consent RGPD obligatoire dans
+      // le même write (atomicité art. 7.1). Identity Platform
+      // `beforeUserCreated` peut fournir une seconde couche
+      // (defense-in-depth) si activé — `set({merge:true})` rend les 2
+      // chemins idempotents. Si IP désactivée, c'est ce chemin qui crée le
+      // doc.
+      allow create: if isFullyAuthed()
+        && isOwner(uid)
+        && request.resource.data.id == uid
+        && request.resource.data.email is string
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() > 0
+        && request.resource.data.rgpdConsentVersion is string
+        && request.resource.data.rgpdConsentVersion.size() > 0
+        && request.resource.data.rgpdConsentAt is timestamp
+        && request.resource.data.isAnonymous == false
+        && request.resource.data.deletedAt == null;
+
+      // CREATE (anonyme, BAILLAN-M1) : defense-in-depth — en pratique le
+      // doc est provisionné par la Cloud Function `handleNewUser`
+      // (beforeUserCreated, Admin SDK, bypasse les rules). Ce chemin
+      // n'existe que si Identity Platform blocking functions est désactivé
+      // ET permet au client de recréer un doc anonyme cohérent : PAS de
+      // `rgpdConsentAt` (l'anonyme n'a rien signé), `email`/`fullName`
+      // vides par construction.
+      allow create: if isAnonymous()
+        && request.auth.uid == uid
+        && request.resource.data.id == uid
+        && request.resource.data.email == null
+        && request.resource.data.fullName == ''
+        && request.resource.data.isAnonymous == true
+        && request.resource.data.subscriptionTier == 'anonymous'
+        && request.resource.data.anonExpiresAt is timestamp
+        && request.resource.data.rgpdConsentAt == null
+        && request.resource.data.deletedAt == null;
+
+      // UPDATE (compte complet) : profil propre. RGPD consent versionné,
+      // identifiants et `subscriptionTier`/`isAnonymous` immuables côté
+      // client (seule la Callable `finalizeAnonymousUpgrade`, via Admin
+      // SDK, peut faire transitionner un tier — bypass des rules).
+      allow update: if isFullyAuthed()
+        && isOwner(uid)
+        && isActive(resource)
+        && request.resource.data.id == resource.data.id
+        // PAS preservesImmutables() ici : le helper exige `landlordId`,
+        // champ que landlords ne porte pas (sa clé est `id`) — l'accès à un
+        // champ absent fait échouer la rule et refusait TOUT update. On
+        // inline les immuables pertinents pour cette collection.
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.deletedAt == resource.data.deletedAt
+        && request.resource.data.rgpdConsentAt == resource.data.rgpdConsentAt
+        && request.resource.data.rgpdConsentVersion == resource.data.rgpdConsentVersion
+        && request.resource.data.subscriptionTier == resource.data.subscriptionTier
+        && request.resource.data.isAnonymous == resource.data.isAnonymous;
+
+      // UPDATE (anonyme, BAILLAN-M1) : limité aux champs que le renewer
+      // d'expiration et l'app cliente ont besoin de toucher — jamais
+      // `rgpdConsentAt`/`Version` (l'anonyme ne consent jamais côté client),
+      // jamais `subscriptionTier` (seule la Callable finalize peut upgrader).
+      allow update: if isAnonymous()
+        && isOwner(uid)
+        && isActive(resource)
+        && resource.data.isAnonymous == true
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.email == null
+        && request.resource.data.fullName == ''
+        && request.resource.data.isAnonymous == true
+        && request.resource.data.subscriptionTier == 'anonymous'
+        && request.resource.data.anonExpiresAt is timestamp
+        // Borne supérieure sur anonExpiresAt : un anon ne peut pas se
+        // stamper une expiration en l'an 9999 pour échapper au cron.
+        // Autorisé = now + 15 jours max (marge d'1j vs le renouvellement
+        // 14j côté client pour tolérer les décalages d'horloge).
+        && request.resource.data.anonExpiresAt < request.time + duration.value(15, 'd')
+        && request.resource.data.rgpdConsentAt == null
+        // Même raison que la rule UPDATE compte complet : pas de
+        // preservesImmutables() sur landlords (pas de champ landlordId).
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.deletedAt == resource.data.deletedAt;
+
+      // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
+      // anonymes expirés passe par la Cloud Function planifiée
+      // `cleanupExpiredAnon` (Admin SDK, bypasse les rules).
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // properties/{id}   — CRUD direct (pas de cross-entity)
+    // ====================================================================
+    match /properties/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn(); // filtré par .where('landlordId', '==', uid)
+
+      // BAILLAN-M1 : create/update réservés aux comptes complets — un
+      // anonyme n'a accès qu'au simulateur, jamais au registre de biens.
+      allow create: if isFullyAuthed()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.deletedAt == null
+        && request.resource.data.id == id
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.address is string
+        && request.resource.data.type in ['appartement', 'maison', 'studio', 'autre']
+        // activeLeaseCount maintenu par CF — doit valoir 0 à la création
+        && request.resource.data.activeLeaseCount == 0;
+
+      allow update: if isFullyAuthed()
+        && isOwner(resource.data.landlordId)
+        && isActive(resource)
+        && preservesImmutables(resource)
+        // activeLeaseCount n'est jamais touché par le client (denorm CF only).
+        && request.resource.data.activeLeaseCount == resource.data.activeLeaseCount;
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // tenants/{id}   — CRUD direct
+    // ====================================================================
+    match /tenants/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      // BAILLAN-M1 : create/update réservés aux comptes complets.
+      allow create: if isFullyAuthed()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.deletedAt == null
+        && request.resource.data.id == id
+        && request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && request.resource.data.lastName is string
+        && request.resource.data.lastName.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.activeLeaseCount == 0;
+
+      allow update: if isFullyAuthed()
+        && isOwner(resource.data.landlordId)
+        && isActive(resource)
+        && preservesImmutables(resource)
+        && request.resource.data.activeLeaseCount == resource.data.activeLeaseCount;
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // leases/{id}   — CROSS-ENTITY → CF exclusive
+    //
+    // Création/modification doivent valider que propertyId et tenantId
+    // appartiennent au même landlord (auth.uid). Impossible dans les rules
+    // (2× get() coûteux + impossible de checker que les denorms sont les bonnes).
+    // ====================================================================
+    match /leases/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      // Tout passe par Callable `createLease`, `updateLease`, `softDeleteLease`.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // payments/{id}   — CROSS-ENTITY (lease.landlordId) → CF exclusive
+    // ====================================================================
+    match /payments/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // receipts/{id}   — IMMUABLES (loi 6 juillet 1989) → CF exclusive
+    //
+    // Pas de soft-delete (rétention légale 5 ans). Pas de filtrage isActive
+    // en read : les receipts voided restent lisibles pour audit.
+    // ====================================================================
+    match /receipts/{id} {
+      allow get: if isOwner(resource.data.landlordId);
+      allow list: if isSignedIn();
+
+      // generateReceipt / voidReceipt / markReceiptAsSent en Callable.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // documents/{id}   — CF exclusive (legalHold dérivé de category)
+    // ====================================================================
+    match /documents/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      // createDocument calcule legalHold côté serveur depuis category.
+      // softDeleteDocument refuse si legalHold == true.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
+    // investment_scenarios/{id}   — CRUD direct (pas de cross-entity)
+    // ====================================================================
+    match /investment_scenarios/{id} {
+      allow get: if isOwner(resource.data.landlordId) && isActive(resource);
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.deletedAt == null
+        && request.resource.data.id == id
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.schemaVersion is int
+        && request.resource.data.schemaVersion > 0
+        && request.resource.data.scenarioJson is map;
+
+      allow update: if isOwner(resource.data.landlordId)
+        && isActive(resource)
+        && preservesImmutables(resource);
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // paid_plan_interest/{uid}   — docId = Firebase Auth UID (BAILLAN-M1)
+    //
+    // Marque d'intérêt pour le futur Plan Pro. Réservé aux comptes complets
+    // (un anonyme n'a pas encore vu la proposition de valeur du produit —
+    // le CTA "M'avertir" n'est jamais montré aux anons côté UI).
+    // ====================================================================
+    match /paid_plan_interest/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+
+      allow create, update: if isFullyAuthed()
+        && isOwner(uid)
+        && request.resource.data.features is list;
+
+      allow delete: if false;
+    }
+
+    // ====================================================================
+    // support_requests/{id}   — CREATE-ONLY (FEAT-025)
+    //
+    // Formulaire « Nous contacter ». Le client écrit une demande à son
+    // propre nom ; il ne relit JAMAIS (pas de back-office in-app en V1).
+    // Traitement (notification email, triage) via Admin SDK / console.
+    // ====================================================================
+    match /support_requests/{id} {
+      allow get, list: if false;   // l'utilisateur ne relit pas ses demandes en V1
+
+      allow create: if isFullyAuthed()
+        && request.resource.data.landlordId == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.appVersion is string
+        && request.resource.data.appEnv is string
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // ====================================================================
+    // Fallback — tout le reste bloqué
+    // ====================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

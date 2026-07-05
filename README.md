@@ -46,21 +46,20 @@
 # 1. Installer les dépendances
 flutter pub get
 
-# 2. Lancer le stack Supabase local (optionnel)
-supabase start
+# 2. Copier le template de config et remplir tes valeurs Supabase
+cp dart-defines.example.json dart-defines.json
+# Édite dart-defines.json avec ton URL et ta clé publishable
+# (ce fichier est gitignoré — ne le commit jamais)
 
-# 3. Lancer l'app sur Chrome avec les variables d'env
-flutter run -d chrome \
-  --dart-define=SUPABASE_URL=http://localhost:54321 \
-  --dart-define=SUPABASE_ANON_KEY=<clé locale>
+# 3. Lancer l'app sur Chrome
+flutter run -d chrome --dart-define-from-file=dart-defines.json
 ```
 
 ### Build pour production
 
 ```bash
-flutter build web --release \
-  --dart-define=SUPABASE_URL=<url prod> \
-  --dart-define=SUPABASE_ANON_KEY=<clé prod>
+# Crée un dart-defines.prod.json pour la prod (gitignoré)
+flutter build web --release --dart-define-from-file=dart-defines.prod.json
 ```
 
 ### Déployer

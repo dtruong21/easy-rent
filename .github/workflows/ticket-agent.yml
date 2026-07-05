@@ -1,0 +1,165 @@
+name: Ticket Agent (autonomous)
+
+# Picks the oldest open GitHub issue labeled `bug` or `feature-request` that is:
+#   - older than 3 hours
+#   - not yet picked (no agent-processing/agent-done/agent-skip labels)
+# Tags it as agent-processing and dispatches Claude Code to handle it.
+
+on:
+  schedule:
+    - cron: '15 * * * *'  # every hour at :15 past
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Force-process a specific issue number (skip 3h gate)'
+        required: false
+        type: string
+
+concurrency:
+  group: ticket-agent
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  find-mature-ticket:
+    name: Find oldest eligible ticket
+    runs-on: ubuntu-latest
+    outputs:
+      issue_number: ${{ steps.find.outputs.issue_number }}
+      kind: ${{ steps.find.outputs.kind }}
+    steps:
+      - name: Manual override
+        if: ${{ inputs.issue_number != '' }}
+        id: manual
+        run: |
+          ISSUE="${{ inputs.issue_number }}"
+          KIND=$(gh issue view "$ISSUE" --json labels --jq '.labels | map(.name) | if index("bug") then "bug" elif index("feature-request") then "feature" else "unknown" end')
+          echo "issue_number=$ISSUE" >> $GITHUB_OUTPUT
+          echo "kind=$KIND" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-pick oldest eligible
+        if: ${{ inputs.issue_number == '' }}
+        id: auto
+        run: |
+          # Filtre :
+          #  - open
+          #  - label "bug" OU "feature-request"
+          #  - PAS de label agent-processing/agent-done/agent-skip
+          #  - créé il y a plus de 3h (10800 secondes)
+          # Trie par createdAt ASC, prend le premier
+          PAYLOAD=$(gh issue list \
+            --state open \
+            --json number,createdAt,labels \
+            --limit 100 \
+            --jq '
+              [.[]
+                | {number, createdAt, labels: [.labels[].name]}
+                | select(.labels | inside(["bug","feature-request","agent-processing","agent-done","agent-skip"]) | not | not)
+                | select((.labels | index("bug")) or (.labels | index("feature-request")))
+                | select((.labels | index("agent-processing")) | not)
+                | select((.labels | index("agent-done")) | not)
+                | select((.labels | index("agent-skip")) | not)
+                | select((now - (.createdAt | fromdateiso8601)) > 10800)
+              ] | sort_by(.createdAt) | .[0] // empty')
+
+          if [ -z "$PAYLOAD" ] || [ "$PAYLOAD" = "empty" ]; then
+            echo "🟢 Aucun ticket éligible cette heure."
+            echo "issue_number=" >> $GITHUB_OUTPUT
+            echo "kind=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          NUMBER=$(echo "$PAYLOAD" | jq -r '.number')
+          LABELS=$(echo "$PAYLOAD" | jq -r '.labels | join(",")')
+          if echo "$LABELS" | grep -q "bug"; then
+            KIND="bug"
+          else
+            KIND="feature"
+          fi
+
+          echo "🎯 Ticket sélectionné: #$NUMBER (kind: $KIND)"
+          echo "issue_number=$NUMBER" >> $GITHUB_OUTPUT
+          echo "kind=$KIND" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Consolidate output
+        id: find
+        run: |
+          NUMBER="${{ steps.manual.outputs.issue_number }}${{ steps.auto.outputs.issue_number }}"
+          KIND="${{ steps.manual.outputs.kind }}${{ steps.auto.outputs.kind }}"
+          echo "issue_number=$NUMBER" >> $GITHUB_OUTPUT
+          echo "kind=$KIND" >> $GITHUB_OUTPUT
+
+  process-ticket:
+    name: Process ticket via Claude Code
+    needs: find-mature-ticket
+    if: ${{ needs.find-mature-ticket.outputs.issue_number != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: develop  # les agents partent toujours de develop
+
+      - name: Mark issue as agent-processing
+        run: |
+          gh issue edit ${{ needs.find-mature-ticket.outputs.issue_number }} \
+            --add-label "agent-processing" \
+            --remove-label "agent-eligible" 2>/dev/null || true
+          gh issue comment ${{ needs.find-mature-ticket.outputs.issue_number }} \
+            --body "🤖 Pris en charge par l'agent IA — pipeline démarré (run: $GITHUB_RUN_ID)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Flutter (for the pipeline tools)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run Claude Code agent
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Auth via abonnement Claude (Team/Pro/Max) — pas de facturation API
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Tu es l'orchestrateur autonome d'EasyRent.
+
+            Une issue GitHub vient d'être assignée à l'agent IA :
+            - Numéro : #${{ needs.find-mature-ticket.outputs.issue_number }}
+            - Type : ${{ needs.find-mature-ticket.outputs.kind }}
+
+            Mission selon le type :
+              - bug → exécute le pipeline /fix-bug #${{ needs.find-mature-ticket.outputs.issue_number }}
+              - feature → exécute /build-feature #${{ needs.find-mature-ticket.outputs.issue_number }}
+
+            Avant tout :
+            1. Lis docs/state/INDEX.md (économie tokens — règle d'or)
+            2. Lis l'issue avec `gh issue view ${{ needs.find-mature-ticket.outputs.issue_number }}`
+
+            À la fin :
+            - Si une PR a été créée, commente sur l'issue avec le lien
+            - Si tu es bloqué (ambiguïté, conflit, etc.) : retire le label agent-processing, ajoute un commentaire expliquant ce qui bloque, ne supprime PAS l'issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Handle pipeline failure
+        if: failure()
+        run: |
+          gh issue edit ${{ needs.find-mature-ticket.outputs.issue_number }} \
+            --remove-label "agent-processing" \
+            --add-label "agent-failed"
+          gh issue comment ${{ needs.find-mature-ticket.outputs.issue_number }} \
+            --body "❌ Le pipeline agent a échoué (run: $GITHUB_RUN_ID). Reviewer manuellement avant de retirer le label \`agent-failed\` pour relancer."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

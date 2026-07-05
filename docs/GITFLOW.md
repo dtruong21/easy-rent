@@ -1,0 +1,133 @@
+# EasyRent — Git Flow simplifié
+
+## 🌳 Modèle de branches
+
+```
+main          ──●──────●──────●──→   (PROD — Firebase live, schéma public)
+                 ╲     ╱   ╲   ╱
+                  release│   hotfix│
+                  merge  │   merge │
+                         ╲          ╲
+develop       ──●─●─●─●──●─●─●─●──●─●──→  (DEV — Firebase staging, schéma dev)
+                 ╲ ╲ ╱ ╱
+                  feature/*    (branches courtes — depuis develop)
+```
+
+### Branches long-lived
+
+| Branche | Rôle | Cible déploiement | Schéma Supabase |
+|---|---|---|---|
+| `main` | Prod stable | Firebase Hosting **live** | `public` |
+| `develop` | Intégration dev/staging | Firebase Hosting **staging** | `dev` |
+
+### Branches éphémères
+
+| Préfixe | Source | Destination | Quand |
+|---|---|---|---|
+| `feature/<slug>` | `develop` | `develop` (PR) | Nouvelle fonctionnalité |
+| `fix/<slug>` | `develop` | `develop` (PR) | Bug non-urgent |
+| `hotfix/<slug>` | `main` | `main` + `develop` (cherry-pick ou re-PR) | Bug critique en prod |
+| `chore/<slug>` | `develop` | `develop` (PR) | Maintenance, refacto |
+
+## 🔒 Branch protection (à configurer sur GitHub)
+
+Pour les deux long-lived branches (`main` et `develop`) — Settings → Branches → Add branch protection rule :
+
+### Règles communes (main + develop)
+- ✅ **Require a pull request before merging**
+- ✅ **Require approvals** : 1 (peut être toi-même via review automatique des agents)
+- ✅ **Require status checks** : `analyze-test` du workflow CI
+- ✅ **Require branches to be up to date before merging**
+- ❌ **Allow force pushes** : NEVER
+- ❌ **Allow deletions** : NEVER
+
+### Règles spécifiques à `main`
+- ✅ **Require linear history** (oblige squash ou rebase, pas de merge commits messy)
+- ✅ **Lock branch** : impossible de pousser directement, même par admin
+- ✅ **Restrict who can push** : personne (uniquement via PR depuis `develop`)
+
+## 🔄 Workflows quotidiens
+
+### Démarrer une nouvelle feature
+```bash
+git checkout develop
+git pull
+git checkout -b feature/quittance-pdf-mensuelle
+# ... code ...
+git push -u origin feature/quittance-pdf-mensuelle
+gh pr create --base develop --head feature/quittance-pdf-mensuelle
+```
+
+Quand la PR est mergée → la feature arrive sur `develop` → CI build et déploie automatiquement sur **staging** (Firebase staging channel, schéma `dev`).
+
+### Promouvoir develop vers prod (release)
+Quand `develop` est stable et tu veux livrer en prod :
+```bash
+git checkout main
+git pull
+git merge --no-ff develop  # ou via PR develop → main
+git push origin main
+```
+→ CI déploie sur **prod** (Firebase live channel, schéma `public`).
+
+### Hotfix sur prod
+Bug urgent en prod, pas le temps de passer par develop :
+```bash
+git checkout main
+git pull
+git checkout -b hotfix/auth-bypass
+# ... fix ...
+gh pr create --base main
+# Après merge sur main, propager vers develop :
+git checkout develop
+git pull
+git merge main
+git push origin develop
+```
+
+## 🎯 Conventions de commit
+
+Format : `<type>(<scope>): <description>`
+
+| Type | Quand |
+|---|---|
+| `feat` | Nouvelle fonctionnalité |
+| `fix` | Correction de bug |
+| `chore` | Maintenance, dépendances |
+| `docs` | Documentation seule |
+| `test` | Ajout/modif de tests |
+| `refactor` | Refacto sans changement fonctionnel |
+| `perf` | Optimisation perf |
+
+Scope : `auth`, `properties`, `tenants`, `leases`, `payments`, `pdf`, `ui`, `db`, etc.
+
+Exemples :
+- `feat(quittance): générer PDF avec mentions légales loi 89`
+- `fix(auth): corriger redirect après magic link`
+- `chore(deps): bump supabase_flutter to 2.12.4`
+
+## 🔀 Strategy de merge
+
+- **feature → develop** : **Squash merge** (PR = 1 commit propre dans develop)
+- **develop → main** : **Merge commit** (`--no-ff`) — préserve l'historique des releases
+- **hotfix → main** : **Squash merge**
+- **main → develop** (back-merge après hotfix) : **Merge commit**
+
+## 🤖 Comment les agents IA interagissent
+
+| Agent / Commande | Source branch | Target branch |
+|---|---|---|
+| `/build-feature` | `develop` | crée `feature/*`, PR vers `develop` |
+| `/fix-bug` (non-urgent) | `develop` | crée `fix/*`, PR vers `develop` |
+| `/fix-bug` (hotfix label) | `main` | crée `hotfix/*`, PR vers `main` |
+| `ticket-agent.yml` | `develop` | crée branches, PR vers `develop` |
+
+## ✅ Avant de promouvoir develop → main
+
+Checklist obligatoire :
+- [ ] Toutes les features du sprint sont mergées dans develop
+- [ ] CI verte sur develop
+- [ ] Staging testé manuellement (smoke tests : auth + créer un bien + envoyer une quittance)
+- [ ] Pas de migration DB cassante non préparée
+- [ ] Release notes rédigées dans `docs/releases/<version>.md`
+- [ ] Confirmation utilisateur explicite (jamais auto-promote en prod)
