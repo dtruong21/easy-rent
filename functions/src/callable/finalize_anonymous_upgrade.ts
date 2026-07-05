@@ -2,10 +2,12 @@
  * finalizeAnonymousUpgrade — callable appelée par le client juste après un
  * `linkWithCredential` / `linkWithPopup` réussi sur un compte anonyme.
  *
- * Le trigger `handleNewUser` (beforeUserCreated) NE se redéclenche PAS lors
- * d'un link (c'est un update Auth, pas un create) — le doc `landlords/{uid}`
- * reste donc à l'état anonyme (`subscriptionTier: 'anonymous'`,
- * `rgpdConsentAt: null`) tant que cette callable n'a pas tourné.
+ * Le provisioning initial du doc `landlords/{uid}` est 100 % côté client
+ * (auth_repository.dart ; le blocking trigger handleNewUser a été retiré —
+ * ADR 0001). Un `link` anonyme→compte est un update Auth (pas un create), donc
+ * rien ne repromeut le doc automatiquement : il reste à l'état anonyme
+ * (`subscriptionTier: 'anonymous'`, `rgpdConsentAt: null`) tant que cette
+ * callable n'a pas tourné.
  *
  * Choix architecture (préférence produit BAILLAN-M1) : callable client-driven
  * plutôt qu'un trigger `onIdTokenChanged` — plus prévisible, retry-friendly,

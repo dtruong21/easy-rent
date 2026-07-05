@@ -6,9 +6,16 @@
  * `src/<domain>/` et ré-exporté ici pour que `firebase deploy --only functions`
  * les voie.
  *
- * FEAT-019 — Phase 1 backend foundations (handleNewUser + setUpdatedAt
- * + softDelete + lease/payment cross-entity callables + recompute stale).
+ * FEAT-019 — Phase 1 backend foundations (setUpdatedAt + softDelete +
+ * lease/payment cross-entity callables + recompute stale).
  * Phase 2 ajoutera generate/void/markSent receipts + create document.
+ *
+ * NB — le trigger bloquant `handleNewUser` (beforeUserCreated) a été retiré
+ * (ADR 0001) : il exigeait Identity Platform (GCIP) non activé sur le projet,
+ * ce qui faisait échouer `firebase deploy --only functions` (exit 2). Le
+ * provisioning du doc landlord est 100 % côté client (auth_repository.dart),
+ * gardé par les Firestore rules. NE PAS réintroduire de blocking function
+ * sans réactiver GCIP au préalable.
  */
 
 import * as admin from "firebase-admin";
@@ -23,9 +30,6 @@ setGlobalOptions({
   region: "europe-west1",
   maxInstances: 10,
 });
-
-// ---------- Auth ----------
-export {handleNewUser} from "./auth/handle_new_user";
 
 // ---------- Triggers ----------
 export {

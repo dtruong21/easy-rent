@@ -9,8 +9,8 @@
   },
   "scripts": {
     "lint": "eslint --ext .ts src",
-    "build": "tsc",
-    "build:watch": "tsc --watch",
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
     "serve": "npm run build && firebase emulators:start --only functions,firestore,auth",
     "shell": "npm run build && firebase functions:shell",
     "deploy": "firebase deploy --only functions",
