@@ -385,8 +385,8 @@ void main() {
       expect(find.text('tenants'), findsNothing);
     });
 
-    testWidgets('hors mode picker : succès → go(/tenants) (comportement '
-        'historique conservé)', (tester) async {
+    testWidgets('création, hors mode picker : succès → go(/tenants) '
+        '(comportement liste conservé — création uniquement)', (tester) async {
       final repo = _FakeTenantRepository();
       final router = GoRouter(
         routes: [
@@ -413,6 +413,68 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('tenants'), findsOneWidget);
+    });
+
+    testWidgets('F-2 — édition, hors mode picker : succès → pop() (retour à la '
+        'fiche détail, pas la liste)', (tester) async {
+      final repo = _FakeTenantRepository();
+      final tenant = repo._makeTenant(id: 'id-1', firstName: 'Marie');
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/tenant-detail',
+            builder: (context, _) => Scaffold(
+              body: Builder(
+                builder: (context) => Column(
+                  children: [
+                    const Text('fiche détail locataire'),
+                    TextButton(
+                      onPressed: () => context.push('/tenant-detail/edit'),
+                      child: const Text('modifier'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, _) => TenantFormPage(initial: tenant),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/tenants',
+            builder: (context, _) => const Scaffold(body: Text('tenants')),
+          ),
+        ],
+        initialLocation: '/tenant-detail',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('modifier'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TenantFormPage), findsOneWidget);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(TenantFormPage)),
+      );
+      container.read(tenantFormControllerProvider.notifier).state =
+          TenantFormState.success(tenant: tenant);
+      await tester.pumpAndSettle();
+
+      // pop() : retour à la FICHE DÉTAIL, pas à la liste — preuve que la
+      // pile intermédiaire (détail → edit) n'a pas été écrasée par un
+      // go('/tenants').
+      expect(find.byType(TenantFormPage), findsNothing);
+      expect(find.text('fiche détail locataire'), findsOneWidget);
+      expect(find.text('tenants'), findsNothing);
     });
   });
 }

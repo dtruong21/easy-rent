@@ -97,7 +97,10 @@ class _StepTile extends StatelessWidget {
       ),
       title: Text(label, style: theme.textTheme.bodyLarge),
       trailing: Icon(Icons.chevron_right, color: theme.colorScheme.primary),
-      onTap: () => context.go(route),
+      // push() (pas go()) : depuis l'onglet Accueil, on empile le formulaire
+      // de création sans changer d'onglet — pop() ramène directement à
+      // l'Accueil (F-1, docs/UX_NAVIGATION.md §5).
+      onTap: () => context.push(route),
     );
   }
 }

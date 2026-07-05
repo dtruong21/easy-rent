@@ -750,23 +750,99 @@ void main() {
       },
     );
 
-    testWidgets('édition → filtre conservé + navigation /leases sans param', (
-      tester,
-    ) async {
+    testWidgets(
+      'édition, sans pile (deep-link direct) → filtre conservé + filet de '
+      'sécurité go(/leases) sans param (canPop() == false)',
+      (tester) async {
+        final container = makeContainer();
+        await tester.pumpWidget(
+          buildWithRouter(container: container, initial: _makeLease()),
+        );
+        await tester.pumpAndSettle();
+
+        container.read(leaseFilterProvider.notifier).state =
+            LeaseFilter.terminated;
+
+        ctrl.emitSuccess(_makeLease());
+        await tester.pumpAndSettle();
+
+        expect(find.text('liste baux filter=-'), findsOneWidget);
+        expect(container.read(leaseFilterProvider), LeaseFilter.terminated);
+      },
+    );
+
+    // Router à 2 niveaux (fiche détail → push formulaire) : seul un harnais
+    // avec une fiche détail DISTINCTE de la liste peut prouver que
+    // l'édition revient à la fiche (pop()) et pas à la liste (go()) — c'est
+    // précisément le bug F-2.
+    Widget buildWithDetailStack({
+      required ProviderContainer container,
+      required Lease lease,
+    }) {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/leases',
+            builder: (context, state) => Scaffold(
+              body: Text(
+                'liste baux filter='
+                '${state.uri.queryParameters['filter'] ?? '-'}',
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/lease-detail',
+            builder: (context, _) => Scaffold(
+              body: Builder(
+                builder: (context) => Column(
+                  children: [
+                    const Text('fiche détail bail'),
+                    TextButton(
+                      onPressed: () => context.push('/lease-detail/edit'),
+                      child: const Text('modifier'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, _) => LeaseFormPage(initial: lease),
+              ),
+            ],
+          ),
+        ],
+        initialLocation: '/lease-detail',
+      );
+      return UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      );
+    }
+
+    testWidgets('F-2 — édition, PUSHÉE depuis la fiche détail → succès → pop() '
+        '(retour à la fiche détail, pas la liste)', (tester) async {
       final container = makeContainer();
+      final lease = _makeLease();
       await tester.pumpWidget(
-        buildWithRouter(container: container, initial: _makeLease()),
+        buildWithDetailStack(container: container, lease: lease),
       );
       await tester.pumpAndSettle();
 
-      container.read(leaseFilterProvider.notifier).state =
-          LeaseFilter.terminated;
+      await tester.tap(find.text('modifier'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LeaseFormPage), findsOneWidget);
 
-      ctrl.emitSuccess(_makeLease());
+      ctrl.emitSuccess(lease);
       await tester.pumpAndSettle();
 
-      expect(find.text('liste baux filter=-'), findsOneWidget);
-      expect(container.read(leaseFilterProvider), LeaseFilter.terminated);
+      // pop() : retour à la FICHE DÉTAIL, pas à la liste — preuve que la
+      // pile intermédiaire (détail → edit) n'a pas été écrasée par un
+      // go('/leases').
+      expect(find.byType(LeaseFormPage), findsNothing);
+      expect(find.text('fiche détail bail'), findsOneWidget);
+      expect(find.textContaining('liste baux'), findsNothing);
     });
   });
 }

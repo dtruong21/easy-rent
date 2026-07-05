@@ -264,7 +264,17 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
           );
-          context.go('/properties');
+          // Édition : la page a été poussée depuis la fiche détail
+          // (`/properties/:id/edit`) — pop() y revient. Création : la page a
+          // été poussée depuis la liste (`/properties/new`) — go() vers la
+          // racine conserve le comportement historique (F-2).
+          if (isCreating) {
+            context.go('/properties');
+          } else if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/properties');
+          }
         },
         error: (_) {
           _log.warning('PropertyFormPage error state');

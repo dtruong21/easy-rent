@@ -185,12 +185,6 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
         fallbackRoute: '/leases',
         actions: [
           IconButton(
-            key: const Key('btn_profile'),
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Mon profil',
-            onPressed: () => context.push('/profile'),
-          ),
-          IconButton(
             key: const Key('btn_edit_lease'),
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Modifier',

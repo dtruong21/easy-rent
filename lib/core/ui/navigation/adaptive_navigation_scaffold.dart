@@ -257,7 +257,10 @@ class _RailBrand extends ConsumerWidget {
 }
 
 /// Action « Simuler un investissement » épinglée en bas du rail. Le simulateur
-/// vit hors du shell (accessible aussi aux anonymes) → `go()` (pas `goBranch`).
+/// vit hors du shell mais reste une destination de premier niveau — on
+/// l'empile PAR-DESSUS le shell (`push()`, pas `go()`) pour que le retour
+/// natif dépile directement vers le dashboard, sans aller-retour parasite par
+/// la garde de session (docs/UX_NAVIGATION.md §3.4).
 class _RailSimulatorAction extends StatelessWidget {
   const _RailSimulatorAction({required this.expanded});
 
@@ -267,7 +270,7 @@ class _RailSimulatorAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onSurfaceVariant;
-    void go() => context.go('/simulator');
+    void go() => context.push('/simulator');
 
     if (!expanded) {
       return IconButton(

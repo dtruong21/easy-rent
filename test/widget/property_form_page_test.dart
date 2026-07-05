@@ -330,4 +330,163 @@ void main() {
       expect(find.textContaining('Données invalides'), findsOneWidget);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // F-2 (correctif navigation) — succès : édition → pop() (retour fiche
+  // détail), création → go('/properties') (comportement historique).
+  // ---------------------------------------------------------------------------
+  group('PropertyFormPage — navigation de succès (F-2)', () {
+    late _DriveableFormController ctrl;
+
+    ProviderContainer makeContainer() {
+      final container = ProviderContainer(
+        overrides: [
+          propertyRepositoryProvider.overrideWithValue(
+            _FakePropertyRepository(),
+          ),
+          propertyFormControllerProvider.overrideWith((ref) {
+            ctrl = _DriveableFormController(ref);
+            return ctrl;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    // Router à 2 niveaux (liste → fiche détail → push formulaire) : seul un
+    // harnais avec une fiche détail DISTINCTE de la liste peut prouver que
+    // l'édition revient à la fiche (pop()) et pas à la liste (go()) — c'est
+    // précisément le bug F-2.
+    Widget buildWithDetailStack({
+      required ProviderContainer container,
+      required Property property,
+    }) {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/properties',
+            builder: (context, _) => const Scaffold(body: Text('liste biens')),
+          ),
+          GoRoute(
+            path: '/property-detail',
+            builder: (context, _) => Scaffold(
+              body: Builder(
+                builder: (context) => Column(
+                  children: [
+                    const Text('fiche détail bien'),
+                    TextButton(
+                      onPressed: () => context.push('/property-detail/edit'),
+                      child: const Text('modifier'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, _) => PropertyFormPage(initial: property),
+              ),
+            ],
+          ),
+        ],
+        initialLocation: '/property-detail',
+      );
+      return UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      );
+    }
+
+    testWidgets(
+      'édition → succès → pop() (retour à la fiche détail, pas la liste)',
+      (tester) async {
+        final container = makeContainer();
+        final property = Property(
+          id: 'id-1',
+          landlordId: 'landlord-1',
+          name: 'Appart Lyon',
+          address: '5 rue Mercière',
+          type: PropertyType.appartement,
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+        );
+        await tester.pumpWidget(
+          buildWithDetailStack(container: container, property: property),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('modifier'));
+        await tester.pumpAndSettle();
+        expect(find.byType(PropertyFormPage), findsOneWidget);
+
+        ctrl.emitSuccess(property);
+        await tester.pumpAndSettle();
+
+        // pop() : retour à la FICHE DÉTAIL, pas à la liste — preuve que la
+        // pile intermédiaire (détail → edit) n'a pas été écrasée par un
+        // go('/properties').
+        expect(find.byType(PropertyFormPage), findsNothing);
+        expect(find.text('fiche détail bien'), findsOneWidget);
+        expect(find.text('liste biens'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'création → succès → go(/properties) (comportement liste conservé)',
+      (tester) async {
+        final container = makeContainer();
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/properties',
+              builder: (context, _) =>
+                  const Scaffold(body: Text('liste biens')),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, _) => const PropertyFormPage(),
+                ),
+              ],
+            ),
+          ],
+          initialLocation: '/properties/new',
+        );
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final created = Property(
+          id: 'new-id',
+          landlordId: 'landlord-1',
+          name: 'Nouveau bien',
+          address: '1 rue test',
+          type: PropertyType.appartement,
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+        );
+        ctrl.emitSuccess(created);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PropertyFormPage), findsNothing);
+        expect(find.text('liste biens'), findsOneWidget);
+      },
+    );
+  });
+}
+
+/// Contrôleur pilotable depuis le test : expose l'émission d'un état succès
+/// (le setter `state` de [StateNotifier] est protected, accessible en
+/// sous-classe).
+class _DriveableFormController extends PropertyFormController {
+  _DriveableFormController(super.ref);
+
+  void emitSuccess(Property property) {
+    state = PropertyFormState.success(property: property);
+  }
 }

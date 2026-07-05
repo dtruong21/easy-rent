@@ -176,8 +176,16 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
             ),
           );
           if (widget.popOnSuccess && context.canPop()) {
+            // Mode picker (push depuis un autre formulaire, ex. bail) :
+            // rendre l'id créé à l'appelant.
             context.pop(tenant.id);
+          } else if (!isCreating && context.canPop()) {
+            // Édition (hors picker) : la page a été poussée depuis la fiche
+            // détail (`/tenants/:id/edit`) — pop() y revient (F-2). Pas de
+            // valeur de retour : ce n'est pas un picker.
+            context.pop();
           } else {
+            // Création (hors picker) : comportement historique conservé.
             context.go('/tenants');
           }
         },

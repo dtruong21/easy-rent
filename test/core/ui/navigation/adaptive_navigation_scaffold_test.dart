@@ -333,15 +333,29 @@ void main() {
       expect(find.byKey(const Key('rail_simulator_action')), findsOneWidget);
     });
 
-    testWidgets('tap → navigue vers /simulator (hors shell)', (tester) async {
+    testWidgets('tap → push vers /simulator (hors shell), empilé par-dessus '
+        'le shell', (tester) async {
       await _setViewportWidth(tester, 900);
-      await _pumpApp(tester, _buildTestRouter());
+      final router = _buildTestRouter();
+      await _pumpApp(tester, router);
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('rail_simulator_action')));
       await tester.pumpAndSettle();
 
       expect(find.text('page simulateur'), findsOneWidget);
+      // push() (pas go()) : le shell reste dans la pile sous /simulator — un
+      // pop() natif y ramène directement (F-4, docs/UX_NAVIGATION.md §3.4).
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      expect(navigator.canPop(), isTrue);
+      navigator.pop();
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/accueil',
+      );
+      expect(find.byKey(const Key('adaptive_nav_rail')), findsOneWidget);
     });
   });
 

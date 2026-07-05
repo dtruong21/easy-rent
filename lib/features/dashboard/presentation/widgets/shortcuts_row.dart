@@ -51,7 +51,10 @@ class _ShortcutCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.go(route),
+        // push() (pas go()) : le simulateur est empilé PAR-DESSUS le shell,
+        // le back natif dépile directement vers l'Accueil (docs/
+        // UX_NAVIGATION.md §3.4).
+        onTap: () => context.push(route),
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: spacing.lg,

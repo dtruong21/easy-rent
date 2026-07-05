@@ -276,8 +276,16 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
             // (actif) → retour forcé sur la liste non filtrée. Reset direct
             // du provider : la page /leases sous le formulaire pushé est
             // réutilisée par GoRouter, le seul query param ne suffirait pas.
+            // ⚠️ Conservé tel quel (F-2) : NE PAS remplacer par pop(), ce
+            // go('/leases?filter=all') est un fix historique qui évite de
+            // masquer le bail créé derrière un filtre hérité.
             ref.read(leaseFilterProvider.notifier).state = LeaseFilter.all;
             context.go('/leases?filter=all');
+          } else if (context.canPop()) {
+            // Édition : la page a été poussée depuis la fiche détail
+            // (`/leases/:id/edit`) — pop() y revient plutôt que d'écraser la
+            // pile avec la liste (F-2).
+            context.pop();
           } else {
             context.go('/leases');
           }

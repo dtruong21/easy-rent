@@ -101,7 +101,11 @@ class _ActivityTile extends StatelessWidget {
           title: 'Paiement enregistré · $tenantName',
           subtitle:
               '${MoneyFormat.formatEurosFromCents(amountCents)} · ${FrenchDate.format(occurredAt)}',
-          onTap: () => context.go('/leases/$leaseId/payments/$paymentId/edit'),
+          // push() (pas go()) : depuis l'onglet Accueil, on empile la
+          // sous-page de la branche Baux sans changer d'onglet — pop() y
+          // ramène directement à l'Accueil (F-1, docs/UX_NAVIGATION.md §5).
+          onTap: () =>
+              context.push('/leases/$leaseId/payments/$paymentId/edit'),
         ),
       ActivityReceiptGenerated(
         receiptId: _,
@@ -115,7 +119,8 @@ class _ActivityTile extends StatelessWidget {
           title: 'Quittance générée · $periodLabel',
           subtitle:
               '${MoneyFormat.formatEurosFromCents(totalCents)} · ${FrenchDate.format(occurredAt)}',
-          onTap: () => context.go('/leases/$leaseId/receipts'),
+          // push() (pas go()) — voir F-1 ci-dessus.
+          onTap: () => context.push('/leases/$leaseId/receipts'),
         ),
       ActivityDocumentUploaded(
         documentId: _,
@@ -130,7 +135,8 @@ class _ActivityTile extends StatelessWidget {
           title: '$categoryLabel · $filename',
           subtitle:
               '${_formatSize(sizeBytes)} · ${FrenchDate.format(occurredAt)}',
-          onTap: () => context.go('/leases/$leaseId'),
+          // push() (pas go()) — voir F-1 ci-dessus.
+          onTap: () => context.push('/leases/$leaseId'),
         ),
     };
   }
