@@ -198,8 +198,48 @@ class FirestoreReceiptsRepository implements ReceiptsRepository {
       totalCents: (data['totalCents'] as int?) ?? 0,
       lastPaidAt: _ts(data['lastPaidAt']),
       generatedAt: _ts(data['generatedAt']),
+      notes: await _aggregateSourcePaymentNotes(data['paymentIds']),
     );
     return renderReceiptPdf(pdfData);
+  }
+
+  /// Agrège le motif/notes des paiements source d'une quittance (FEAT-029
+  /// V1.1) pour affichage sur le PDF.
+  ///
+  /// Le doc Firestore `receipts/{id}` (posé par la CF `generateReceipt`, hors
+  /// scope de cette story) ne dénormalise PAS `payment.notes` — on relit donc
+  /// les paiements source directement (lecture Firestore déjà autorisée,
+  /// aucune Callable requise). Une quittance couvre en général 1 seul
+  /// paiement ; s'il en couvre plusieurs (regroupement de période), les notes
+  /// non vides sont jointes par ' · '. Tolérant aux erreurs de lecture
+  /// individuelles (paiement supprimé entre-temps) — n'empêche jamais le
+  /// rendu du PDF.
+  ///
+  /// Note review : un paiement soft-deleted (`deletedAt != null`) est déjà
+  /// bloqué en lecture par la règle Firestore `payments/get`
+  /// (`isOwner && isActive`) — le `try/catch` ci-dessous capte ce refus, sa
+  /// note ne fuite donc jamais. Le filtre explicite ci-dessous est une
+  /// défense en profondeur (évite un aller-retour réseau rejeté côté
+  /// serveur) plutôt qu'une nécessité de sécurité.
+  Future<String?> _aggregateSourcePaymentNotes(dynamic paymentIds) async {
+    if (paymentIds is! List || paymentIds.isEmpty) return null;
+    final notes = <String>[];
+    for (final id in paymentIds) {
+      if (id is! String) continue;
+      try {
+        final snap = await _firestore.collection('payments').doc(id).get();
+        final data = snap.data();
+        if (data == null || data['deletedAt'] != null) continue;
+        final note = data['notes'] as String?;
+        if (note != null && note.trim().isNotEmpty) {
+          notes.add(note.trim());
+        }
+      } catch (e, st) {
+        _log.warning('lecture note paiement $id échouée (ignorée)', e, st);
+      }
+    }
+    if (notes.isEmpty) return null;
+    return notes.join(' · ');
   }
 
   @override

@@ -32,9 +32,19 @@ class MoneyValidators {
   /// Valide un montant de charges (saisi en euros, string).
   ///
   /// Règle : champ requis, montant ≥ 0 (0 accepté), ≤ [kMaxAmountCents].
-  static String? validateChargesAmount(String? value) {
+  ///
+  /// [requiredMessage] permet aux appelants dont le champ ne représente pas
+  /// littéralement des « charges » (ex. dépenses réelles de régularisation,
+  /// FEAT-029) de fournir un message adapté au contexte métier, sans dupliquer
+  /// la logique de validation. Par défaut, conserve le message historique
+  /// utilisé par les formulaires bail/paiement.
+  static String? validateChargesAmount(
+    String? value, {
+    String requiredMessage =
+        'Les charges sont obligatoires (saisir 0 si aucune charge)',
+  }) {
     if (value == null || value.trim().isEmpty) {
-      return 'Les charges sont obligatoires (saisir 0 si aucune charge)';
+      return requiredMessage;
     }
     final cents = MoneyFormat.eurosToCents(value);
     if (cents == null) {

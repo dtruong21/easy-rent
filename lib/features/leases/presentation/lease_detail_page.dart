@@ -10,6 +10,7 @@ import '../../../core/ui/cards/status_pill_tone.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
+import '../../charge_regularization/presentation/widgets/charge_regularization_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../profile/application/landlord_profile_provider.dart';
@@ -93,8 +94,11 @@ class _LeaseDetailContent extends ConsumerWidget {
     // (le bouton de partage se désactive gracieusement).
     final tenantEmail = asyncTenant.valueOrNull?.email;
     final tenantFirstName = asyncTenant.valueOrNull?.firstName ?? '';
+    final tenantLastName = asyncTenant.valueOrNull?.lastName ?? '';
+    final tenantFullName = '$tenantFirstName $tenantLastName'.trim();
     final propertyAddress = asyncProperty.valueOrNull?.address ?? '';
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
+    final landlordAddress = asyncProfile.valueOrNull?.address ?? '';
 
     // FEAT-028 : le retard est calculé au niveau de la liste (l'info
     // paiement n'est pas portée par le Lease seul). On réutilise le cache
@@ -136,6 +140,16 @@ class _LeaseDetailContent extends ConsumerWidget {
             _StatusCard(lease: lease, isLate: isLate),
             const SizedBox(height: 16),
             _InfoCard(lease: lease),
+            const SizedBox(height: 16),
+            ChargeRegularizationSection(
+              lease: lease,
+              landlordFullName: landlordFullName,
+              landlordAddress: landlordAddress,
+              tenantFullName: tenantFullName,
+              tenantFirstName: tenantFirstName,
+              propertyAddress: propertyAddress,
+              tenantEmail: tenantEmail,
+            ),
             const SizedBox(height: 16),
             PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 16),

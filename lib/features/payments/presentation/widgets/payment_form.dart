@@ -403,8 +403,12 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             controller: _notesController,
             enabled: widget.enabled,
             decoration: const InputDecoration(
-              labelText: 'Notes (optionnel)',
-              hintText: 'Ex. : paiement en deux fois',
+              labelText: 'Motif / notes (optionnel)',
+              hintText:
+                  'Ex. : régularisation charges 2025, charge exceptionnelle',
+              helperText:
+                  'Ce motif apparaît sur le reçu ou la quittance générés '
+                  'pour ce paiement.',
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
