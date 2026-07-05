@@ -69,6 +69,7 @@ class _InMemoryLeaseRepository implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async {
     final l = Lease(
       id: 'gen-${_leases.length + 1}',
@@ -77,6 +78,7 @@ class _InMemoryLeaseRepository implements LeaseRepository {
       tenantId: tenantId,
       rentAmountCents: rentAmountCents,
       chargesAmountCents: chargesAmountCents,
+      nonRecoverableChargesCents: nonRecoverableChargesCents,
       startDate: startDate,
       endDate: endDate,
       status: LeaseStatus.active,

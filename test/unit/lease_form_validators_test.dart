@@ -423,4 +423,79 @@ void main() {
       expect(LeaseFormValidators.validateAgencyFees(1000000001), isNotNull);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // FEAT-036 — validateNonRecoverableCharges
+  // ---------------------------------------------------------------------------
+  group('validateNonRecoverableCharges', () {
+    test('null → null (optionnel)', () {
+      expect(LeaseFormValidators.validateNonRecoverableCharges(null), isNull);
+    });
+
+    test('vide → null (optionnel)', () {
+      expect(LeaseFormValidators.validateNonRecoverableCharges(''), isNull);
+    });
+
+    test('espaces uniquement → null (optionnel)', () {
+      expect(LeaseFormValidators.validateNonRecoverableCharges('   '), isNull);
+    });
+
+    test('"0" → null (zéro accepté)', () {
+      expect(LeaseFormValidators.validateNonRecoverableCharges('0'), isNull);
+    });
+
+    test('"20,00" (virgule) → null', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('20,00'),
+        isNull,
+      );
+    });
+
+    test('"20.00" (point) → null', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('20.00'),
+        isNull,
+      );
+    });
+
+    // ⚠️ Cas piège documenté dans le validateur : une saisie négative comme
+    // "-20" doit être rejetée, alors même que le validateur reçoit la String
+    // brute (pas un int déjà converti) — voir lease_form_validators.dart.
+    test('négatif "-20" → erreur', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('-20'),
+        isNotNull,
+      );
+    });
+
+    test('"abc" (non numérique) → erreur', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('abc'),
+        isNotNull,
+      );
+    });
+
+    // --- Plafond 100 000 000 centimes = 1 000 000,00 € (aligné sur les
+    // champs voisins récupérable/agence, cf. MoneyValidators.kMaxAmountCents) ---
+    test('"999999.99" (99 999 999 cts, sous le plafond) → null', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('999999.99'),
+        isNull,
+      );
+    });
+
+    test('"1000000.00" (exactement au plafond) → null', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('1000000.00'),
+        isNull,
+      );
+    });
+
+    test('"1000000.01" (au-delà du plafond) → erreur', () {
+      expect(
+        LeaseFormValidators.validateNonRecoverableCharges('1000000.01'),
+        isNotNull,
+      );
+    });
+  });
 }

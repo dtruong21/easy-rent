@@ -45,6 +45,7 @@ abstract interface class LeaseRepository {
     int agencyFeesCents,
     bool solidarityClause,
     bool entryInventoryDone,
+    int nonRecoverableChargesCents,
   });
 
   /// Met à jour via la Callable `updateLease` (whitelist champs mutables +
@@ -227,6 +228,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async {
     _log.info('create(propertyId=$propertyId, tenantId=$tenantId)');
     final res = await _callable('createLease').call(<String, dynamic>{
@@ -234,6 +236,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
       'tenantId': tenantId,
       'rentAmountCents': rentAmountCents,
       'chargesAmountCents': chargesAmountCents,
+      'nonRecoverableChargesCents': nonRecoverableChargesCents,
       'startDate': startDate.toUtc().toIso8601String(),
       'endDate': ?endDate?.toUtc().toIso8601String(),
       'status': 'active',
@@ -260,6 +263,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
     final patch = <String, dynamic>{
       'rentAmountCents': lease.rentAmountCents,
       'chargesAmountCents': lease.chargesAmountCents,
+      'nonRecoverableChargesCents': lease.nonRecoverableChargesCents,
       'endDate': lease.endDate?.toUtc().toIso8601String(),
       'leaseType': lease.leaseType.sqlValue,
       'depositAmountCents': lease.depositAmountCents,

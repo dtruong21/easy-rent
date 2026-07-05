@@ -31,7 +31,17 @@ class Lease with _$Lease {
     @JsonKey(name: 'property_id') required String propertyId,
     @JsonKey(name: 'tenant_id') required String tenantId,
     @JsonKey(name: 'rent_amount_cents') required int rentAmountCents,
+    // Réinterprété FEAT-036 : part RÉCUPÉRABLE des charges (provision
+    // mensuelle facturable au locataire, décret n°87-713). Nom inchangé pour
+    // la rétrocompat — voir [LeaseExtension.recoverableChargesCents] pour
+    // l'alias explicite et `docs/plans/FEAT-036-charges-recuperables.md`.
     @JsonKey(name: 'charges_amount_cents') required int chargesAmountCents,
+    // FEAT-036 : part NON récupérable des charges — à la charge du bailleur,
+    // jamais facturée au locataire. Absent sur les baux créés avant FEAT-036
+    // ⇒ `@Default(0)` (migration lazy, aucun backfill nécessaire).
+    @JsonKey(name: 'non_recoverable_charges_cents')
+    @Default(0)
+    int nonRecoverableChargesCents,
     @JsonKey(name: 'start_date', fromJson: _dateFromJson, toJson: _dateToJson)
     required DateTime startDate,
     @JsonKey(
@@ -133,7 +143,26 @@ String _methodToJson(PaymentMethod v) => v.sqlValue;
 /// Getters utilitaires sur un bail.
 extension LeaseExtension on Lease {
   /// Loyer toutes charges comprises en centimes.
+  ///
+  /// ⚠️ FEAT-036 : reste volontairement `rent + récupérable` (INCHANGÉ). Le
+  /// non-récupérable n'est jamais facturé au locataire (décret n°87-713) —
+  /// l'inclure ici fausserait le montant réellement dû (cards, bandeau
+  /// paiement, quittance). Pour le total des charges (informatif), voir
+  /// [totalChargesCents].
   int get totalAmountCents => rentAmountCents + chargesAmountCents;
+
+  /// Alias lisible de [chargesAmountCents] — la part RÉCUPÉRABLE des
+  /// charges (facturable au locataire). Le champ sous-jacent n'est pas
+  /// renommé pour préserver la rétrocompat des ~15 points de lecture
+  /// existants (quittance, paiements, dashboard) ; cet alias clarifie
+  /// seulement l'intention dans le nouveau code FEAT-036.
+  int get recoverableChargesCents => chargesAmountCents;
+
+  /// Total des charges (récupérable + non récupérable) en centimes.
+  ///
+  /// Purement informatif (fiche bail) — jamais utilisé comme montant dû par
+  /// le locataire, voir [totalAmountCents].
+  int get totalChargesCents => chargesAmountCents + nonRecoverableChargesCents;
 
   /// Vrai si le bail est actif et non archivé.
   bool get isActive => status == LeaseStatus.active && deletedAt == null;

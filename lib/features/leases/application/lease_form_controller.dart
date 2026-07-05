@@ -50,6 +50,7 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async {
     state = const LeaseFormState.submitting();
 
@@ -75,6 +76,7 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
           agencyFeesCents: agencyFeesCents,
           solidarityClause: solidarityClause,
           entryInventoryDone: entryInventoryDone,
+          nonRecoverableChargesCents: nonRecoverableChargesCents,
         );
         _log.info('lease created id=${result.id}');
       } else {
@@ -95,6 +97,7 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
           agencyFeesCents: agencyFeesCents,
           solidarityClause: solidarityClause,
           entryInventoryDone: entryInventoryDone,
+          nonRecoverableChargesCents: nonRecoverableChargesCents,
         );
         result = await repo.update(updated);
         _log.info('lease updated id=${result.id}');

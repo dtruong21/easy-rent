@@ -71,6 +71,15 @@ export const createLease = onCall(
       "chargesAmountCents",
       {min: 0},
     );
+    // FEAT-036 : part non récupérable (à charge du bailleur, informatif).
+    // chargesAmountCents reste la part récupérable, inchangée. Pas de
+    // contrainte total = récupérable + non-récupérable : aucun champ total
+    // n'est persisté (voir plan FEAT-036 §c).
+    const nonRecoverableChargesCents = requireInt(
+      data.nonRecoverableChargesCents ?? 0,
+      "nonRecoverableChargesCents",
+      {min: 0},
+    );
     const startDate = toTimestamp(data.startDate, "startDate");
     const endDate = optionalTimestamp(data.endDate, "endDate");
     const status = requireString(data.status ?? "active", "status");
@@ -151,6 +160,7 @@ export const createLease = onCall(
         tenantEmail: tenant.email,
         rentAmountCents,
         chargesAmountCents,
+        nonRecoverableChargesCents,
         startDate,
         endDate,
         status,
@@ -188,6 +198,7 @@ export const createLease = onCall(
 const LEASE_MUTABLE_FIELDS = new Set([
   "rentAmountCents",
   "chargesAmountCents",
+  "nonRecoverableChargesCents",
   "endDate",
   "status",
   "leaseType",
@@ -229,6 +240,21 @@ export const updateLease = onCall(
         !LEASE_STATUSES.has(cleanPatch.status)
       ) {
         throw new HttpsError("invalid-argument", "invalid status");
+      }
+    }
+    // FEAT-036 : nonRecoverableChargesCents transite par cleanPatch sans
+    // transformation de type (comme agencyFeesCents) ; on borne juste ici,
+    // à l'instar de status/paymentMethod ci-dessus.
+    if (cleanPatch.nonRecoverableChargesCents !== undefined) {
+      if (
+        typeof cleanPatch.nonRecoverableChargesCents !== "number" ||
+        !Number.isInteger(cleanPatch.nonRecoverableChargesCents) ||
+        cleanPatch.nonRecoverableChargesCents < 0
+      ) {
+        throw new HttpsError(
+          "invalid-argument",
+          "nonRecoverableChargesCents must be an integer >= 0",
+        );
       }
     }
 

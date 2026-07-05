@@ -10,9 +10,20 @@
 /// en assertion séparée du getter, pour détecter une inversion accidentelle
 /// du signe (risque identifié dans le cahier des charges — un solde inversé
 /// exposerait à réclamer au locataire alors qu'un remboursement est dû).
+///
+/// Étend également la couverture FEAT-036 (non-régression AC-2) : un bail
+/// avec `nonRecoverableChargesCents > 0` doit produire EXACTEMENT le même
+/// solde qu'un bail identique avec 0, car seul `lease.chargesAmountCents`
+/// (le récupérable) alimente la chaîne de calcul via les provisions
+/// encaissées — voir groupe « FEAT-036 » ci-dessous.
 library;
 
+import 'package:easyrent/features/charge_regularization/application/charge_provisions_calculator.dart';
 import 'package:easyrent/features/charge_regularization/domain/charge_regularization_balance.dart';
+import 'package:easyrent/features/leases/domain/lease.dart';
+import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/payments/domain/payment.dart';
+import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -202,4 +213,136 @@ void main() {
       });
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // FEAT-036 — non-régression AC-2 : le bail.nonRecoverableChargesCents
+  // n'affecte jamais le solde de régularisation.
+  //
+  // Simule le flux réel de bout en bout (docs/plans/FEAT-036, section d) :
+  // lease.chargesAmountCents (récupérable) → pré-remplit
+  // payment.chargesAmountCents (comme le fait payment_form_page.dart) →
+  // sumChargeProvisionsForPeriod() → provisionsCollectedCents →
+  // ChargeRegularizationBalance.balanceCents.
+  // ---------------------------------------------------------------------------
+  group('FEAT-036 — non-régression : nonRecoverableChargesCents du bail '
+      "n'entre jamais dans le solde de régularisation (AC-2)", () {
+    Lease buildLease({required int nonRecoverableChargesCents}) => Lease(
+      id: 'lease-1',
+      landlordId: 'owner-1',
+      propertyId: 'prop-1',
+      tenantId: 'tenant-1',
+      rentAmountCents: 85000,
+      chargesAmountCents: 10000, // récupérable — inchangé par le scénario
+      nonRecoverableChargesCents: nonRecoverableChargesCents,
+      startDate: DateTime(2025, 1, 1),
+      status: LeaseStatus.active,
+      createdAt: DateTime(2025, 1, 1),
+      updatedAt: DateTime(2025, 1, 1),
+    );
+
+    /// Simule le pré-remplissage de `payment_form_page.dart` : la
+    /// provision de charges du paiement est toujours calquée sur
+    /// `lease.chargesAmountCents` (le récupérable), jamais sur
+    /// `totalChargesCents` — c'est précisément l'invariant à protéger.
+    Payment buildMonthlyPayment(Lease lease, DateTime month) => Payment(
+      id: 'payment-${month.month}',
+      leaseId: lease.id,
+      landlordId: lease.landlordId,
+      periodStart: DateTime(month.year, month.month, 1),
+      periodEnd: DateTime(month.year, month.month + 1, 0),
+      paidAt: DateTime(month.year, month.month, 5),
+      rentAmountCents: lease.rentAmountCents,
+      chargesAmountCents: lease.chargesAmountCents, // récupérable SEUL
+      paymentMethod: PaymentMethod.virement,
+      createdAt: month,
+      updatedAt: month,
+    );
+
+    ChargeRegularizationBalance regularizeYear(
+      Lease lease, {
+      required int actualExpensesCents,
+    }) {
+      final periodStart = DateTime(2025, 1, 1);
+      final periodEnd = DateTime(2025, 12, 31);
+      final payments = List.generate(
+        12,
+        (i) => buildMonthlyPayment(lease, DateTime(2025, i + 1, 1)),
+      );
+      final provisionsCollectedCents = sumChargeProvisionsForPeriod(
+        payments: payments,
+        referenceStart: periodStart,
+        referenceEnd: periodEnd,
+      );
+      return ChargeRegularizationBalance(
+        periodStart: periodStart,
+        periodEnd: periodEnd,
+        provisionsCollectedCents: provisionsCollectedCents,
+        actualExpensesCents: actualExpensesCents,
+      );
+    }
+
+    test('bail SANS non-récupérable (0) — solde de référence', () {
+      final lease = buildLease(nonRecoverableChargesCents: 0);
+      final balance = regularizeYear(lease, actualExpensesCents: 135000);
+
+      // provisions = 12 * 10000 (récupérable) = 120000
+      expect(balance.provisionsCollectedCents, 120000);
+      expect(balance.balanceCents, 15000);
+    });
+
+    test('bail AVEC non-récupérable > 0 — solde STRICTEMENT IDENTIQUE '
+        'au bail à 0 (le non-récupérable est invisible du calcul)', () {
+      final leaseWithoutNonRecoverable = buildLease(
+        nonRecoverableChargesCents: 0,
+      );
+      final leaseWithNonRecoverable = buildLease(
+        nonRecoverableChargesCents: 4000, // 40 € non récupérable/mois
+      );
+
+      final balanceWithout = regularizeYear(
+        leaseWithoutNonRecoverable,
+        actualExpensesCents: 135000,
+      );
+      final balanceWith = regularizeYear(
+        leaseWithNonRecoverable,
+        actualExpensesCents: 135000,
+      );
+
+      expect(
+        balanceWith.provisionsCollectedCents,
+        balanceWithout.provisionsCollectedCents,
+        reason:
+            'Les provisions encaissées ne doivent dépendre que de '
+            'lease.chargesAmountCents (récupérable), jamais de '
+            'nonRecoverableChargesCents.',
+      );
+      expect(
+        balanceWith.balanceCents,
+        balanceWithout.balanceCents,
+        reason:
+            'Un bail avec des charges non récupérables > 0 doit '
+            'produire EXACTEMENT le même solde de régularisation '
+            "qu'un bail identique sans non-récupérable (AC-2) — sinon "
+            'le locataire se verrait facturer une charge illégale '
+            '(décret n°87-713).',
+      );
+      expect(balanceWith.direction, balanceWithout.direction);
+      expect(balanceWith.labelFr, balanceWithout.labelFr);
+    });
+
+    test('le total des charges du bail (totalChargesCents) n\'apparaît '
+        'nulle part dans le calcul de provisions', () {
+      final lease = buildLease(nonRecoverableChargesCents: 8000);
+      final balance = regularizeYear(lease, actualExpensesCents: 120000);
+
+      // Si totalChargesCents (10000 + 8000 = 18000) avait fuité dans le
+      // pré-remplissage des paiements, les provisions seraient
+      // 12 * 18000 = 216000 au lieu de 12 * 10000 = 120000.
+      expect(balance.provisionsCollectedCents, 120000);
+      expect(
+        balance.provisionsCollectedCents,
+        isNot(12 * lease.totalChargesCents),
+      );
+    });
+  });
 }
