@@ -311,7 +311,7 @@ Lease _makeLease({required String id, required LeaseStatus status}) => Lease(
 
 class _FakeLeaseRepo implements LeaseRepository {
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [
     LeaseListItem(
       lease: _makeLease(id: 'lease-shell-1', status: LeaseStatus.active),
       propertyName: 'Appart Test',

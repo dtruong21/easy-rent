@@ -28,7 +28,7 @@ class _InMemoryLeaseRepository implements LeaseRepository {
   DateTime? lastCloseDate;
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async {
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async {
     // Tri status ASC puis start_date DESC.
     final sorted = List<Lease>.from(_leases)
       ..sort((a, b) {

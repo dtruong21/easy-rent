@@ -23,7 +23,11 @@ abstract interface class LeaseRepository {
   /// Tri : `status ASC` (active d'abord) puis `startDate DESC`. Les denorms
   /// `propertyName` et `tenant{First,Last}Name` sont déjà sur le doc lease,
   /// donc pas de jointure nécessaire (1 seule query).
-  Future<List<LeaseListItem>> listForDisplay();
+  ///
+  /// [now] est injectable pour les tests (calcul `isLate` déterministe,
+  /// cf. `lease_lateness.dart`) — les appelants prod ne le fournissent
+  /// jamais et obtiennent le défaut `DateTime.now()`.
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now});
 
   Future<Lease> getById(String id);
 
@@ -97,7 +101,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
   );
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async {
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async {
     _log.info('listForDisplay()');
     // Tri côté serveur : startDate DESC. Le tri status ASC (active d'abord)
     // est appliqué côté client après lecture pour ne pas multiplier les
@@ -124,7 +128,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
         .toList();
     final paymentsByLease = await _fetchPaymentsByLease(activeLeaseIds);
 
-    final now = DateTime.now();
+    final effectiveNow = now ?? DateTime.now();
     final items = qs.docs.map((d) {
       final lease = leases.firstWhere((l) => l.id == d.id);
       final data = d.data();
@@ -138,7 +142,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
       final isLate = isLeaseLate(
         lease: lease,
         payments: paymentsByLease[lease.id] ?? const [],
-        now: now,
+        now: effectiveNow,
       );
       return LeaseListItem(
         lease: lease,

@@ -31,7 +31,7 @@ class _FakeLeaseRepo implements LeaseRepository {
   Future<Lease> getById(String id) async => lease;
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [];
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
   Future<Lease> create({

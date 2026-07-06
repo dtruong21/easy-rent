@@ -29,7 +29,7 @@ class _FakeRepo implements LeaseRepository {
   const _FakeRepo({this.items = const [], this.listError});
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async {
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async {
     if (listError != null) throw listError!;
     return items;
   }

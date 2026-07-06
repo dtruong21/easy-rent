@@ -303,7 +303,7 @@ Lease _makeLease({required String id, required LeaseStatus status}) => Lease(
 /// pour prouver que la pile GoRouter s'est construite jusqu'à la cible).
 class _FakeLeaseRepo implements LeaseRepository {
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [
     LeaseListItem(
       lease: _makeLease(id: 'lease-shell-1', status: LeaseStatus.active),
       propertyName: 'Appart Test',
