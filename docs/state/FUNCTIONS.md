@@ -98,7 +98,7 @@
 
 ### 🔒 Lease Management (FEAT-005, FEAT-036)
 
-#### `createLease`
+#### `createLease` (FEAT-042)
 
 **Type** : Callable (client invoke, isFullyAuthed only)
 
@@ -108,7 +108,8 @@ export const createLease = onCall(async (request) => {
   const uid = request.auth.uid;
   const data = {
     propertyId, tenantId, rentAmountCents, chargesAmountCents,
-    nonRecoverableChargesCents (NEW FEAT-036),
+    nonRecoverableChargesCents (FEAT-036),
+    chargeMode (FEAT-042, optional; resolved/enforced serveur),
     startDate, endDate, status, leaseType, paymentDay, paymentMethod,
     depositAmountCents, irlIndexValue, irlQuarterRef, agencyFeesCents,
     solidarityClause, entryInventoryDone
@@ -120,34 +121,42 @@ export const createLease = onCall(async (request) => {
 1. Auth : `uid` présent (isFullyAuthed via RLS)
 2. FK validation : GET properties/{propertyId}, tenants/{tenantId}
 3. Ownership : properties.landlordId == tenants.landlordId == uid
-4. **FEAT-036** : nonRecoverableChargesCents validé (≥ 0, pas de total constraint)
-5. Date logic : startDate <= endDate
-6. Status inference : 'active' | 'terminated' | 'archived'
+4. FEAT-036 : nonRecoverableChargesCents validé (≥ 0, pas de total constraint)
+5. **FEAT-042** : `resolveChargeMode(leaseType, chargeMode)` → canonique (coerce type↔mode, rejette incompatible)
+6. **FEAT-042 Forfait** : Si mode==forfait → force nonRecoverableChargesCents=0 (ventilation interdite)
+7. Date logic : startDate <= endDate
+8. Status inference : 'active' | 'terminated' | 'archived'
 
 **Mutations** (transactionnel) :
 1. CREATE leases/{id} avec snapshot denorm (propertyName, tenantFirstName/LastName, etc.)
-2. **FEAT-036** : persiste chargesAmountCents (récupérable) + nonRecoverableChargesCents (informatif)
-3. Si status=='active' : INCREMENT properties/{propertyId}.activeLeaseCount
-4. Si status=='active' : INCREMENT tenants/{tenantId}.activeLeaseCount
+2. Persiste chargesAmountCents (récupérable) + nonRecoverableChargesCents (≥ 0, ou forcé 0 si forfait)
+3. **FEAT-042** : persiste resolveChargeMode(leaseType, chargeMode) → chargeMode
+4. Si status=='active' : INCREMENT properties/{propertyId}.activeLeaseCount
+5. Si status=='active' : INCREMENT tenants/{tenantId}.activeLeaseCount
 
 **Retour** : `{leaseId: string}`
 
-**Erreurs** : PERMISSION_DENIED, NOT_FOUND, INVALID_ARGUMENT
+**Erreurs** : PERMISSION_DENIED, NOT_FOUND, INVALID_ARGUMENT, FAILED_PRECONDITION (type↔mode conflict)
 
 **Fichier** : `functions/src/callable/lease_payment.ts`
 
-#### `updateLease`
+#### `updateLease` (FEAT-042)
 
 **Type** : Callable
 
-**Mutable fields** : rentAmountCents, chargesAmountCents, **nonRecoverableChargesCents (FEAT-036)**, endDate, status, leaseType, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone
+**Mutable fields** : rentAmountCents, chargesAmountCents, nonRecoverableChargesCents (FEAT-036), endDate, status, leaseType, **chargeMode (FEAT-042)**, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone
 
 **Logique** :
 1. Fetch current lease + validate ownership
-2. **FEAT-036** : nonRecoverableChargesCents borné (≥ 0), validation cross-entity + re-validation charges
-3. Si status change (active → terminated) : DECREMENT activeLeaseCount (CF soft-delete + trigger)
-4. Transact : Admin SDK update + denorm re-snapshot propertyName
-5. Return `{updated: true}`
+2. FEAT-036 : nonRecoverableChargesCents borné (≥ 0), validation cross-entity + re-validation charges
+3. **FEAT-042 (inconditional)** : `resolveChargeMode(finalLeaseType, requestedChargeMode)` → canonique (même si patch n'y touche pas — baux legacy doivent appliquer forçage)
+   - Si leaseType ne change pas → use requestedChargeMode (du patch) ou ancien persisté (si omis)
+   - Si leaseType change → requestedChargeMode du patch seulement (ancien persisté ignoré pour dérivation libre)
+   - Backfill lazy : persiste toujours le mode résolu (matérialise legacy à la 1ère mutation)
+4. **FEAT-042 Forfait** : Si finalChargeMode==forfait → force nonRecoverableChargesCents=0 (inclus baux legacy mobilité)
+5. Si status change (active → terminated) : DECREMENT activeLeaseCount (CF soft-delete + trigger)
+6. Transact : Admin SDK update + denorm re-snapshot propertyName + chargeMode matérialisé
+7. Return `{updated: true}`
 
 **Fichier** : `functions/src/callable/lease_payment.ts`
 
@@ -499,7 +508,19 @@ export const softDeleteEntity = onCall(async (request) => {
 
 ---
 
-## Helper Utilities
+## Helper Utilities & Constants
+
+**Fichier** : `functions/src/callable/lease_payment.ts` (constants + FEAT-042 helpers)
+
+| Constant/Helper | Valeur/Signature | Usage |
+|---|---|---|
+| `CHARGE_MODES` | `Set(["provisions", "forfait"])` | **FEAT-042** : validation chargeMode enum |
+| `resolveChargeMode()` | `(leaseType: string, requested?: string) → string` | **FEAT-042** : source unique de vérité serveur pour cohérence type↔mode + dérivation legacy |
+
+**Logique `resolveChargeMode`** :
+- `unfurnished` → forcé `'provisions'` (art. 23 loi 6/7/1989), rejette forfait explicite
+- `mobility` → forcé `'forfait'` (loi ELAN art. 25-18), rejette provisions explicite
+- `furnished` | `student` → libre, défaut `'provisions'` si omis
 
 **Fichier** : `functions/src/utils/callable_helpers.ts`
 
@@ -515,6 +536,28 @@ export const softDeleteEntity = onCall(async (request) => {
 | `asBag()` | `(data) → Record<string, any>` | Safely cast to object bag |
 | `dataOrFail()` | `(snap, entity) → any` | Extract doc data or throw NOT_FOUND |
 | `assertOwnedAndActive()` | `(doc, uid, entity) → void` | Check ownership + isActive |
+
+---
+
+## Dart Repositories — Getters Calculés
+
+### `FirestoreLeaseRepository.listForDisplay({DateTime? now})`
+
+**Fichier** : `lib/features/leases/data/lease_repository.dart`
+
+**Signature** :
+```dart
+Future<List<LeaseListItem>> listForDisplay({DateTime? now})
+```
+
+**Logique** (FEAT-042 inchangée, FEAT-028 lateness injectée) :
+1. Query Firestore : `landlordId==uid && deletedAt==null`, sort `startDate DESC` (200 limit)
+2. Fetch ALL payments pour baux actifs (FEAT-028 : évite charger paiements baux terminés)
+3. **Injectable clock** : `now ?? DateTime.now()` — permet tests déterministes (FEAT-042 horloge injectable)
+4. Compute pour chaque : `isLeaseLate(lease, payments, now)` → retard coloré + filtre
+5. Return `List<LeaseListItem>` (lease + computed state)
+
+**Utilisé par** : `leasesListProvider` (Riverpod FutureProvider)
 
 ---
 

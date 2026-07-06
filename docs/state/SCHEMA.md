@@ -110,9 +110,9 @@ Locataire. Anonyme N/A.
 
 ---
 
-### `leases/{id}` — CF exclusive (FEAT-036, FEAT-006)
+### `leases/{id}` — CF exclusive (FEAT-036, FEAT-042, FEAT-006)
 
-Bail d'habitation. **CROSS-ENTITY** : propertyId + tenantId doivent appartenir au même landlord + validation ownership. Charges = `chargesAmountCents` (récupérable FEAT-036) + `nonRecoverableChargesCents` (informatif bailleur, FEAT-036).
+Bail d'habitation. **CROSS-ENTITY** : propertyId + tenantId doivent appartenir au même landlord + validation ownership. Charges = `chargesAmountCents` (récupérable FEAT-036) + `nonRecoverableChargesCents` (informatif bailleur, FEAT-036). **Mode de charges (FEAT-042)** : `chargeMode` (provisions | forfait) détermine l'éligibilité à la régularisation (provisions uniquement).
 
 | Champ | Type | Notes |
 |---|---|---|
@@ -126,12 +126,13 @@ Bail d'habitation. **CROSS-ENTITY** : propertyId + tenantId doivent appartenir a
 | `tenantLastName` | string | Snapshot tenants.lastName |
 | `tenantEmail` | string | Snapshot tenants.email |
 | `rentAmountCents` | int | Loyer mensuel (en centimes) |
-| `chargesAmountCents` | int | Part RÉCUPÉRABLE (FEAT-036) — bilancée au locataire via paiement + régularisation |
-| `nonRecoverableChargesCents` | int | Part NON-RÉCUPÉRABLE (FEAT-036) — informatif bailleur, jamais bilancée |
+| `chargesAmountCents` | int | Part RÉCUPÉRABLE (FEAT-036) — bilancée au locataire via paiement + régularisation (provisions only) |
+| `nonRecoverableChargesCents` | int | Part NON-RÉCUPÉRABLE (FEAT-036) — informatif bailleur, jamais bilancée ; forcé à 0 en mode forfait (FEAT-042) |
 | `startDate` | timestamp | Début bail |
 | `endDate` | timestamp\|null | Fin bail |
 | `status` | string | 'active' \| 'terminated' \| 'archived' |
 | `leaseType` | string | 'unfurnished' \| 'furnished' \| 'mobility' \| 'student' |
+| `chargeMode` | string\|null | **FEAT-042** : 'provisions' (provisions mensuelles + régularisation) \| 'forfait' (montant libératoire, pas de régularisation). Nullable = migration lazy ; effectif dérivé de leaseType si null (voir note) |
 | `depositAmountCents` | int\|null | Dépôt garantie |
 | `paymentDay` | int | Jour versement (1..28) |
 | `paymentMethod` | string | 'virement' \| 'cheque' \| 'especes' \| 'prelevement' \| 'autre' |
@@ -144,7 +145,15 @@ Bail d'habitation. **CROSS-ENTITY** : propertyId + tenantId doivent appartenir a
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | Soft-delete, isActive filter |
 
-**Mutable fields** (updateLease) : rentAmountCents, chargesAmountCents, nonRecoverableChargesCents, endDate, status, leaseType, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone.
+**Charge Mode Resolution (FEAT-042)** : 
+- `chargeMode==null` (baux pré-042, migration lazy sans backfill) → getter Dart `effectiveChargeMode` dérive depuis `leaseType` :
+  - `unfurnished` → `provisions` (art. 23 loi 6 juillet 1989, forcé serveur)
+  - `mobility` → `forfait` (loi ELAN art. 25-18, forcé serveur)
+  - `furnished` | `student` → `provisions` (défaut sûr)
+- `chargeMode` explicite (baux FEAT-042+) → validé serveur (`resolveChargeMode` impose cohérence type↔mode, rejette changements incohérents)
+- **Forfait mode** : `nonRecoverableChargesCents` forcé à 0 serveur (ventilation interdite) — valide aussi pour baux legacy mobilité
+
+**Mutable fields** (updateLease) : rentAmountCents, chargesAmountCents, nonRecoverableChargesCents, endDate, status, leaseType, chargeMode, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone.
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(resource)

@@ -4,20 +4,20 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-05T21:15:00Z
-- **Commit ref** : `341d58d` (develop, FEAT-036 + FEAT-041 V1 merged, 2026-07-05)
+- **Dernière mise à jour** : 2026-07-06T07:45:00Z
+- **Commit ref** : `6367a8c` (develop, FEAT-036 + FEAT-041 V1 + FEAT-042 merged, 2026-07-06)
 - **Branche** : `develop`
-- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ (FEAT-001–030 + FEAT-036, FEAT-041 V1, `expenses` collection live)
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ (FEAT-001–042, `expenses` + charge modes collections live)
 
 ## Pointeurs
 
 | Aspect du projet | Fichier | Contenu clé |
 |---|---|---|
-| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase |
+| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase, **chargeMode FEAT-042** |
 | Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 45+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041) |
-| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–041 V1, MVP ✅ + Post-MVP M1 ✅ (FEAT-036, FEAT-041 merged) |
+| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–042, MVP ✅ + Post-MVP M1 ✅ (FEAT-036, FEAT-041 V1, FEAT-042 merged) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
-| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **27 callables** (+ `createExpense`, `updateExpense` FEAT-041) + 8 triggers (+ `setUpdatedAtExpenses`) + 1 scheduled |
+| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **27 callables** + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper**; **horloge injectable `listForDisplay`** |
 | Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
 | Design tokens (sémantique métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) | Couleurs (error, warning, success), spacing (4dp grid) |
 
@@ -53,7 +53,19 @@
 | **Hosting** | Firebase Hosting | Staging + prod channels, CSP (fonts.gstatic.com) |
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
-## Changements récents (2026-07-03 — 2026-07-05)
+## Changements récents (2026-07-03 — 2026-07-06)
+
+### FEAT-042 : Mode de charges (provisions/forfait) + éligibilité régularisation
+
+**Status** : ✅ DONE (merged PR #68, 2026-07-06)
+
+- **Nouveau champ** : `leases.chargeMode` (string?, 'provisions' | 'forfait')
+- **Migration lazy** : null dérivé du leaseType (nu→provisions, mobilité→forfait)
+- **CF helper** : `resolveChargeMode(leaseType, requested)` — source vérité serveur (type↔mode cohérence)
+- **Forfait constraint** : nonRecoverableChargesCents forcé à 0 (ventilation interdite)
+- **Éligibilité régularisation** : Prédicat `canRegularizeCharges` (effectiveChargeMode==provisions, remplace ancien gate)
+- **Horloge injectable** : `listForDisplay({DateTime? now})` — tests déterministes (FEAT-042 fix lateness)
+- **Dart domain** : `lib/features/leases/domain/{lease.dart, charge_mode.dart}` — getters calculés, enum + coercion
 
 ### FEAT-041 : Suivi dépenses unifié (V1)
 
@@ -182,9 +194,9 @@
 - `/simulator` (list/create) + `/simulator/:id` (edit)
 - Accessible anonymes + comptes (investment_scenarios CRUD direct)
 
-## Audit incohérences (2026-07-05)
+## Audit incohérences (2026-07-06)
 
-À la date 2026-07-05 (après merge FEAT-036 + FEAT-041 V1, commit 341d58d) :
+À la date 2026-07-06 (après merge FEAT-036 + FEAT-041 V1 + FEAT-042, commit 6367a8c) :
 
 - **✅ Collections Firestore cohérentes** : **11 collections** (landlords, properties, tenants, leases, payments, receipts, documents, **expenses (NEW FEAT-041)**, investment_scenarios, paid_plan_interest, support_requests) — Firestore camelCase stable
 - **✅ Règles de sécurité complètes** : 3 couches (rules + CF + triggers), isFullyAuthed() + isAnonymous(), soft-delete filters systématiques, expenses CF exclusive (cross-entity + juridique validation)
@@ -199,6 +211,7 @@
 - **✅ FEAT-036 intégration** : nonRecoverableChargesCents + chargesAmountCents dual tracking (leases), validation CF, tests coverage
 - **✅ FEAT-041 V1 intégration** : expenses collection live + juridique category derivation (NATURE_DEFAULT_CATEGORY) + FEAT-041b docs v2 (expense_receipt category) + routes PropertyExpensesPage
 - **✅ FEAT-041c planné** : recomputeChargeRegularization trigger (attendre V1.1, non déployé)
+- **✅ FEAT-042 intégration** : chargeMode champ nullable + resolveChargeMode CF helper (type↔mode cohérence) + effectiveChargeMode getter + canRegularizeCharges predicate (remplace ancien gate leaseType==unfurnished) + forfait⇒nonRecoverable=0 forcing + horloge injectable listForDisplay
 
 ## Prochaines étapes (priorité)
 

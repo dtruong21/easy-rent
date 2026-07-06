@@ -53,10 +53,55 @@
 | **FEAT-035** | **2FA TOTP** | Post-M2 | 📋 planned | — | Authenticator app integration |
 | **FEAT-036** | **Charges récupérables vs non-récupérables** | M1 | ✅ **done** | PR #66 (2026-07-05) | **nonRecoverableChargesCents, FEAT-036 merged** |
 | **FEAT-041** | **Suivi dépenses unifié** | M1 | ✅ **done (V1)** | PR #67 (2026-07-05) | **`expenses` collection, CF exclusive, FEAT-041a/b/c planifiées** |
+| **FEAT-042** | **Mode de charges (provisions/forfait) + éligibilité régularisation** | M1 | ✅ **done** | PR #68 (2026-07-06) | **`leases.chargeMode`, `resolveChargeMode` CF, `effectiveChargeMode` getter, `canRegularizeCharges` predicate** |
 
 ---
 
-## Détails par feature (Post-MVP M1, session 2026-07-03–07-05)
+## Détails par feature (Post-MVP M1, session 2026-07-03–07-06)
+
+### FEAT-042 : Mode de charges (provisions/forfait) + éligibilité régularisation
+
+**Status** : ✅ DONE — merged PR #68 (2026-07-06)
+
+**Contenu** :
+
+- **Nouveau champ** : `leases.chargeMode` (string? = 'provisions' | 'forfait')
+  - **Nullable** : migration lazy sans backfill (baux pré-042 = null)
+  - Getter Dart `effectiveChargeMode` → dérive depuis `leaseType` si null :
+    - `unfurnished` → provisions (forcé, art. 23 loi 6/7/1989)
+    - `mobility` → forfait (forcé, loi ELAN art. 25-18)
+    - `furnished` | `student` → provisions (défaut sûr)
+
+- **CF Helper** : `resolveChargeMode(leaseType, requested)` — source unique vérité serveur
+  - **Coercive** : refuse changements incohérents (ex: forfait sur nu → INVALID_ARGUMENT)
+  - Backfill lazy : persiste toujours le mode résolu à la première mutation (matérialise legacy)
+
+- **Forfait constraint** : Si chargeMode==forfait → force `nonRecoverableChargesCents=0` serveur
+  - Ventilation interdite (forfait = montant libératoire unique)
+  - Valide aussi baux legacy mobilité (effectiveChargeMode=forfait)
+
+- **Éligibilité régularisation** : Getter `canRegularizeCharges` (remplace ancien gate `leaseType==unfurnished`)
+  - **Vrai si et seulement si** : `effectiveChargeMode == provisions`
+  - Meublé + provisions → régularisable (nouveau)
+  - Étudiant + provisions → régularisable (nouveau)
+  - Mobilité + forfait → jamais régularisable (ancien + nouveau, forcé)
+  - Mobilité legacy → effectiveChargeMode=forfait → jamais régularisable (backcompat)
+
+- **Horloge injectable** : `FirestoreLeaseRepository.listForDisplay({DateTime? now})`
+  - Default : `DateTime.now()` production
+  - Override : tests déterministes (FEAT-042 fix horloge pour lateness déterministe)
+
+- **Cloud Functions** :
+  - `createLease` : `resolveChargeMode(leaseType, data.chargeMode)` + forfait⇒nonRecoverable=0
+  - `updateLease` : inconditional re-resolution (même si patch n'y touche pas — legacy enforcement)
+
+**Schéma Firestore** : `leases.chargeMode` (champ nouveau, rétractivement nullable)
+
+**Tests** : lease_repository_firestore_test.dart (horloge injectable)
+
+**Feature** : /leases/:id?action=regularize (découvrabilité FEAT-029b) éligible seulement si `canRegularizeCharges==true`
+
+---
 
 ### FEAT-041 : Suivi dépenses unifié (V1)
 
@@ -341,5 +386,5 @@ c31c75e feat(leases): FEAT-036 — charges récupérables / non-récupérables
 ## Résumé Phase Actuelle
 
 **MVP** : ✅ COMPLETE (FEAT-001–030, production-ready staging)
-**Post-MVP M1** : ✅ COMPLETE (FEAT-031–041 V1, `expenses` collection live, Firestore camelCase stable)
+**Post-MVP M1** : ✅ COMPLETE (FEAT-001–042, `expenses` collection + charge modes live, Firestore camelCase stable)
 **Prochaines** : FEAT-031 (rappels email, attente infra), FEAT-032 (graph trésorerie), FEAT-034 (import CSV)
