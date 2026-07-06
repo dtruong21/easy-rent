@@ -342,6 +342,15 @@ export const updateLease = onCall(
       // type à mode forcé (ex: meublé forfait → mobilité reste forfait ;
       // meublé forfait → nu redevient provisions).
       //
+      // La résolution est INCONDITIONNELLE : on dérive toujours le mode
+      // EFFECTIF via resolveChargeMode, même si le patch ne touche ni
+      // leaseType ni chargeMode. C'est indispensable pour les baux LEGACY
+      // pré-042 dont le `chargeMode` n'est pas persisté (undefined) : un
+      // mobilité legacy a un mode effectif forfait bien que rien ne soit
+      // stocké. Sans cette dérivation, un patch qui ne touche ni leaseType
+      // ni chargeMode (ex: {nonRecoverableChargesCents: 999}) sauterait le
+      // forçage forfait⇒0 et laisserait persister une ventilation illégale.
+      //
       // Le "requested" passé à resolveChargeMode ne doit être le
       // `chargeMode` PERSISTÉ que si le leaseType ne change pas (validation
       // d'un changement de mode isolé, contre le type courant). Si le
@@ -350,6 +359,9 @@ export const updateLease = onCall(
       // `chargeMode` persisté (qui reflète l'ancien type) doit être ignoré
       // pour laisser resolveChargeMode dériver librement le défaut du
       // nouveau type, plutôt que d'être traité comme un conflit explicite.
+      // Pour un legacy sans leaseType patché, `requestedChargeMode` vaut
+      // `lease.chargeMode` (undefined) → resolveChargeMode dérive le défaut
+      // du type courant (ex: mobility → forfait).
       const leaseTypeChanged = cleanPatch.leaseType !== undefined;
       const finalLeaseType = leaseTypeChanged ?
         (cleanPatch.leaseType as string) :
@@ -358,23 +370,17 @@ export const updateLease = onCall(
         cleanPatch.chargeMode !== undefined ?
           cleanPatch.chargeMode :
           leaseTypeChanged ? undefined : lease.chargeMode;
-      if (leaseTypeChanged || cleanPatch.chargeMode !== undefined) {
-        cleanPatch.chargeMode = resolveChargeMode(
-          finalLeaseType,
-          requestedChargeMode,
-        );
-      }
+      const finalChargeMode = resolveChargeMode(
+        finalLeaseType,
+        requestedChargeMode,
+      );
+      // Backfill lazy : on persiste toujours le mode effectif résolu, ce qui
+      // matérialise le mode d'un bail legacy à la première mutation.
+      cleanPatch.chargeMode = finalChargeMode;
       // Forfait ⇒ pas de ventilation : un forfait est un montant unique
-      // libératoire, on force la part non récupérable à 0 côté serveur.
-      // On regarde le mode EFFECTIF final (cleanPatch.chargeMode s'il a été
-      // recalculé ci-dessus, sinon le mode déjà persisté), pas seulement
-      // cleanPatch.chargeMode : un patch qui ne touche ni leaseType ni
-      // chargeMode mais tente de faire passer nonRecoverableChargesCents à
-      // une valeur non nulle sur un bail déjà en forfait doit être neutralisé.
-      const finalChargeMode =
-        typeof cleanPatch.chargeMode === "string" ?
-          cleanPatch.chargeMode :
-          lease.chargeMode;
+      // libératoire, on force la part non récupérable à 0 côté serveur, sur
+      // le mode EFFECTIF (donc y compris pour un mobilité legacy dont le mode
+      // n'était pas encore persisté).
       if (finalChargeMode === "forfait") {
         cleanPatch.nonRecoverableChargesCents = 0;
       }

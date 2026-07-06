@@ -151,10 +151,19 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     final agencyFeesCents = _agencyFeesCtrl.text.trim().isEmpty
         ? 0
         : (MoneyFormat.eurosToCents(_agencyFeesCtrl.text) ?? 0);
+    // FEAT-042 (défense en profondeur, revue post-merge) : en mode forfait,
+    // le champ "Charges non récupérables" est masqué dans le formulaire — le
+    // payload client doit refléter cette absence plutôt que de lire un
+    // controller potentiellement resté rempli suite à un bascule de mode
+    // (nu/meublé → forfait). Le serveur force déjà 0 dans ce mode, mais on ne
+    // veut pas dépendre uniquement de cette garantie côté back.
     final nonRecoverableChargesCents =
-        _nonRecoverableChargesCtrl.text.trim().isEmpty
+        formState.currentChargeMode == ChargeMode.forfait
         ? 0
-        : (MoneyFormat.eurosToCents(_nonRecoverableChargesCtrl.text) ?? 0);
+        : (_nonRecoverableChargesCtrl.text.trim().isEmpty
+              ? 0
+              : (MoneyFormat.eurosToCents(_nonRecoverableChargesCtrl.text) ??
+                    0));
 
     // Section 4 — payment day
     final paymentDayRaw = _paymentDayCtrl.text.trim();

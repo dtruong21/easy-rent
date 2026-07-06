@@ -949,6 +949,121 @@ void main() {
         );
       },
     );
+
+    // -----------------------------------------------------------------------
+    // Correctif défense en profondeur (revue post-merge) : en mode forfait,
+    // le champ "Charges non récupérables" est masqué dans l'UI mais
+    // `_submit` lisait autrefois le controller sans condition — le payload
+    // pouvait transmettre une valeur résiduelle (saisie AVANT bascule vers
+    // forfait). Le client doit désormais forcer 0, sans dépendre uniquement
+    // de la garantie serveur.
+    // -----------------------------------------------------------------------
+    testWidgets(
+      'soumission — mode forfait (meublé) force nonRecoverableChargesCents '
+      'à 0 même si une valeur avait été saisie avant la bascule de mode',
+      (tester) async {
+        final repo = _FakeLeaseRepo();
+        await tester.pumpWidget(_buildForm(leaseRepo: repo));
+        await tester.pumpAndSettle();
+
+        // Bien.
+        await tester.tap(find.byKey(const Key('field_property')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Appartement Test').last);
+        await tester.pumpAndSettle();
+
+        // Locataire.
+        await tester.tap(find.byKey(const Key('field_tenant')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Jean Dupont').last);
+        await tester.pumpAndSettle();
+
+        // Loyer + charges.
+        await tester.enterText(find.byKey(const Key('field_rent')), '800');
+        await tester.enterText(find.byKey(const Key('field_charges')), '50');
+
+        // Date de début.
+        await tester.ensureVisible(find.byKey(const Key('field_start_date')));
+        await tester.tap(find.byKey(const Key('field_start_date')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        // Type meublé (mode libre, défaut provisions) : on saisit une
+        // valeur non récupérable AVANT de basculer en forfait.
+        await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+        await tester.tap(find.byKey(const Key('field_lease_type')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Meublé').last);
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          '20',
+        );
+        await tester.pumpAndSettle();
+
+        // Bascule vers Forfait : le champ disparaît de l'UI, mais le
+        // controller conserve encore "20" en mémoire.
+        await tester.ensureVisible(find.text('Forfait'));
+        await tester.tap(find.text('Forfait'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          findsNothing,
+        );
+
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_submit_lease_form')),
+        );
+        await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+        await tester.pumpAndSettle();
+
+        expect(repo.createdLease, isNotNull);
+        expect(repo.createdLease!.chargeMode, ChargeMode.forfait);
+        // Le payload doit refléter l'UI masquée (0), pas la saisie
+        // résiduelle du controller (20 € = 2000 centimes).
+        expect(repo.createdLease!.nonRecoverableChargesCents, 0);
+      },
+    );
+
+    testWidgets(
+      'édition — bail meublé avec nonRecoverableChargesCents existant '
+      '(2000), bascule vers forfait → 0 transmis au repo',
+      (tester) async {
+        final repo = _FakeLeaseRepo();
+        final lease = _makeLease().copyWith(
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.provisions,
+          nonRecoverableChargesCents: 2000,
+        );
+        await tester.pumpWidget(_buildForm(initial: lease, leaseRepo: repo));
+        await tester.pumpAndSettle();
+
+        // Le champ est pré-rempli à "20,00" (2000 centimes).
+        expect(find.text('20,00'), findsOneWidget);
+
+        await tester.ensureVisible(find.text('Forfait'));
+        await tester.tap(find.text('Forfait'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          findsNothing,
+        );
+
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_submit_lease_form')),
+        );
+        await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+        await tester.pumpAndSettle();
+
+        expect(repo.updatedLease, isNotNull);
+        expect(repo.updatedLease!.chargeMode, ChargeMode.forfait);
+        expect(repo.updatedLease!.nonRecoverableChargesCents, 0);
+      },
+    );
   });
 
   group('LeaseFormPage — FEAT-036 câblage nonRecoverableChargesCents '

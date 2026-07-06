@@ -587,6 +587,52 @@ describe("updateLease — chargeMode coercition (FEAT-042)", () => {
     expect(doc?.nonRecoverableChargesCents).toBe(0);
   });
 
+  it("mobilité legacy (chargeMode absent) : mode effectif forfait → force nonRecoverableChargesCents=0 + backfill chargeMode", async () => {
+    // Bail legacy pré-042 : leaseType mobility mais aucun chargeMode persisté
+    // (undefined). Un patch qui ne touche ni leaseType ni chargeMode doit
+    // quand même dériver le mode effectif (forfait) et neutraliser la
+    // ventilation, tout en matérialisant le mode par backfill lazy.
+    seedLease("lease-1", {leaseType: "mobility"});
+    // Sanity : le seed n'a effectivement pas de chargeMode persisté.
+    expect(store.get("leases/lease-1")?.chargeMode).toBeUndefined();
+
+    await updateLease.run(
+      callableRequest(LANDLORD_UID, {
+        id: "lease-1",
+        patch: {nonRecoverableChargesCents: 999},
+      }),
+    );
+
+    const doc = store.get("leases/lease-1");
+    expect(doc?.nonRecoverableChargesCents).toBe(0);
+    expect(doc?.chargeMode).toBe("forfait");
+  });
+
+  it("meublé legacy (chargeMode null) patché : reste provisions (backfill) + ventilation conservée", async () => {
+    // Bail legacy meublé sans mode explicite (null) : le mode libre par
+    // défaut est provisions. Un patch qui ne touche ni leaseType ni
+    // chargeMode ne doit pas forcer la ventilation à 0, et doit backfill
+    // provisions.
+    seedLease("lease-1", {
+      leaseType: "furnished",
+      chargeMode: null,
+      nonRecoverableChargesCents: 1200,
+    });
+
+    await updateLease.run(
+      callableRequest(LANDLORD_UID, {
+        id: "lease-1",
+        patch: {rentAmountCents: 90000},
+      }),
+    );
+
+    const doc = store.get("leases/lease-1");
+    expect(doc?.chargeMode).toBe("provisions");
+    // Ventilation conservée : provisions ne force pas la part non récup à 0.
+    expect(doc?.nonRecoverableChargesCents).toBe(1200);
+    expect(doc?.rentAmountCents).toBe(90000);
+  });
+
   it("invalid-argument rejeté ne modifie pas le doc (leaseType inconnu)", async () => {
     seedLease("lease-1", {leaseType: "furnished", chargeMode: "provisions"});
 
