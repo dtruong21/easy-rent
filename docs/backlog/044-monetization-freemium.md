@@ -29,6 +29,14 @@ Nudges **contextuels** : ajout d'un 3ᵉ bien · approche de la déclaration fis
 - **UI** : bouton désactivé + écran d'upgrade contextuel au moment de valeur.
 - Modèle de tiers déjà en place : enum `SubscriptionTier {anonymous, free, paid}`, `LandlordTierRepository`, collection `paid_plan_interest`.
 
+## Paiement / facturation — RevenueCat (décidé 2026-07-06)
+**RevenueCat** comme couche d'abonnement unifiée : wrappe **Stripe (web)** + **App Store IAP (iOS)** + **Play Billing (Android)** derrière un SDK unique + un **entitlement** (« user Pro »).
+- **Flux** : achat (Stripe web / IAP mobile, via RevenueCat) → **webhook RevenueCat** → **Cloud Function** → écrit `landlords.subscriptionTier = 'paid'`. Le tier Firestore reste la **seule source de vérité** du gating serveur (createProperty…). Le fournisseur ne fait que **basculer le tier**.
+- **Pourquoi** : mobile-first → App Store/Play imposent l'IAP (~15-30 %) pour un abonnement numérique in-app ; RevenueCat unifie iOS/Android/web, évite de maintenir 3 stacks de facturation, et donne un statut Pro cohérent multi-plateforme.
+- **Coût** : commissions stores ~15-30 % (mobile) vs Stripe ~2 % (web) ; RevenueCat gratuit sous un seuil de revenu puis petit %. Mitigations : privilégier l'**annuel** (moins de transactions) + inciter à l'abonnement **web** là où c'est permis (moins de commission).
+- **`paid_plan_interest`** = paywall « coming soon » (capture d'intérêt) **jusqu'à** l'intégration RevenueCat réelle.
+- **⚠️ % de commission et règles store (IAP obligatoire, exceptions EU DMA / US) à revérifier au moment du build.**
+
 ## Benchmark concurrents (2025-2026, sourcé)
 | Concurrent | Gratuit permanent ? | Limite gratuit | Prix payant | Metric |
 |---|---|---|---|---|
@@ -43,7 +51,7 @@ Nudges **contextuels** : ajout d'un 3ᵉ bien · approche de la déclaration fis
 ## Décisions ouvertes (à figer avant build)
 - Prix exact du Pro (mensuel + annuel) ; inclure une option « à vie » ?
 - Quota de stockage documents en gratuit.
-- Mécanisme de paiement : Stripe (web) + App Store/Play IAP (mobile) — dépend de FEAT-024.
+- ~~Mécanisme de paiement~~ → **décidé : RevenueCat** (Stripe web + IAP iOS/Android unifiés) — voir section dédiée.
 - Timing de build (recommandé : avec/après FEAT-024 mobile).
 
 ## Dépendances
