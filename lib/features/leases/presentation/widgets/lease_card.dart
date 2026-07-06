@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
@@ -9,6 +10,7 @@ import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
+import '../lease_list_item_display_l10n.dart';
 import 'lease_status_mapper.dart';
 
 /// Card v2 représentant un bail dans la liste.
@@ -32,14 +34,17 @@ class LeaseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lease = item.lease;
-    final pillData = leaseStatusPill(lease, isLate: item.isLate);
+    final pillData = leaseStatusPill(context, lease, isLate: item.isLate);
 
     return EntityCard(
       onTap: onTap,
-      semanticLabel: '${item.propertyName} — ${item.tenantDisplayName}',
+      semanticLabel: context.l10n.leasesCardSemanticLabel(
+        item.displayPropertyName(context),
+        item.displayTenantName(context),
+      ),
       header: EntityCardHeader(
         title: Text(
-          item.propertyName,
+          item.displayPropertyName(context),
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -73,18 +78,19 @@ class LeaseCard extends StatelessWidget {
         children: [
           _LeaseCardRow(
             icon: Icons.person_outline,
-            text: item.tenantDisplayName,
+            text: item.displayTenantName(context),
           ),
           const SizedBox(height: 4),
           _LeaseCardRow(
             icon: Icons.calendar_today_outlined,
-            text: _formatPeriod(lease.startDate, lease.endDate),
+            text: _formatPeriod(context, lease.startDate, lease.endDate),
           ),
           const SizedBox(height: 4),
           _LeaseCardRow(
             icon: Icons.euro_outlined,
-            text:
-                '${MoneyFormat.formatEurosFromCents(lease.totalAmountCents)} CC / mois',
+            text: context.l10n.leasesCardRentPerMonth(
+              MoneyFormat.formatEurosFromCents(lease.totalAmountCents),
+            ),
           ),
         ],
       ),
@@ -92,17 +98,22 @@ class LeaseCard extends StatelessWidget {
     );
   }
 
-  String _formatPeriod(DateTime startDate, DateTime? endDate) {
+  String _formatPeriod(
+    BuildContext context,
+    DateTime startDate,
+    DateTime? endDate,
+  ) {
+    final l10n = context.l10n;
     final start = FrenchDate.format(startDate);
     if (endDate == null) {
-      return '$start → CDI';
+      return l10n.leasesCardPeriodOpenEnded(start);
     }
     final end = FrenchDate.format(endDate);
     final years = (endDate.difference(startDate).inDays / 365.25).round().abs();
     if (years > 0) {
-      return '$start → $end ($years an${years > 1 ? 's' : ''})';
+      return l10n.leasesCardPeriodWithYears(start, end, years);
     }
-    return '$start → $end';
+    return l10n.leasesCardPeriod(start, end);
   }
 }
 
@@ -154,7 +165,7 @@ class _LeaseCardFooter extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: () => context.push('/leases/$leaseId/receipts'),
           icon: const Icon(Icons.receipt_long_outlined, size: 16),
-          label: const Text('Quittances'),
+          label: Text(context.l10n.leasesCardReceiptsButton),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             minimumSize: Size.zero,
@@ -165,7 +176,7 @@ class _LeaseCardFooter extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: () => context.push('/leases/$leaseId/payments/new'),
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('Paiement'),
+          label: Text(context.l10n.leasesCardPaymentButton),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             minimumSize: Size.zero,
@@ -205,7 +216,7 @@ class _RegularizeChargesMenu extends StatelessWidget {
     return PopupMenuButton<_LeaseCardMenuAction>(
       key: Key('lease_menu_$leaseId'),
       icon: const Icon(Icons.more_vert, size: 18),
-      tooltip: 'Actions',
+      tooltip: context.l10n.leasesCardActionsTooltip,
       // Bouton icône compact : le tap target Material par défaut (48×48,
       // ConstrainedBox interne kMinInteractiveDimension) fait déborder le
       // header de EntityCard, dont la hauteur est dictée par le StatusPill
@@ -219,11 +230,11 @@ class _RegularizeChargesMenu extends StatelessWidget {
         visualDensity: VisualDensity.compact,
       ),
       onSelected: (_) => context.push('/leases/$leaseId?action=regularize'),
-      itemBuilder: (_) => const [
+      itemBuilder: (_) => [
         PopupMenuItem(
-          key: Key('menu_item_regularize_charges'),
+          key: const Key('menu_item_regularize_charges'),
           value: _LeaseCardMenuAction.regularizeCharges,
-          child: Text('Régulariser les charges'),
+          child: Text(context.l10n.leasesRegularizeChargesMenuItem),
         ),
       ],
     );

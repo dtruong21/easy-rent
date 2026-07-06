@@ -2,6 +2,7 @@ import 'package:easyrent/features/tenants/application/tenant_form_controller.dar
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_form_state.dart';
+import 'package:easyrent/features/tenants/domain/tenant_submit_error.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/tenant_form_page.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
@@ -317,16 +318,19 @@ void main() {
     // État erreur — message affiché inline
     // -----------------------------------------------------------------------
     testWidgets('état erreur — message affiché inline', (tester) async {
+      // FEAT-043 : TenantFormState.error.message porte désormais le `name`
+      // technique d'un TenantSubmitError (pas un texte FR en dur) — la
+      // présentation le retraduit via TenantSubmitErrorL10n.
       await tester.pumpWidget(
         _buildForm(
-          initialState: const TenantFormState.error(
-            message: 'Données invalides. Vérifiez les champs et réessayez.',
+          initialState: TenantFormState.error(
+            message: TenantSubmitError.saveFailed.name,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Données invalides'), findsOneWidget);
+      expect(find.textContaining('Erreur de sauvegarde'), findsOneWidget);
     });
   });
   group('TenantFormPage — mode picker (popOnSuccess)', () {

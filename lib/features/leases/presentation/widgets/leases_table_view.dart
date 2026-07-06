@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
+import '../lease_list_item_display_l10n.dart';
 import 'lease_status_mapper.dart';
 
 /// Colonnes triables du tableau baux.
@@ -92,16 +94,22 @@ class _LeasesTableViewState extends State<LeasesTableView> {
             sortColumnIndex: _LeaseTableSort.values.indexOf(_sortColumn),
             sortAscending: _sortAscending,
             columns: [
-              DataColumn(label: const Text('Bien'), onSort: _onSort),
-              DataColumn(label: const Text('Locataire'), onSort: _onSort),
-              const DataColumn(label: Text('Période')),
               DataColumn(
-                label: const Text('Loyer CC'),
+                label: Text(context.l10n.leasesTableColumnProperty),
+                onSort: _onSort,
+              ),
+              DataColumn(
+                label: Text(context.l10n.leasesTableColumnTenant),
+                onSort: _onSort,
+              ),
+              DataColumn(label: Text(context.l10n.leasesTableColumnPeriod)),
+              DataColumn(
+                label: Text(context.l10n.leasesTableColumnRent),
                 numeric: true,
                 onSort: _onSort,
               ),
-              const DataColumn(label: Text('Statut')),
-              const DataColumn(label: Text('Actions')),
+              DataColumn(label: Text(context.l10n.leasesTableColumnStatus)),
+              DataColumn(label: Text(context.l10n.leasesTableColumnActions)),
             ],
             rows: items.map((item) => _buildRow(context, item)).toList(),
           ),
@@ -112,7 +120,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
 
   DataRow _buildRow(BuildContext context, LeaseListItem item) {
     final lease = item.lease;
-    final pillData = leaseStatusPill(lease, isLate: item.isLate);
+    final pillData = leaseStatusPill(context, lease, isLate: item.isLate);
 
     return DataRow(
       onSelectChanged: (_) => context.push('/leases/${lease.id}'),
@@ -121,7 +129,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 160, maxWidth: 200),
             child: Text(
-              item.propertyName,
+              item.displayPropertyName(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -131,7 +139,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 140, maxWidth: 180),
             child: Text(
-              item.tenantDisplayName,
+              item.displayTenantName(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -141,7 +149,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
           SizedBox(
             width: 200,
             child: Text(
-              _formatPeriod(lease.startDate, lease.endDate),
+              _formatPeriod(context, lease.startDate, lease.endDate),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -149,7 +157,9 @@ class _LeasesTableViewState extends State<LeasesTableView> {
         ),
         DataCell(
           Text(
-            '${MoneyFormat.formatEurosFromCents(lease.totalAmountCents)} CC',
+            context.l10n.leasesTableRentCc(
+              MoneyFormat.formatEurosFromCents(lease.totalAmountCents),
+            ),
           ),
         ),
         DataCell(
@@ -168,7 +178,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
                 key: Key('table_receipts_${lease.id}'),
                 onPressed: () => context.push('/leases/${lease.id}/receipts'),
                 icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                tooltip: 'Quittances',
+                tooltip: context.l10n.leasesCardReceiptsButton,
                 visualDensity: VisualDensity.compact,
               ),
               IconButton(
@@ -176,7 +186,7 @@ class _LeasesTableViewState extends State<LeasesTableView> {
                 onPressed: () =>
                     context.push('/leases/${lease.id}/payments/new'),
                 icon: const Icon(Icons.add, size: 18),
-                tooltip: 'Ajouter paiement',
+                tooltip: context.l10n.leasesTableAddPaymentTooltip,
                 visualDensity: VisualDensity.compact,
               ),
               // Raccourci "Régulariser les charges" (FEAT-030) — gate légal :
@@ -188,15 +198,15 @@ class _LeasesTableViewState extends State<LeasesTableView> {
                 PopupMenuButton<_LeaseTableMenuAction>(
                   key: Key('table_menu_${lease.id}'),
                   icon: const Icon(Icons.more_vert, size: 18),
-                  tooltip: 'Actions',
+                  tooltip: context.l10n.leasesCardActionsTooltip,
                   padding: EdgeInsets.zero,
                   onSelected: (_) =>
                       context.push('/leases/${lease.id}?action=regularize'),
-                  itemBuilder: (_) => const [
+                  itemBuilder: (_) => [
                     PopupMenuItem(
-                      key: Key('table_menu_item_regularize_charges'),
+                      key: const Key('table_menu_item_regularize_charges'),
                       value: _LeaseTableMenuAction.regularizeCharges,
-                      child: Text('Régulariser les charges'),
+                      child: Text(context.l10n.leasesRegularizeChargesMenuItem),
                     ),
                   ],
                 ),
@@ -207,12 +217,16 @@ class _LeasesTableViewState extends State<LeasesTableView> {
     );
   }
 
-  String _formatPeriod(DateTime startDate, DateTime? endDate) {
+  String _formatPeriod(
+    BuildContext context,
+    DateTime startDate,
+    DateTime? endDate,
+  ) {
     final start = FrenchDate.format(startDate);
     if (endDate == null) {
-      return '$start → CDI';
+      return context.l10n.leasesCardPeriodOpenEnded(start);
     }
-    return '$start → ${FrenchDate.format(endDate)}';
+    return context.l10n.leasesCardPeriod(start, FrenchDate.format(endDate));
   }
 }
 

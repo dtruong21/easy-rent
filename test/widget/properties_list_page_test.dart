@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/properties/application/properties_filter_provider.dart';
@@ -12,6 +13,7 @@ import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/properties_list_page.dart';
 import 'package:easyrent/features/properties/presentation/widgets/properties_card_view.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -153,7 +155,13 @@ Widget _buildPage(_FakeRepo repo) {
 
   return ProviderScope(
     overrides: [propertyRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+    child: MaterialApp.router(
+      routerConfig: router,
+      theme: _appTheme(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -291,7 +299,13 @@ void main() {
           container: container,
           child: MediaQuery(
             data: const MediaQueryData(size: Size(800, 600)),
-            child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+            child: MaterialApp.router(
+              routerConfig: router,
+              theme: _appTheme(),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              locale: const Locale('fr'),
+              supportedLocales: supportedLocales,
+            ),
           ),
         ),
       );
@@ -330,7 +344,13 @@ void main() {
               () => _LoadingListItemsNotifier(),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+          child: MaterialApp.router(
+            routerConfig: router,
+            theme: _appTheme(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
 

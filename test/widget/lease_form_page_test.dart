@@ -1,3 +1,4 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/leases/application/lease_form_controller.dart';
 import 'package:easyrent/features/leases/application/leases_filter_provider.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
@@ -19,6 +20,7 @@ import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -317,7 +319,12 @@ Widget _buildForm({
           (ref) => LeaseFormController(ref)..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -1283,7 +1290,12 @@ void main() {
       );
       return UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: supportedLocales,
+          locale: const Locale('fr'),
+        ),
       );
     }
 
@@ -1374,7 +1386,12 @@ void main() {
       );
       return UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: supportedLocales,
+          locale: const Locale('fr'),
+        ),
       );
     }
 

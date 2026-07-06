@@ -134,5 +134,1701 @@
   "leasesFilterTerminated": "Terminated",
   "@leasesFilterTerminated": {
     "description": "Lease list filter option: terminated leases."
+  },
+
+  "commonYes": "Yes",
+  "@commonYes": {
+    "description": "Generic boolean value 'Yes' shown for true flags (e.g. elevator, furnished) across features."
+  },
+
+  "leasesListTitle": "My leases",
+  "@leasesListTitle": {
+    "description": "AppBar title of the leases list page."
+  },
+  "leasesCreateButton": "Add a lease",
+  "@leasesCreateButton": {
+    "description": "FAB and empty-state button label to create a new lease."
+  },
+  "leasesErrorConnection": "Error. Check your connection and try again.",
+  "@leasesErrorConnection": {
+    "description": "Error message shown when the leases list fails to load due to a Firebase/network exception."
+  },
+  "leasesErrorLoading": "Loading error",
+  "@leasesErrorLoading": {
+    "description": "Generic fallback error message for the leases list when the exception type is not a FirebaseException."
+  },
+  "leasesErrorUnableToLoad": "Unable to load your leases.",
+  "@leasesErrorUnableToLoad": {
+    "description": "Title of the full-page error view for the leases list."
+  },
+  "leasesEmptyFilterTitle": "No lease matches this filter",
+  "@leasesEmptyFilterTitle": {
+    "description": "Empty-state title shown when leases exist but the active filter hides them all."
+  },
+  "leasesEmptyFilterMessage": "The filter « {filterLabel} » does not match any of your leases.",
+  "@leasesEmptyFilterMessage": {
+    "description": "Empty-state message shown when leases exist but the active filter hides them all; {filterLabel} is the localized label of the active LeaseFilter (e.g. 'Active', 'Late').",
+    "placeholders": {
+      "filterLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "leasesShowAllButton": "Show all leases",
+  "@leasesShowAllButton": {
+    "description": "Button in the filtered empty-state that resets the filter to 'all'."
+  },
+  "leasesEmptyTitle": "No lease registered",
+  "@leasesEmptyTitle": {
+    "description": "Empty-state title when the landlord has no lease at all."
+  },
+  "leasesEmptyMessage": "Create a lease to start managing your rental.\nYou will need at least one property and one tenant.",
+  "@leasesEmptyMessage": {
+    "description": "Empty-state message when the landlord has no lease at all (two lines separated by \\n)."
+  },
+  "leasesDetailTitle": "Lease",
+  "@leasesDetailTitle": {
+    "description": "AppBar title of the lease detail page."
+  },
+  "leasesCloseSuccessSnackbar": "Lease closed",
+  "@leasesCloseSuccessSnackbar": {
+    "description": "Snackbar shown after successfully closing (terminating) a lease from the detail page."
+  },
+  "leasesCloseButton": "Close this lease",
+  "@leasesCloseButton": {
+    "description": "Button on the lease detail page to terminate an active lease."
+  },
+  "leasesArchiveButton": "Archive this lease",
+  "@leasesArchiveButton": {
+    "description": "Button on the lease detail page to soft-delete (archive) the lease."
+  },
+  "leasesArchiveDialogTitle": "Archive this lease?",
+  "@leasesArchiveDialogTitle": {
+    "description": "Title of the archive confirmation dialog for a lease."
+  },
+  "leasesArchiveDialogEntityLabel": "This lease",
+  "@leasesArchiveDialogEntityLabel": {
+    "description": "Entity label injected into the shared ArchiveConfirmDialog copy for a lease."
+  },
+  "leasesArchiveDialogStandardMessage": "Do you want to archive this lease? It will no longer appear in your list.",
+  "@leasesArchiveDialogStandardMessage": {
+    "description": "Standard confirmation message shown in the archive dialog for a non-active lease."
+  },
+  "leasesArchiveDialogActiveLeaseMessage": "This lease is still active. Are you sure you want to archive it? It will no longer appear in your list.",
+  "@leasesArchiveDialogActiveLeaseMessage": {
+    "description": "Stronger warning message shown in the archive dialog when the lease being archived is still active."
+  },
+  "leasesArchiveSuccessSnackbar": "Lease archived",
+  "@leasesArchiveSuccessSnackbar": {
+    "description": "Snackbar shown after successfully archiving a lease."
+  },
+  "leasesArchiveErrorSnackbar": "Unable to archive this lease. Please try again.",
+  "@leasesArchiveErrorSnackbar": {
+    "description": "Snackbar shown when archiving a lease fails."
+  },
+  "leasesDetailStatusLabel": "Status",
+  "@leasesDetailStatusLabel": {
+    "description": "Label in the lease detail status card, next to the status pill."
+  },
+  "leasesStatusActive": "Active",
+  "@leasesStatusActive": {
+    "description": "Singular status pill label for an active lease (not to be confused with leasesFilterActive, plural, used as a filter option label)."
+  },
+  "leasesStatusTerminated": "Terminated",
+  "@leasesStatusTerminated": {
+    "description": "Singular status pill label for a terminated lease (not to be confused with leasesFilterTerminated, plural, used as a filter option label)."
+  },
+  "leasesStatusArchived": "Archived",
+  "@leasesStatusArchived": {
+    "description": "Status pill label for an archived lease."
+  },
+  "leasesDetailPropertyLabel": "Property",
+  "@leasesDetailPropertyLabel": {
+    "description": "Label of the clickable link row to the linked property, in the lease detail info card."
+  },
+  "leasesDetailTenantLabel": "Tenant",
+  "@leasesDetailTenantLabel": {
+    "description": "Label of the clickable link row to the linked tenant, in the lease detail info card."
+  },
+  "leasesDetailViewSheetLink": "View sheet",
+  "@leasesDetailViewSheetLink": {
+    "description": "Underlined call-to-action text under a link row (property/tenant) in the lease detail info card."
+  },
+  "leasesDetailTypeAndDurationSection": "Type and duration",
+  "@leasesDetailTypeAndDurationSection": {
+    "description": "Section header in the lease detail info card, grouping lease type and dates."
+  },
+  "leasesDetailLeaseTypeLabel": "Lease type",
+  "@leasesDetailLeaseTypeLabel": {
+    "description": "Row label for the lease type value in the lease detail info card."
+  },
+  "leasesDetailStartDateLabel": "Start",
+  "@leasesDetailStartDateLabel": {
+    "description": "Row label for the lease start date in the lease detail info card."
+  },
+  "leasesDetailEndDateLabel": "End",
+  "@leasesDetailEndDateLabel": {
+    "description": "Row label for the lease end date in the lease detail info card."
+  },
+  "leasesOpenEndedAbbreviation": "(open-ended)",
+  "@leasesOpenEndedAbbreviation": {
+    "description": "Abbreviation shown as the end date value when the lease has no end date (open-ended contract, 'contrat à durée indéterminée')."
+  },
+  "leasesDetailRentAndChargesSection": "Rent and charges",
+  "@leasesDetailRentAndChargesSection": {
+    "description": "Section header in the lease detail info card, grouping rent/charges amounts."
+  },
+  "leasesDetailRentExclChargesLabel": "Rent excl. charges",
+  "@leasesDetailRentExclChargesLabel": {
+    "description": "Row label for the rent amount excluding charges ('hors charges') in the lease detail info card."
+  },
+  "leasesDetailRecoverableChargesLabel": "Recoverable charges",
+  "@leasesDetailRecoverableChargesLabel": {
+    "description": "Row label for the recoverable (tenant-billable) charges amount in the lease detail info card."
+  },
+  "leasesDetailNonRecoverableChargesLabel": "Non-recoverable charges",
+  "@leasesDetailNonRecoverableChargesLabel": {
+    "description": "Row label for the non-recoverable (landlord-borne) charges amount in the lease detail info card. Always shown, even when 0."
+  },
+  "leasesDetailTotalChargesLabel": "Total charges",
+  "@leasesDetailTotalChargesLabel": {
+    "description": "Row label for the sum of recoverable and non-recoverable charges (informational only) in the lease detail info card."
+  },
+  "leasesDetailRentInclChargesLabel": "Rent incl. charges",
+  "@leasesDetailRentInclChargesLabel": {
+    "description": "Row label for the total rent including recoverable charges ('charges comprises', amount actually due by the tenant) in the lease detail info card."
+  },
+  "leasesDetailDepositLabel": "Security deposit",
+  "@leasesDetailDepositLabel": {
+    "description": "Row label for the security deposit amount in the lease detail info card (only shown if set)."
+  },
+  "leasesDetailAgencyFeesLabel": "Agency fees",
+  "@leasesDetailAgencyFeesLabel": {
+    "description": "Row label for the agency fees amount in the lease detail info card (only shown if > 0)."
+  },
+  "leasesDetailPaymentTermsSection": "Payment terms",
+  "@leasesDetailPaymentTermsSection": {
+    "description": "Section header in the lease detail info card, grouping payment day and method."
+  },
+  "leasesDetailPaymentDayLabel": "Due day",
+  "@leasesDetailPaymentDayLabel": {
+    "description": "Row label for the monthly payment due day in the lease detail info card."
+  },
+  "leasesDetailPaymentDayValue": "the {day} of each month",
+  "@leasesDetailPaymentDayValue": {
+    "description": "Value text describing the payment due day of month; {day} is the day-of-month integer (1-28).",
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "leasesDetailPaymentMethodLabel": "Payment method",
+  "@leasesDetailPaymentMethodLabel": {
+    "description": "Row label for the payment method value in the lease detail info card."
+  },
+  "leasesDetailIrlAndClausesSection": "IRL index and clauses",
+  "@leasesDetailIrlAndClausesSection": {
+    "description": "Section header in the lease detail info card, grouping IRL rent index and optional clauses (only shown if at least one field is set)."
+  },
+  "leasesDetailIrlIndexLabel": "IRL index",
+  "@leasesDetailIrlIndexLabel": {
+    "description": "Row label for the initial IRL (rent reference index) value in the lease detail info card."
+  },
+  "leasesDetailIrlQuarterLabel": "IRL reference quarter",
+  "@leasesDetailIrlQuarterLabel": {
+    "description": "Row label for the IRL reference quarter (e.g. T1-2026) in the lease detail info card."
+  },
+  "leasesDetailSolidarityClauseLabel": "Joint liability clause",
+  "@leasesDetailSolidarityClauseLabel": {
+    "description": "Row label for the joint-and-several liability clause badge (co-tenants), in the lease detail info card."
+  },
+  "leasesDetailSolidarityBadge": "Joint liability",
+  "@leasesDetailSolidarityBadge": {
+    "description": "Badge text (StatusPill) confirming the joint liability clause is active, in the lease detail info card."
+  },
+  "leasesDetailEntryInventoryLabel": "Move-in inventory",
+  "@leasesDetailEntryInventoryLabel": {
+    "description": "Row label for the move-in inventory (état des lieux d'entrée) badge, in the lease detail info card."
+  },
+  "leasesDetailEntryInventoryBadge": "Move-in inventory done",
+  "@leasesDetailEntryInventoryBadge": {
+    "description": "Badge text (StatusPill) confirming the move-in inventory was completed, in the lease detail info card."
+  },
+  "leasesDetailNotFoundAppBarTitle": "Lease sheet",
+  "@leasesDetailNotFoundAppBarTitle": {
+    "description": "AppBar title of the lease-not-found page (shown when RLS returns zero row for the requested id)."
+  },
+  "leasesDetailNotFoundTitle": "Lease not found",
+  "@leasesDetailNotFoundTitle": {
+    "description": "Title of the lease-not-found page body."
+  },
+  "leasesDetailNotFoundMessage": "This lease may have been archived or does not belong to you.",
+  "@leasesDetailNotFoundMessage": {
+    "description": "Explanatory message on the lease-not-found page."
+  },
+  "leasesDetailBackToListButton": "Back to list",
+  "@leasesDetailBackToListButton": {
+    "description": "Button on the lease-not-found page navigating back to the leases list."
+  },
+  "leasesCardSemanticLabel": "{propertyName} — {tenantName}",
+  "@leasesCardSemanticLabel": {
+    "description": "Accessibility semantic label for a lease card (screen readers); combines the property name and tenant display name, already resolved for archived placeholders.",
+    "placeholders": {
+      "propertyName": {
+        "type": "String"
+      },
+      "tenantName": {
+        "type": "String"
+      }
+    }
+  },
+  "leasesCardRentPerMonth": "{amount} incl. charges / month",
+  "@leasesCardRentPerMonth": {
+    "description": "Lease card row showing the monthly rent including charges; {amount} is already formatted in euros (e.g. '850,00 €').",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "leasesCardPeriodOpenEnded": "{start} → open-ended",
+  "@leasesCardPeriodOpenEnded": {
+    "description": "Lease period text on cards/table when the lease has no end date; {start} is already formatted (e.g. '15 janv. 2024').",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "leasesCardPeriod": "{start} → {end}",
+  "@leasesCardPeriod": {
+    "description": "Lease period text on cards/table for a lease shorter than a year; {start}/{end} are already formatted dates.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "leasesCardPeriodWithYears": "{start} → {end} ({years} {years, plural, one{year} other{years}})",
+  "@leasesCardPeriodWithYears": {
+    "description": "Lease period text on cards including a year count when the lease spans one year or more; {start}/{end} are already formatted dates, {years} is a rounded absolute year count used for ICU plural selection.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      },
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "leasesCardReceiptsButton": "Receipts",
+  "@leasesCardReceiptsButton": {
+    "description": "Button/tooltip on the lease card footer and table row navigating to the lease's receipts."
+  },
+  "leasesCardPaymentButton": "Payment",
+  "@leasesCardPaymentButton": {
+    "description": "Button on the lease card footer navigating to the new-payment form for this lease."
+  },
+  "leasesCardActionsTooltip": "Actions",
+  "@leasesCardActionsTooltip": {
+    "description": "Tooltip on the overflow menu button (three-dot icon) on lease cards and table rows."
+  },
+  "leasesRegularizeChargesMenuItem": "Regularize charges",
+  "@leasesRegularizeChargesMenuItem": {
+    "description": "Overflow menu item label navigating to the charge regularization shortcut for an eligible lease (provisions charge mode)."
+  },
+  "leasesArchivedPropertyPlaceholder": "(archived property)",
+  "@leasesArchivedPropertyPlaceholder": {
+    "description": "Placeholder shown instead of the property name when the linked property has been archived; mirrors a sentinel string produced server/data-side."
+  },
+  "leasesArchivedTenantPlaceholder": "(archived tenant)",
+  "@leasesArchivedTenantPlaceholder": {
+    "description": "Placeholder shown instead of the tenant name when the linked tenant has been archived; mirrors a sentinel string produced server/data-side."
+  },
+  "leasesTableColumnProperty": "Property",
+  "@leasesTableColumnProperty": {
+    "description": "Leases table column header: property name."
+  },
+  "leasesTableColumnTenant": "Tenant",
+  "@leasesTableColumnTenant": {
+    "description": "Leases table column header: tenant name."
+  },
+  "leasesTableColumnPeriod": "Period",
+  "@leasesTableColumnPeriod": {
+    "description": "Leases table column header: lease period (start/end dates)."
+  },
+  "leasesTableColumnRent": "Rent incl. charges",
+  "@leasesTableColumnRent": {
+    "description": "Leases table column header: total rent including charges."
+  },
+  "leasesTableColumnStatus": "Status",
+  "@leasesTableColumnStatus": {
+    "description": "Leases table column header: status pill."
+  },
+  "leasesTableColumnActions": "Actions",
+  "@leasesTableColumnActions": {
+    "description": "Leases table column header: row action buttons."
+  },
+  "leasesTableRentCc": "{amount} incl. charges",
+  "@leasesTableRentCc": {
+    "description": "Leases table cell showing the total rent including charges; {amount} is already formatted in euros.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "leasesTableAddPaymentTooltip": "Add payment",
+  "@leasesTableAddPaymentTooltip": {
+    "description": "Tooltip on the table row icon button to add a new payment for this lease."
+  },
+  "leasesActiveWarningDialogTitle": "Existing active lease",
+  "@leasesActiveWarningDialogTitle": {
+    "description": "Title of the warning dialog shown when the selected property already has another active lease."
+  },
+  "leasesActiveWarningDialogContent": "This property already has an active lease. Do you still want to create this new lease?",
+  "@leasesActiveWarningDialogContent": {
+    "description": "Body text of the active-lease warning dialog."
+  },
+  "leasesActiveWarningDialogConfirmButton": "Continue",
+  "@leasesActiveWarningDialogConfirmButton": {
+    "description": "Confirm button on the active-lease warning dialog, proceeding with lease creation despite the warning."
+  },
+  "leasesCloseDialogTitle": "Close this lease",
+  "@leasesCloseDialogTitle": {
+    "description": "Title of the lease closing (termination) confirmation dialog."
+  },
+  "leasesCloseDialogContent": "This action will set the lease status to «Terminated». It cannot be undone from the interface.",
+  "@leasesCloseDialogContent": {
+    "description": "Warning body text of the lease closing confirmation dialog."
+  },
+  "leasesCloseDialogEffectiveDateLabel": "Effective end date",
+  "@leasesCloseDialogEffectiveDateLabel": {
+    "description": "Label above the date picker field in the lease closing dialog."
+  },
+  "leasesCloseDialogDatePickerHelp": "Effective end date",
+  "@leasesCloseDialogDatePickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the lease's effective closing date."
+  },
+  "leasesCloseDialogConfirmButton": "Close",
+  "@leasesCloseDialogConfirmButton": {
+    "description": "Confirm button on the lease closing dialog."
+  },
+  "leasesFormNewTitle": "New lease",
+  "@leasesFormNewTitle": {
+    "description": "AppBar title of the lease form page in creation mode."
+  },
+  "leasesFormEditTitle": "Edit lease",
+  "@leasesFormEditTitle": {
+    "description": "AppBar title of the lease form page in edit mode."
+  },
+  "leasesFormCreatedSnackbar": "Lease created",
+  "@leasesFormCreatedSnackbar": {
+    "description": "Snackbar shown after successfully creating a lease."
+  },
+  "leasesFormUpdatedSnackbar": "Changes saved",
+  "@leasesFormUpdatedSnackbar": {
+    "description": "Snackbar shown after successfully saving changes to an existing lease."
+  },
+  "leasesFormNotFoundMessage": "Lease not found.",
+  "@leasesFormNotFoundMessage": {
+    "description": "Error message shown on the lease edit page when the lease could not be loaded."
+  },
+  "leasesFormCreateSubmitButton": "Create lease",
+  "@leasesFormCreateSubmitButton": {
+    "description": "Submit button label on the lease form in creation mode."
+  },
+  "leasesFormSectionParties": "Parties and property",
+  "@leasesFormSectionParties": {
+    "description": "Section 1 header of the lease form: property and tenant selection."
+  },
+  "leasesFormSectionRentAndCharges": "Rent and charges",
+  "@leasesFormSectionRentAndCharges": {
+    "description": "Section 2 header of the lease form: rent, charges, deposit, agency fees."
+  },
+  "leasesFormSectionTypeAndDuration": "Lease type and duration",
+  "@leasesFormSectionTypeAndDuration": {
+    "description": "Section 3 header of the lease form: lease type, charge mode, start/end dates."
+  },
+  "leasesFormNoPropertiesMessage": "You must first create a property.",
+  "@leasesFormNoPropertiesMessage": {
+    "description": "Hint banner shown in the lease form when the landlord has no property yet."
+  },
+  "leasesFormCreatePropertyButton": "Create a property",
+  "@leasesFormCreatePropertyButton": {
+    "description": "Button label in the no-properties hint banner, navigating to property creation."
+  },
+  "leasesFormPropertyFieldLabel": "Property *",
+  "@leasesFormPropertyFieldLabel": {
+    "description": "Label of the required property dropdown field in the lease form."
+  },
+  "leasesFormNoTenantsMessage": "You must first create a tenant.",
+  "@leasesFormNoTenantsMessage": {
+    "description": "Hint banner shown in the lease form when the landlord has no tenant yet."
+  },
+  "leasesFormCreateTenantButton": "Create a tenant",
+  "@leasesFormCreateTenantButton": {
+    "description": "Button label in the no-tenants hint banner, navigating to tenant creation."
+  },
+  "leasesFormNewTenantInlineButton": "New tenant",
+  "@leasesFormNewTenantInlineButton": {
+    "description": "Inline button under the tenant dropdown to create a tenant without leaving the lease form."
+  },
+  "leasesFormTenantFieldLabel": "Tenant *",
+  "@leasesFormTenantFieldLabel": {
+    "description": "Label of the required tenant dropdown field in the lease form."
+  },
+  "leasesFormRentLabel": "Rent excl. charges (€) *",
+  "@leasesFormRentLabel": {
+    "description": "Label of the required rent amount field in the lease form."
+  },
+  "leasesFormRentHint": "E.g.: 850.00",
+  "@leasesFormRentHint": {
+    "description": "Hint/example text of the rent amount field in the lease form."
+  },
+  "leasesFormRecoverableChargesLabel": "Recoverable charges (€) *",
+  "@leasesFormRecoverableChargesLabel": {
+    "description": "Label of the charges field when the lease charge mode is 'provisions' (recoverable, subject to annual regularization)."
+  },
+  "leasesFormRecoverableChargesHelper": "Monthly provisions billable to the tenant (decree no. 87-713)",
+  "@leasesFormRecoverableChargesHelper": {
+    "description": "Helper text of the charges field when the lease charge mode is 'provisions'."
+  },
+  "leasesFormFlatChargesLabel": "Flat charges fee (€) *",
+  "@leasesFormFlatChargesLabel": {
+    "description": "Label of the charges field when the lease charge mode is 'forfait' (flat, non-refundable fee)."
+  },
+  "leasesFormFlatChargesHelper": "Monthly flat fee that fully settles charges — not subject to regularization.",
+  "@leasesFormFlatChargesHelper": {
+    "description": "Helper text of the charges field when the lease charge mode is 'forfait'."
+  },
+  "leasesFormChargesHint": "E.g.: 50.00 (enter 0 if none)",
+  "@leasesFormChargesHint": {
+    "description": "Hint/example text of the charges amount field in the lease form (shared by both provisions and forfait modes)."
+  },
+  "leasesFormNonRecoverableChargesLabel": "Non-recoverable charges (€)",
+  "@leasesFormNonRecoverableChargesLabel": {
+    "description": "Label of the optional non-recoverable charges field in the lease form (hidden in flat/forfait charge mode)."
+  },
+  "leasesFormNonRecoverableChargesHint": "E.g.: 20.00 (enter 0 if none)",
+  "@leasesFormNonRecoverableChargesHint": {
+    "description": "Hint/example text of the non-recoverable charges field in the lease form."
+  },
+  "leasesFormNonRecoverableChargesHelper": "Borne by the landlord — not billable to the tenant. Enter 0 if none.",
+  "@leasesFormNonRecoverableChargesHelper": {
+    "description": "Helper text of the non-recoverable charges field in the lease form."
+  },
+  "leasesFormDepositLabel": "Security deposit (€)",
+  "@leasesFormDepositLabel": {
+    "description": "Label of the optional security deposit field in the lease form."
+  },
+  "leasesFormDepositHint": "E.g.: 850.00",
+  "@leasesFormDepositHint": {
+    "description": "Hint/example text of the security deposit field in the lease form."
+  },
+  "leasesFormOptionalHelper": "Optional",
+  "@leasesFormOptionalHelper": {
+    "description": "Generic helper text marking a field as optional in the lease form (used by the deposit field)."
+  },
+  "leasesFormAgencyFeesLabel": "Agency fees (€)",
+  "@leasesFormAgencyFeesLabel": {
+    "description": "Label of the optional agency fees field in the lease form."
+  },
+  "leasesFormAgencyFeesHint": "E.g.: 500.00 (0 if none)",
+  "@leasesFormAgencyFeesHint": {
+    "description": "Hint/example text of the agency fees field in the lease form."
+  },
+  "leasesFormAgencyFeesHelper": "Optional — enter 0 if no agency",
+  "@leasesFormAgencyFeesHelper": {
+    "description": "Helper text of the agency fees field in the lease form."
+  },
+  "leasesFormLeaseTypeLabel": "Lease type *",
+  "@leasesFormLeaseTypeLabel": {
+    "description": "Label of the required lease type dropdown field in the lease form."
+  },
+  "leasesTypeUnfurnished": "Unfurnished",
+  "@leasesTypeUnfurnished": {
+    "description": "LeaseType.unfurnished label, shown in the lease type dropdown and lease detail info card."
+  },
+  "leasesTypeUnfurnishedHelper": "Unfurnished lease: 3-year minimum term · max deposit = 1 month excl. charges",
+  "@leasesTypeUnfurnishedHelper": {
+    "description": "Helper text shown under the lease type field when 'unfurnished' is selected."
+  },
+  "leasesTypeFurnished": "Furnished",
+  "@leasesTypeFurnished": {
+    "description": "LeaseType.furnished label, shown in the lease type dropdown and lease detail info card."
+  },
+  "leasesTypeFurnishedHelper": "Furnished lease: 1-year minimum term · max deposit = 2 months excl. charges",
+  "@leasesTypeFurnishedHelper": {
+    "description": "Helper text shown under the lease type field when 'furnished' is selected."
+  },
+  "leasesTypeMobility": "Mobility",
+  "@leasesTypeMobility": {
+    "description": "LeaseType.mobility label, shown in the lease type dropdown and lease detail info card (short-term 'bail mobilité')."
+  },
+  "leasesTypeMobilityHelper": "Mobility lease: 1 to 10 months · no security deposit",
+  "@leasesTypeMobilityHelper": {
+    "description": "Helper text shown under the lease type field when 'mobility' is selected."
+  },
+  "leasesTypeStudent": "Student",
+  "@leasesTypeStudent": {
+    "description": "LeaseType.student label, shown in the lease type dropdown and lease detail info card."
+  },
+  "leasesTypeStudentHelper": "Student lease: 9 months · max deposit = 1 month excl. charges",
+  "@leasesTypeStudentHelper": {
+    "description": "Helper text shown under the lease type field when 'student' is selected."
+  },
+  "leasesFormChargeModeSectionLabel": "Charge mode",
+  "@leasesFormChargeModeSectionLabel": {
+    "description": "Section label above the charge mode segmented button in the lease form."
+  },
+  "leasesFormChargeModeProvisionsSegment": "Provisions",
+  "@leasesFormChargeModeProvisionsSegment": {
+    "description": "Segment label for the 'provisions' charge mode option in the lease form."
+  },
+  "leasesFormChargeModeFlatSegment": "Flat fee",
+  "@leasesFormChargeModeFlatSegment": {
+    "description": "Segment label for the 'forfait' (flat fee) charge mode option in the lease form."
+  },
+  "leasesFormChargeModeHelperUnfurnished": "Unfurnished lease: provisions with mandatory annual regularization (art. 23).",
+  "@leasesFormChargeModeHelperUnfurnished": {
+    "description": "Helper text under the charge mode selector when the lease type is 'unfurnished' (mode locked to provisions)."
+  },
+  "leasesFormChargeModeHelperMobility": "Mobility lease: flat fee mandatory, not subject to regularization (loi ELAN art. 25-18).",
+  "@leasesFormChargeModeHelperMobility": {
+    "description": "Helper text under the charge mode selector when the lease type is 'mobility' (mode locked to forfait)."
+  },
+  "leasesFormChargeModeHelperFurnishedOrStudent": "Furnished: provisions (subject to regularization) or flat fee (final, art. 25-10).",
+  "@leasesFormChargeModeHelperFurnishedOrStudent": {
+    "description": "Helper text under the charge mode selector when the lease type is 'furnished' or 'student' (mode freely selectable)."
+  },
+  "leasesFormStartDateLabel": "Start date *",
+  "@leasesFormStartDateLabel": {
+    "description": "Label of the required start date field in the lease form."
+  },
+  "leasesFormStartDatePickerHelp": "Lease start date",
+  "@leasesFormStartDatePickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the lease start date."
+  },
+  "leasesFormSelectDatePlaceholder": "Select a date",
+  "@leasesFormSelectDatePlaceholder": {
+    "description": "Placeholder text shown in a date field before any date has been picked."
+  },
+  "leasesFormOpenEndedToggleLabel": "Open-ended lease",
+  "@leasesFormOpenEndedToggleLabel": {
+    "description": "Checkbox label toggling whether the lease has no end date."
+  },
+  "leasesFormEndDateLabel": "End date",
+  "@leasesFormEndDateLabel": {
+    "description": "Label of the optional end date field in the lease form (hidden when open-ended is checked)."
+  },
+  "leasesFormEndDatePickerHelp": "Lease end date",
+  "@leasesFormEndDatePickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the lease end date."
+  },
+  "leasesFormOptionalPlaceholder": "Optional",
+  "@leasesFormOptionalPlaceholder": {
+    "description": "Placeholder text shown in the end date field before any date has been picked."
+  },
+  "leasesFormPaymentSectionTitle": "Payment terms (optional)",
+  "@leasesFormPaymentSectionTitle": {
+    "description": "Title of the collapsible ExpansionTile grouping payment day and payment method fields."
+  },
+  "leasesFormPaymentDayLabel": "Due day",
+  "@leasesFormPaymentDayLabel": {
+    "description": "Label of the payment due-day field in the lease form."
+  },
+  "leasesFormPaymentDayHelper": "Day of the month the rent is due (1 to 28)",
+  "@leasesFormPaymentDayHelper": {
+    "description": "Helper text of the payment due-day field in the lease form."
+  },
+  "leasesFormPaymentMethodLabel": "Payment method",
+  "@leasesFormPaymentMethodLabel": {
+    "description": "Label of the payment method dropdown field in the lease form."
+  },
+  "leasesFormIrlClausesSectionTitle": "IRL index and clauses (optional)",
+  "@leasesFormIrlClausesSectionTitle": {
+    "description": "Title of the collapsible ExpansionTile grouping IRL index, quarter, and optional clauses fields."
+  },
+  "leasesFormIrlValueLabel": "Initial IRL index",
+  "@leasesFormIrlValueLabel": {
+    "description": "Label of the optional initial IRL (rent reference index) field in the lease form."
+  },
+  "leasesFormIrlValueHint": "E.g.: 142.43",
+  "@leasesFormIrlValueHint": {
+    "description": "Hint/example text of the IRL index field in the lease form."
+  },
+  "leasesFormIrlValueHelper": "Rent reference index (optional)",
+  "@leasesFormIrlValueHelper": {
+    "description": "Helper text of the IRL index field in the lease form."
+  },
+  "leasesFormIrlQuarterLabel": "IRL reference quarter",
+  "@leasesFormIrlQuarterLabel": {
+    "description": "Label of the optional IRL reference quarter field in the lease form."
+  },
+  "leasesFormIrlQuarterHelper": "Format: T1-2026, T2-2026, etc.",
+  "@leasesFormIrlQuarterHelper": {
+    "description": "Helper text of the IRL reference quarter field in the lease form, describing the expected format."
+  },
+  "leasesFormSolidarityClauseLabel": "Joint liability clause",
+  "@leasesFormSolidarityClauseLabel": {
+    "description": "Title of the switch toggling the joint-and-several liability clause (co-tenants) in the lease form."
+  },
+  "leasesFormSolidarityClauseSubtitle": "Joint liability between co-tenants",
+  "@leasesFormSolidarityClauseSubtitle": {
+    "description": "Subtitle under the joint liability clause switch in the lease form."
+  },
+  "leasesFormEntryInventoryLabel": "Move-in inventory completed",
+  "@leasesFormEntryInventoryLabel": {
+    "description": "Title of the switch toggling whether the move-in inventory ('état des lieux') has been completed, in the lease form."
+  },
+
+  "propertiesListTitle": "My properties",
+  "@propertiesListTitle": {
+    "description": "AppBar title on the properties list page."
+  },
+  "propertiesAddButton": "Add a property",
+  "@propertiesAddButton": {
+    "description": "Button/FAB label to create a new property (list page FAB, empty state CTA)."
+  },
+  "propertiesListErrorConnection": "Error. Check your connection and try again.",
+  "@propertiesListErrorConnection": {
+    "description": "Error message shown when the properties list fails to load due to a Firebase/network exception."
+  },
+  "propertiesListErrorGeneric": "Loading error",
+  "@propertiesListErrorGeneric": {
+    "description": "Generic fallback error message shown when the properties list fails to load for a non-Firebase reason."
+  },
+  "propertiesEmptyTitle": "No property registered",
+  "@propertiesEmptyTitle": {
+    "description": "Empty state title on the properties list when the landlord has no property yet."
+  },
+  "propertiesEmptyMessage": "Add your first property to start managing your rentals.\nYou can then link tenants and leases to it.",
+  "@propertiesEmptyMessage": {
+    "description": "Empty state supporting message on the properties list, multi-line."
+  },
+  "propertiesLimitBanner": "200-property limit reached. Contact support to increase this limit.",
+  "@propertiesLimitBanner": {
+    "description": "Banner shown at the top of the properties list/table when the 200-property limit is reached."
+  },
+  "propertiesListErrorTitle": "Unable to load your properties.",
+  "@propertiesListErrorTitle": {
+    "description": "Title shown in the full-page error view of the properties list."
+  },
+  "propertiesDetailAppBarTitle": "Property record",
+  "@propertiesDetailAppBarTitle": {
+    "description": "AppBar title used on the property-not-found page (generic title, since the property name is unknown)."
+  },
+  "propertiesDetailActiveLeasesTitle": "Active leases",
+  "@propertiesDetailActiveLeasesTitle": {
+    "description": "Section title on the property detail page for the (stub) active leases section."
+  },
+  "propertiesDetailActiveLeasesStub": "Available after FEAT-005",
+  "@propertiesDetailActiveLeasesStub": {
+    "description": "Placeholder text under the active leases section title, indicating the feature is not yet implemented (internal feature-flag reference, dev-facing but currently user-visible)."
+  },
+  "propertiesDetailArchiveButton": "Archive this property",
+  "@propertiesDetailArchiveButton": {
+    "description": "Button label to archive (soft-delete) the current property from its detail page."
+  },
+  "propertiesArchiveDialogTitle": "Archive this property?",
+  "@propertiesArchiveDialogTitle": {
+    "description": "Title of the confirmation dialog shown before archiving a property."
+  },
+  "propertiesArchiveDialogStandardMessage": "Do you want to archive \"{propertyName}\"? The property will no longer appear in your list. Linked leases will be kept.",
+  "@propertiesArchiveDialogStandardMessage": {
+    "description": "Confirmation dialog message shown when archiving a property with no active lease.",
+    "placeholders": {
+      "propertyName": {
+        "type": "String"
+      }
+    }
+  },
+  "propertiesArchiveDialogActiveLeaseMessage": "This property has an active lease. Are you sure you want to archive \"{propertyName}\"? Linked active leases will be kept but the property will no longer appear in your list.",
+  "@propertiesArchiveDialogActiveLeaseMessage": {
+    "description": "Reinforced confirmation dialog message shown when archiving a property that has an active lease.",
+    "placeholders": {
+      "propertyName": {
+        "type": "String"
+      }
+    }
+  },
+  "propertiesArchiveSuccessSnackbar": "Property archived",
+  "@propertiesArchiveSuccessSnackbar": {
+    "description": "SnackBar confirmation shown after successfully archiving a property."
+  },
+  "propertiesArchiveErrorSnackbar": "Unable to archive this property. Please try again.",
+  "@propertiesArchiveErrorSnackbar": {
+    "description": "SnackBar error shown when archiving a property fails."
+  },
+  "propertiesFieldName": "Name",
+  "@propertiesFieldName": {
+    "description": "Label of the property name field on the read-only detail card."
+  },
+  "propertiesFieldAddress": "Address",
+  "@propertiesFieldAddress": {
+    "description": "Label of the property address field on the read-only detail card."
+  },
+  "propertiesFieldCity": "City",
+  "@propertiesFieldCity": {
+    "description": "Label of the postal code + city field on the read-only detail card."
+  },
+  "propertiesSectionCharacteristics": "Characteristics",
+  "@propertiesSectionCharacteristics": {
+    "description": "Section header on the property detail card grouping physical characteristics."
+  },
+  "propertiesFieldType": "Type",
+  "@propertiesFieldType": {
+    "description": "Label of the property type field on the read-only detail card."
+  },
+  "propertiesFieldSurface": "Surface area",
+  "@propertiesFieldSurface": {
+    "description": "Label of the surface area field on the read-only detail card."
+  },
+  "propertiesSurfaceValue": "{surface} m²",
+  "@propertiesSurfaceValue": {
+    "description": "Formatted surface area value with the m² unit; {surface} is already locale-formatted (e.g. \"45,5\" or \"45\").",
+    "placeholders": {
+      "surface": {
+        "type": "String"
+      }
+    }
+  },
+  "propertiesFieldRooms": "Rooms",
+  "@propertiesFieldRooms": {
+    "description": "Label of the number-of-rooms field on the read-only detail card."
+  },
+  "propertiesFieldBedrooms": "Bedrooms",
+  "@propertiesFieldBedrooms": {
+    "description": "Label of the number-of-bedrooms field on the read-only detail card."
+  },
+  "propertiesFieldFloor": "Floor",
+  "@propertiesFieldFloor": {
+    "description": "Label of the floor field on the read-only detail card."
+  },
+  "propertiesFieldElevator": "Elevator",
+  "@propertiesFieldElevator": {
+    "description": "Label of the elevator field on the read-only detail card (shown only when true)."
+  },
+  "propertiesFieldFurnished": "Furnished",
+  "@propertiesFieldFurnished": {
+    "description": "Label of the furnished field on the read-only detail card (shown only when true)."
+  },
+  "propertiesFieldHeating": "Heating",
+  "@propertiesFieldHeating": {
+    "description": "Label of the heating type field on the read-only detail card."
+  },
+  "propertiesFieldConstructionYear": "Construction year",
+  "@propertiesFieldConstructionYear": {
+    "description": "Label of the construction year field on the read-only detail card."
+  },
+  "propertiesSectionEnergyPerformance": "Energy performance (DPE / GHG)",
+  "@propertiesSectionEnergyPerformance": {
+    "description": "Section header on the property detail card grouping the French energy performance diagnostic fields (DPE = Diagnostic de Performance Énergétique, GES = Gaz à Effet de Serre)."
+  },
+  "propertiesFieldDpeClass": "DPE class",
+  "@propertiesFieldDpeClass": {
+    "description": "Label of the DPE (energy performance) letter grade field, read-only detail card."
+  },
+  "propertiesFieldDpeConsumption": "DPE consumption",
+  "@propertiesFieldDpeConsumption": {
+    "description": "Label of the DPE energy consumption value field, read-only detail card."
+  },
+  "propertiesDpeConsumptionValue": "{value} kWh/m²/year",
+  "@propertiesDpeConsumptionValue": {
+    "description": "Formatted DPE consumption value with unit.",
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "propertiesFieldGesClass": "GHG class",
+  "@propertiesFieldGesClass": {
+    "description": "Label of the GES (greenhouse gas) letter grade field, read-only detail card."
+  },
+  "propertiesFieldCreatedAt": "Added on",
+  "@propertiesFieldCreatedAt": {
+    "description": "Label of the creation date field on the read-only detail card."
+  },
+  "propertiesFieldUpdatedAt": "Last updated on",
+  "@propertiesFieldUpdatedAt": {
+    "description": "Label of the last-updated date field on the read-only detail card."
+  },
+  "propertiesNotFoundTitle": "Property not found",
+  "@propertiesNotFoundTitle": {
+    "description": "Title shown when a property cannot be loaded (cross-user access or archived)."
+  },
+  "propertiesNotFoundMessage": "This property may have been archived or does not belong to you.",
+  "@propertiesNotFoundMessage": {
+    "description": "Supporting message shown under propertiesNotFoundTitle."
+  },
+  "propertiesBackToListButton": "Back to list",
+  "@propertiesBackToListButton": {
+    "description": "Button label to navigate back to the properties list from the not-found page."
+  },
+  "propertiesNotFoundShort": "Property not found.",
+  "@propertiesNotFoundShort": {
+    "description": "Short inline error text shown in the edit page when the property to edit cannot be loaded."
+  },
+  "propertiesCreateSuccessSnackbar": "Property created",
+  "@propertiesCreateSuccessSnackbar": {
+    "description": "SnackBar confirmation shown after successfully creating a property."
+  },
+  "propertiesUpdateSuccessSnackbar": "Changes saved",
+  "@propertiesUpdateSuccessSnackbar": {
+    "description": "SnackBar confirmation shown after successfully updating a property."
+  },
+  "propertiesFormTitleCreate": "New property",
+  "@propertiesFormTitleCreate": {
+    "description": "AppBar title of the property form in creation mode."
+  },
+  "propertiesFormTitleEdit": "Edit property",
+  "@propertiesFormTitleEdit": {
+    "description": "AppBar title of the property form in edit mode."
+  },
+  "propertiesFormSubmitCreate": "Create property",
+  "@propertiesFormSubmitCreate": {
+    "description": "Submit button label of the property form in creation mode."
+  },
+  "propertiesFormSectionMainInfo": "Main information",
+  "@propertiesFormSectionMainInfo": {
+    "description": "Section 1 header of the property form (required fields)."
+  },
+  "propertiesFormNameLabel": "Property name *",
+  "@propertiesFormNameLabel": {
+    "description": "Label of the required property name text field."
+  },
+  "propertiesFormNameHint": "E.g.: Apartment Paris 11th",
+  "@propertiesFormNameHint": {
+    "description": "Hint text of the property name text field."
+  },
+  "propertiesFormAddressLabel": "Full address *",
+  "@propertiesFormAddressLabel": {
+    "description": "Label of the required property address text field."
+  },
+  "propertiesFormAddressHint": "E.g.: 12 Peace Street",
+  "@propertiesFormAddressHint": {
+    "description": "Hint text of the property address text field."
+  },
+  "propertiesFormPostalCodeLabel": "Postal code",
+  "@propertiesFormPostalCodeLabel": {
+    "description": "Label of the optional postal code text field."
+  },
+  "propertiesFormCityLabel": "City",
+  "@propertiesFormCityLabel": {
+    "description": "Label of the optional city text field."
+  },
+  "propertiesFormTypeLabel": "Property type *",
+  "@propertiesFormTypeLabel": {
+    "description": "Label of the required property type dropdown."
+  },
+  "propertiesFormTypeRequired": "Please select a property type",
+  "@propertiesFormTypeRequired": {
+    "description": "Validation error shown when the property type dropdown is left empty on submit."
+  },
+  "propertiesFormSurfaceLabel": "Surface area in m² (optional)",
+  "@propertiesFormSurfaceLabel": {
+    "description": "Label of the optional surface area text field."
+  },
+  "propertiesFormSectionCharacteristics": "Characteristics (optional)",
+  "@propertiesFormSectionCharacteristics": {
+    "description": "ExpansionTile title for the optional characteristics section of the property form."
+  },
+  "propertiesFormRoomsLabel": "Rooms",
+  "@propertiesFormRoomsLabel": {
+    "description": "Label of the number-of-rooms text field in the property form."
+  },
+  "propertiesFormBedroomsLabel": "Bedrooms",
+  "@propertiesFormBedroomsLabel": {
+    "description": "Label of the number-of-bedrooms text field in the property form."
+  },
+  "propertiesFormFloorLabel": "Floor",
+  "@propertiesFormFloorLabel": {
+    "description": "Label of the floor number text field in the property form."
+  },
+  "propertiesFormFloorHelper": "0 = ground floor, negative allowed for basement",
+  "@propertiesFormFloorHelper": {
+    "description": "Helper text under the floor field explaining the numbering convention."
+  },
+  "propertiesFormElevatorLabel": "Elevator",
+  "@propertiesFormElevatorLabel": {
+    "description": "Switch label to indicate the property has an elevator."
+  },
+  "propertiesFormFurnishedLabel": "Furnished",
+  "@propertiesFormFurnishedLabel": {
+    "description": "Switch label to indicate the property is furnished."
+  },
+  "propertiesFormFurnishedHelper": "Impacts the legal lease duration",
+  "@propertiesFormFurnishedHelper": {
+    "description": "Helper text under the furnished switch explaining its legal impact on lease duration."
+  },
+  "propertiesFormHeatingTypeLabel": "Heating type",
+  "@propertiesFormHeatingTypeLabel": {
+    "description": "Label of the heating type dropdown in the property form."
+  },
+  "propertiesFormNotSpecified": "Not specified",
+  "@propertiesFormNotSpecified": {
+    "description": "Dropdown option meaning no value was provided (masculine agreement, used for heating type)."
+  },
+  "propertiesFormConstructionYearLabel": "Construction year",
+  "@propertiesFormConstructionYearLabel": {
+    "description": "Label of the construction year text field in the property form."
+  },
+  "propertiesFormSectionFinancing": "Financing & acquisition (optional)",
+  "@propertiesFormSectionFinancing": {
+    "description": "ExpansionTile title for the optional financing/acquisition section of the property form (FEAT-017)."
+  },
+  "propertiesFormPurchasePriceLabel": "Purchase price",
+  "@propertiesFormPurchasePriceLabel": {
+    "description": "Label of the purchase price text field."
+  },
+  "propertiesFormPurchaseDateValue": "Purchase date: {date}",
+  "@propertiesFormPurchaseDateValue": {
+    "description": "List tile title showing the selected purchase date, already formatted as dd/MM/yyyy.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "propertiesFormPurchaseDateEmpty": "Purchase date (optional)",
+  "@propertiesFormPurchaseDateEmpty": {
+    "description": "List tile title shown when no purchase date has been selected yet."
+  },
+  "propertiesFormClearDate": "Clear date",
+  "@propertiesFormClearDate": {
+    "description": "Tooltip of the icon button clearing a selected date field."
+  },
+  "propertiesFormPickDate": "Pick a date",
+  "@propertiesFormPickDate": {
+    "description": "Tooltip of the icon button opening the date picker."
+  },
+  "propertiesFormNotaryFeesLabel": "Notary fees",
+  "@propertiesFormNotaryFeesLabel": {
+    "description": "Label of the notary fees text field."
+  },
+  "propertiesFormNotaryFeesHelper": "Standard: 8% existing / 2% new",
+  "@propertiesFormNotaryFeesHelper": {
+    "description": "Helper text under the notary fees field giving typical French rates for existing vs new properties."
+  },
+  "propertiesFormIsNewLabel": "New property",
+  "@propertiesFormIsNewLabel": {
+    "description": "Switch label to indicate the property is newly built."
+  },
+  "propertiesFormIsNewHelper": "Impacts notary fees (~2%)",
+  "@propertiesFormIsNewHelper": {
+    "description": "Helper text under the new-property switch explaining its impact on notary fees."
+  },
+  "propertiesFormPropertyTaxLabel": "Annual property tax",
+  "@propertiesFormPropertyTaxLabel": {
+    "description": "Label of the annual property tax (taxe foncière) text field."
+  },
+  "propertiesFormInsurancePnoLabel": "Annual landlord insurance (PNO)",
+  "@propertiesFormInsurancePnoLabel": {
+    "description": "Label of the annual landlord (non-occupant) insurance text field (PNO = Propriétaire Non Occupant)."
+  },
+  "propertiesFormCondoFeesLabel": "Annual NON-RECOVERABLE condo fees",
+  "@propertiesFormCondoFeesLabel": {
+    "description": "Label of the annual non-recoverable condo fees text field."
+  },
+  "propertiesFormCondoFeesHelper": "Major works, property manager, ALUR — not water or waste",
+  "@propertiesFormCondoFeesHelper": {
+    "description": "Helper text clarifying which expense categories are covered by non-recoverable condo fees (ALUR = French housing law)."
+  },
+  "propertiesFormSectionLoan": "Mortgage loan (optional)",
+  "@propertiesFormSectionLoan": {
+    "description": "Sub-section header for the mortgage loan fields within the financing section."
+  },
+  "propertiesFormLoanPrincipalLabel": "Loan principal",
+  "@propertiesFormLoanPrincipalLabel": {
+    "description": "Label of the loan principal amount text field."
+  },
+  "propertiesFormLoanRateLabel": "Nominal rate",
+  "@propertiesFormLoanRateLabel": {
+    "description": "Label of the loan nominal interest rate text field."
+  },
+  "propertiesFormLoanDurationLabel": "Duration",
+  "@propertiesFormLoanDurationLabel": {
+    "description": "Label of the loan duration (in months) text field."
+  },
+  "propertiesFormLoanInsuranceRateLabel": "Borrower insurance rate",
+  "@propertiesFormLoanInsuranceRateLabel": {
+    "description": "Label of the loan borrower insurance rate text field."
+  },
+  "propertiesFormLoanInsuranceRateHelper": "Calculated on the initial principal",
+  "@propertiesFormLoanInsuranceRateHelper": {
+    "description": "Helper text clarifying the base amount used to calculate the borrower insurance rate."
+  },
+  "propertiesFormLoanStartDateValue": "Loan start: {date}",
+  "@propertiesFormLoanStartDateValue": {
+    "description": "List tile title showing the selected loan start date, already formatted as dd/MM/yyyy.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "propertiesFormLoanStartDateEmpty": "Loan start date (optional)",
+  "@propertiesFormLoanStartDateEmpty": {
+    "description": "List tile title shown when no loan start date has been selected yet."
+  },
+  "propertiesFormLoanPaymentOverrideLabel": "Monthly payment (optional override)",
+  "@propertiesFormLoanPaymentOverrideLabel": {
+    "description": "Label of the manual monthly loan payment override text field."
+  },
+  "propertiesFormLoanPaymentOverrideHelper": "Enter if different from the automatic calculation",
+  "@propertiesFormLoanPaymentOverrideHelper": {
+    "description": "Helper text explaining when to use the monthly payment override field."
+  },
+  "propertiesFormSectionDpe": "DPE / GHG (optional)",
+  "@propertiesFormSectionDpe": {
+    "description": "ExpansionTile title for the optional energy performance diagnostic section of the property form."
+  },
+  "propertiesFormDpeClassLabel": "DPE class",
+  "@propertiesFormDpeClassLabel": {
+    "description": "Label of the DPE letter grade dropdown in the property form."
+  },
+  "propertiesFormDpeValueLabel": "DPE value",
+  "@propertiesFormDpeValueLabel": {
+    "description": "Label of the DPE numeric consumption value text field in the property form."
+  },
+  "propertiesFormGesClassLabel": "GHG class",
+  "@propertiesFormGesClassLabel": {
+    "description": "Label of the GES letter grade dropdown in the property form."
+  },
+  "propertiesFormGesNotSpecified": "Not specified",
+  "@propertiesFormGesNotSpecified": {
+    "description": "Dropdown option meaning no value was provided (feminine agreement in French, used for GES class — 'classe' is feminine)."
+  },
+  "propertiesTypeAppartement": "Apartment",
+  "@propertiesTypeAppartement": {
+    "description": "PropertyType enum label: apartment."
+  },
+  "propertiesTypeMaison": "House",
+  "@propertiesTypeMaison": {
+    "description": "PropertyType enum label: house."
+  },
+  "propertiesTypeStudio": "Studio",
+  "@propertiesTypeStudio": {
+    "description": "PropertyType enum label: studio."
+  },
+  "propertiesTypeAutre": "Other",
+  "@propertiesTypeAutre": {
+    "description": "PropertyType enum label: other."
+  },
+  "propertiesHeatingElectric": "Electric",
+  "@propertiesHeatingElectric": {
+    "description": "HeatingType enum label: electric heating."
+  },
+  "propertiesHeatingGas": "Gas",
+  "@propertiesHeatingGas": {
+    "description": "HeatingType enum label: gas heating."
+  },
+  "propertiesHeatingCollective": "Collective",
+  "@propertiesHeatingCollective": {
+    "description": "HeatingType enum label: collective/shared building heating."
+  },
+  "propertiesHeatingFuel": "Oil",
+  "@propertiesHeatingFuel": {
+    "description": "HeatingType enum label: heating oil."
+  },
+  "propertiesHeatingWood": "Wood",
+  "@propertiesHeatingWood": {
+    "description": "HeatingType enum label: wood heating."
+  },
+  "propertiesHeatingHeatPump": "Heat pump",
+  "@propertiesHeatingHeatPump": {
+    "description": "HeatingType enum label: heat pump."
+  },
+  "propertiesHeatingOther": "Other",
+  "@propertiesHeatingOther": {
+    "description": "HeatingType enum label: other heating type."
+  },
+  "propertiesFilterAll": "All",
+  "@propertiesFilterAll": {
+    "description": "PropertyFilter enum label: no filter, show all properties."
+  },
+  "propertiesFilterOccupied": "Occupied",
+  "@propertiesFilterOccupied": {
+    "description": "PropertyFilter enum label: only occupied (rented) properties."
+  },
+  "propertiesFilterVacant": "Vacant",
+  "@propertiesFilterVacant": {
+    "description": "PropertyFilter enum label: only vacant properties."
+  },
+  "propertiesStatusOccupied": "Occupied",
+  "@propertiesStatusOccupied": {
+    "description": "StatusPill label shown on a property card/row/table when it has an active lease."
+  },
+  "propertiesStatusVacant": "Vacant",
+  "@propertiesStatusVacant": {
+    "description": "StatusPill label shown on a property card/row/table when it has no active lease."
+  },
+  "propertiesNoTenant": "No tenant",
+  "@propertiesNoTenant": {
+    "description": "Fallback text shown instead of a tenant name when a property is vacant (card body, table cell)."
+  },
+  "propertiesViewLease": "View lease",
+  "@propertiesViewLease": {
+    "description": "Button/tooltip label to navigate to the active lease of a property (card footer, table row action)."
+  },
+  "propertiesCreateLease": "Create a lease",
+  "@propertiesCreateLease": {
+    "description": "Button/tooltip label to create a new lease for a vacant property (card footer, table row action, profitability card CTA)."
+  },
+  "propertiesEditPropertyButton": "Edit property",
+  "@propertiesEditPropertyButton": {
+    "description": "Button label to navigate to the property edit form (used from the profitability card's missing-data CTA)."
+  },
+  "propertiesCardSemanticLabel": "{propertyName} — {status}",
+  "@propertiesCardSemanticLabel": {
+    "description": "Semantic (accessibility) label of a property card, combining the property name and its occupancy status label.",
+    "placeholders": {
+      "propertyName": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "propertiesTableColumnProperty": "Property",
+  "@propertiesTableColumnProperty": {
+    "description": "Properties table column header: property name/address."
+  },
+  "propertiesTableColumnType": "Type",
+  "@propertiesTableColumnType": {
+    "description": "Properties table column header: property type."
+  },
+  "propertiesTableColumnSurface": "Surface area",
+  "@propertiesTableColumnSurface": {
+    "description": "Properties table column header: surface area."
+  },
+  "propertiesTableColumnStatus": "Status",
+  "@propertiesTableColumnStatus": {
+    "description": "Properties table column header: occupancy status."
+  },
+  "propertiesTableColumnTenant": "Tenant",
+  "@propertiesTableColumnTenant": {
+    "description": "Properties table column header: current tenant name."
+  },
+  "propertiesTableColumnRent": "Rent incl. charges",
+  "@propertiesTableColumnRent": {
+    "description": "Properties table column header: monthly rent including charges (CC = charges comprises)."
+  },
+  "propertiesTableColumnActions": "Actions",
+  "@propertiesTableColumnActions": {
+    "description": "Properties table column header: row action buttons."
+  },
+  "propertiesProfitabilityTitle": "Profitability",
+  "@propertiesProfitabilityTitle": {
+    "description": "Title of the profitability card shown on the property detail page (FEAT-017)."
+  },
+  "propertiesProfitabilityVacantMessage": "Profitability not computable — no active lease",
+  "@propertiesProfitabilityVacantMessage": {
+    "description": "Message shown in the profitability card when the property has no active lease."
+  },
+  "propertiesProfitabilityMissingDataMessage": "Enter the purchase price to compute profitability",
+  "@propertiesProfitabilityMissingDataMessage": {
+    "description": "Message shown in the profitability card when required financial data (purchase price) is missing."
+  },
+  "propertiesProfitabilityYieldGross": "Gross yield",
+  "@propertiesProfitabilityYieldGross": {
+    "description": "KPI chip label: gross rental yield percentage."
+  },
+  "propertiesProfitabilityYieldNet": "Net yield",
+  "@propertiesProfitabilityYieldNet": {
+    "description": "KPI chip label: net rental yield percentage."
+  },
+  "propertiesProfitabilityLoanPayment": "Loan payment",
+  "@propertiesProfitabilityLoanPayment": {
+    "description": "KPI chip label: monthly loan payment amount."
+  },
+  "propertiesProfitabilityCashflow": "Cash flow / month",
+  "@propertiesProfitabilityCashflow": {
+    "description": "KPI chip label: monthly cash flow before tax."
+  },
+  "propertiesProfitabilityNetNotComputable": "Net yield not computable — enter annual charges",
+  "@propertiesProfitabilityNetNotComputable": {
+    "description": "Note shown when gross yield is available but net yield cannot be computed due to missing annual charges."
+  },
+  "propertiesProfitabilityDisclaimer": "Indicative estimate before tax — does not account for the tax regime or social security contributions (17.2%)",
+  "@propertiesProfitabilityDisclaimer": {
+    "description": "Legal/financial disclaimer shown at the bottom of the profitability card."
+  },
+
+  "tenantsListTitle": "My tenants",
+  "@tenantsListTitle": {
+    "description": "AppBar title of the tenants list page (/tenants)."
+  },
+  "tenantsAddButton": "Add a tenant",
+  "@tenantsAddButton": {
+    "description": "FAB label and empty-state action button to create a new tenant."
+  },
+  "tenantsEmptyTitle": "No tenant registered",
+  "@tenantsEmptyTitle": {
+    "description": "Empty state title on the tenants list when there are zero tenants."
+  },
+  "tenantsEmptyMessage": "Add your first tenant to get started.\nYou can then link them to a property via a lease.",
+  "@tenantsEmptyMessage": {
+    "description": "Empty state explanatory message on the tenants list (contains a line break)."
+  },
+  "tenantsErrorFirestore": "Firestore error: {details}",
+  "@tenantsErrorFirestore": {
+    "description": "Error message shown on the tenants list when the underlying Firestore stream/query fails; {details} is the raw exception message or code.",
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsErrorLoading": "Loading error",
+  "@tenantsErrorLoading": {
+    "description": "Generic fallback error message on the tenants list when the failure is not a recognized FirebaseException."
+  },
+  "tenantsErrorLoadFailedTitle": "Unable to load your tenants.",
+  "@tenantsErrorLoadFailedTitle": {
+    "description": "Title of the full-page error view on the tenants list (above the retry button)."
+  },
+  "tenantsLimitReachedBanner": "Limit of 200 tenants reached. Contact support to increase this limit.",
+  "@tenantsLimitReachedBanner": {
+    "description": "Banner shown above the tenants list/table when the 200-tenant cap is reached."
+  },
+  "tenantsArchiveButton": "Archive this tenant",
+  "@tenantsArchiveButton": {
+    "description": "Destructive outlined button on the tenant detail page to archive the tenant."
+  },
+  "tenantsArchiveDialogTitle": "Archive this tenant?",
+  "@tenantsArchiveDialogTitle": {
+    "description": "Title of the archive confirmation dialog for a tenant."
+  },
+  "tenantsArchiveDialogStandardMessage": "Do you want to archive \"{name}\"? The tenant will no longer appear in your list. Linked leases will be kept.",
+  "@tenantsArchiveDialogStandardMessage": {
+    "description": "Body of the archive confirmation dialog when the tenant has no active lease; {name} is the tenant's full display name (first + last name).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsArchiveDialogActiveLeaseMessage": "This tenant has an active lease. Are you sure you want to archive \"{name}\"? Linked active leases will be kept but the tenant will no longer appear in your list.",
+  "@tenantsArchiveDialogActiveLeaseMessage": {
+    "description": "Body of the archive confirmation dialog when the tenant has at least one active lease (reinforced warning); {name} is the tenant's full display name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsArchiveSuccessSnackBar": "Tenant archived",
+  "@tenantsArchiveSuccessSnackBar": {
+    "description": "SnackBar confirming a successful tenant archive action."
+  },
+  "tenantsArchiveErrorSnackBar": "Unable to archive this tenant. Please try again.",
+  "@tenantsArchiveErrorSnackBar": {
+    "description": "SnackBar shown when archiving a tenant fails."
+  },
+  "tenantsFieldFirstName": "First name",
+  "@tenantsFieldFirstName": {
+    "description": "Read-only field label on the tenant detail info card: first name."
+  },
+  "tenantsFieldLastName": "Last name",
+  "@tenantsFieldLastName": {
+    "description": "Read-only field label on the tenant detail info card: last name."
+  },
+  "tenantsFieldEmail": "Email",
+  "@tenantsFieldEmail": {
+    "description": "Read-only field label on the tenant detail info card: email address."
+  },
+  "tenantsFieldPhone": "Phone",
+  "@tenantsFieldPhone": {
+    "description": "Read-only field label on the tenant detail info card: phone number."
+  },
+  "tenantsFieldBirthDate": "Date of birth",
+  "@tenantsFieldBirthDate": {
+    "description": "Read-only field label on the tenant detail info card: date of birth."
+  },
+  "tenantsFieldBirthPlace": "Place of birth",
+  "@tenantsFieldBirthPlace": {
+    "description": "Read-only field label on the tenant detail info card: place of birth."
+  },
+  "tenantsFieldNationality": "Nationality",
+  "@tenantsFieldNationality": {
+    "description": "Read-only field label on the tenant detail info card: nationality."
+  },
+  "tenantsSectionProfessional": "Professional situation",
+  "@tenantsSectionProfessional": {
+    "description": "Section sub-header on the tenant detail info card grouping profession/employer/income/previous address."
+  },
+  "tenantsFieldProfession": "Profession",
+  "@tenantsFieldProfession": {
+    "description": "Read-only field label on the tenant detail info card: profession/job title."
+  },
+  "tenantsFieldEmployer": "Employer",
+  "@tenantsFieldEmployer": {
+    "description": "Read-only field label on the tenant detail info card: employer name."
+  },
+  "tenantsFieldMonthlyIncome": "Monthly income",
+  "@tenantsFieldMonthlyIncome": {
+    "description": "Read-only field label on the tenant detail info card: net monthly income."
+  },
+  "tenantsMonthlyIncomeValue": "{amount} / month",
+  "@tenantsMonthlyIncomeValue": {
+    "description": "Formatted value shown next to tenantsFieldMonthlyIncome; {amount} is the already euro-formatted amount (e.g. '2 500,00 €').",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsFieldPreviousAddress": "Previous address",
+  "@tenantsFieldPreviousAddress": {
+    "description": "Read-only field label on the tenant detail info card: previous address."
+  },
+  "tenantsSectionGuarantor": "Guarantor",
+  "@tenantsSectionGuarantor": {
+    "description": "Section sub-header on the tenant detail info card grouping guarantor name/email/phone."
+  },
+  "tenantsFieldGuarantorName": "Guarantor name",
+  "@tenantsFieldGuarantorName": {
+    "description": "Read-only field label on the tenant detail info card: guarantor's full name."
+  },
+  "tenantsFieldGuarantorEmail": "Guarantor email",
+  "@tenantsFieldGuarantorEmail": {
+    "description": "Read-only field label on the tenant detail info card: guarantor's email."
+  },
+  "tenantsFieldGuarantorPhone": "Guarantor phone",
+  "@tenantsFieldGuarantorPhone": {
+    "description": "Read-only field label on the tenant detail info card: guarantor's phone."
+  },
+  "tenantsFieldCreatedAt": "Added on",
+  "@tenantsFieldCreatedAt": {
+    "description": "Read-only field label on the tenant detail info card: creation date."
+  },
+  "tenantsFieldUpdatedAt": "Last updated on",
+  "@tenantsFieldUpdatedAt": {
+    "description": "Read-only field label on the tenant detail info card: last update date."
+  },
+  "tenantsLeasesSectionTitle": "Linked leases",
+  "@tenantsLeasesSectionTitle": {
+    "description": "Section title on the tenant detail page listing the tenant's leases."
+  },
+  "tenantsErrorLoadLeases": "Unable to load leases.",
+  "@tenantsErrorLoadLeases": {
+    "description": "Inline error shown in the linked-leases section of the tenant detail page when the fetch fails."
+  },
+  "tenantsDetailFallbackTitle": "Tenant profile",
+  "@tenantsDetailFallbackTitle": {
+    "description": "AppBar title used as a generic fallback while the tenant detail page is not yet resolved (not-found state)."
+  },
+  "tenantsNotFoundTitle": "Tenant not found",
+  "@tenantsNotFoundTitle": {
+    "description": "Title of the not-found page shown when a tenant id does not resolve (archived, not owned, or unknown)."
+  },
+  "tenantsNotFoundMessage": "This tenant may have been archived or does not belong to you.",
+  "@tenantsNotFoundMessage": {
+    "description": "Explanatory message on the tenant not-found page."
+  },
+  "tenantsBackToListButton": "Back to list",
+  "@tenantsBackToListButton": {
+    "description": "Button on the tenant not-found page navigating back to the tenants list."
+  },
+  "tenantsFormTitleCreate": "New tenant",
+  "@tenantsFormTitleCreate": {
+    "description": "AppBar title of the tenant form page in creation mode."
+  },
+  "tenantsFormTitleEdit": "Edit tenant",
+  "@tenantsFormTitleEdit": {
+    "description": "AppBar title of the tenant form page in edit mode (also reused as fallback title while the tenant to edit is loading/not found)."
+  },
+  "tenantsEditNotFound": "Tenant not found.",
+  "@tenantsEditNotFound": {
+    "description": "Inline error text on the tenant edit page when the tenant to edit could not be loaded."
+  },
+  "tenantsCreateSuccessSnackBar": "Tenant created",
+  "@tenantsCreateSuccessSnackBar": {
+    "description": "SnackBar shown after successfully creating a tenant."
+  },
+  "tenantsUpdateSuccessSnackBar": "Changes saved",
+  "@tenantsUpdateSuccessSnackBar": {
+    "description": "SnackBar shown after successfully updating a tenant."
+  },
+  "tenantsFormSubmitCreate": "Create tenant",
+  "@tenantsFormSubmitCreate": {
+    "description": "Submit button label on the tenant form in creation mode (edit mode reuses commonSave)."
+  },
+  "tenantsSectionIdentity": "Identity",
+  "@tenantsSectionIdentity": {
+    "description": "Section header of the first (mandatory) block of the tenant form: identity fields."
+  },
+  "tenantsFormFirstNameLabel": "First name *",
+  "@tenantsFormFirstNameLabel": {
+    "description": "Label of the required first name field in the tenant form."
+  },
+  "tenantsFormFirstNameHint": "E.g.: John",
+  "@tenantsFormFirstNameHint": {
+    "description": "Placeholder/example text of the first name field in the tenant form."
+  },
+  "tenantsFormLastNameLabel": "Last name *",
+  "@tenantsFormLastNameLabel": {
+    "description": "Label of the required last name field in the tenant form."
+  },
+  "tenantsFormLastNameHint": "E.g.: Smith",
+  "@tenantsFormLastNameHint": {
+    "description": "Placeholder/example text of the last name field in the tenant form."
+  },
+  "tenantsFormEmailLabel": "Email *",
+  "@tenantsFormEmailLabel": {
+    "description": "Label of the required email field in the tenant form."
+  },
+  "tenantsFormEmailHint": "E.g.: john.smith@email.com",
+  "@tenantsFormEmailHint": {
+    "description": "Placeholder/example text of the email field in the tenant form."
+  },
+  "tenantsFormPhoneLabel": "Phone (optional)",
+  "@tenantsFormPhoneLabel": {
+    "description": "Label of the optional phone field in the tenant form."
+  },
+  "tenantsFormPhoneHint": "E.g.: 06 12 34 56 78",
+  "@tenantsFormPhoneHint": {
+    "description": "Placeholder/example text of the phone field in the tenant form (French phone number format kept as example)."
+  },
+  "tenantsFormBirthDateLabel": "Date of birth (optional)",
+  "@tenantsFormBirthDateLabel": {
+    "description": "Label of the optional birth date field in the tenant form; also used as the native date picker's helpText/fieldLabelText."
+  },
+  "tenantsFormBirthDateHint": "DD/MM/YYYY",
+  "@tenantsFormBirthDateHint": {
+    "description": "Hint/format placeholder of the birth date field and native date picker fieldHintText in the tenant form."
+  },
+  "tenantsFormClearTooltip": "Clear",
+  "@tenantsFormClearTooltip": {
+    "description": "Tooltip of the small clear (x) icon button next to the birth date field."
+  },
+  "tenantsFormBirthPlaceLabel": "Place of birth (optional)",
+  "@tenantsFormBirthPlaceLabel": {
+    "description": "Label of the optional birth place field in the tenant form."
+  },
+  "tenantsFormBirthPlaceHint": "E.g.: Paris",
+  "@tenantsFormBirthPlaceHint": {
+    "description": "Placeholder/example text of the birth place field in the tenant form."
+  },
+  "tenantsFormNationalityLabel": "Nationality (optional)",
+  "@tenantsFormNationalityLabel": {
+    "description": "Label of the optional nationality field in the tenant form."
+  },
+  "tenantsFormNationalityHint": "E.g.: French",
+  "@tenantsFormNationalityHint": {
+    "description": "Placeholder/example text of the nationality field in the tenant form."
+  },
+  "tenantsSectionProfessionalOptional": "Professional situation (optional)",
+  "@tenantsSectionProfessionalOptional": {
+    "description": "Title of the collapsible ExpansionTile section for professional situation fields in the tenant form."
+  },
+  "tenantsFormProfessionLabel": "Profession",
+  "@tenantsFormProfessionLabel": {
+    "description": "Label of the profession field in the tenant form (optional section)."
+  },
+  "tenantsFormProfessionHint": "E.g.: Engineer",
+  "@tenantsFormProfessionHint": {
+    "description": "Placeholder/example text of the profession field in the tenant form."
+  },
+  "tenantsFormEmployerLabel": "Employer",
+  "@tenantsFormEmployerLabel": {
+    "description": "Label of the employer field in the tenant form (optional section)."
+  },
+  "tenantsFormEmployerHint": "E.g.: XYZ Company",
+  "@tenantsFormEmployerHint": {
+    "description": "Placeholder/example text of the employer field in the tenant form."
+  },
+  "tenantsFormMonthlyIncomeLabel": "Net monthly income",
+  "@tenantsFormMonthlyIncomeLabel": {
+    "description": "Label of the net monthly income field in the tenant form (optional section, entered in euros)."
+  },
+  "tenantsFormMonthlyIncomeHint": "E.g.: 2500",
+  "@tenantsFormMonthlyIncomeHint": {
+    "description": "Placeholder/example text of the monthly income field in the tenant form."
+  },
+  "tenantsFormMonthlyIncomeHelper": "in €",
+  "@tenantsFormMonthlyIncomeHelper": {
+    "description": "Helper text under the monthly income field clarifying the unit is euros. Currency symbol kept as € in every locale."
+  },
+  "tenantsFormInvalidAmount": "Invalid amount",
+  "@tenantsFormInvalidAmount": {
+    "description": "Inline validation error shown on the monthly income field when the entered text is not a valid integer."
+  },
+  "tenantsFormPreviousAddressLabel": "Previous address",
+  "@tenantsFormPreviousAddressLabel": {
+    "description": "Label of the previous address field in the tenant form (optional section)."
+  },
+  "tenantsFormPreviousAddressHint": "E.g.: 5 rue des Fleurs, 75001 Paris",
+  "@tenantsFormPreviousAddressHint": {
+    "description": "Placeholder/example text of the previous address field in the tenant form (French address kept as illustrative example)."
+  },
+  "tenantsSectionGuarantorOptional": "Guarantor (optional)",
+  "@tenantsSectionGuarantorOptional": {
+    "description": "Title of the collapsible ExpansionTile section for guarantor fields in the tenant form."
+  },
+  "tenantsFormGuarantorNameLabel": "Guarantor name",
+  "@tenantsFormGuarantorNameLabel": {
+    "description": "Label of the guarantor name field in the tenant form (optional section)."
+  },
+  "tenantsFormGuarantorNameHint": "E.g.: Peter Smith",
+  "@tenantsFormGuarantorNameHint": {
+    "description": "Placeholder/example text of the guarantor name field in the tenant form."
+  },
+  "tenantsFormGuarantorEmailLabel": "Guarantor email",
+  "@tenantsFormGuarantorEmailLabel": {
+    "description": "Label of the guarantor email field in the tenant form (optional section)."
+  },
+  "tenantsFormGuarantorEmailHint": "E.g.: guarantor@email.com",
+  "@tenantsFormGuarantorEmailHint": {
+    "description": "Placeholder/example text of the guarantor email field in the tenant form."
+  },
+  "tenantsFormGuarantorPhoneLabel": "Guarantor phone",
+  "@tenantsFormGuarantorPhoneLabel": {
+    "description": "Label of the guarantor phone field in the tenant form (optional section)."
+  },
+  "tenantsFormGuarantorPhoneHint": "E.g.: 06 12 34 56 78",
+  "@tenantsFormGuarantorPhoneHint": {
+    "description": "Placeholder/example text of the guarantor phone field in the tenant form."
+  },
+  "tenantsFilterAll": "All",
+  "@tenantsFilterAll": {
+    "description": "Tenants list filter option: show all tenants (no filter). Used in both the desktop SegmentedButton and the mobile dropdown."
+  },
+  "tenantsFilterActive": "Active",
+  "@tenantsFilterActive": {
+    "description": "Tenants list filter option: tenants with an active lease only."
+  },
+  "tenantsFilterWithoutLease": "Without lease",
+  "@tenantsFilterWithoutLease": {
+    "description": "Tenants list filter option: tenants without an active lease."
+  },
+  "tenantsStatusActive": "Active",
+  "@tenantsStatusActive": {
+    "description": "Occupancy status pill label shown on tenant cards/table rows when the tenant has an active lease."
+  },
+  "tenantsStatusWithoutLease": "No lease",
+  "@tenantsStatusWithoutLease": {
+    "description": "Occupancy status pill label shown on tenant cards/table rows when the tenant has no active lease."
+  },
+  "tenantsNoPropertyOccupied": "No property occupied",
+  "@tenantsNoPropertyOccupied": {
+    "description": "Fallback text on tenant cards/table when the tenant currently occupies no property."
+  },
+  "tenantsViewLeaseButton": "View lease",
+  "@tenantsViewLeaseButton": {
+    "description": "Button/tooltip/link label to navigate to the tenant's active lease (used on cards, table row actions, and the linked-leases list)."
+  },
+  "tenantsCreateLeaseButton": "Create a lease",
+  "@tenantsCreateLeaseButton": {
+    "description": "Button/tooltip label to start creating a new lease for a tenant with no active lease (used on cards and table row actions)."
+  },
+  "tenantsTableColumnName": "Name",
+  "@tenantsTableColumnName": {
+    "description": "Tenants table column header: tenant full name."
+  },
+  "tenantsTableColumnEmail": "Email",
+  "@tenantsTableColumnEmail": {
+    "description": "Tenants table column header: tenant email."
+  },
+  "tenantsTableColumnPhone": "Phone",
+  "@tenantsTableColumnPhone": {
+    "description": "Tenants table column header: tenant phone."
+  },
+  "tenantsTableColumnStatus": "Status",
+  "@tenantsTableColumnStatus": {
+    "description": "Tenants table column header: occupancy status pill."
+  },
+  "tenantsTableColumnProperty": "Occupied property",
+  "@tenantsTableColumnProperty": {
+    "description": "Tenants table column header: currently occupied property name."
+  },
+  "tenantsTableColumnRent": "Rent excl. charges",
+  "@tenantsTableColumnRent": {
+    "description": "Tenants table column header: active lease rent amount (numeric column). 'CC' = 'charges comprises' (rent including recoverable charges provision)."
+  },
+  "tenantsTableColumnActions": "Actions",
+  "@tenantsTableColumnActions": {
+    "description": "Tenants table column header: row action buttons (edit/lease)."
+  },
+  "tenantsNoLeaseForTenant": "No lease registered for this tenant.",
+  "@tenantsNoLeaseForTenant": {
+    "description": "Empty state message in the linked-leases summary widget when a tenant has zero leases."
+  },
+  "tenantsLeaseRentPerMonth": "{amount}/month excl. charges",
+  "@tenantsLeaseRentPerMonth": {
+    "description": "Rent amount line in a tenant's linked-lease summary item; {amount} is the already euro-formatted rent. 'HC' = 'hors charges' (excluding charges).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsLeasePeriodOpenEnded": "From {startDate} (open-ended)",
+  "@tenantsLeasePeriodOpenEnded": {
+    "description": "Lease period label in a tenant's linked-lease summary item when the lease has no end date (indefinite term); {startDate} is already formatted (e.g. '01/01/2026'). 'CDI' evokes an open-ended/indefinite contract, mirrored as 'open-ended' in English.",
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsLeasePeriodFixed": "From {startDate} to {endDate}",
+  "@tenantsLeasePeriodFixed": {
+    "description": "Lease period label in a tenant's linked-lease summary item when the lease has a fixed end date; both dates are already formatted strings.",
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "tenantsLeaseStatusActive": "Active",
+  "@tenantsLeaseStatusActive": {
+    "description": "Lease status pill label (active) shown in a tenant's linked-lease summary item."
+  },
+  "tenantsLeaseStatusTerminated": "Terminated",
+  "@tenantsLeaseStatusTerminated": {
+    "description": "Lease status pill label (terminated) shown in a tenant's linked-lease summary item."
+  },
+  "tenantsLeaseStatusArchived": "Archived",
+  "@tenantsLeaseStatusArchived": {
+    "description": "Lease status pill label (archived) shown in a tenant's linked-lease summary item."
+  },
+  "tenantsErrorHasActiveLeases": "This tenant has active leases — terminate them before archiving.",
+  "@tenantsErrorHasActiveLeases": {
+    "description": "Tenant form submission error (TenantSubmitError.hasActiveLeases): backend refused the operation because the tenant still has active leases."
+  },
+  "tenantsErrorPermissionDenied": "Action not authorized.",
+  "@tenantsErrorPermissionDenied": {
+    "description": "Tenant form submission error (TenantSubmitError.permissionDenied): backend returned permission-denied/unauthenticated."
+  },
+  "tenantsErrorServiceUnavailable": "Service temporarily unavailable. Please try again.",
+  "@tenantsErrorServiceUnavailable": {
+    "description": "Tenant form submission error (TenantSubmitError.serviceUnavailable): backend returned unavailable/deadline-exceeded."
+  },
+  "tenantsErrorNotFound": "Tenant not found. It may have been archived.",
+  "@tenantsErrorNotFound": {
+    "description": "Tenant form submission error (TenantSubmitError.notFound): the tenant being edited no longer exists (TenantNotFoundException)."
+  },
+  "tenantsErrorSaveFailed": "Error saving. Check your connection and try again.",
+  "@tenantsErrorSaveFailed": {
+    "description": "Tenant form submission error (TenantSubmitError.saveFailed): generic Firestore/save failure, including unrecognized Cloud Functions error codes."
+  },
+  "tenantsErrorUnknown": "An error occurred. Please try again.",
+  "@tenantsErrorUnknown": {
+    "description": "Tenant form submission error (TenantSubmitError.unknown): unexpected exception caught during submit()."
   }
 }

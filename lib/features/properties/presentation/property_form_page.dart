@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/surface_validator.dart';
 import '../application/property_detail_provider.dart';
@@ -253,11 +254,14 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
   @override
   Widget build(BuildContext context) {
     final isCreating = widget.initial == null;
+    final l10n = context.l10n;
 
     ref.listen<PropertyFormState>(propertyFormControllerProvider, (_, next) {
       next.whenOrNull(
         success: (property) {
-          final msg = isCreating ? 'Bien créé' : 'Modifications enregistrées';
+          final msg = isCreating
+              ? l10n.propertiesCreateSuccessSnackbar
+              : l10n.propertiesUpdateSuccessSnackbar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -294,7 +298,9 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: isCreating ? 'Nouveau bien' : 'Modifier le bien',
+        title: isCreating
+            ? l10n.propertiesFormTitleCreate
+            : l10n.propertiesFormTitleEdit,
         fallbackRoute: '/properties',
       ),
       body: SingleChildScrollView(
@@ -365,7 +371,11 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isCreating ? 'Créer le bien' : 'Enregistrer'),
+                  : Text(
+                      isCreating
+                          ? l10n.propertiesFormSubmitCreate
+                          : l10n.commonSave,
+                    ),
             ),
           ],
         ),
@@ -391,12 +401,12 @@ class PropertyEditPage extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppAppBar(
-          title: 'Modifier le bien',
+          title: context.l10n.propertiesFormTitleEdit,
           fallbackRoute: '/properties',
         ),
         body: Center(
           child: Text(
-            'Bien introuvable.',
+            context.l10n.propertiesNotFoundShort,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),

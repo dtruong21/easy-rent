@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/properties/application/property_detail_provider.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
@@ -7,6 +8,7 @@ import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/property_detail_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,7 +119,12 @@ Widget _buildPage({required String propertyId, required _FakeRepo repo}) {
 
   return ProviderScope(
     overrides: [propertyRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -245,7 +252,12 @@ void main() {
           overrides: [
             propertyDetailProvider.overrideWith(() => _LoadingDetailNotifier()),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
 

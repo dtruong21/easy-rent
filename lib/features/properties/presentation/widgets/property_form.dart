@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/property_form_validators.dart';
 import '../../../../core/utils/surface_validator.dart';
 import '../../domain/heating_type.dart';
 import '../../domain/property_type.dart';
+import 'heating_type_l10n.dart';
+import 'property_type_l10n.dart';
 
 // Helpers de conversion texte → centimes et taux → basis points.
 int? _eurosToCents(String text) {
@@ -160,6 +163,7 @@ class PropertyFormWidgetState extends State<PropertyForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Form(
       key: widget.formKey,
       child: Column(
@@ -168,7 +172,7 @@ class PropertyFormWidgetState extends State<PropertyForm> {
           // ----------------------------------------------------------------
           // Section 1 — Informations principales
           // ----------------------------------------------------------------
-          _SectionHeader(title: 'Informations principales'),
+          _SectionHeader(title: l10n.propertiesFormSectionMainInfo),
           const SizedBox(height: 12),
 
           // Nom du bien
@@ -176,10 +180,10 @@ class PropertyFormWidgetState extends State<PropertyForm> {
             key: const Key('field_name'),
             controller: widget.nameController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Nom du bien *',
-              hintText: 'Ex. : Appartement Paris 11e',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormNameLabel,
+              hintText: l10n.propertiesFormNameHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.sentences,
             onChanged: (_) {
@@ -201,10 +205,10 @@ class PropertyFormWidgetState extends State<PropertyForm> {
             key: const Key('field_address'),
             controller: widget.addressController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Adresse complète *',
-              hintText: 'Ex. : 12 rue de la Paix',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormAddressLabel,
+              hintText: l10n.propertiesFormAddressHint,
+              border: const OutlineInputBorder(),
             ),
             maxLines: 2,
             textCapitalization: TextCapitalization.sentences,
@@ -232,10 +236,10 @@ class PropertyFormWidgetState extends State<PropertyForm> {
                   key: const Key('field_postal_code'),
                   controller: widget.postalCodeController,
                   enabled: widget.enabled,
-                  decoration: const InputDecoration(
-                    labelText: 'Code postal',
+                  decoration: InputDecoration(
+                    labelText: l10n.propertiesFormPostalCodeLabel,
                     hintText: '75001',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   maxLength: 5,
@@ -258,10 +262,10 @@ class PropertyFormWidgetState extends State<PropertyForm> {
                   key: const Key('field_city'),
                   controller: widget.cityController,
                   enabled: widget.enabled,
-                  decoration: const InputDecoration(
-                    labelText: 'Ville',
+                  decoration: InputDecoration(
+                    labelText: l10n.propertiesFormCityLabel,
                     hintText: 'Paris',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   textCapitalization: TextCapitalization.words,
                   onEditingComplete: () {
@@ -277,16 +281,19 @@ class PropertyFormWidgetState extends State<PropertyForm> {
           DropdownButtonFormField<PropertyType>(
             key: const Key('field_type'),
             initialValue: widget.selectedType,
-            decoration: const InputDecoration(
-              labelText: 'Type de bien *',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormTypeLabel,
+              border: const OutlineInputBorder(),
             ),
             items: PropertyType.values
-                .map((t) => DropdownMenuItem(value: t, child: Text(t.labelFr)))
+                .map(
+                  (t) =>
+                      DropdownMenuItem(value: t, child: Text(t.label(context))),
+                )
                 .toList(),
             onChanged: widget.enabled ? widget.onTypeChanged : null,
             validator: (v) =>
-                v == null ? 'Veuillez sélectionner un type de bien' : null,
+                v == null ? l10n.propertiesFormTypeRequired : null,
           ),
           const SizedBox(height: 16),
 
@@ -295,11 +302,11 @@ class PropertyFormWidgetState extends State<PropertyForm> {
             key: const Key('field_surface'),
             controller: widget.surfaceController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Surface en m² (optionnel)',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormSurfaceLabel,
               hintText: 'Ex. : 45,5',
               suffixText: 'm²',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) {
@@ -548,12 +555,13 @@ class _CaracteristiquesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       // Supprime le trait de séparation par défaut de l'ExpansionTile.
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_caracteristiques'),
-        title: const Text('Caractéristiques (optionnel)'),
+        title: Text(l10n.propertiesFormSectionCharacteristics),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -567,10 +575,10 @@ class _CaracteristiquesSection extends StatelessWidget {
                   key: const Key('field_rooms'),
                   controller: roomsController,
                   enabled: enabled,
-                  decoration: const InputDecoration(
-                    labelText: 'Pièces',
+                  decoration: InputDecoration(
+                    labelText: l10n.propertiesFormRoomsLabel,
                     hintText: 'Ex. : 3',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   onEditingComplete: () {
@@ -589,10 +597,10 @@ class _CaracteristiquesSection extends StatelessWidget {
                   key: const Key('field_bedrooms'),
                   controller: bedroomsController,
                   enabled: enabled,
-                  decoration: const InputDecoration(
-                    labelText: 'Chambres',
+                  decoration: InputDecoration(
+                    labelText: l10n.propertiesFormBedroomsLabel,
                     hintText: 'Ex. : 2',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   onEditingComplete: () {
@@ -614,11 +622,11 @@ class _CaracteristiquesSection extends StatelessWidget {
             key: const Key('field_floor'),
             controller: floorController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Étage',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormFloorLabel,
               hintText: '0',
-              helperText: '0 = RDC, négatif autorisé pour sous-sol',
-              border: OutlineInputBorder(),
+              helperText: l10n.propertiesFormFloorHelper,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: const TextInputType.numberWithOptions(signed: true),
             onEditingComplete: () {
@@ -635,7 +643,7 @@ class _CaracteristiquesSection extends StatelessWidget {
           // Ascenseur
           SwitchListTile(
             key: const Key('field_has_elevator'),
-            title: const Text('Ascenseur'),
+            title: Text(l10n.propertiesFormElevatorLabel),
             value: hasElevator,
             contentPadding: EdgeInsets.zero,
             onChanged: enabled ? onHasElevatorChanged : null,
@@ -644,8 +652,8 @@ class _CaracteristiquesSection extends StatelessWidget {
           // Meublé
           SwitchListTile(
             key: const Key('field_furnished'),
-            title: const Text('Meublé'),
-            subtitle: const Text('Impacte la durée légale du bail'),
+            title: Text(l10n.propertiesFormFurnishedLabel),
+            subtitle: Text(l10n.propertiesFormFurnishedHelper),
             value: furnished,
             contentPadding: EdgeInsets.zero,
             onChanged: enabled ? onFurnishedChanged : null,
@@ -657,19 +665,19 @@ class _CaracteristiquesSection extends StatelessWidget {
           DropdownButtonFormField<HeatingType?>(
             key: const Key('field_heating_type'),
             initialValue: selectedHeatingType,
-            decoration: const InputDecoration(
-              labelText: 'Type de chauffage',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormHeatingTypeLabel,
+              border: const OutlineInputBorder(),
             ),
             items: [
-              const DropdownMenuItem<HeatingType?>(
+              DropdownMenuItem<HeatingType?>(
                 value: null,
-                child: Text('Non renseigné'),
+                child: Text(l10n.propertiesFormNotSpecified),
               ),
               ...HeatingType.values.map(
                 (h) => DropdownMenuItem<HeatingType?>(
                   value: h,
-                  child: Text(h.labelFr),
+                  child: Text(h.label(context)),
                 ),
               ),
             ],
@@ -682,10 +690,10 @@ class _CaracteristiquesSection extends StatelessWidget {
             key: const Key('field_construction_year'),
             controller: constructionYearController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Année de construction',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormConstructionYearLabel,
               hintText: 'Ex. : 1975',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             maxLength: 4,
@@ -803,11 +811,12 @@ class _FinancementSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_financement'),
-        title: const Text('Financement & acquisition (optionnel)'),
+        title: Text(l10n.propertiesFormSectionFinancing),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -817,11 +826,11 @@ class _FinancementSection extends StatelessWidget {
             key: const Key('field_purchase_price'),
             controller: purchasePriceController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: "Prix d'achat",
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormPurchasePriceLabel,
               hintText: 'Ex. : 200000',
               suffixText: '€',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             onEditingComplete: () {
@@ -841,8 +850,10 @@ class _FinancementSection extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             title: Text(
               purchaseDate != null
-                  ? "Date d'achat : ${purchaseDate!.day.toString().padLeft(2, '0')}/${purchaseDate!.month.toString().padLeft(2, '0')}/${purchaseDate!.year}"
-                  : "Date d'achat (optionnel)",
+                  ? l10n.propertiesFormPurchaseDateValue(
+                      "${purchaseDate!.day.toString().padLeft(2, '0')}/${purchaseDate!.month.toString().padLeft(2, '0')}/${purchaseDate!.year}",
+                    )
+                  : l10n.propertiesFormPurchaseDateEmpty,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             trailing: Row(
@@ -851,14 +862,14 @@ class _FinancementSection extends StatelessWidget {
                 if (purchaseDate != null)
                   IconButton(
                     icon: const Icon(Icons.clear),
-                    tooltip: 'Effacer la date',
+                    tooltip: l10n.propertiesFormClearDate,
                     onPressed: enabled
                         ? () => onPurchaseDateChanged(null)
                         : null,
                   ),
                 IconButton(
                   icon: const Icon(Icons.calendar_today_outlined),
-                  tooltip: 'Choisir une date',
+                  tooltip: l10n.propertiesFormPickDate,
                   onPressed: enabled
                       ? () => _pickDate(
                           context,
@@ -877,12 +888,12 @@ class _FinancementSection extends StatelessWidget {
             key: const Key('field_notary_fees'),
             controller: notaryFeesController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Frais de notaire',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormNotaryFeesLabel,
               hintText: 'Ex. : 15000',
               suffixText: '€',
-              helperText: 'Standard : 8 % ancien / 2 % neuf',
-              border: OutlineInputBorder(),
+              helperText: l10n.propertiesFormNotaryFeesHelper,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             onEditingComplete: () {
@@ -899,8 +910,8 @@ class _FinancementSection extends StatelessWidget {
           // Bien neuf
           SwitchListTile(
             key: const Key('field_is_new_property'),
-            title: const Text('Bien neuf'),
-            subtitle: const Text('Impact sur les frais de notaire (~2 %)'),
+            title: Text(l10n.propertiesFormIsNewLabel),
+            subtitle: Text(l10n.propertiesFormIsNewHelper),
             value: isNewProperty,
             contentPadding: EdgeInsets.zero,
             onChanged: enabled ? onIsNewPropertyChanged : null,
@@ -912,11 +923,11 @@ class _FinancementSection extends StatelessWidget {
             key: const Key('field_property_tax'),
             controller: propertyTaxController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Taxe foncière annuelle',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormPropertyTaxLabel,
               hintText: 'Ex. : 1200',
               suffixText: '€ / an',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             onEditingComplete: () {
@@ -935,11 +946,11 @@ class _FinancementSection extends StatelessWidget {
             key: const Key('field_insurance_pno'),
             controller: insurancePnoController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Assurance PNO annuelle',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormInsurancePnoLabel,
               hintText: 'Ex. : 300',
               suffixText: '€ / an',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             onEditingComplete: () {
@@ -958,13 +969,12 @@ class _FinancementSection extends StatelessWidget {
             key: const Key('field_condo_fees'),
             controller: condoFeesController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Charges copropriété NON RÉCUPÉRABLES annuelles',
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormCondoFeesLabel,
               hintText: 'Ex. : 600',
               suffixText: '€ / an',
-              helperText:
-                  'Gros travaux, syndic, ALUR — pas l\'eau ni les ordures',
-              border: OutlineInputBorder(),
+              helperText: l10n.propertiesFormCondoFeesHelper,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             onEditingComplete: () {
@@ -1059,11 +1069,12 @@ class _LoanSubSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Prêt immobilier (optionnel)',
+          l10n.propertiesFormSectionLoan,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -1074,11 +1085,11 @@ class _LoanSubSection extends StatelessWidget {
           key: const Key('field_loan_principal'),
           controller: loanPrincipalController,
           enabled: enabled,
-          decoration: const InputDecoration(
-            labelText: 'Capital emprunté',
+          decoration: InputDecoration(
+            labelText: l10n.propertiesFormLoanPrincipalLabel,
             hintText: 'Ex. : 180000',
             suffixText: '€',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
           onEditingComplete: () {
@@ -1100,11 +1111,11 @@ class _LoanSubSection extends StatelessWidget {
                 key: const Key('field_loan_rate'),
                 controller: loanRateController,
                 enabled: enabled,
-                decoration: const InputDecoration(
-                  labelText: 'Taux nominal',
+                decoration: InputDecoration(
+                  labelText: l10n.propertiesFormLoanRateLabel,
                   hintText: '3.5',
                   suffixText: '%',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -1125,11 +1136,11 @@ class _LoanSubSection extends StatelessWidget {
                 key: const Key('field_loan_duration'),
                 controller: loanDurationController,
                 enabled: enabled,
-                decoration: const InputDecoration(
-                  labelText: 'Durée',
+                decoration: InputDecoration(
+                  labelText: l10n.propertiesFormLoanDurationLabel,
                   hintText: '240',
                   suffixText: 'mois',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
                 onEditingComplete: () {
@@ -1150,12 +1161,12 @@ class _LoanSubSection extends StatelessWidget {
           key: const Key('field_loan_insurance_rate'),
           controller: loanInsuranceRateController,
           enabled: enabled,
-          decoration: const InputDecoration(
-            labelText: "Taux assurance emprunteur",
+          decoration: InputDecoration(
+            labelText: l10n.propertiesFormLoanInsuranceRateLabel,
             hintText: '0.30',
             suffixText: '%',
-            helperText: 'Calculé sur le capital initial',
-            border: OutlineInputBorder(),
+            helperText: l10n.propertiesFormLoanInsuranceRateHelper,
+            border: const OutlineInputBorder(),
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onEditingComplete: () {
@@ -1174,8 +1185,10 @@ class _LoanSubSection extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
           title: Text(
             loanStartDate != null
-                ? 'Début du prêt : ${loanStartDate!.day.toString().padLeft(2, '0')}/${loanStartDate!.month.toString().padLeft(2, '0')}/${loanStartDate!.year}'
-                : 'Date de début du prêt (optionnel)',
+                ? l10n.propertiesFormLoanStartDateValue(
+                    "${loanStartDate!.day.toString().padLeft(2, '0')}/${loanStartDate!.month.toString().padLeft(2, '0')}/${loanStartDate!.year}",
+                  )
+                : l10n.propertiesFormLoanStartDateEmpty,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           trailing: Row(
@@ -1184,14 +1197,14 @@ class _LoanSubSection extends StatelessWidget {
               if (loanStartDate != null)
                 IconButton(
                   icon: const Icon(Icons.clear),
-                  tooltip: 'Effacer la date',
+                  tooltip: l10n.propertiesFormClearDate,
                   onPressed: enabled
                       ? () => onLoanStartDateChanged(null)
                       : null,
                 ),
               IconButton(
                 icon: const Icon(Icons.calendar_today_outlined),
-                tooltip: 'Choisir une date',
+                tooltip: l10n.propertiesFormPickDate,
                 onPressed: enabled ? () => _pickDate(context) : null,
               ),
             ],
@@ -1203,12 +1216,12 @@ class _LoanSubSection extends StatelessWidget {
           key: const Key('field_loan_payment_override'),
           controller: loanPaymentOverrideController,
           enabled: enabled,
-          decoration: const InputDecoration(
-            labelText: 'Mensualité (override optionnel)',
+          decoration: InputDecoration(
+            labelText: l10n.propertiesFormLoanPaymentOverrideLabel,
             hintText: 'Ex. : 850',
             suffixText: '€ / mois',
-            helperText: 'Saisir si différente du calcul automatique',
-            border: OutlineInputBorder(),
+            helperText: l10n.propertiesFormLoanPaymentOverrideHelper,
+            border: const OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
           onEditingComplete: () {
@@ -1254,11 +1267,12 @@ class _DpeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_dpe'),
-        title: const Text('DPE / GES (optionnel)'),
+        title: Text(l10n.propertiesFormSectionDpe),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -1272,9 +1286,9 @@ class _DpeSection extends StatelessWidget {
                 child: DropdownButtonFormField<String?>(
                   key: const Key('field_dpe_letter'),
                   initialValue: selectedDpeLetter,
-                  decoration: const InputDecoration(
-                    labelText: 'Classe DPE',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.propertiesFormDpeClassLabel,
+                    border: const OutlineInputBorder(),
                   ),
                   items: [
                     const DropdownMenuItem<String?>(
@@ -1295,12 +1309,12 @@ class _DpeSection extends StatelessWidget {
                   key: const Key('field_dpe_value'),
                   controller: dpeValueController,
                   enabled: enabled,
-                  decoration: const InputDecoration(
-                    labelText: 'Valeur DPE',
+                  decoration: InputDecoration(
+                    labelText: l10n.propertiesFormDpeValueLabel,
                     hintText: 'Ex. : 180',
                     helperText: 'kWh/m²/an',
                     suffixText: 'kWh',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   onEditingComplete: () {
@@ -1321,14 +1335,14 @@ class _DpeSection extends StatelessWidget {
           DropdownButtonFormField<String?>(
             key: const Key('field_ges_letter'),
             initialValue: selectedGesLetter,
-            decoration: const InputDecoration(
-              labelText: 'Classe GES',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.propertiesFormGesClassLabel,
+              border: const OutlineInputBorder(),
             ),
             items: [
-              const DropdownMenuItem<String?>(
+              DropdownMenuItem<String?>(
                 value: null,
-                child: Text('Non renseignée'),
+                child: Text(l10n.propertiesFormGesNotSpecified),
               ),
               ...dpeGesLetters.map(
                 (l) => DropdownMenuItem<String?>(value: l, child: Text(l)),

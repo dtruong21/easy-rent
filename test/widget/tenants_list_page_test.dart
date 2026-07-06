@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/tenants/application/tenants_filter_provider.dart';
@@ -9,6 +10,7 @@ import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_filter.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/tenants_list_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,7 +131,13 @@ Widget _buildPage(_FakeRepo repo) {
 
   return ProviderScope(
     overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+    child: MaterialApp.router(
+      routerConfig: router,
+      theme: _appTheme(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -248,7 +256,13 @@ void main() {
               () => _LoadingListItemsNotifier(),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+          child: MaterialApp.router(
+            routerConfig: router,
+            theme: _appTheme(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: supportedLocales,
+            locale: const Locale('fr'),
+          ),
         ),
       );
 
@@ -346,7 +360,13 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+            child: MaterialApp.router(
+              routerConfig: router,
+              theme: _appTheme(),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: supportedLocales,
+              locale: const Locale('fr'),
+            ),
           ),
         );
         await tester.pumpAndSettle();

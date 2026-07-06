@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
@@ -28,18 +29,19 @@ class PropertiesListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final asyncProperties = ref.watch(filteredPropertiesProvider);
     final viewMode = context.isMobile
         ? ViewMode.card
         : ref.watch(viewModeProvider('properties'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes biens', showBackButton: false),
+      appBar: AppAppBar(title: l10n.propertiesListTitle, showBackButton: false),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_property'),
         onPressed: () => context.push('/properties/new'),
         icon: const Icon(Icons.add),
-        label: const Text('Ajouter un bien'),
+        label: Text(l10n.propertiesAddButton),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -52,8 +54,8 @@ class PropertiesListPage extends ConsumerWidget {
                   : PropertiesCardView.loading(),
               error: (e, _) => _ErrorView(
                 message: e is FirebaseException
-                    ? ("Erreur. Vérifiez votre connexion et réessayez.")
-                    : 'Erreur de chargement',
+                    ? l10n.propertiesListErrorConnection
+                    : l10n.propertiesListErrorGeneric,
                 // Invalider la RACINE : filteredPropertiesProvider n'est
                 // qu'un dérivé — l'invalider seul relisait l'AsyncError
                 // caché par le notifier sans jamais refetcher.
@@ -63,15 +65,13 @@ class PropertiesListPage extends ConsumerWidget {
                 if (properties.isEmpty) {
                   return CardEmptyState(
                     icon: Icons.home_outlined,
-                    title: 'Aucun bien enregistré',
-                    message:
-                        'Ajoutez votre premier bien pour démarrer la gestion locative.\n'
-                        'Vous pourrez ensuite y associer des locataires et des baux.',
+                    title: l10n.propertiesEmptyTitle,
+                    message: l10n.propertiesEmptyMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_add_property_empty'),
                       onPressed: () => context.push('/properties/new'),
                       icon: const Icon(Icons.add),
-                      label: const Text('Ajouter un bien'),
+                      label: Text(l10n.propertiesAddButton),
                     ),
                   );
                 }
@@ -119,7 +119,7 @@ class _WithLimitBanner extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Text(
-            'Limite de 200 biens atteinte. Contactez le support pour augmenter cette limite.',
+            context.l10n.propertiesLimitBanner,
             textAlign: TextAlign.center,
             style: Theme.of(
               context,
@@ -157,7 +157,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Impossible de charger vos biens.',
+              context.l10n.propertiesListErrorTitle,
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -171,7 +171,7 @@ class _ErrorView extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text(context.l10n.commonRetry),
             ),
           ],
         ),

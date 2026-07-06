@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
@@ -11,7 +12,9 @@ import '../application/properties_list_provider.dart';
 import '../application/property_detail_provider.dart';
 import '../data/property_repository.dart';
 import '../domain/property.dart';
+import 'widgets/heating_type_l10n.dart';
 import 'widgets/property_profitability_card.dart';
+import 'widgets/property_type_l10n.dart';
 
 final _log = Logger('PropertyDetailPage');
 
@@ -52,6 +55,7 @@ class _PropertyDetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppAppBar(
         title: property.name,
@@ -60,7 +64,7 @@ class _PropertyDetailContent extends ConsumerWidget {
           IconButton(
             key: const Key('btn_edit_property'),
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Modifier',
+            tooltip: l10n.commonEdit,
             onPressed: () => context.push('/properties/${property.id}/edit'),
           ),
         ],
@@ -89,12 +93,12 @@ class _PropertyDetailContent extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Baux actifs',
+                      l10n.propertiesDetailActiveLeasesTitle,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Disponible après FEAT-005',
+                      l10n.propertiesDetailActiveLeasesStub,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
@@ -114,7 +118,7 @@ class _PropertyDetailContent extends ConsumerWidget {
                 side: BorderSide(color: Theme.of(context).colorScheme.error),
               ),
               icon: const Icon(Icons.archive_outlined),
-              label: const Text('Archiver ce bien'),
+              label: Text(l10n.propertiesDetailArchiveButton),
               onPressed: () => _confirmArchive(context, ref, property),
             ),
           ],
@@ -140,20 +144,19 @@ class _PropertyDetailContent extends ConsumerWidget {
     }
 
     if (!context.mounted) return;
+    final l10n = context.l10n;
 
     await showDialog<void>(
       context: context,
       builder: (_) => ArchiveConfirmDialog(
-        title: 'Archiver ce bien ?',
+        title: l10n.propertiesArchiveDialogTitle,
         entityLabel: property.name,
-        standardMessage:
-            'Voulez-vous archiver "${property.name}" ? '
-            "Le bien n'apparaîtra plus dans votre liste. "
-            'Les baux liés seront conservés.',
-        activeLeaseMessage:
-            'Ce bien a un bail actif. Êtes-vous sûr de vouloir archiver '
-            '"${property.name}" ? Les baux actifs liés seront conservés '
-            "mais le bien n'apparaîtra plus dans votre liste.",
+        standardMessage: l10n.propertiesArchiveDialogStandardMessage(
+          property.name,
+        ),
+        activeLeaseMessage: l10n.propertiesArchiveDialogActiveLeaseMessage(
+          property.name,
+        ),
         hasActiveLease: activeLeaseCount > 0,
         onConfirm: () => _archive(context, ref, property),
       ),
@@ -174,7 +177,7 @@ class _PropertyDetailContent extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Bien archivé'),
+          content: Text(context.l10n.propertiesArchiveSuccessSnackbar),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         ),
       );
@@ -184,9 +187,7 @@ class _PropertyDetailContent extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            "Impossible d'archiver ce bien. Veuillez réessayer.",
-          ),
+          content: Text(context.l10n.propertiesArchiveErrorSnackbar),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -203,6 +204,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -211,7 +213,7 @@ class _InfoCard extends StatelessWidget {
           children: [
             _InfoRow(
               icon: Icons.label_outline,
-              label: 'Nom',
+              label: l10n.propertiesFieldName,
               value: property.name,
             ),
 
@@ -219,14 +221,14 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.location_on_outlined,
-              label: 'Adresse',
+              label: l10n.propertiesFieldAddress,
               value: property.address,
             ),
             if (property.postalCode != null || property.city != null) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.place_outlined,
-                label: 'Ville',
+                label: l10n.propertiesFieldCity,
                 value: [
                   if (property.postalCode != null) property.postalCode!,
                   if (property.city != null) property.city!,
@@ -237,7 +239,7 @@ class _InfoCard extends StatelessWidget {
             // --- Caractéristiques ---
             const Divider(height: 24),
             Text(
-              'Caractéristiques',
+              l10n.propertiesSectionCharacteristics,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -245,23 +247,26 @@ class _InfoCard extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               icon: Icons.home_outlined,
-              label: 'Type',
-              value: property.type.labelFr,
+              label: l10n.propertiesFieldType,
+              value: property.type.label(context),
             ),
             if (property.surfaceM2 != null) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.square_foot,
-                label: 'Surface',
-                value:
-                    '${property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2)} m²',
+                label: l10n.propertiesFieldSurface,
+                value: l10n.propertiesSurfaceValue(
+                  property.surfaceM2!.toStringAsFixed(
+                    property.surfaceM2! % 1 == 0 ? 0 : 2,
+                  ),
+                ),
               ),
             ],
             if (property.rooms != null) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.grid_view_outlined,
-                label: 'Pièces',
+                label: l10n.propertiesFieldRooms,
                 value: '${property.rooms}',
               ),
             ],
@@ -269,7 +274,7 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.bed_outlined,
-                label: 'Chambres',
+                label: l10n.propertiesFieldBedrooms,
                 value: '${property.bedrooms}',
               ),
             ],
@@ -277,7 +282,7 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.stairs_outlined,
-                label: 'Étage',
+                label: l10n.propertiesFieldFloor,
                 value: '${property.floor}',
               ),
             ],
@@ -285,31 +290,31 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.elevator_outlined,
-                label: 'Ascenseur',
-                value: 'Oui',
+                label: l10n.propertiesFieldElevator,
+                value: l10n.commonYes,
               ),
             ],
             if (property.furnished) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.chair_outlined,
-                label: 'Meublé',
-                value: 'Oui',
+                label: l10n.propertiesFieldFurnished,
+                value: l10n.commonYes,
               ),
             ],
             if (property.heatingType != null) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.thermostat_outlined,
-                label: 'Chauffage',
-                value: property.heatingType!.labelFr,
+                label: l10n.propertiesFieldHeating,
+                value: property.heatingType!.label(context),
               ),
             ],
             if (property.constructionYear != null) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.construction_outlined,
-                label: 'Année de construction',
+                label: l10n.propertiesFieldConstructionYear,
                 value: '${property.constructionYear}',
               ),
             ],
@@ -320,7 +325,7 @@ class _InfoCard extends StatelessWidget {
                 property.gesLetter != null) ...[
               const Divider(height: 24),
               Text(
-                'Performance énergétique (DPE / GES)',
+                l10n.propertiesSectionEnergyPerformance,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -329,7 +334,7 @@ class _InfoCard extends StatelessWidget {
               if (property.dpeLetter != null) ...[
                 _InfoRow(
                   icon: Icons.energy_savings_leaf_outlined,
-                  label: 'Classe DPE',
+                  label: l10n.propertiesFieldDpeClass,
                   value: property.dpeLetter!,
                 ),
               ],
@@ -337,15 +342,17 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.bolt_outlined,
-                  label: 'Consommation DPE',
-                  value: '${property.dpeValueKwhM2Year} kWh/m²/an',
+                  label: l10n.propertiesFieldDpeConsumption,
+                  value: l10n.propertiesDpeConsumptionValue(
+                    property.dpeValueKwhM2Year!,
+                  ),
                 ),
               ],
               if (property.gesLetter != null) ...[
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.cloud_outlined,
-                  label: 'Classe GES',
+                  label: l10n.propertiesFieldGesClass,
                   value: property.gesLetter!,
                 ),
               ],
@@ -355,13 +362,13 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today_outlined,
-              label: 'Ajouté le',
+              label: l10n.propertiesFieldCreatedAt,
               value: FrenchDate.format(property.createdAt),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.update,
-              label: 'Modifié le',
+              label: l10n.propertiesFieldUpdatedAt,
               value: FrenchDate.format(property.updatedAt),
             ),
           ],
@@ -418,8 +425,12 @@ class _NotFoundPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppAppBar(title: 'Fiche bien', fallbackRoute: '/properties'),
+      appBar: AppAppBar(
+        title: l10n.propertiesDetailAppBarTitle,
+        fallbackRoute: '/properties',
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -433,13 +444,13 @@ class _NotFoundPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Bien introuvable',
+                l10n.propertiesNotFoundTitle,
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Ce bien a peut-être été archivé ou ne vous appartient pas.',
+                l10n.propertiesNotFoundMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -449,7 +460,7 @@ class _NotFoundPage extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => context.go('/properties'),
                 icon: const Icon(Icons.arrow_back),
-                label: const Text('Retour à la liste'),
+                label: Text(l10n.propertiesBackToListButton),
               ),
             ],
           ),
