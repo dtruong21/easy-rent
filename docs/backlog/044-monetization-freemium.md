@@ -8,12 +8,12 @@ On ne convertit **pas en frustrant** (couper une feature = paywall punitif, mauv
 
 ## Modèle retenu
 - **Anonyme** : simulateur d'investissement seul (inchangé, déjà géré par `scenarioLimit`).
-- **Gratuit (généreux)** : jusqu'à **2 biens**, gestion quotidienne **complète et illimitée en usage** — quittances (obligation légale), paiements, régularisation manuelle, dépenses, détection retards, dashboard, upload documents (quota de stockage). Le petit bailleur (majorité du marché) **ne paie jamais** → acquisition, bonnes notes stores, bouche-à-oreille.
+- **Gratuit (généreux)** : jusqu'à **2 biens · 2 baux actifs · 3 locataires actifs** (plafonds comptés sur les **ACTIFS** — turnover-safe : un bail terminé/archivé ou soft-deleted ne compte pas ; le +large sur les locataires laisse passer une petite **colocation**). Gestion quotidienne **complète et illimitée en usage** dans ces limites — quittances (obligation légale), paiements, régularisation manuelle, dépenses, détection retards, dashboard, upload documents (quota de stockage). Le petit bailleur (majorité du marché) **ne paie jamais** → acquisition, bonnes notes stores, bouche-à-oreille.
 - **Pro — un SEUL plan à PRIX FIXE** (~**4,90 €/mois** ou ~**39-49 €/an**, prix exact à confirmer) : **le prix NE monte PAS avec le patrimoine**. Débloque : **biens illimités** + **automatisation** (rappels auto FEAT-031, rapports de rentabilité multi-biens, export comptable/fiscal FEC/2044, multi-utilisateurs/mandataire, archivage de régularisation FEAT-033) + stockage étendu.
 - (Option à doser) **Achat « à vie »** (IAP one-time) pour les allergiques à l'abonnement — écartée pour l'instant, rouvrable.
 
 ## Value metric
-**Nombre de biens** — seuil du gratuit (≤2). Mais le Pro est **flat** : au-delà de 2 biens, un seul prix, pas de facturation par bien. C'est le **différenciateur central** (les concurrents facturent par bien → coût explosif).
+**Nombre de biens** — metric primaire, seuil du gratuit (≤2). Garde-fous secondaires en free : **≤2 baux actifs** et **≤3 locataires actifs** (comptés sur les actifs, pas l'historique). Mais le Pro est **flat** : au-delà, un seul prix, aucune facturation par bien/bail/locataire. C'est le **différenciateur central** (les concurrents facturent par bien → coût explosif).
 
 ## Conversion (aux moments de valeur, pas frontal)
 Nudges **contextuels** : ajout d'un 3ᵉ bien · approche de la déclaration fiscale (export) · envie d'automatiser les relances (fini les échanges gênants) · partage avec conjoint/comptable. **Essai gratuit** du Pro. **Abonnement unique** via App Store / Play (mobile-first) + Stripe (web). Réutiliser `paid_plan_interest/{uid}` comme paywall « coming soon » tant que le paiement réel n'est pas intégré.
@@ -25,7 +25,7 @@ Nudges **contextuels** : ajout d'un 3ᵉ bien · approche de la déclaration fis
 - **Downgrade** (Pro→gratuit) au-delà de la limite = biens excédentaires en **lecture seule**, jamais supprimés/inaccessibles.
 
 ## Enforcement (technique)
-- **Côté serveur** (source de vérité) : Cloud Function `createProperty` vérifie `landlords.subscriptionTier` + un compteur dénormalisé `activePropertiesCount` (maintenu par CF) ; refuse le N+1ᵉ bien en `free` (`resource-exhausted`). Firestore rules en défense.
+- **Côté serveur** (source de vérité) : les Cloud Functions **`createProperty`, `createLease` ET `createTenant`** vérifient `landlords.subscriptionTier` + les **compteurs dénormalisés d'ACTIFS** (`activePropertiesCount`, `activeLeasesCount`, `activeTenantsCount`, maintenus par CF à la création/soft-delete/changement de statut — exclure terminé/archivé/supprimé) ; refusent la création au-delà du plafond free (`resource-exhausted`). Firestore rules en défense.
 - **UI** : bouton désactivé + écran d'upgrade contextuel au moment de valeur.
 - Modèle de tiers déjà en place : enum `SubscriptionTier {anonymous, free, paid}`, `LandlordTierRepository`, collection `paid_plan_interest`.
 
