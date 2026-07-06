@@ -3,6 +3,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../payments/domain/payment_method.dart';
+import 'charge_mode.dart';
 import 'lease_status.dart';
 import 'lease_type.dart';
 
@@ -76,6 +77,16 @@ class Lease with _$Lease {
     @JsonKey(name: 'entry_inventory_done')
     @Default(false)
     bool entryInventoryDone,
+    // FEAT-042 : mode de charges (provisions vs forfait). Nullable et SANS
+    // `@Default` — `null` est signifiant (bail pré-042, migration lazy sans
+    // backfill) : voir [LeaseExtension.effectiveChargeMode] pour la
+    // dérivation. Ne jamais remplacer par une valeur concrète ici.
+    @JsonKey(
+      name: 'charge_mode',
+      fromJson: _chargeModeFromJson,
+      toJson: _chargeModeToJson,
+    )
+    ChargeMode? chargeMode,
     // --- Timestamps ---
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
@@ -126,6 +137,15 @@ LeaseType _leaseTypeFromJson(dynamic value) =>
 String _leaseTypeToJson(LeaseType v) => v.sqlValue;
 
 // ---------------------------------------------------------------------------
+// Helpers JSON privés — ChargeMode (FEAT-042)
+// ---------------------------------------------------------------------------
+
+ChargeMode? _chargeModeFromJson(dynamic value) =>
+    ChargeMode.fromSqlOrNull(value as String?);
+
+String? _chargeModeToJson(ChargeMode? v) => v?.sqlValue;
+
+// ---------------------------------------------------------------------------
 // Helpers JSON privés — PaymentMethod
 // ---------------------------------------------------------------------------
 
@@ -169,4 +189,26 @@ extension LeaseExtension on Lease {
 
   /// Vrai si le bail est clôturé (terminé).
   bool get isClosed => status == LeaseStatus.terminated;
+
+  // ---------------------------------------------------------------------
+  // FEAT-042 — mode de charges effectif + éligibilité régularisation
+  // ---------------------------------------------------------------------
+
+  /// Mode de charges effectif. Les baux créés avant FEAT-042 n'ont pas de
+  /// [chargeMode] persisté (`null`) → on le dérive du type de bail :
+  /// mobilité = forfait (obligatoire, loi ELAN art. 25-18), tout le reste
+  /// (nu, meublé, étudiant) = provisions (défaut sûr — nu est forcé
+  /// provisions côté serveur et le meublé pré-042 était traité comme
+  /// provisions par l'ancien gate).
+  ChargeMode get effectiveChargeMode =>
+      chargeMode ??
+      (leaseType == LeaseType.mobility
+          ? ChargeMode.forfait
+          : ChargeMode.provisions);
+
+  /// Prédicat unique d'éligibilité à la régularisation annuelle des charges
+  /// (art. 23 loi du 6 juillet 1989) — SOURCE DE VÉRITÉ. Remplace l'ancien
+  /// critère erroné `leaseType == LeaseType.unfurnished` : le vrai critère
+  /// juridique est le mode de charges, pas le type de bail.
+  bool get canRegularizeCharges => effectiveChargeMode == ChargeMode.provisions;
 }

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../leases/domain/lease.dart';
-import '../../../leases/domain/lease_type.dart';
 import 'charge_regularization_dialog.dart';
 
-/// Section "Charges" de [LeaseDetailPage] (FEAT-029 V1.2).
+/// Section "Charges" de [LeaseDetailPage] (FEAT-029 V1.2, FEAT-042).
 ///
 /// Gate légal : la régularisation annuelle des charges (art. 23 loi du 6
-/// juillet 1989) ne s'applique qu'aux baux nus. Pour les autres types
-/// (meublé, mobilité, étudiant), le forfait de charges est libératoire — pas
-/// de régularisation légale. Décision de scope V1 : uniquement
-/// `LeaseType.unfurnished` (cf. `docs/backlog/029-charges-regularisation.md`,
-/// § « Régime meublé vs nu »).
+/// juillet 1989) ne s'applique qu'aux baux dont le **mode de charges
+/// effectif** est `provisions` (cf. `Lease.canRegularizeCharges`, FEAT-042).
+/// Le critère n'est PAS le type de bail — un bail meublé ou étudiant en
+/// provisions est éligible, un bail (quel que soit son type) au forfait ne
+/// l'est jamais.
 ///
-/// - Bail nu : bouton d'action "Régularisation annuelle des charges".
-/// - Autres types : pas de bouton, message informatif sobre — évite une
+/// - Mode provisions : bouton d'action "Régularisation annuelle des charges".
+/// - Mode forfait : pas de bouton, message informatif sobre — évite une
 ///   fausse impression de conformité sur un cas où la loi ne l'exige pas.
 class ChargeRegularizationSection extends StatelessWidget {
   const ChargeRegularizationSection({
@@ -42,7 +41,7 @@ class ChargeRegularizationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isUnfurnished = lease.leaseType == LeaseType.unfurnished;
+    final canRegularize = lease.canRegularizeCharges;
 
     return Card(
       child: Padding(
@@ -55,7 +54,7 @@ class ChargeRegularizationSection extends StatelessWidget {
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            if (isUnfurnished)
+            if (canRegularize)
               OutlinedButton.icon(
                 key: const Key('btn_charge_regularization'),
                 icon: const Icon(Icons.receipt_long_outlined, size: 18),
@@ -65,8 +64,9 @@ class ChargeRegularizationSection extends StatelessWidget {
             else
               Text(
                 key: const Key('text_charge_regularization_not_applicable'),
-                'Le forfait de charges ne donne pas lieu à régularisation '
-                'légale pour ce type de bail.',
+                'Ce bail est au forfait de charges : le forfait est '
+                'libératoire et ne donne pas lieu à régularisation '
+                '(loi du 6 juillet 1989, art. 23 a contrario).',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,

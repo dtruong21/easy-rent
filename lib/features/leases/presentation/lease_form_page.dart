@@ -13,6 +13,7 @@ import '../application/lease_form_controller.dart';
 import '../application/leases_filter_provider.dart';
 import '../data/lease_repository.dart';
 import '../../payments/domain/payment_method.dart';
+import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_filter.dart';
 import '../domain/lease_form_state.dart';
@@ -201,6 +202,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
             irlIndexValue: irlValue,
             irlQuarterRef: irlQuarter,
             leaseType: formState.currentLeaseType,
+            chargeMode: formState.currentChargeMode,
             paymentMethod: formState.currentPaymentMethod,
             solidarityClause: formState.currentSolidarityClause,
             entryInventoryDone: formState.currentEntryInventoryDone,
@@ -222,6 +224,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
         irlIndexValue: irlValue,
         irlQuarterRef: irlQuarter,
         leaseType: formState.currentLeaseType,
+        chargeMode: formState.currentChargeMode,
         paymentMethod: formState.currentPaymentMethod,
         solidarityClause: formState.currentSolidarityClause,
         entryInventoryDone: formState.currentEntryInventoryDone,
@@ -243,6 +246,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     double? irlIndexValue,
     String? irlQuarterRef,
     required LeaseType leaseType,
+    required ChargeMode chargeMode,
     required PaymentMethod paymentMethod,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
@@ -259,6 +263,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           startDate: startDate,
           endDate: endDate,
           leaseType: leaseType,
+          chargeMode: chargeMode,
           depositAmountCents: depositAmountCents,
           paymentDay: paymentDay,
           paymentMethod: paymentMethod,
@@ -376,6 +381,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               initialStartDate: widget.initial?.startDate,
               initialEndDate: widget.initial?.endDate,
               initialLeaseType: widget.initial?.leaseType,
+              initialChargeMode: widget.initial?.chargeMode,
               initialPaymentMethod: widget.initial?.paymentMethod,
               initialSolidarityClause:
                   widget.initial?.solidarityClause ?? false,

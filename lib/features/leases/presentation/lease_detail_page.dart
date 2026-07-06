@@ -25,7 +25,6 @@ import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_status.dart';
-import '../domain/lease_type.dart';
 import 'widgets/close_lease_dialog.dart';
 
 final _log = Logger('LeaseDetailPage');
@@ -34,7 +33,8 @@ final _log = Logger('LeaseDetailPage');
 ///
 /// Route : `/leases/:id` — accepte le query param optionnel
 /// `?action=regularize` (raccourci FEAT-030 depuis la liste Baux, action
-/// visible uniquement pour les baux nus). Quand présent, la fiche ouvre
+/// visible uniquement pour les baux en mode provisions, cf.
+/// `Lease.canRegularizeCharges` — FEAT-042). Quand présent, la fiche ouvre
 /// automatiquement le dialog de régularisation des charges une fois ses
 /// données chargées (cf. [_LeaseDetailContent]).
 ///
@@ -153,14 +153,14 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Raccourci FEAT-030 (`?action=regularize` depuis la liste Baux) :
     // ouvrir le dialog de régularisation une fois cette frame posée, une
     // seule fois par montage (garde `_regularizationDialogOpened`). Le gate
-    // légal (bail nu uniquement) est revérifié ici en plus du gate déjà
-    // appliqué à la construction du raccourci dans la liste — défense en
-    // profondeur si l'URL est partagée/tapée manuellement sur un bail non
-    // nu. `addPostFrameCallback` : on ne doit pas appeler `showDialog`
-    // pendant `build()`.
+    // légal (mode provisions uniquement, FEAT-042) est revérifié ici en plus
+    // du gate déjà appliqué à la construction du raccourci dans la liste —
+    // défense en profondeur si l'URL est partagée/tapée manuellement sur un
+    // bail non éligible. `addPostFrameCallback` : on ne doit pas appeler
+    // `showDialog` pendant `build()`.
     if (widget.openRegularizationOnLoad &&
         !_regularizationDialogOpened &&
-        lease.leaseType == LeaseType.unfurnished) {
+        lease.canRegularizeCharges) {
       _regularizationDialogOpened = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;

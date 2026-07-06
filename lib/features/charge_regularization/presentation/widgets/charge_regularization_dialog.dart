@@ -15,8 +15,8 @@ import 'charge_regularization_form.dart';
 /// Dialog de régularisation annuelle des charges (FEAT-029 V1.2).
 ///
 /// Ouvert depuis [LeaseDetailPage] via l'action dédiée, uniquement pour les
-/// baux nus (`leaseType == unfurnished` — gate appliqué par l'appelant, ce
-/// dialog ne revérifie pas le type de bail).
+/// baux en mode provisions (`canRegularizeCharges` — gate appliqué par
+/// l'appelant, ce dialog ne revérifie pas le mode de charges, FEAT-042).
 ///
 /// Flux :
 /// 1. Période de référence pré-remplie sur les 12 derniers mois glissants

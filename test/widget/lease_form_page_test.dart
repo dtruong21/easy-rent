@@ -1,6 +1,7 @@
 import 'package:easyrent/features/leases/application/lease_form_controller.dart';
 import 'package:easyrent/features/leases/application/leases_filter_provider.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_filter.dart';
 import 'package:easyrent/features/leases/domain/lease_form_state.dart';
@@ -48,6 +49,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
@@ -67,6 +69,7 @@ class _FakeLeaseRepo implements LeaseRepository {
       nonRecoverableChargesCents: nonRecoverableChargesCents,
       startDate: startDate,
       endDate: endDate,
+      chargeMode: chargeMode,
     );
     return createdLease!;
   }
@@ -98,6 +101,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     int nonRecoverableChargesCents = 0,
+    ChargeMode? chargeMode,
   }) => Lease(
     id: 'new-lease-id',
     landlordId: 'owner-1',
@@ -109,6 +113,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     startDate: startDate,
     endDate: endDate,
     status: LeaseStatus.active,
+    chargeMode: chargeMode,
     createdAt: DateTime(2024),
     updatedAt: DateTime(2024),
   );
@@ -721,6 +726,231 @@ void main() {
       expect(find.text('Erreur de connexion'), findsOneWidget);
     });
   });
+
+  group('LeaseFormPage — FEAT-042 mode de charges', () {
+    testWidgets(
+      'type nu (défaut) — segmented button verrouillé sur "Provisions"',
+      (tester) async {
+        await tester.pumpWidget(_buildForm());
+        await tester.pumpAndSettle();
+
+        final segmented = tester.widget<SegmentedButton<ChargeMode>>(
+          find.byKey(const Key('segmented_charge_mode')),
+        );
+        expect(segmented.selected, {ChargeMode.provisions});
+        expect(segmented.onSelectionChanged, isNull);
+      },
+    );
+
+    testWidgets('type mobilité — segmented button verrouillé sur "Forfait"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+      await tester.tap(find.byKey(const Key('field_lease_type')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mobilité').last);
+      await tester.pumpAndSettle();
+
+      final segmented = tester.widget<SegmentedButton<ChargeMode>>(
+        find.byKey(const Key('segmented_charge_mode')),
+      );
+      expect(segmented.selected, {ChargeMode.forfait});
+      expect(segmented.onSelectionChanged, isNull);
+    });
+
+    testWidgets('type meublé — segmented button LIBRE, défaut "Provisions"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+      await tester.tap(find.byKey(const Key('field_lease_type')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Meublé').last);
+      await tester.pumpAndSettle();
+
+      final segmented = tester.widget<SegmentedButton<ChargeMode>>(
+        find.byKey(const Key('segmented_charge_mode')),
+      );
+      expect(segmented.selected, {ChargeMode.provisions});
+      expect(segmented.onSelectionChanged, isNotNull);
+    });
+
+    testWidgets(
+      'type meublé — toggle vers Forfait masque le champ non-récupérable '
+      'et change le libellé du champ charges',
+      (tester) async {
+        await tester.pumpWidget(_buildForm());
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+        await tester.tap(find.byKey(const Key('field_lease_type')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Meublé').last);
+        await tester.pumpAndSettle();
+
+        // Provisions (défaut) : champ non-récupérable visible.
+        expect(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Charges récupérables'), findsOneWidget);
+
+        await tester.ensureVisible(find.text('Forfait'));
+        await tester.tap(find.text('Forfait'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          findsNothing,
+        );
+        expect(find.textContaining('Forfait de charges'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'type étudiant — bascule type nu→étudiant→nu conserve la cohérence '
+      '(provisions forcé en nu)',
+      (tester) async {
+        await tester.pumpWidget(_buildForm());
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+        await tester.tap(find.byKey(const Key('field_lease_type')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Étudiant').last);
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.text('Forfait'));
+        await tester.tap(find.text('Forfait'));
+        await tester.pumpAndSettle();
+
+        // Retour à nu : le mode doit être re-forcé à provisions.
+        await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+        await tester.tap(find.byKey(const Key('field_lease_type')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Vide (non meublé)').last);
+        await tester.pumpAndSettle();
+
+        final segmented = tester.widget<SegmentedButton<ChargeMode>>(
+          find.byKey(const Key('segmented_charge_mode')),
+        );
+        expect(segmented.selected, {ChargeMode.provisions});
+        expect(segmented.onSelectionChanged, isNull);
+      },
+    );
+
+    testWidgets('soumission — chargeMode forfait (meublé) transmis au repo', (
+      tester,
+    ) async {
+      final repo = _FakeLeaseRepo();
+      await tester.pumpWidget(_buildForm(leaseRepo: repo));
+      await tester.pumpAndSettle();
+
+      // Bien.
+      await tester.tap(find.byKey(const Key('field_property')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Appartement Test').last);
+      await tester.pumpAndSettle();
+
+      // Locataire.
+      await tester.tap(find.byKey(const Key('field_tenant')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Jean Dupont').last);
+      await tester.pumpAndSettle();
+
+      // Loyer + charges.
+      await tester.enterText(find.byKey(const Key('field_rent')), '800');
+      await tester.enterText(find.byKey(const Key('field_charges')), '50');
+
+      // Date de début.
+      await tester.ensureVisible(find.byKey(const Key('field_start_date')));
+      await tester.tap(find.byKey(const Key('field_start_date')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      // Type meublé + forfait.
+      await tester.ensureVisible(find.byKey(const Key('field_lease_type')));
+      await tester.tap(find.byKey(const Key('field_lease_type')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Meublé').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Forfait'));
+      await tester.tap(find.text('Forfait'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_submit_lease_form')),
+      );
+      await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+      await tester.pumpAndSettle();
+
+      expect(repo.createdLease, isNotNull);
+      expect(repo.createdLease!.chargeMode, ChargeMode.forfait);
+    });
+
+    testWidgets('soumission — type nu (défaut, non touché) transmet chargeMode '
+        'provisions', (tester) async {
+      final repo = _FakeLeaseRepo();
+      await tester.pumpWidget(_buildForm(leaseRepo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('field_property')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Appartement Test').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('field_tenant')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Jean Dupont').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('field_rent')), '800');
+      await tester.enterText(find.byKey(const Key('field_charges')), '50');
+
+      await tester.ensureVisible(find.byKey(const Key('field_start_date')));
+      await tester.tap(find.byKey(const Key('field_start_date')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_submit_lease_form')),
+      );
+      await tester.tap(find.byKey(const Key('btn_submit_lease_form')));
+      await tester.pumpAndSettle();
+
+      expect(repo.createdLease, isNotNull);
+      expect(repo.createdLease!.chargeMode, ChargeMode.provisions);
+    });
+
+    testWidgets(
+      'mode édition — initialChargeMode forfait pré-sélectionne le segment',
+      (tester) async {
+        final lease = _makeLease().copyWith(
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.forfait,
+        );
+        await tester.pumpWidget(_buildForm(initial: lease));
+        await tester.pumpAndSettle();
+
+        final segmented = tester.widget<SegmentedButton<ChargeMode>>(
+          find.byKey(const Key('segmented_charge_mode')),
+        );
+        expect(segmented.selected, {ChargeMode.forfait});
+        expect(
+          find.byKey(const Key('field_non_recoverable_charges')),
+          findsNothing,
+        );
+      },
+    );
+  });
+
   group('LeaseFormPage — FEAT-036 câblage nonRecoverableChargesCents '
       '(revue adversariale, Finding 1)', () {
     // -----------------------------------------------------------------

@@ -1,8 +1,10 @@
 /// Tests unitaires du modèle [Lease] : round-trip JSON, dates, extension getters.
 library;
 
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Lease _buildLease({
@@ -17,6 +19,8 @@ Lease _buildLease({
   DateTime? endDate,
   LeaseStatus status = LeaseStatus.active,
   DateTime? deletedAt,
+  LeaseType leaseType = LeaseType.unfurnished,
+  ChargeMode? chargeMode,
 }) {
   return Lease(
     id: id,
@@ -29,6 +33,8 @@ Lease _buildLease({
     startDate: startDate ?? DateTime(2024, 1, 1),
     endDate: endDate,
     status: status,
+    leaseType: leaseType,
+    chargeMode: chargeMode,
     createdAt: DateTime(2024, 1, 1, 10),
     updatedAt: DateTime(2024, 1, 1, 10),
     deletedAt: deletedAt,
@@ -252,6 +258,104 @@ void main() {
     test('isClosed false quand status=active', () {
       final lease = _buildLease(status: LeaseStatus.active);
       expect(lease.isClosed, isFalse);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // FEAT-042 — effectiveChargeMode (dérivation par type, legacy null)
+  // ---------------------------------------------------------------------
+  group('LeaseExtension.effectiveChargeMode', () {
+    test('chargeMode explicite provisions — priorité sur la dérivation', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.mobility,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+
+    test('chargeMode explicite forfait — priorité sur la dérivation', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.unfurnished,
+        chargeMode: ChargeMode.forfait,
+      );
+      expect(lease.effectiveChargeMode, ChargeMode.forfait);
+    });
+
+    test('null + unfurnished → provisions (dérivé)', () {
+      final lease = _buildLease(leaseType: LeaseType.unfurnished);
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+
+    test('null + mobility → forfait (dérivé, loi ELAN art. 25-18)', () {
+      final lease = _buildLease(leaseType: LeaseType.mobility);
+      expect(lease.effectiveChargeMode, ChargeMode.forfait);
+    });
+
+    test('null + furnished → provisions (dérivé, défaut sûr legacy)', () {
+      final lease = _buildLease(leaseType: LeaseType.furnished);
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+
+    test('null + student → provisions (dérivé, défaut sûr legacy)', () {
+      final lease = _buildLease(leaseType: LeaseType.student);
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // FEAT-042 — canRegularizeCharges (prédicat unique d'éligibilité)
+  // ---------------------------------------------------------------------
+  group('LeaseExtension.canRegularizeCharges', () {
+    test('unfurnished (chargeMode null → provisions dérivé) → true', () {
+      final lease = _buildLease(leaseType: LeaseType.unfurnished);
+      expect(lease.canRegularizeCharges, isTrue);
+    });
+
+    test('furnished + chargeMode provisions → true', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.furnished,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.canRegularizeCharges, isTrue);
+    });
+
+    test('furnished + chargeMode forfait → false', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.furnished,
+        chargeMode: ChargeMode.forfait,
+      );
+      expect(lease.canRegularizeCharges, isFalse);
+    });
+
+    test('student + chargeMode provisions → true', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.student,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.canRegularizeCharges, isTrue);
+    });
+
+    test('student + chargeMode forfait → false', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.student,
+        chargeMode: ChargeMode.forfait,
+      );
+      expect(lease.canRegularizeCharges, isFalse);
+    });
+
+    test('mobility (chargeMode null → forfait dérivé) → false', () {
+      final lease = _buildLease(leaseType: LeaseType.mobility);
+      expect(lease.canRegularizeCharges, isFalse);
+    });
+
+    test('mobility + chargeMode provisions explicite → true (le prédicat lit '
+        'effectiveChargeMode, qui priorise une valeur explicite même '
+        'incohérente côté client — la cohérence est imposée serveur)', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.mobility,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.canRegularizeCharges, isTrue);
     });
   });
 }

@@ -7,7 +7,6 @@ import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
-import '../../domain/lease_type.dart';
 import 'lease_status_mapper.dart';
 
 /// Colonnes triables du tableau baux.
@@ -181,11 +180,11 @@ class _LeasesTableViewState extends State<LeasesTableView> {
                 visualDensity: VisualDensity.compact,
               ),
               // Raccourci "Régulariser les charges" (FEAT-030) — gate légal :
-              // uniquement les baux nus, cf. commentaire équivalent dans
-              // lease_card.dart. Navigue vers la fiche qui ouvre le dialog
-              // automatiquement (les données riches requises ne sont pas
-              // portées par LeaseListItem).
-              if (lease.leaseType == LeaseType.unfurnished)
+              // uniquement les baux en mode provisions (FEAT-042), cf.
+              // commentaire équivalent dans lease_card.dart. Navigue vers la
+              // fiche qui ouvre le dialog automatiquement (les données
+              // riches requises ne sont pas portées par LeaseListItem).
+              if (lease.canRegularizeCharges)
                 PopupMenuButton<_LeaseTableMenuAction>(
                   key: Key('table_menu_${lease.id}'),
                   icon: const Icon(Icons.more_vert, size: 18),
