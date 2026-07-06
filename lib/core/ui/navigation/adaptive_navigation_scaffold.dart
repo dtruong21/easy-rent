@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../i18n/l10n_extensions.dart';
 import '../branding/brand_mark.dart';
 import '../breakpoints.dart';
 import 'rail_expanded_provider.dart';
@@ -59,33 +60,38 @@ class _Destination {
   final String label;
 }
 
-const _destinations = <_Destination>[
-  _Destination(
-    icon: Icons.home_outlined,
-    selectedIcon: Icons.home,
-    label: 'Accueil',
-  ),
-  _Destination(
-    icon: Icons.home_work_outlined,
-    selectedIcon: Icons.home_work,
-    label: 'Biens',
-  ),
-  _Destination(
-    icon: Icons.people_outline,
-    selectedIcon: Icons.people,
-    label: 'Locataires',
-  ),
-  _Destination(
-    icon: Icons.description_outlined,
-    selectedIcon: Icons.description,
-    label: 'Baux',
-  ),
-  _Destination(
-    icon: Icons.person_outline,
-    selectedIcon: Icons.person,
-    label: 'Profil',
-  ),
-];
+/// Destinations localisées (FEAT-043) — construites à chaque `build` à
+/// partir du [BuildContext] pour suivre la langue active.
+List<_Destination> _destinations(BuildContext context) {
+  final l10n = context.l10n;
+  return [
+    _Destination(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: l10n.navHome,
+    ),
+    _Destination(
+      icon: Icons.home_work_outlined,
+      selectedIcon: Icons.home_work,
+      label: l10n.navProperties,
+    ),
+    _Destination(
+      icon: Icons.people_outline,
+      selectedIcon: Icons.people,
+      label: l10n.navTenants,
+    ),
+    _Destination(
+      icon: Icons.description_outlined,
+      selectedIcon: Icons.description,
+      label: l10n.navLeases,
+    ),
+    _Destination(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: l10n.navProfile,
+    ),
+  ];
+}
 
 /// Bascule vers la branche [index]. Re-tap de l'onglet déjà actif → retour à
 /// la racine de la branche (`initialLocation: true`), idiome Material
@@ -114,7 +120,7 @@ class _NarrowLayout extends StatelessWidget {
           onDestinationSelected: (index) =>
               _onDestinationSelected(navigationShell, index),
           destinations: [
-            for (final destination in _destinations)
+            for (final destination in _destinations(context))
               NavigationDestination(
                 icon: Icon(destination.icon),
                 selectedIcon: Icon(destination.selectedIcon),
@@ -169,7 +175,7 @@ class _WideLayout extends ConsumerWidget {
                 ),
               ),
               destinations: [
-                for (final destination in _destinations)
+                for (final destination in _destinations(context))
                   NavigationRailDestination(
                     icon: Icon(destination.icon),
                     selectedIcon: Icon(destination.selectedIcon),

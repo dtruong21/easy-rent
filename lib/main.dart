@@ -6,12 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import 'core/config/env.dart';
+import 'core/i18n/locale_provider.dart';
+import 'core/i18n/locale_resolution.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
 import 'features/auth/application/anon_expiry_renewer.dart';
 import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,11 +65,21 @@ class _BaillanAppState extends ConsumerState<BaillanApp> {
     // Thème choisi par l'utilisateur (Profil → Apparence), persisté en
     // localStorage. Défaut : suit le système.
     final themeMode = ref.watch(themeModeProvider);
+    // Langue choisie par l'utilisateur (Profil → Langue), persistée en
+    // localStorage (FEAT-043). `null` = suit le système (résolution via
+    // localeResolutionCallback ci-dessous) ; non-null court-circuite la
+    // résolution système (override manuel).
+    final locale = ref.watch(localeProvider);
     return MaterialApp.router(
       title: 'Baillan.',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      locale: locale,
+      supportedLocales: supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localeResolutionCallback: resolveLocale,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

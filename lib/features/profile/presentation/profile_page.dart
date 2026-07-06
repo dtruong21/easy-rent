@@ -63,6 +63,9 @@ class ProfilePage extends ConsumerWidget {
             const ProfileAppearanceSection(),
             const SizedBox(height: 32),
 
+            const ProfileLanguageSection(),
+            const SizedBox(height: 32),
+
             const SectionHeader(title: 'Aide'),
             const SizedBox(height: 8),
             ListTile(

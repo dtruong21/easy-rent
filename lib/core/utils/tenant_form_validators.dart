@@ -1,3 +1,4 @@
+import '../validation/validation_error.dart';
 import 'email_validator.dart';
 
 /// Validateurs du formulaire locataire — logique pure, sans dépendance Flutter.
@@ -8,6 +9,12 @@ import 'email_validator.dart';
 /// Note : [validatePhone] retourne toujours `null` en V1 (string libre acceptée).
 /// Le hook est en place pour une évolution future (regex internationale ou package
 /// `phone_validator` en P1).
+///
+/// [validateEmailError] est l'exemple pilote FEAT-043 (i18n) du pattern
+/// « validator → enum d'erreur mappé en présentation » — voir
+/// `lib/l10n/l10n_convention.dart`. Les autres méthodes de cette classe
+/// restent en `String?` FR en dur pour l'instant (extraction complète hors
+/// périmètre de la foundation).
 class TenantFormValidators {
   const TenantFormValidators._();
 
@@ -41,6 +48,21 @@ class TenantFormValidators {
     }
     if (!EmailValidator.isValid(value)) {
       return 'Adresse email invalide (ex. : jean.dupont@email.com)';
+    }
+    return null;
+  }
+
+  /// Valide l'adresse email du locataire — variante pilote FEAT-043 (i18n).
+  ///
+  /// Même règle que [validateEmail], mais retourne un [ValidationError]
+  /// (indépendant de la locale) au lieu d'un message FR en dur. La couche
+  /// présentation traduit via `ValidationErrorL10n.message(context)`.
+  static ValidationError? validateEmailError(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return ValidationError.required;
+    }
+    if (!EmailValidator.isValid(value)) {
+      return ValidationError.invalidEmail;
     }
     return null;
   }

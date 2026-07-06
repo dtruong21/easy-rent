@@ -11,6 +11,7 @@ import '../../../core/ui/breakpoints.dart';
 import '../application/leases_filter_provider.dart';
 import '../application/leases_list_provider.dart';
 import '../domain/lease_filter.dart';
+import 'lease_filter_l10n.dart';
 import 'widgets/leases_card_view.dart';
 import 'widgets/leases_filter_bar.dart';
 import 'widgets/leases_table_view.dart';
@@ -109,8 +110,8 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
                       icon: Icons.filter_alt_off_outlined,
                       title: 'Aucun bail pour ce filtre',
                       message:
-                          'Le filtre « ${filter.labelFr} » ne correspond '
-                          'à aucun de vos baux.',
+                          'Le filtre « ${filter.label(context)} » ne '
+                          'correspond à aucun de vos baux.',
                       action: OutlinedButton.icon(
                         key: const Key('btn_show_all_leases'),
                         onPressed: () =>

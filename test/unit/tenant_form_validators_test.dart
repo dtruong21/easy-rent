@@ -1,4 +1,5 @@
 import 'package:easyrent/core/utils/tenant_form_validators.dart';
+import 'package:easyrent/core/validation/validation_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -98,6 +99,40 @@ void main() {
       test('format valide avec espaces autour → null (trimmed)', () {
         expect(
           TenantFormValidators.validateEmail('  test@example.com  '),
+          isNull,
+        );
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // validateEmailError — pilote FEAT-043 (i18n) : ValidationError pur, sans
+    // BuildContext ni message FR en dur (voir lib/l10n/l10n_convention.dart).
+    // -----------------------------------------------------------------------
+    group('validateEmailError', () {
+      test('null → ValidationError.required', () {
+        expect(
+          TenantFormValidators.validateEmailError(null),
+          ValidationError.required,
+        );
+      });
+
+      test('chaîne vide → ValidationError.required', () {
+        expect(
+          TenantFormValidators.validateEmailError(''),
+          ValidationError.required,
+        );
+      });
+
+      test('format invalide → ValidationError.invalidEmail', () {
+        expect(
+          TenantFormValidators.validateEmailError('pas-un-email'),
+          ValidationError.invalidEmail,
+        );
+      });
+
+      test('format valide → null', () {
+        expect(
+          TenantFormValidators.validateEmailError('jean.dupont@email.com'),
           isNull,
         );
       });

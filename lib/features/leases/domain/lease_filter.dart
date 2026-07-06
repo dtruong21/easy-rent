@@ -2,6 +2,12 @@
 ///
 /// Utilisé par le [StateProvider] local à la feature leases
 /// et le provider dérivé `filteredLeasesProvider`.
+///
+/// FEAT-043 (i18n) : cet enum ne porte plus de libellé FR en dur (ancien
+/// getter `labelFr`, retiré). Le mapping enum → libellé localisé vit dans la
+/// couche présentation : voir `LeaseFilterL10n`
+/// (`lib/features/leases/presentation/lease_filter_l10n.dart`) — pattern de
+/// référence documenté dans `lib/l10n/l10n_convention.dart`.
 enum LeaseFilter {
   /// Tous les baux (aucun filtre).
   all,
@@ -22,15 +28,6 @@ enum LeaseFilter {
 
   /// Baux terminés.
   terminated;
-
-  /// Libellé affiché dans l'UI française.
-  String get labelFr => switch (this) {
-    LeaseFilter.all => 'Tous',
-    LeaseFilter.active => 'Actifs',
-    LeaseFilter.renewable => 'À renouveler',
-    LeaseFilter.late => 'En retard',
-    LeaseFilter.terminated => 'Terminés',
-  };
 
   /// Parse la valeur d'un query param `?filter=` (drill-down depuis un KPI
   /// dashboard). Retourne `null` si absent ou inconnu → la page garde le

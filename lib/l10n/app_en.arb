@@ -1,0 +1,138 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2026-07-06",
+
+  "appTitle": "Baillan.",
+  "@appTitle": {
+    "description": "Application title, used as browser/tab title and window title."
+  },
+
+  "commonSave": "Save",
+  "@commonSave": {
+    "description": "Generic save action (buttons across forms)."
+  },
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Generic cancel action (buttons, dialogs)."
+  },
+  "commonDelete": "Delete",
+  "@commonDelete": {
+    "description": "Generic delete action (buttons, dialogs, destructive)."
+  },
+  "commonEdit": "Edit",
+  "@commonEdit": {
+    "description": "Generic edit action (buttons, menu items)."
+  },
+  "commonBack": "Back",
+  "@commonBack": {
+    "description": "Generic back navigation action."
+  },
+  "commonConfirm": "Confirm",
+  "@commonConfirm": {
+    "description": "Generic confirm action (dialogs)."
+  },
+  "commonClose": "Close",
+  "@commonClose": {
+    "description": "Generic close action (dialogs, sheets, snackbars)."
+  },
+  "commonRetry": "Retry",
+  "@commonRetry": {
+    "description": "Generic retry action shown on error states."
+  },
+  "commonLoading": "Loading…",
+  "@commonLoading": {
+    "description": "Generic loading indicator label shown while data is fetched."
+  },
+  "commonErrorGeneric": "Something went wrong. Please try again.",
+  "@commonErrorGeneric": {
+    "description": "Generic fallback error message shown when a specific message is not available."
+  },
+  "commonUnknown": "Unknown",
+  "@commonUnknown": {
+    "description": "Generic fallback for an unknown/unavailable value."
+  },
+
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Shell navigation destination label: dashboard/home branch."
+  },
+  "navProperties": "Properties",
+  "@navProperties": {
+    "description": "Shell navigation destination label: properties branch."
+  },
+  "navTenants": "Tenants",
+  "@navTenants": {
+    "description": "Shell navigation destination label: tenants branch."
+  },
+  "navLeases": "Leases",
+  "@navLeases": {
+    "description": "Shell navigation destination label: leases branch."
+  },
+  "navProfile": "Profile",
+  "@navProfile": {
+    "description": "Shell navigation destination label: profile branch."
+  },
+
+  "profileAppearanceTitle": "Appearance",
+  "@profileAppearanceTitle": {
+    "description": "Section header in Profile settings for the theme selector."
+  },
+  "profileThemeSystem": "System",
+  "@profileThemeSystem": {
+    "description": "Theme selector option: follow system theme."
+  },
+  "profileThemeLight": "Light",
+  "@profileThemeLight": {
+    "description": "Theme selector option: force light theme."
+  },
+  "profileThemeDark": "Dark",
+  "@profileThemeDark": {
+    "description": "Theme selector option: force dark theme."
+  },
+  "profileLanguageTitle": "Language",
+  "@profileLanguageTitle": {
+    "description": "Section header in Profile settings for the language selector (FEAT-043)."
+  },
+  "profileLanguageSystem": "System",
+  "@profileLanguageSystem": {
+    "description": "Language selector option: follow system/browser locale."
+  },
+  "profileLanguageFrench": "Français",
+  "@profileLanguageFrench": {
+    "description": "Language selector option: force French. Kept untranslated (endonym) on purpose in every locale."
+  },
+  "profileLanguageEnglish": "English",
+  "@profileLanguageEnglish": {
+    "description": "Language selector option: force English. Kept untranslated (endonym) on purpose in every locale."
+  },
+
+  "validationRequired": "This field is required",
+  "@validationRequired": {
+    "description": "Validation error: a required field was left empty."
+  },
+  "validationInvalidEmail": "Invalid email address",
+  "@validationInvalidEmail": {
+    "description": "Validation error: the email field does not match a valid email format."
+  },
+
+  "leasesFilterAll": "All",
+  "@leasesFilterAll": {
+    "description": "Lease list filter option: show all leases (no filter)."
+  },
+  "leasesFilterActive": "Active",
+  "@leasesFilterActive": {
+    "description": "Lease list filter option: active leases only."
+  },
+  "leasesFilterRenewable": "Renewable soon",
+  "@leasesFilterRenewable": {
+    "description": "Lease list filter option: active leases ending within 60 days."
+  },
+  "leasesFilterLate": "Late",
+  "@leasesFilterLate": {
+    "description": "Lease list filter option: leases with a late payment for the current due period."
+  },
+  "leasesFilterTerminated": "Terminated",
+  "@leasesFilterTerminated": {
+    "description": "Lease list filter option: terminated leases."
+  }
+}

@@ -23,6 +23,8 @@ import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/pwa/application/install_prompt_controller.dart';
 import 'package:easyrent/features/pwa/data/install_prompt_storage.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
@@ -143,6 +145,9 @@ Future<GoRouter> _pumpApp(WidgetTester tester, _StreamAuthRepo repo) async {
           return MaterialApp.router(
             routerConfig: router,
             theme: AppTheme.light,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
           );
         },
       ),

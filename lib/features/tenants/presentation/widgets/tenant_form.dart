@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/utils/tenant_form_validators.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 
 /// Champs partagés du formulaire locataire.
 ///
@@ -153,7 +154,11 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_emailTouched) return null;
-              return TenantFormValidators.validateEmail(v);
+              // Exemple pilote FEAT-043 (i18n) : le validateur retourne un
+              // ValidationError (pur, sans BuildContext), traduit ici.
+              return TenantFormValidators.validateEmailError(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),

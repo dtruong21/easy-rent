@@ -4,6 +4,8 @@ import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_form_state.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/tenant_form_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,7 +122,12 @@ Widget _buildForm({
           (ref) => TenantFormController(ref)..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -220,10 +227,10 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_submit_form')));
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("L'adresse email est obligatoire"),
-        findsOneWidget,
-      );
+      // FEAT-043 : le champ email route désormais via ValidationError
+      // (pattern pilote i18n) → message générique ARB (`validationRequired`)
+      // au lieu du message spécifique "L'adresse email est obligatoire".
+      expect(find.textContaining('obligatoire'), findsOneWidget);
     });
 
     testWidgets('validation — erreur email si format invalide', (tester) async {
@@ -359,7 +366,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -400,7 +412,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -453,7 +470,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();

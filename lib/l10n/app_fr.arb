@@ -1,0 +1,41 @@
+{
+  "@@locale": "fr",
+  "@@last_modified": "2026-07-06",
+
+  "appTitle": "Baillan.",
+  "commonSave": "Enregistrer",
+  "commonCancel": "Annuler",
+  "commonDelete": "Supprimer",
+  "commonEdit": "Modifier",
+  "commonBack": "Retour",
+  "commonConfirm": "Confirmer",
+  "commonClose": "Fermer",
+  "commonRetry": "Réessayer",
+  "commonLoading": "Chargement…",
+  "commonErrorGeneric": "Une erreur est survenue. Veuillez réessayer.",
+  "commonUnknown": "Inconnu",
+
+  "navHome": "Accueil",
+  "navProperties": "Biens",
+  "navTenants": "Locataires",
+  "navLeases": "Baux",
+  "navProfile": "Profil",
+
+  "profileAppearanceTitle": "Apparence",
+  "profileThemeSystem": "Système",
+  "profileThemeLight": "Clair",
+  "profileThemeDark": "Sombre",
+  "profileLanguageTitle": "Langue",
+  "profileLanguageSystem": "Système",
+  "profileLanguageFrench": "Français",
+  "profileLanguageEnglish": "English",
+
+  "validationRequired": "Ce champ est obligatoire",
+  "validationInvalidEmail": "Adresse email invalide",
+
+  "leasesFilterAll": "Tous",
+  "leasesFilterActive": "Actifs",
+  "leasesFilterRenewable": "À renouveler",
+  "leasesFilterLate": "En retard",
+  "leasesFilterTerminated": "Terminés"
+}

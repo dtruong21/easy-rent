@@ -45,6 +45,8 @@ import 'package:easyrent/features/pwa/data/install_prompt_storage.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -409,6 +411,9 @@ Future<GoRouter> _pumpShellApp(
           return MaterialApp.router(
             routerConfig: router,
             theme: AppTheme.light,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
           );
         },
       ),
