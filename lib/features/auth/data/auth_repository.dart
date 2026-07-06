@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/env.dart';
 import 'apple_auth_exception.dart';
 import 'google_auth_exception.dart';
 
@@ -253,19 +255,21 @@ bool _defaultIsNewUser(UserCredential cred) {
   return info.isNewUser;
 }
 
-/// Ouvre le popup OAuth de link pour un utilisateur anonyme donné.
+/// Lance le flux OAuth de link pour un utilisateur anonyme donné.
 ///
 /// Extrait en fonction injectable car `firebase_auth_mocks` (0.14.2) ne
-/// surcharge pas `User.linkWithPopup` (méthode concrète héritée de la classe
-/// réelle `User`, absente de `MockUser` → `NoSuchMethodError` en test). En
-/// production, [_defaultLinkWithPopup] délègue simplement au SDK.
-typedef LinkWithPopupFn =
+/// surcharge ni `User.linkWithPopup` ni `User.linkWithProvider` (méthodes
+/// concrètes héritées de la classe réelle `User`, absentes de `MockUser` →
+/// `NoSuchMethodError` en test). En production, [_defaultLinkWithProvider]
+/// délègue au SDK : popup sur le web, flux natif sur Android/iOS (FEAT-024)
+/// — même contrat `UserCredential` dans les deux cas.
+typedef LinkWithProviderFn =
     Future<UserCredential> Function(User user, AuthProvider provider);
 
-Future<UserCredential> _defaultLinkWithPopup(
+Future<UserCredential> _defaultLinkWithProvider(
   User user,
   AuthProvider provider,
-) => user.linkWithPopup(provider);
+) => kIsWeb ? user.linkWithPopup(provider) : user.linkWithProvider(provider);
 
 /// Lie un utilisateur anonyme à une [AuthCredential] (email/password ici).
 ///
@@ -308,11 +312,11 @@ class FirebaseAuthRepository implements AuthRepository {
     this._firestore, {
     FirebaseFunctions? functions,
     IsNewUserResolver isNewUserResolver = _defaultIsNewUser,
-    LinkWithPopupFn linkWithPopup = _defaultLinkWithPopup,
+    LinkWithProviderFn linkWithProvider = _defaultLinkWithProvider,
     LinkWithCredentialFn linkWithCredential = _defaultLinkWithCredential,
     FinalizeUpgradeFn? finalizeUpgrade,
   }) : _isNewUser = isNewUserResolver,
-       _linkWithPopup = linkWithPopup,
+       _linkWithProvider = linkWithProvider,
        _linkWithCredential = linkWithCredential,
        _finalizeUpgrade =
            finalizeUpgrade ??
@@ -333,7 +337,7 @@ class FirebaseAuthRepository implements AuthRepository {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final IsNewUserResolver _isNewUser;
-  final LinkWithPopupFn _linkWithPopup;
+  final LinkWithProviderFn _linkWithProvider;
   final LinkWithCredentialFn _linkWithCredential;
   final FinalizeUpgradeFn _finalizeUpgrade;
 
@@ -430,19 +434,29 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
-  /// `Uri.base.origin` lève `StateError` hors des schémas http(s) (ex. les
-  /// tests `flutter test` exécutés en `file://`). Fallback neutre : le lien
-  /// de vérification pointera vers un chemin relatif si l'origin ne peut pas
-  /// être résolu — en production (navigateur réel), l'origin http(s) est
-  /// toujours disponible, ce fallback ne joue donc qu'en environnement de
-  /// test.
+  /// `Uri.base.origin` lève `StateError` hors des schémas http(s) : apps
+  /// mobiles iOS/Android (FEAT-024) et tests `flutter test` exécutés en
+  /// `file://`. Fallback : l'app web publique ([Env.publicAppUrl]) — c'est
+  /// elle qui héberge les pages ciblées par les liens email (/login,
+  /// /reset-password). Sur le web, l'origin courant (prod ou channel
+  /// staging) reste prioritaire.
   String _safeOrigin() {
     try {
       return Uri.base.origin;
     } on StateError {
-      return '';
+      return Env.publicAppUrl;
     }
   }
+
+  /// Lance le flux OAuth de sign-in du provider donné.
+  ///
+  /// `signInWithPopup` est web-only ; sur Android/iOS le SDK expose le flux
+  /// natif équivalent `signInWithProvider` (FEAT-024). Même contrat
+  /// `UserCredential` — les gates RGPD et rollbacks en aval sont identiques.
+  Future<UserCredential> _signInWithOAuthProvider(AuthProvider provider) =>
+      kIsWeb
+      ? _auth.signInWithPopup(provider)
+      : _auth.signInWithProvider(provider);
 
   @override
   Future<void> signInWithGoogle() async {
@@ -450,7 +464,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final provider = GoogleAuthProvider()
       ..addScope('email')
       ..addScope('profile');
-    final cred = await _auth.signInWithPopup(provider);
+    final cred = await _signInWithOAuthProvider(provider);
     final isNewUser = _isNewUser(cred);
     if (!isNewUser) {
       // Connexion normale — un compte Baillan existait déjà pour ce Google.
@@ -494,12 +508,12 @@ class FirebaseAuthRepository implements AuthRepository {
     final provider = GoogleAuthProvider()
       ..addScope('email')
       ..addScope('profile');
-    final cred = await _auth.signInWithPopup(provider);
+    final cred = await _signInWithOAuthProvider(provider);
     final user = cred.user;
     if (user == null) {
       throw FirebaseAuthException(
         code: 'no-user',
-        message: 'signInWithPopup returned null user',
+        message: 'OAuth sign-in returned null user',
       );
     }
 
@@ -556,7 +570,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final provider = OAuthProvider('apple.com')
       ..addScope('email')
       ..addScope('name');
-    final cred = await _auth.signInWithPopup(provider);
+    final cred = await _signInWithOAuthProvider(provider);
     final isNewUser = _isNewUser(cred);
     if (!isNewUser) {
       // Connexion normale — un compte Baillan existait déjà pour cet Apple.
@@ -600,12 +614,12 @@ class FirebaseAuthRepository implements AuthRepository {
     final provider = OAuthProvider('apple.com')
       ..addScope('email')
       ..addScope('name');
-    final cred = await _auth.signInWithPopup(provider);
+    final cred = await _signInWithOAuthProvider(provider);
     final user = cred.user;
     if (user == null) {
       throw FirebaseAuthException(
         code: 'no-user',
-        message: 'signInWithPopup returned null user',
+        message: 'OAuth sign-in returned null user',
       );
     }
 
@@ -775,7 +789,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final provider = GoogleAuthProvider()
       ..addScope('email')
       ..addScope('profile');
-    await _linkWithPopup(anonUser, provider);
+    await _linkWithProvider(anonUser, provider);
     await _finalizeAnonymousUpgrade(rgpdConsent: rgpdConsent);
   }
 
@@ -793,13 +807,13 @@ class FirebaseAuthRepository implements AuthRepository {
     final provider = OAuthProvider('apple.com')
       ..addScope('email')
       ..addScope('name');
-    await _linkWithPopup(anonUser, provider);
+    await _linkWithProvider(anonUser, provider);
     await _finalizeAnonymousUpgrade(rgpdConsent: rgpdConsent);
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
-    final origin = Uri.base.origin;
+    final origin = _safeOrigin();
     _log.info('sendPasswordResetEmail requested (origin: $origin)');
     await _auth.sendPasswordResetEmail(
       email: email,

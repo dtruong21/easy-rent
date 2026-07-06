@@ -179,4 +179,22 @@ void main() {
       );
     });
   });
+
+  group('AuthErrorMapper.fromException (OAuth natif mobile, FEAT-024)', () {
+    FirebaseAuthException e(String code) => FirebaseAuthException(code: code);
+
+    test('web-context-canceled (Android) → connexion annulée', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-context-canceled')),
+        'Connexion annulée.',
+      );
+    });
+
+    test('web-context-cancelled (iOS) → connexion annulée', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-context-cancelled')),
+        'Connexion annulée.',
+      );
+    });
+  });
 }

@@ -73,6 +73,14 @@ class AuthErrorMapper {
       case 'user-cancelled':
         return 'Connexion Apple annulée.';
 
+      // Flux OAuth natif mobile (signInWithProvider, FEAT-024) :
+      // l'utilisateur a refermé le navigateur intégré avant de valider —
+      // équivalent mobile de 'popup-closed-by-user'. Deux orthographes :
+      // Android émet 'canceled', iOS 'cancelled'.
+      case 'web-context-canceled':
+      case 'web-context-cancelled':
+        return 'Connexion annulée.';
+
       case GoogleAuthErrorCode.newUserOnLogin:
         return 'Aucun compte Baillan associé à ce Google. '
             'Veuillez d\'abord créer un compte.';

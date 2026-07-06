@@ -42,18 +42,29 @@
 
 | Couche | Tech | Notes |
 |---|---|---|
-| **Frontend** | Flutter Web 3.x + Dart 3.11+ | PWA, Canvas Kit, EB Garamond serif |
+| **Frontend** | Flutter 3.x + Dart 3.11+ (web + Android + iOS, FEAT-024) | PWA CanvasKit web, natif mobile `com.daki.baillan`, EB Garamond serif |
 | **State** | Riverpod 2.6.0 | StreamProvider FirebaseAuth + Firestore snapshots |
 | **Navigation** | GoRouter 14.6.0 | 3-state redirect guard (via sessionStateProvider) |
 | **Auth** | Firebase Auth native | Email/password + Google + Apple + anonymous tier |
 | **Backend** | Firestore + Cloud Functions | Node.js 20, vitest, 28 indexes, 3-couche rules |
 | **Storage** | Firebase Storage | /documents/, /receipts/, signed URLs 5 min |
-| **PDF** | pdf + printing | Quittance loi 6 juillet 1989 |
+| **PDF** | pdf (rendu) + share_plus (partage mobile) | Quittance loi 6 juillet 1989 |
 | **Build** | build_runner + freezed + json_serializable | Code generation, no reflection |
 | **Hosting** | Firebase Hosting | Staging + prod channels, CSP (fonts.gstatic.com) |
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
 ## Changements récents (2026-07-03 — 2026-07-06)
+
+### FEAT-024 : App mobile iOS/Android — setup + parité (2026-07-06)
+
+**Status** : 🚧 WIP (setup complet, smoke test émulateur ✅ — branche `claude/magical-jackson-d0116a`)
+
+- **Plateformes natives** : `android/` + `ios/` ajoutées au projet (une seule base de code) — applicationId/bundle ID **`com.daki.baillan`** (définitif stores)
+- **Firebase** : apps Android + iOS enregistrées sur `easy-rent-54cd4`, `firebase_options.dart` couvre web/android/ios, SHA debug déclarées
+- **Auth** : OAuth Google/Apple via `signInWithProvider`/`linkWithProvider` sur mobile (popup conservé web) ; liens email fallback `Env.publicAppUrl`
+- **Partage quittances/régularisations** : share sheet natif `share_plus` (`web_share_service_io.dart`, annulation détectée → invariant `sent_at` préservé)
+- **Validé** : analyze clean, 2378 tests, APK debug, parcours anonyme complet sur émulateur Pixel 9
+- **Reste** : signing release, capability Apple Sign-In, icônes natives, QA devices — détail dans [`MOBILE.md`](../MOBILE.md)
 
 ### FEAT-042 : Mode de charges (provisions/forfait) + éligibilité régularisation
 
@@ -234,7 +245,7 @@
 - **Riverpod 3.x upgrade** : Breaking changes, codegen refactor
 - **GoRouter 17.x upgrade** : API reshaping, breaking navigation changes
 - **OCR de baux scannés** : Firebase ML Kit + document ingestion
-- **App native Capacitor** : iOS + Android distribution
+- ~~App native Capacitor~~ → **FEAT-024** : cibles natives Flutter iOS/Android (en cours, 2026-07-06)
 
 ## Dépendances P2 backlog (version upgrades)
 
@@ -284,7 +295,7 @@ Security:
   RLS: soft-delete filters (28 composite indexes)
   
 PDF + Legal:
-  pdf + printing packages
+  pdf (rendu) + share_plus (partage mobile) packages
   Quittance loi 6 juillet 1989 (rétention 5 ans, immuable)
   Web Share API native (fallback mailto://)
   

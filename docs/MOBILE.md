@@ -5,6 +5,60 @@
 > actuel (web) vise iOS et Android **sans réécriture** — même code, mêmes
 > rules Firestore, mêmes Cloud Functions.
 
+## ✅ Setup réalisé (2026-07-06)
+
+Décisions actées :
+
+| # | Décision | Choix |
+|---|---|---|
+| 1 | Bundle ID / applicationId | **`com.daki.baillan`** (définitif stores) |
+| 2 | Cibles V1 | iOS + Android d'emblée |
+| 3 | Distribution de test | différée (builds debug émulateur/simulateur) |
+| 4 | Logins sociaux V1 | Google + Apple iso web (`signInWithProvider`) |
+| 5 | minSdk / iOS minimum | défauts Flutter 3.41 (minSdk 24 / iOS 13) |
+| 6 | Shell nav FEAT-026 | déjà mergé avant J1 ✅ |
+
+Réalisé :
+
+- `flutter create --platforms=android,ios` — dossiers `android/` + `ios/`
+  (applicationId/bundle ID `com.daki.baillan`, label « Baillan. »).
+- Apps Android + iOS enregistrées dans Firebase (`easy-rent-54cd4`) via
+  `flutterfire configure` — `firebase_options.dart` couvre web/android/ios,
+  `google-services.json` + `GoogleService-Info.plist` générés (clés publiques
+  par design, committées — cf. `docs/SECURITY.md`).
+- SHA-1/SHA-256 **debug** enregistrées sur l'app Android Firebase.
+- URL schemes OAuth iOS (REVERSED_CLIENT_ID + app ID encodé) dans Info.plist.
+- Auth : `_signInWithOAuthProvider` / `_defaultLinkWithProvider` — popup sur
+  web, flux natif `signInWithProvider`/`linkWithProvider` sur mobile ; codes
+  d'annulation mobile (`web-context-canceled`/`cancelled`) mappés en FR.
+- Liens email (verify + reset password) : fallback `Env.publicAppUrl`
+  (dart-define `APP_PUBLIC_URL`, défaut `https://easy-rent-54cd4.web.app`)
+  quand `Uri.base.origin` n'existe pas (mobile).
+- Partage quittances/régularisations : `web_share_service_io.dart` —
+  `share_plus` (share sheet natif, PDF en pièce jointe, annulation
+  détectée via `ShareResultStatus.dismissed`) sur
+  Android/iOS ; no-op inchangé sur VM tests/desktop.
+- `<queries>` Android 11+ (https + mailto) pour `url_launcher`.
+
+Reste à faire (itérations suivantes) :
+
+- **Signing release** : keystore Android + certificat/profil Apple Developer,
+  puis SHA-1 release à ajouter dans Firebase.
+- **Apple Sign-In iOS** : capability « Sign in with Apple » (nécessite compte
+  Apple Developer payant) — jusque-là, tester Google + email sur device.
+- **Icônes/splash natifs** : icône launcher Baillan (actuellement icône
+  Flutter par défaut) — `flutter_launcher_icons` à envisager.
+- **CI** : job build APK debug en PR (non bloquant), distribution différée.
+- QA parcours métier complet sur devices réels (J4 du plan).
+
+Build local :
+
+```bash
+flutter build apk --debug          # Android (APP_ENV=dev par défaut)
+flutter build ios --simulator      # iOS simulateur (pas de codesign)
+flutter run -d <device>            # run direct émulateur/simulateur
+```
+
 ## TL;DR
 
 Le codebase est **déjà largement portable** : les seuls points web-only sont
@@ -31,7 +85,7 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
 | Riverpod / GoRouter / freezed / json_serializable | Aucune API plateforme |
 | firebase_core / auth / firestore / functions / storage | SDK Flutter multi-plateformes (config à générer, voir chantiers) |
 | Auth email+password & anonyme | `firebase_auth` portable tel quel |
-| pdf + printing (quittances) | Impls natives iOS/Android — `Printing.sharePdf` donne même un partage natif **meilleur** que le web |
+| pdf (rendu quittances) + share_plus (partage) | Impls natives iOS/Android — share sheet natif **meilleur** que le web (⚠️ printing retiré : son `sharePdf` résout `true` dès l'ouverture du sheet, annulation indétectable) |
 | shared_preferences (thème, format chart, view modes) | NSUserDefaults / SharedPreferences |
 | fl_chart, flutter_svg, url_launcher, file_picker, intl, uuid, mime | OK mobile |
 | Breakpoints UI (<600 = mobile) | Déjà pensés mobile-first sur les listes/cards |
@@ -67,7 +121,8 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
    règle App Store : si un login social tiers est proposé sur iOS, Sign in
    with Apple est obligatoire.
 6. **Partage quittances mobile** : le stub Web Share ne fait rien →
-   brancher `Printing.sharePdf` (dépendance déjà présente) dans le flux
+   brancher `share_plus` (choisi contre `printing.sharePdf`, qui ne
+   remonte pas l'annulation du share sheet) dans le flux
    receipts quand `!kIsWeb`.
 7. **Passe UI mobile native** : SafeArea (notch), comportement clavier
    (resizeToAvoidBottomInset), scroll physics, tailles de touch targets.
@@ -109,7 +164,7 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
 |---|---|
 | J1 | **Shell adaptatif FEAT-026** si non déjà mergé (`StatefulShellRoute.indexedStack` + NavigationBar/Rail, cf. [`docs/UX_NAVIGATION.md`](UX_NAVIGATION.md)) — sinon décisions ↑ directement. Puis `flutter create --platforms` + `flutterfire configure` + smoke run simulateur/émulateur |
 | J2 | Branchement auth `kIsWeb` (`signInWithProvider`) + QA login email/Google/Apple sur devices |
-| J3 | Passe UI mobile **allégée par le shell** (SafeArea sous NavigationBar, clavier, touch targets) + partage quittance natif (`Printing.sharePdf`) |
+| J3 | Passe UI mobile **allégée par le shell** (SafeArea sous NavigationBar, clavier, touch targets) + partage quittance natif (`share_plus`) |
 | J4 | QA parcours métier complet iOS + Android (biens → locataires → baux → paiements → quittances), y compris navigation par onglets + préservation d'état ; corrections |
 | J5 | CI builds (android/ios), distribution interne, doc + state refresh |
 
