@@ -9,14 +9,13 @@ import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
-import '../../domain/lease_type.dart';
 import 'lease_status_mapper.dart';
 
 /// Card v2 représentant un bail dans la liste.
 ///
 /// Utilise [EntityCard] pour le layout cohérent avec les autres entités.
-/// Header : nom du bien + [StatusPill] statut + menu overflow (bail nu
-/// uniquement, FEAT-030).
+/// Header : nom du bien + [StatusPill] statut + menu overflow (baux en mode
+/// provisions uniquement, FEAT-030 + FEAT-042).
 /// Body : locataire, période, loyer CC.
 /// Footer : boutons "Quittances" et "+ Paiement".
 ///
@@ -57,12 +56,14 @@ class LeaseCard extends StatelessWidget {
               size: StatusPillSize.sm,
             ),
             // Raccourci "Régulariser les charges" (FEAT-030) — gate légal :
-            // uniquement les baux nus (art. 23 loi du 6 juillet 1989, cf.
-            // ChargeRegularizationSection). Les données riches requises par
-            // le dialog (adresses, email, nom bailleur) ne sont PAS portées
-            // par LeaseListItem — on navigue vers la fiche qui les charge et
-            // ouvre le dialog automatiquement.
-            if (lease.leaseType == LeaseType.unfurnished)
+            // uniquement les baux en mode provisions (art. 23 loi du 6
+            // juillet 1989, cf. ChargeRegularizationSection). Le critère
+            // n'est PAS le type de bail mais le mode de charges effectif
+            // (FEAT-042) — voir `Lease.canRegularizeCharges`. Les données
+            // riches requises par le dialog (adresses, email, nom bailleur)
+            // ne sont PAS portées par LeaseListItem — on navigue vers la
+            // fiche qui les charge et ouvre le dialog automatiquement.
+            if (lease.canRegularizeCharges)
               _RegularizeChargesMenu(leaseId: lease.id),
           ],
         ),

@@ -13,6 +13,7 @@ import '../application/lease_form_controller.dart';
 import '../application/leases_filter_provider.dart';
 import '../data/lease_repository.dart';
 import '../../payments/domain/payment_method.dart';
+import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_filter.dart';
 import '../domain/lease_form_state.dart';
@@ -150,10 +151,19 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     final agencyFeesCents = _agencyFeesCtrl.text.trim().isEmpty
         ? 0
         : (MoneyFormat.eurosToCents(_agencyFeesCtrl.text) ?? 0);
+    // FEAT-042 (défense en profondeur, revue post-merge) : en mode forfait,
+    // le champ "Charges non récupérables" est masqué dans le formulaire — le
+    // payload client doit refléter cette absence plutôt que de lire un
+    // controller potentiellement resté rempli suite à un bascule de mode
+    // (nu/meublé → forfait). Le serveur force déjà 0 dans ce mode, mais on ne
+    // veut pas dépendre uniquement de cette garantie côté back.
     final nonRecoverableChargesCents =
-        _nonRecoverableChargesCtrl.text.trim().isEmpty
+        formState.currentChargeMode == ChargeMode.forfait
         ? 0
-        : (MoneyFormat.eurosToCents(_nonRecoverableChargesCtrl.text) ?? 0);
+        : (_nonRecoverableChargesCtrl.text.trim().isEmpty
+              ? 0
+              : (MoneyFormat.eurosToCents(_nonRecoverableChargesCtrl.text) ??
+                    0));
 
     // Section 4 — payment day
     final paymentDayRaw = _paymentDayCtrl.text.trim();
@@ -201,6 +211,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
             irlIndexValue: irlValue,
             irlQuarterRef: irlQuarter,
             leaseType: formState.currentLeaseType,
+            chargeMode: formState.currentChargeMode,
             paymentMethod: formState.currentPaymentMethod,
             solidarityClause: formState.currentSolidarityClause,
             entryInventoryDone: formState.currentEntryInventoryDone,
@@ -222,6 +233,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
         irlIndexValue: irlValue,
         irlQuarterRef: irlQuarter,
         leaseType: formState.currentLeaseType,
+        chargeMode: formState.currentChargeMode,
         paymentMethod: formState.currentPaymentMethod,
         solidarityClause: formState.currentSolidarityClause,
         entryInventoryDone: formState.currentEntryInventoryDone,
@@ -243,6 +255,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     double? irlIndexValue,
     String? irlQuarterRef,
     required LeaseType leaseType,
+    required ChargeMode chargeMode,
     required PaymentMethod paymentMethod,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
@@ -259,6 +272,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           startDate: startDate,
           endDate: endDate,
           leaseType: leaseType,
+          chargeMode: chargeMode,
           depositAmountCents: depositAmountCents,
           paymentDay: paymentDay,
           paymentMethod: paymentMethod,
@@ -376,6 +390,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               initialStartDate: widget.initial?.startDate,
               initialEndDate: widget.initial?.endDate,
               initialLeaseType: widget.initial?.leaseType,
+              initialChargeMode: widget.initial?.chargeMode,
               initialPaymentMethod: widget.initial?.paymentMethod,
               initialSolidarityClause:
                   widget.initial?.solidarityClause ?? false,

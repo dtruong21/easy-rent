@@ -27,6 +27,7 @@ import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -310,7 +311,7 @@ Lease _makeLease({required String id, required LeaseStatus status}) => Lease(
 
 class _FakeLeaseRepo implements LeaseRepository {
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [
     LeaseListItem(
       lease: _makeLease(id: 'lease-shell-1', status: LeaseStatus.active),
       propertyName: 'Appart Test',
@@ -335,6 +336,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,

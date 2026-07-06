@@ -8,6 +8,7 @@ library;
 
 import 'package:easyrent/core/utils/money_format.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -357,7 +358,7 @@ class _FakeLeaseRepo implements LeaseRepository {
   Future<Lease> getById(String id) async => lease;
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [];
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
   Future<Lease> create({
@@ -368,6 +369,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,

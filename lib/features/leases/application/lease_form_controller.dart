@@ -7,6 +7,7 @@ import '../../dashboard/application/dashboard_provider.dart';
 import '../../properties/application/properties_list_provider.dart';
 import '../../tenants/application/tenants_list_provider.dart';
 import '../data/lease_repository.dart';
+import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_type.dart';
@@ -42,6 +43,7 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
@@ -68,6 +70,7 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
           startDate: startDate,
           endDate: endDate,
           leaseType: leaseType,
+          chargeMode: chargeMode,
           depositAmountCents: depositAmountCents,
           paymentDay: paymentDay,
           paymentMethod: paymentMethod,
@@ -89,6 +92,7 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
           startDate: startDate,
           endDate: endDate,
           leaseType: leaseType,
+          chargeMode: chargeMode,
           depositAmountCents: depositAmountCents,
           paymentDay: paymentDay,
           paymentMethod: paymentMethod,

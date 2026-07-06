@@ -1,5 +1,6 @@
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -30,7 +31,7 @@ class _FakeRepo implements LeaseRepository {
   }
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [];
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
   Future<Lease> create({
@@ -41,6 +42,7 @@ class _FakeRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
@@ -111,6 +113,7 @@ Lease _makeLease({
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
   LeaseType leaseType = LeaseType.unfurnished,
+  ChargeMode? chargeMode,
   int chargesAmountCents = 5000,
   int nonRecoverableChargesCents = 0,
 }) => Lease(
@@ -125,6 +128,7 @@ Lease _makeLease({
   endDate: endDate,
   status: status,
   leaseType: leaseType,
+  chargeMode: chargeMode,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -627,10 +631,13 @@ void main() {
     });
 
     testWidgets(
-      'openRegularizationOnLoad=true + bail meublé → dialog PAS ouvert '
-      '(gate légal revérifié en défense en profondeur)',
+      'openRegularizationOnLoad=true + bail meublé en FORFAIT → dialog PAS '
+      'ouvert (gate légal revérifié en défense en profondeur, FEAT-042)',
       (tester) async {
-        final lease = _makeLease(leaseType: LeaseType.furnished);
+        final lease = _makeLease(
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.forfait,
+        );
         await tester.pumpWidget(
           _buildDetailPage(
             leaseId: lease.id,
@@ -648,7 +655,32 @@ void main() {
     );
 
     testWidgets(
-      'openRegularizationOnLoad=true + bail mobilité → dialog PAS ouvert',
+      'openRegularizationOnLoad=true + bail meublé en PROVISIONS → dialog '
+      'ouvert (FEAT-042 : le critère est le mode, pas le type)',
+      (tester) async {
+        final lease = _makeLease(
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.provisions,
+        );
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'openRegularizationOnLoad=true + bail mobilité → dialog PAS ouvert '
+      '(mode forfait dérivé, forcé quel que soit chargeMode)',
       (tester) async {
         final lease = _makeLease(leaseType: LeaseType.mobility);
         await tester.pumpWidget(
@@ -668,9 +700,13 @@ void main() {
     );
 
     testWidgets(
-      'openRegularizationOnLoad=true + bail étudiant → dialog PAS ouvert',
+      'openRegularizationOnLoad=true + bail étudiant en FORFAIT → dialog '
+      'PAS ouvert',
       (tester) async {
-        final lease = _makeLease(leaseType: LeaseType.student);
+        final lease = _makeLease(
+          leaseType: LeaseType.student,
+          chargeMode: ChargeMode.forfait,
+        );
         await tester.pumpWidget(
           _buildDetailPage(
             leaseId: lease.id,

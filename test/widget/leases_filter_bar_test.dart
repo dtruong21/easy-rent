@@ -2,6 +2,7 @@ import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/leases/application/leases_filter_provider.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_filter.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
@@ -24,7 +25,7 @@ ThemeData _appTheme() => ThemeData(
 
 class _FakeRepo implements LeaseRepository {
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [];
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
   Future<Lease> getById(String id) async => throw UnimplementedError();
@@ -38,6 +39,7 @@ class _FakeRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
