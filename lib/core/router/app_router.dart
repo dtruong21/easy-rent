@@ -28,6 +28,7 @@ import '../../features/profile/presentation/delete_account_page.dart';
 import '../../features/profile/presentation/profile_details_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/receipts/presentation/lease_receipts_page.dart';
+import '../../features/support/presentation/faq_page.dart';
 import '../../features/support/presentation/support_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
@@ -80,6 +81,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         // la fiche Google Play — doit rester accessible sans login (et aux
         // anonymes, qui y suppriment leur essai).
         '/delete-account',
+        // FAQ produit — consultable avant inscription et par les anonymes.
+        '/faq',
       };
 
       // Routes accessibles aux anonymes ET aux comptes complets (le
@@ -189,6 +192,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
           child: const DeleteAccountRequestPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
+      GoRoute(
+        path: '/faq',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const FaqPage(),
           transition: AppTransition.fade,
         ),
       ),

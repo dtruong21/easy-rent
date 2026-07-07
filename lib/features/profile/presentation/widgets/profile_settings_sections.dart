@@ -171,44 +171,6 @@ class ProfileSessionSection extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Suppression du compte (FEAT-045)
-// ---------------------------------------------------------------------------
-
-/// Tuile d'accès au flux de suppression de compte.
-///
-/// Exigence stores (Play « Account deletion » / App Store 5.1.1(v)) : le
-/// point d'entrée doit être facile à trouver — dernière section du hub
-/// /profile, style destructif. Tout l'avertissement (conséquences,
-/// rétention quittances) vit sur la sous-page dédiée.
-class ProfileDeleteAccountSection extends StatelessWidget {
-  const ProfileDeleteAccountSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(title: 'Suppression du compte'),
-        const SizedBox(height: 8),
-        ListTile(
-          key: const Key('tile_delete_account'),
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(
-            Icons.delete_forever_outlined,
-            color: colorScheme.error,
-          ),
-          title: Text(
-            'Supprimer mon compte',
-            style: TextStyle(color: colorScheme.error),
-          ),
-          subtitle: const Text('Suppression définitive de vos données'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push('/profile/delete-account'),
-        ),
-      ],
-    );
-  }
-}
+// NB (2026-07-07) : la tuile « Supprimer mon compte » (FEAT-045) vit
+// désormais dans le groupe « Compte » de ProfilePage — l'ancienne section
+// dédiée en fin de hub a été retirée (décision de réordonnancement).

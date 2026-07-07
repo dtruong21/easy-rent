@@ -16,9 +16,14 @@ import 'widgets/section_header.dart';
 /// - `/profile/details` : informations personnelles (identité bailleur)
 /// - `/profile/password` : changement de mot de passe (comptes email
 ///   uniquement — tuile masquée sinon, via [hasPasswordProvider])
-/// - `/profile/support` : formulaire « Nous contacter »
 /// - `/profile/delete-account` : suppression de compte (FEAT-045 — exigence
-///   stores, point d'entrée volontairement visible en fin de hub)
+///   stores : point d'entrée facile à trouver, dans le groupe « Compte »)
+/// - `/faq` : questions fréquentes (page publique)
+/// - `/profile/support` : formulaire « Nous contacter »
+///
+/// Ordre des groupes (décision 2026-07-07) : Compte (identité, mot de
+/// passe, suppression) → Apparence → Aide (FAQ, contact, légal) →
+/// À propos → Session.
 ///
 /// Restent inline dans le hub (contenus légers, pas besoin de sous-page) :
 /// Apparence (sélecteur de thème), À propos (version), Session
@@ -31,6 +36,7 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppAppBar(title: 'Mon profil', showBackButton: false),
       body: SingleChildScrollView(
@@ -60,6 +66,22 @@ class ProfilePage extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/profile/password'),
               ),
+            // Suppression de compte (FEAT-045) : dans le groupe Compte —
+            // facile à trouver (exigence stores), style destructif.
+            ListTile(
+              key: const Key('tile_delete_account'),
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.delete_forever_outlined,
+                color: theme.colorScheme.error,
+              ),
+              title: Text(
+                'Supprimer mon compte',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/profile/delete-account'),
+            ),
             const SizedBox(height: 32),
 
             const ProfileAppearanceSection(),
@@ -67,6 +89,14 @@ class ProfilePage extends ConsumerWidget {
 
             const SectionHeader(title: 'Aide'),
             const SizedBox(height: 8),
+            ListTile(
+              key: const Key('tile_faq'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.help_outline),
+              title: const Text('Questions fréquentes (FAQ)'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/faq'),
+            ),
             ListTile(
               key: const Key('tile_support'),
               contentPadding: EdgeInsets.zero,
@@ -82,9 +112,6 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: 32),
 
             const ProfileSessionSection(),
-            const SizedBox(height: 32),
-
-            const ProfileDeleteAccountSection(),
           ],
         ),
       ),
