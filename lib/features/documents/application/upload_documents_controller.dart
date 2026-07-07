@@ -79,15 +79,14 @@ class UploadDocumentsController extends StateNotifier<UploadDocumentsState> {
         initial.add(
           UploadFileStatus.error(
             filename: f.filename,
-            message: 'Le fichier dépasse 10 Mo.',
+            reason: UploadFileErrorReason.fileTooLarge,
           ),
         );
       } else if (!_isAllowedMime(f.filename, f.mimeType)) {
         initial.add(
           UploadFileStatus.error(
             filename: f.filename,
-            message:
-                'Format non supporté. Formats acceptés : PDF, JPG, PNG, WEBP.',
+            reason: UploadFileErrorReason.unsupportedFormat,
           ),
         );
       } else {
@@ -142,15 +141,15 @@ class UploadDocumentsController extends StateNotifier<UploadDocumentsState> {
         _log.warning('FirebaseException uploading ${f.filename}', e, st);
         current[i] = UploadFileStatus.error(
           filename: f.filename,
-          message: e.plugin == 'firebase_storage'
-              ? "Erreur lors de l'upload. Réessayez."
-              : 'Erreur. Vérifiez votre connexion et réessayez.',
+          reason: e.plugin == 'firebase_storage'
+              ? UploadFileErrorReason.storageError
+              : UploadFileErrorReason.connectionError,
         );
       } catch (e, st) {
         _log.severe('Erreur inattendue uploading ${f.filename}', e, st);
         current[i] = UploadFileStatus.error(
           filename: f.filename,
-          message: 'Erreur lors de l\'envoi. Réessayez.',
+          reason: UploadFileErrorReason.unexpected,
         );
       }
 

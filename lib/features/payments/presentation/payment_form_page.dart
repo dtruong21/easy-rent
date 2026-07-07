@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/utils/payment_form_validators.dart';
@@ -133,7 +134,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Vérifiez les montants saisis.'),
+          content: Text(context.l10n.paymentsFormInvalidAmountsSnackbar),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -146,7 +147,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
       _log.warning('currentUser null lors de submit — session expirée ?');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Session expirée. Veuillez vous reconnecter.'),
+          content: Text(context.l10n.paymentsFormSessionExpiredSnackbar),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -179,8 +180,8 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
       next.whenOrNull(
         success: (payment) {
           final msg = isCreating
-              ? 'Paiement enregistré'
-              : 'Modifications enregistrées';
+              ? context.l10n.paymentsFormCreatedSnackbar
+              : context.l10n.paymentsFormUpdatedSnackbar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -217,7 +218,9 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     if (asyncLease.isLoading) {
       return Scaffold(
         appBar: AppAppBar(
-          title: isCreating ? 'Nouveau paiement' : 'Modifier le paiement',
+          title: isCreating
+              ? context.l10n.paymentsFormNewTitle
+              : context.l10n.paymentsFormEditTitle,
           fallbackRoute: '/leases/${widget.leaseId}',
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -228,10 +231,14 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     if (lease == null) {
       return Scaffold(
         appBar: AppAppBar(
-          title: isCreating ? 'Nouveau paiement' : 'Modifier le paiement',
+          title: isCreating
+              ? context.l10n.paymentsFormNewTitle
+              : context.l10n.paymentsFormEditTitle,
           fallbackRoute: '/leases/${widget.leaseId}',
         ),
-        body: const Center(child: Text('Bail introuvable.')),
+        body: Center(
+          child: Text(context.l10n.paymentsFormLeaseNotFoundMessage),
+        ),
       );
     }
 
@@ -242,7 +249,9 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: isCreating ? 'Nouveau paiement' : 'Modifier le paiement',
+        title: isCreating
+            ? context.l10n.paymentsFormNewTitle
+            : context.l10n.paymentsFormEditTitle,
         fallbackRoute: '/leases/${widget.leaseId}',
       ),
       body: SingleChildScrollView(
@@ -288,7 +297,9 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Text(
-                      isCreating ? 'Enregistrer le paiement' : 'Enregistrer',
+                      isCreating
+                          ? context.l10n.paymentsFormCreateSubmitButton
+                          : context.l10n.commonSave,
                     ),
             ),
           ],
@@ -323,12 +334,12 @@ class PaymentEditPage extends ConsumerWidget {
     if (asyncPayment.hasError) {
       return Scaffold(
         appBar: AppAppBar(
-          title: 'Modifier le paiement',
+          title: context.l10n.paymentsFormEditTitle,
           fallbackRoute: '/leases/$leaseId',
         ),
         body: Center(
           child: Text(
-            'Paiement introuvable.',
+            context.l10n.paymentsEditNotFoundMessage,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),

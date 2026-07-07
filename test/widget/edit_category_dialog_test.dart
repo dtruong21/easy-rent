@@ -4,8 +4,10 @@
 /// retour via showDialog typé.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
 import 'package:easyrent/features/documents/presentation/widgets/edit_category_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +21,9 @@ Widget _buildDialog({
   void Function(DocumentCategory)? onSelect,
 }) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => TextButton(
@@ -43,6 +48,9 @@ Widget _buildDialogWithResult({
   required void Function(DocumentCategory?) onResult,
 }) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => TextButton(

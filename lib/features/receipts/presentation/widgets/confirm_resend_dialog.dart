@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 
 /// Dialog de confirmation de repartage d'une quittance déjà partagée.
@@ -28,6 +29,7 @@ class ConfirmResendDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateLabel = FrenchDate.format(previousSentAt);
+    final l10n = context.l10n;
 
     return AlertDialog(
       key: const Key('dialog_confirm_resend'),
@@ -38,18 +40,17 @@ class ConfirmResendDialog extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 8),
-          const Expanded(child: Text('Repartager cette quittance ?')),
+          Expanded(child: Text(l10n.receiptsResendDialogTitle)),
         ],
       ),
       content: Text(
-        'Vous l\'avez déjà partagée le $dateLabel à $previousMaskedEmail.\n\n'
-        'Souhaitez-vous la partager à nouveau ?',
+        l10n.receiptsResendDialogContent(dateLabel, previousMaskedEmail),
       ),
       actions: [
         TextButton(
           key: const Key('btn_resend_cancel'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           key: const Key('btn_resend_confirm'),
@@ -57,7 +58,7 @@ class ConfirmResendDialog extends StatelessWidget {
             Navigator.of(context).pop();
             onConfirm();
           },
-          child: const Text('Repartager'),
+          child: Text(l10n.receiptsResendConfirmButton),
         ),
       ],
     );

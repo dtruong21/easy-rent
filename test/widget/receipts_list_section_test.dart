@@ -8,6 +8,7 @@
 library;
 
 import 'dart:typed_data';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
@@ -15,6 +16,7 @@ import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
 import 'package:easyrent/features/receipts/presentation/receipts_list_section.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -115,7 +117,13 @@ Widget _buildSection(List<Receipt> receipts) {
     overrides: [
       receiptsRepositoryProvider.overrideWithValue(_FakeReceiptsRepo(receipts)),
     ],
-    child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+    child: MaterialApp.router(
+      routerConfig: router,
+      theme: _appTheme(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 

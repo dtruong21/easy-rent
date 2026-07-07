@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../../../core/ui/theme/app_colors.dart';
@@ -187,10 +188,10 @@ class _ReceiptTimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pillData = receiptStatusPill(receipt);
+    final pillData = receiptStatusPill(context, receipt);
     final markerColor = _toneColor(context, pillData.tone);
     final periodLabel = receiptPeriodMonthYear(receipt);
-    final secondary = receiptSecondaryLine(receipt);
+    final secondary = receiptSecondaryLine(context, receipt);
 
     return IntrinsicHeight(
       child: Row(
@@ -360,7 +361,9 @@ class _TimelineItemContent extends StatelessWidget {
           if (receipt.isVoided && receipt.voidedReason != null) ...[
             const SizedBox(height: 2),
             Text(
-              'Motif : ${receipt.voidedReason}',
+              context.l10n.receiptsTimelineVoidReasonPrefix(
+                receipt.voidedReason!,
+              ),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.error,
               ),

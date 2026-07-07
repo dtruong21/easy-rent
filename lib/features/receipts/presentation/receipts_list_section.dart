@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../application/lease_receipts_provider.dart';
 import '../domain/receipt.dart';
 import 'widgets/receipts_timeline_view.dart';
@@ -44,6 +45,7 @@ class ReceiptsListSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncReceipts = ref.watch(leaseReceiptsProvider(leaseId));
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -51,14 +53,14 @@ class ReceiptsListSection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Quittances émises', style: theme.textTheme.titleMedium),
+            Text(l10n.receiptsSectionTitle, style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             asyncReceipts.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) {
                 _log.warning('Erreur chargement quittances', e);
                 return Text(
-                  'Erreur lors du chargement des quittances.',
+                  l10n.receiptsSectionErrorMessage,
                   style: TextStyle(color: theme.colorScheme.error),
                 );
               },
@@ -126,7 +128,7 @@ class _ReceiptsList extends StatelessWidget {
             key: const Key('btn_see_all_receipts'),
             onPressed: () => context.go('/leases/$leaseId/receipts'),
             icon: const Icon(Icons.list_alt_outlined, size: 18),
-            label: const Text('Voir toutes les quittances'),
+            label: Text(context.l10n.receiptsSectionSeeAllButton),
           ),
         ),
       ],
@@ -143,7 +145,7 @@ class _EmptyReceiptsHint extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
-        'Aucune quittance générée.',
+        context.l10n.receiptsSectionEmptyHint,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           fontStyle: FontStyle.italic,

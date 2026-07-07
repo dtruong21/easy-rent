@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Validation côté client du motif d'annulation.
 ///
 /// Miroir de la contrainte DB :
@@ -45,6 +47,7 @@ class _VoidReceiptDialogState extends State<VoidReceiptDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AlertDialog(
       key: const Key('dialog_void_receipt'),
@@ -52,7 +55,7 @@ class _VoidReceiptDialogState extends State<VoidReceiptDialog> {
         children: [
           Icon(Icons.cancel_outlined, color: theme.colorScheme.error),
           const SizedBox(width: 8),
-          const Text('Annuler cette quittance ?'),
+          Text(l10n.receiptsVoidDialogTitle),
         ],
       ),
       content: Form(
@@ -62,8 +65,7 @@ class _VoidReceiptDialogState extends State<VoidReceiptDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cette action est irréversible. La quittance sera marquée '
-              '"Annulée" mais restera visible dans la liste pour traçabilité.',
+              l10n.receiptsVoidDialogContent,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -73,19 +75,19 @@ class _VoidReceiptDialogState extends State<VoidReceiptDialog> {
               maxLines: 3,
               maxLength: _kMaxReasonLength,
               enabled: !widget.isSubmitting,
-              decoration: const InputDecoration(
-                labelText: 'Motif de l\'annulation *',
-                hintText: 'Ex. : Erreur de montant, doublon, etc.',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.receiptsVoidReasonLabel,
+                hintText: l10n.receiptsVoidReasonHint,
+                border: const OutlineInputBorder(),
                 alignLabelWithHint: true,
               ),
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.length < _kMinReasonLength) {
-                  return 'Le motif doit contenir au moins $_kMinReasonLength caractères.';
+                  return l10n.receiptsVoidReasonTooShort(_kMinReasonLength);
                 }
                 if (trimmed.length > _kMaxReasonLength) {
-                  return 'Le motif ne peut pas dépasser $_kMaxReasonLength caractères.';
+                  return l10n.receiptsVoidReasonTooLong(_kMaxReasonLength);
                 }
                 return null;
               },
@@ -99,7 +101,7 @@ class _VoidReceiptDialogState extends State<VoidReceiptDialog> {
           onPressed: widget.isSubmitting
               ? null
               : () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           key: const Key('btn_void_confirm'),
@@ -114,7 +116,7 @@ class _VoidReceiptDialogState extends State<VoidReceiptDialog> {
                   width: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text("Confirmer l'annulation"),
+              : Text(l10n.receiptsVoidConfirmButton),
         ),
       ],
     );

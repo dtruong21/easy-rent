@@ -13,6 +13,22 @@ final _log = Logger('UpdateDocumentCategoryController');
 // État sealed
 // ---------------------------------------------------------------------------
 
+/// Motif d'échec de la mise à jour de catégorie — indépendant de la locale
+/// d'affichage (FEAT-043).
+///
+/// [UpdateDocumentCategoryController] (sans `BuildContext`) reste une
+/// fonction pure : il détermine le motif mais ne compose aucun message
+/// traduit. La couche présentation ([DocumentListTile]) mappe cet enum vers
+/// `context.l10n.<clé>` via l'extension `UpdateCategoryErrorReasonL10n` (voir
+/// `lib/features/documents/presentation/update_category_error_reason_l10n.dart`).
+enum UpdateCategoryErrorReason {
+  /// Erreur réseau/backend (`FirebaseException`) lors de la mise à jour.
+  connectionError,
+
+  /// Erreur inattendue non catégorisée.
+  unexpected,
+}
+
 /// État du flow de mise à jour de catégorie d'un document.
 sealed class UpdateCategoryState {
   const UpdateCategoryState();
@@ -36,8 +52,8 @@ final class UpdateCategorySuccess extends UpdateCategoryState {
 
 /// Erreur lors de la mise à jour.
 final class UpdateCategoryError extends UpdateCategoryState {
-  const UpdateCategoryError({required this.message});
-  final String message;
+  const UpdateCategoryError({required this.reason});
+  final UpdateCategoryErrorReason reason;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,13 +91,13 @@ class UpdateDocumentCategoryController
       state = UpdateCategorySuccess(document: doc);
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException lors de updateCategory', e, st);
-      state = UpdateCategoryError(
-        message: "Erreur. Vérifiez votre connexion et réessayez.",
+      state = const UpdateCategoryError(
+        reason: UpdateCategoryErrorReason.connectionError,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de updateCategory', e, st);
       state = const UpdateCategoryError(
-        message: 'Modification impossible. Réessayez.',
+        reason: UpdateCategoryErrorReason.unexpected,
       );
     }
   }

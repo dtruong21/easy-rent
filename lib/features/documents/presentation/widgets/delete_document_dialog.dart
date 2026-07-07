@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../domain/document.dart';
 
 /// Dialog de confirmation de suppression d'un document.
@@ -22,6 +23,7 @@ class DeleteDocumentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     if (document.legalHold) {
       return AlertDialog(
@@ -34,20 +36,15 @@ class DeleteDocumentDialog extends StatelessWidget {
               color: theme.colorScheme.tertiary,
             ),
             const SizedBox(width: 8),
-            const Expanded(
-              child: Text('Document conservé (obligation légale)'),
-            ),
+            Expanded(child: Text(l10n.documentsDeleteLegalHoldDialogTitle)),
           ],
         ),
-        content: const Text(
-          'Ce document sera masqué de votre liste mais conservé en archive '
-          '(loi du 6 juillet 1989 art. 21 / RGPD — durée de conservation 5 ans).',
-        ),
+        content: Text(l10n.documentsDeleteLegalHoldDialogContent),
         actions: [
           TextButton(
             key: const Key('btn_cancel_delete'),
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             key: const Key('btn_confirm_delete'),
@@ -55,7 +52,7 @@ class DeleteDocumentDialog extends StatelessWidget {
               Navigator.of(context).pop();
               onConfirm();
             },
-            child: const Text('Masquer'),
+            child: Text(l10n.documentsDeleteHideButton),
           ),
         ],
       );
@@ -63,16 +60,13 @@ class DeleteDocumentDialog extends StatelessWidget {
 
     return AlertDialog(
       key: const Key('delete_doc_dialog'),
-      title: const Text('Supprimer ce document ?'),
-      content: Text(
-        'Le fichier "${document.filename}" sera définitivement supprimé. '
-        'Cette action est irréversible.',
-      ),
+      title: Text(l10n.documentsDeleteDialogTitle),
+      content: Text(l10n.documentsDeleteDialogContent(document.filename)),
       actions: [
         TextButton(
           key: const Key('btn_cancel_delete'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           key: const Key('btn_confirm_delete'),
@@ -83,7 +77,7 @@ class DeleteDocumentDialog extends StatelessWidget {
             Navigator.of(context).pop();
             onConfirm();
           },
-          child: const Text('Supprimer'),
+          child: Text(l10n.commonDelete),
         ),
       ],
     );

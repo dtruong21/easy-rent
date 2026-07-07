@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Type de warning pour le montant du paiement.
 enum PaymentAmountWarningType {
   /// Montant inférieur au loyer du bail.
@@ -11,10 +13,10 @@ enum PaymentAmountWarningType {
 
 /// Banner non bloquante affichée quand le montant saisi diffère du bail.
 ///
-/// - Montant inférieur : "Montant inférieur au bail — un reçu sera émis (pas
-///   une quittance libératoire)."
-/// - Montant supérieur : "Montant supérieur au bail — vérifiez s'il s'agit
-///   d'une régularisation."
+/// - Montant inférieur : `context.l10n.paymentsAmountWarningBelowMessage`
+///   (reçu émis, pas une quittance libératoire).
+/// - Montant supérieur : `context.l10n.paymentsAmountWarningAboveMessage`
+///   (à vérifier — possible régularisation).
 ///
 /// Non bloquante : la soumission reste possible.
 class PaymentAmountWarning extends StatelessWidget {
@@ -28,12 +30,12 @@ class PaymentAmountWarning extends StatelessWidget {
     final (icon, message, color) = switch (type) {
       PaymentAmountWarningType.below => (
         Icons.info_outline,
-        "Montant inférieur au bail — un reçu sera émis (pas une quittance libératoire).",
+        context.l10n.paymentsAmountWarningBelowMessage,
         theme.colorScheme.tertiary,
       ),
       PaymentAmountWarningType.above => (
         Icons.warning_amber_outlined,
-        "Montant supérieur au bail — vérifiez s'il s'agit d'une régularisation.",
+        context.l10n.paymentsAmountWarningAboveMessage,
         theme.colorScheme.error,
       ),
     };

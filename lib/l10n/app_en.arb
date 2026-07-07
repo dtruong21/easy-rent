@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "@@last_modified": "2026-07-06",
+  "@@last_modified": "2026-07-07",
 
   "appTitle": "Baillan.",
   "@appTitle": {
@@ -2508,5 +2508,848 @@
   "profilePasswordUpdatedSnackbar": "Password updated",
   "@profilePasswordUpdatedSnackbar": {
     "description": "SnackBar confirmation shown after successfully changing the password."
+  },
+
+  "receiptsListPageTitle": "Receipts",
+  "@receiptsListPageTitle": {
+    "description": "AppBar title of the lease receipts list page (route /leases/:id/receipts)."
+  },
+  "receiptsEmptyStateTitle": "No receipt generated yet",
+  "@receiptsEmptyStateTitle": {
+    "description": "CardEmptyState title on the lease receipts list page when the lease has no receipt at all."
+  },
+  "receiptsEmptyStateMessage": "Receipts appear here as soon as a payment is recorded and a receipt is generated from the Payments page.",
+  "@receiptsEmptyStateMessage": {
+    "description": "CardEmptyState supporting message on the lease receipts list page (same empty state as receiptsEmptyStateTitle)."
+  },
+  "receiptsEmptyStateGoPaymentsButton": "View payments",
+  "@receiptsEmptyStateGoPaymentsButton": {
+    "description": "CardEmptyState action button on the lease receipts list page, navigating to the new-payment form for this lease."
+  },
+  "receiptsListErrorTitle": "Unable to load receipts.",
+  "@receiptsListErrorTitle": {
+    "description": "Title of the full-page error view on the lease receipts list page when loading fails; the retry button below reuses commonRetry."
+  },
+  "receiptsSectionTitle": "Receipts issued",
+  "@receiptsSectionTitle": {
+    "description": "Card section header of ReceiptsListSection, embedded in the lease detail page (shows a 3-item preview of receipts)."
+  },
+  "receiptsSectionErrorMessage": "Error loading receipts.",
+  "@receiptsSectionErrorMessage": {
+    "description": "Inline error text shown inside ReceiptsListSection (lease detail page) when the receipts stream fails."
+  },
+  "receiptsSectionEmptyHint": "No receipt generated yet.",
+  "@receiptsSectionEmptyHint": {
+    "description": "Small italic hint shown inside ReceiptsListSection (lease detail page) when the lease has no receipt yet; distinct from receiptsEmptyStateTitle, which is the full CardEmptyState on the dedicated /leases/:id/receipts list page."
+  },
+  "receiptsSectionSeeAllButton": "View all receipts",
+  "@receiptsSectionSeeAllButton": {
+    "description": "Link button under the receipts preview in ReceiptsListSection (lease detail page), navigating to the full receipts list page."
+  },
+  "receiptsBannerPropertyLoadingPlaceholder": "Loading property...",
+  "@receiptsBannerPropertyLoadingPlaceholder": {
+    "description": "Placeholder shown in the lease-context banner (top of the receipts list page) in place of the property name while it has not resolved yet."
+  },
+  "receiptsBannerPeriod": "Lease {start} → {end}",
+  "@receiptsBannerPeriod": {
+    "description": "Lease period line in the receipts context banner, for a lease with a known end date; {start}/{end} are already formatted dates (e.g. '15 janv. 2024').",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsBannerPeriodOpenEnded": "Lease {start} → open-ended",
+  "@receiptsBannerPeriodOpenEnded": {
+    "description": "Same line as receiptsBannerPeriod for an open-ended lease (no end date); mirrors the 'CDI'/'open-ended' convention already used by the leases module (leasesCardPeriodOpenEnded).",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsBannerRentCcPerMonth": "{amount} incl. charges/month",
+  "@receiptsBannerRentCcPerMonth": {
+    "description": "Rent line in the receipts context banner (rent + charges, per month); {amount} is already formatted in euros. 'CC' = 'charges comprises' (rent including charges).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsBannerGeneratedCount": "{count} {count, plural, one{receipt generated} other{receipts generated}}",
+  "@receiptsBannerGeneratedCount": {
+    "description": "First half of the counters line in the receipts context banner (total receipts generated for this lease); concatenated in code with receiptsBannerSentCount via a literal ' · ' separator.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsBannerSentCount": "{count} {count, plural, one{sent} other{sent}}",
+  "@receiptsBannerSentCount": {
+    "description": "Second half of the counters line in the receipts context banner (receipts already shared with the tenant); intentionally terse, the noun is omitted (mirrors the source French wording).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsFilterAll": "All",
+  "@receiptsFilterAll": {
+    "description": "Receipt status filter option (SegmentedButton/Dropdown) on the receipts list page: no filter."
+  },
+  "receiptsFilterSent": "Sent",
+  "@receiptsFilterSent": {
+    "description": "Receipt status filter option: shared receipts only."
+  },
+  "receiptsFilterPaid": "Paid",
+  "@receiptsFilterPaid": {
+    "description": "Receipt status filter option: paid receipts only."
+  },
+  "receiptsFilterVoided": "Voided",
+  "@receiptsFilterVoided": {
+    "description": "Receipt status filter option: voided receipts only."
+  },
+  "receiptsFilterAllYears": "All years",
+  "@receiptsFilterAllYears": {
+    "description": "Year filter dropdown hint text and 'no filter' item label on the receipts list page."
+  },
+  "receiptsViewModeTimeline": "Timeline",
+  "@receiptsViewModeTimeline": {
+    "description": "View-mode toggle segment label on the receipts list page: vertical timeline view (default). Identical in both locales, matching the existing source copy (English loanword already used in the French UI)."
+  },
+  "receiptsViewModeCards": "Cards",
+  "@receiptsViewModeCards": {
+    "description": "View-mode toggle segment label on the receipts list page: card grid view. Identical in both locales, matching the existing source copy."
+  },
+  "receiptsStatusVoided": "Voided",
+  "@receiptsStatusVoided": {
+    "description": "Singular status pill label for a voided receipt (receiptStatusPill mapper)."
+  },
+  "receiptsStatusStale": "Outdated",
+  "@receiptsStatusStale": {
+    "description": "Singular status pill label for a stale/superseded receipt (Receipt.isStale — a later correction makes this receipt no longer authoritative)."
+  },
+  "receiptsStatusSent": "Sent",
+  "@receiptsStatusSent": {
+    "description": "Singular status pill label for a receipt already shared with the tenant."
+  },
+  "receiptsStatusPaid": "Paid",
+  "@receiptsStatusPaid": {
+    "description": "Singular status pill label for a receipt covering at least one paid payment."
+  },
+  "receiptsStatusIssued": "Issued",
+  "@receiptsStatusIssued": {
+    "description": "Singular status pill label for a receipt with no other more specific status (default case)."
+  },
+  "receiptsSecondaryVoidedOn": "Voided on {date}",
+  "@receiptsSecondaryVoidedOn": {
+    "description": "Secondary info line on a receipt card/timeline item, voided case; {date} is already formatted as DD/MM.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsSecondaryPaidAndSharedOn": "Paid on {paidDate} · Shared on {sharedDate} to {maskedEmail}",
+  "@receiptsSecondaryPaidAndSharedOn": {
+    "description": "Secondary info line on a receipt card/timeline item, paid-and-shared case; {paidDate}/{sharedDate} already formatted as DD/MM, {maskedEmail} already masked for RGPD (e.g. 'j***@example.com').",
+    "placeholders": {
+      "paidDate": {
+        "type": "String"
+      },
+      "sharedDate": {
+        "type": "String"
+      },
+      "maskedEmail": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsSecondaryPaidOn": "Paid on {date}",
+  "@receiptsSecondaryPaidOn": {
+    "description": "Secondary info line on a receipt card/timeline item, paid-but-not-yet-shared case.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsSecondaryIssuedOn": "Issued on {date}",
+  "@receiptsSecondaryIssuedOn": {
+    "description": "Secondary info line on a receipt card/timeline item, default case (neither paid nor voided).",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsCardSemanticLabel": "Receipt {periodLabel} — {amount}",
+  "@receiptsCardSemanticLabel": {
+    "description": "Accessibility semantic label of a receipt card (screen readers); {periodLabel} is e.g. 'Mars 2026', {amount} is already formatted in euros.",
+    "placeholders": {
+      "periodLabel": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsCardStaleWarning": "Outdated receipt",
+  "@receiptsCardStaleWarning": {
+    "description": "Warning row shown on a receipt card body when the receipt is stale (superseded by a later correction)."
+  },
+  "receiptsCardAmountCc": "{amount} incl. charges",
+  "@receiptsCardAmountCc": {
+    "description": "Amount row on a receipt card body; {amount} is already formatted in euros. 'CC' = 'charges comprises' (rent including charges), mirrors the leasesTableRentCc convention.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsTimelineVoidReasonPrefix": "Reason: {reason}",
+  "@receiptsTimelineVoidReasonPrefix": {
+    "description": "Third line of a timeline item, shown when the receipt was voided with a reason; {reason} is free text entered by the landlord (not translated).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsOpenPdfLabel": "Open PDF",
+  "@receiptsOpenPdfLabel": {
+    "description": "Tooltip/button label to open a receipt's PDF (desktop actions row icon button, and the receipt-generated preview dialog's action button)."
+  },
+  "receiptsOpenPdfMenuItem": "Open PDF",
+  "@receiptsOpenPdfMenuItem": {
+    "description": "Popup menu item label (mobile actions menu) to open a receipt's PDF; kept as a distinct key from receiptsOpenPdfLabel because the source French wording differs slightly ('Ouvrir PDF' vs 'Ouvrir le PDF')."
+  },
+  "receiptsOpenPdfButtonShort": "PDF",
+  "@receiptsOpenPdfButtonShort": {
+    "description": "Short button label (receipt card footer, OutlinedButton.icon) to open the PDF; identical text in both locales."
+  },
+  "receiptsShareMenuItem": "Share",
+  "@receiptsShareMenuItem": {
+    "description": "Popup menu item label (mobile actions menu) to share a receipt."
+  },
+  "receiptsVoidTooltip": "Void this receipt",
+  "@receiptsVoidTooltip": {
+    "description": "Tooltip on the icon button voiding a receipt (desktop actions row and receipt card footer)."
+  },
+  "receiptsVoidMenuItem": "Void",
+  "@receiptsVoidMenuItem": {
+    "description": "Popup menu item label (mobile actions menu) to void a receipt; kept distinct from commonCancel (a dismiss action) because this means 'void/invalidate the receipt', a destructive domain action."
+  },
+  "receiptsActionsMenuTooltip": "Actions",
+  "@receiptsActionsMenuTooltip": {
+    "description": "Tooltip of the overflow (three-dot) popup menu button on a receipt row (mobile actions menu)."
+  },
+  "receiptsVoidSuccessSnackbar": "Receipt voided",
+  "@receiptsVoidSuccessSnackbar": {
+    "description": "SnackBar confirmation shown after successfully voiding a receipt (desktop actions row, mobile actions menu, and receipt card)."
+  },
+  "receiptsErrorOpenPdfBrowser": "Unable to open the PDF. Please check your browser.",
+  "@receiptsErrorOpenPdfBrowser": {
+    "description": "SnackBar shown when launchUrl fails to open a receipt's PDF in a new tab (several call sites: actions menu, receipt card, preview dialog)."
+  },
+  "receiptsErrorGeneratePdfLink": "Unable to generate the download link.",
+  "@receiptsErrorGeneratePdfLink": {
+    "description": "SnackBar shown when building the signed/data PDF URL throws an exception (actions menu, receipt card)."
+  },
+  "receiptsGenerateButtonTooltip": "Generate a receipt",
+  "@receiptsGenerateButtonTooltip": {
+    "description": "Tooltip of the icon button triggering receipt generation from a payment (GenerateReceiptButton)."
+  },
+  "receiptsProfileIncompleteTitle": "Incomplete profile",
+  "@receiptsProfileIncompleteTitle": {
+    "description": "Title of the dialog shown when the backend rejects receipt generation because the landlord profile is missing required fields."
+  },
+  "receiptsProfileIncompleteMessage": "To generate a receipt, you must first complete your landlord profile (name and address are required under the French law of 6 July 1989).",
+  "@receiptsProfileIncompleteMessage": {
+    "description": "Explanatory body text of the profile-incomplete dialog. This is UI chrome referencing a legal requirement, not the legal document content itself (which stays out of scope)."
+  },
+  "receiptsProfileIncompleteFieldsHeader": "Missing fields:",
+  "@receiptsProfileIncompleteFieldsHeader": {
+    "description": "Header above the bullet list of missing profile fields in the profile-incomplete dialog."
+  },
+  "receiptsProfileIncompleteFieldFullName": "Full name",
+  "@receiptsProfileIncompleteFieldFullName": {
+    "description": "Missing-field label mapped from the backend field code 'full_name' in the profile-incomplete dialog."
+  },
+  "receiptsProfileIncompleteFieldAddress": "Postal address",
+  "@receiptsProfileIncompleteFieldAddress": {
+    "description": "Missing-field label mapped from the backend field code 'address' in the profile-incomplete dialog."
+  },
+  "receiptsProfileIncompleteFieldPhone": "Phone",
+  "@receiptsProfileIncompleteFieldPhone": {
+    "description": "Missing-field label mapped from the backend field code 'phone' in the profile-incomplete dialog."
+  },
+  "receiptsProfileIncompleteLaterButton": "Later",
+  "@receiptsProfileIncompleteLaterButton": {
+    "description": "Dismiss button of the profile-incomplete dialog (closes without navigating)."
+  },
+  "receiptsProfileIncompleteGoButton": "Complete my profile",
+  "@receiptsProfileIncompleteGoButton": {
+    "description": "Action button of the profile-incomplete dialog, navigating to /profile."
+  },
+  "receiptsPreviewTitleQuittance": "Rent receipt generated",
+  "@receiptsPreviewTitleQuittance": {
+    "description": "Title of the post-generation preview dialog (ReceiptPreviewDialog) when the generated document is a full 'quittance'."
+  },
+  "receiptsPreviewTitleRecu": "Payment receipt generated",
+  "@receiptsPreviewTitleRecu": {
+    "description": "Title of the post-generation preview dialog when the generated document is a partial 'reçu' (does not discharge the tenant)."
+  },
+  "receiptsPreviewTypeLabel": "Type:",
+  "@receiptsPreviewTypeLabel": {
+    "description": "Row label in the receipt preview dialog. Includes the trailing colon with its locale-specific spacing (French uses a space before ':', English does not) since the display widget now renders the label as-is without concatenating a separator."
+  },
+  "receiptsPreviewPeriodLabel": "Period:",
+  "@receiptsPreviewPeriodLabel": {
+    "description": "Row label in the receipt preview dialog (see receiptsPreviewTypeLabel for the colon convention)."
+  },
+  "receiptsPreviewTotalLabel": "Total:",
+  "@receiptsPreviewTotalLabel": {
+    "description": "Row label in the receipt preview dialog (see receiptsPreviewTypeLabel for the colon convention)."
+  },
+  "receiptsPreviewRecuDisclaimer": "This receipt does not discharge the tenant from the balance due for this period.",
+  "@receiptsPreviewRecuDisclaimer": {
+    "description": "Info banner shown only when the generated document is a 'reçu' (not a full 'quittance'). This is UI chrome around the legal document, not the legal PDF content itself (out of scope)."
+  },
+  "receiptsDocumentTypeQuittance": "Rent receipt",
+  "@receiptsDocumentTypeQuittance": {
+    "description": "Localized label for DocumentType.quittance — a full-discharge receipt (loi du 6 juillet 1989, art. 21): confirms the tenant owes nothing more for the period. The domain enum keeps a hardcoded 'label' getter for test compatibility; this key powers the new DocumentTypeL10n.localizedLabel(context) extension used by widgets."
+  },
+  "receiptsDocumentTypeRecu": "Payment receipt",
+  "@receiptsDocumentTypeRecu": {
+    "description": "Localized label for DocumentType.recu — a partial/non-discharging receipt (does not release the tenant from the remaining balance for the period)."
+  },
+  "receiptsVoidDialogTitle": "Void this receipt?",
+  "@receiptsVoidDialogTitle": {
+    "description": "Title of the void confirmation dialog (VoidReceiptDialog)."
+  },
+  "receiptsVoidDialogContent": "This action cannot be undone. The receipt will be marked \"Voided\" but will remain visible in the list for traceability.",
+  "@receiptsVoidDialogContent": {
+    "description": "Warning body text of the void confirmation dialog."
+  },
+  "receiptsVoidReasonLabel": "Reason for voiding *",
+  "@receiptsVoidReasonLabel": {
+    "description": "Label of the required reason text field in the void confirmation dialog."
+  },
+  "receiptsVoidReasonHint": "E.g.: Amount error, duplicate, etc.",
+  "@receiptsVoidReasonHint": {
+    "description": "Hint text of the reason text field in the void confirmation dialog."
+  },
+  "receiptsVoidReasonTooShort": "The reason must be at least {min} characters long.",
+  "@receiptsVoidReasonTooShort": {
+    "description": "Client-side validation error when the void reason is too short; {min} is always the hardcoded constant 3 (never 0 or 1), so no ICU plural handling is needed.",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsVoidReasonTooLong": "The reason cannot exceed {max} characters.",
+  "@receiptsVoidReasonTooLong": {
+    "description": "Client-side validation error when the void reason is too long; {max} is always the hardcoded constant 500.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsVoidConfirmButton": "Confirm voiding",
+  "@receiptsVoidConfirmButton": {
+    "description": "Confirm (destructive) button of the void confirmation dialog."
+  },
+  "receiptsResendDialogTitle": "Share this receipt again?",
+  "@receiptsResendDialogTitle": {
+    "description": "Title of the resend confirmation dialog (ConfirmResendDialog), shown when a receipt was already shared."
+  },
+  "receiptsResendDialogContent": "You already shared it on {date} with {maskedEmail}.\n\nDo you want to share it again?",
+  "@receiptsResendDialogContent": {
+    "description": "Body text of the resend confirmation dialog; {date} already formatted, {maskedEmail} already masked for RGPD.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "maskedEmail": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsResendConfirmButton": "Share again",
+  "@receiptsResendConfirmButton": {
+    "description": "Confirm button of the resend confirmation dialog."
+  },
+  "receiptsShareTooltipInvalid": "Invalid receipt — sharing unavailable",
+  "@receiptsShareTooltipInvalid": {
+    "description": "Tooltip on the disabled share button when the receipt is voided or stale."
+  },
+  "receiptsShareTooltipNoEmail": "Tenant has no email — sharing unavailable",
+  "@receiptsShareTooltipNoEmail": {
+    "description": "Tooltip on the disabled share button when the tenant has no email address."
+  },
+  "receiptsShareTooltipShare": "Share by email",
+  "@receiptsShareTooltipShare": {
+    "description": "Tooltip on the share button when the receipt has never been shared yet."
+  },
+  "receiptsShareTooltipResend": "Share again (already shared on {date})",
+  "@receiptsShareTooltipResend": {
+    "description": "Tooltip on the share button when the receipt was already shared; {date} is already formatted (empty string in the defensive fallback case where the underlying date would unexpectedly be null).",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "receiptsShareSuccessNative": "Receipt shared. The tenant's address has been copied to the clipboard.",
+  "@receiptsShareSuccessNative": {
+    "description": "SnackBar shown after a successful share via the native Web Share API."
+  },
+  "receiptsShareSuccessFallback": "PDF downloaded. Remember to attach it manually to your email.",
+  "@receiptsShareSuccessFallback": {
+    "description": "SnackBar shown after a successful share via the fallback path (PDF download + prefilled mailto:)."
+  },
+  "receiptsErrorPermissionDenied": "Action not authorized.",
+  "@receiptsErrorPermissionDenied": {
+    "description": "ReceiptActionError.permissionDenied — backend returned permission-denied/unauthenticated (generation or void flow)."
+  },
+  "receiptsErrorNoPaymentForPeriod": "No payment found for this period, or invalid lease.",
+  "@receiptsErrorNoPaymentForPeriod": {
+    "description": "ReceiptActionError.noPaymentForPeriod — generation flow, backend returned failed-precondition."
+  },
+  "receiptsErrorLeaseOrPaymentsNotFound": "Lease or payments not found.",
+  "@receiptsErrorLeaseOrPaymentsNotFound": {
+    "description": "ReceiptActionError.leaseOrPaymentsNotFound — generation flow, backend returned not-found."
+  },
+  "receiptsErrorGenerationFailed": "Error generating the PDF. Please try again.",
+  "@receiptsErrorGenerationFailed": {
+    "description": "ReceiptActionError.generationFailed — generation flow, generic/unmapped backend error code or a ReceiptGenerationException."
+  },
+  "receiptsErrorReceiptNotFound": "Receipt not found.",
+  "@receiptsErrorReceiptNotFound": {
+    "description": "ReceiptActionError.receiptNotFound — void flow, backend returned not-found."
+  },
+  "receiptsErrorAlreadyVoidedOrInvalid": "This receipt is already voided or cannot be voided.",
+  "@receiptsErrorAlreadyVoidedOrInvalid": {
+    "description": "ReceiptActionError.alreadyVoidedOrInvalid — void flow, backend returned failed-precondition."
+  },
+  "receiptsErrorVoidFailed": "Error while voiding the receipt. Please try again.",
+  "@receiptsErrorVoidFailed": {
+    "description": "ReceiptActionError.voidFailed — void flow, generic/unmapped backend error code."
+  },
+  "receiptsErrorShareFailed": "Sharing failed. Please try again.",
+  "@receiptsErrorShareFailed": {
+    "description": "ReceiptActionError.shareFailed — share flow, generic fallback. Deviation: previously the raw ShareReceiptException.message (sometimes an untranslated browser DOMException string) was shown verbatim in the SnackBar; it is now replaced by this friendly, localized message (the technical detail is still logged via Logger.warning)."
+  },
+  "receiptsErrorUnknown": "An error occurred. Please try again.",
+  "@receiptsErrorUnknown": {
+    "description": "ReceiptActionError.unknown — shared generic fallback across the generation, void and share flows (unexpected exception)."
+  },
+
+  "paymentsFormNewTitle": "New payment",
+  "@paymentsFormNewTitle": {
+    "description": "AppBar title of the payment form page in creation mode (loading state, lease-not-found state, and main form state all reuse it)."
+  },
+  "paymentsFormEditTitle": "Edit payment",
+  "@paymentsFormEditTitle": {
+    "description": "AppBar title of the payment form page in edit mode; also reused as the AppBar title of PaymentEditPage's not-found error state."
+  },
+  "paymentsFormLeaseNotFoundMessage": "Lease not found.",
+  "@paymentsFormLeaseNotFoundMessage": {
+    "description": "Body text shown on the payment form when its parent lease could not be loaded (leaseDetailProvider returned no value and none was passed to the constructor)."
+  },
+  "paymentsFormInvalidAmountsSnackbar": "Check the amounts entered.",
+  "@paymentsFormInvalidAmountsSnackbar": {
+    "description": "SnackBar shown when the rent/charges amounts typed by the user cannot be parsed even though field validation passed (defensive guard before submit)."
+  },
+  "paymentsFormSessionExpiredSnackbar": "Session expired. Please sign in again.",
+  "@paymentsFormSessionExpiredSnackbar": {
+    "description": "SnackBar shown when submitting the payment form fails because no authenticated user id (landlordId) is available."
+  },
+  "paymentsFormCreatedSnackbar": "Payment recorded",
+  "@paymentsFormCreatedSnackbar": {
+    "description": "SnackBar shown after successfully creating a payment."
+  },
+  "paymentsFormUpdatedSnackbar": "Changes saved",
+  "@paymentsFormUpdatedSnackbar": {
+    "description": "SnackBar shown after successfully saving changes to an existing payment."
+  },
+  "paymentsFormCreateSubmitButton": "Record payment",
+  "@paymentsFormCreateSubmitButton": {
+    "description": "Submit button label on the payment form in creation mode (edit mode reuses commonSave instead)."
+  },
+  "paymentsEditNotFoundMessage": "Payment not found.",
+  "@paymentsEditNotFoundMessage": {
+    "description": "Body text shown on the payment edit page (PaymentEditPage) when the payment itself could not be loaded (paymentDetailProvider error)."
+  },
+  "paymentsFormPeriodStartPickerHelp": "Period start",
+  "@paymentsFormPeriodStartPickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the payment's period start date."
+  },
+  "paymentsFormPeriodEndPickerHelp": "Period end",
+  "@paymentsFormPeriodEndPickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the payment's period end date."
+  },
+  "paymentsFormPaidAtPickerHelp": "Payment date",
+  "@paymentsFormPaidAtPickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the payment's paid-at (collection) date."
+  },
+  "paymentsFormRentLabel": "Rent excl. charges (€) *",
+  "@paymentsFormRentLabel": {
+    "description": "Label of the required rent amount (excluding charges) field in the payment form."
+  },
+  "paymentsFormRentHint": "E.g.: {amount}",
+  "@paymentsFormRentHint": {
+    "description": "Hint/example text of the rent amount field in the payment form; {amount} is the parent lease's rent already formatted as a plain decimal string (MoneyFormat.centsToInput, e.g. '850,00' — no € suffix, not yet locale-aware).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentsFormChargesLabel": "Charges (€) *",
+  "@paymentsFormChargesLabel": {
+    "description": "Label of the required charges amount field in the payment form (single lump sum for this payment record, not split between recoverable/non-recoverable like on the lease)."
+  },
+  "paymentsFormChargesHint": "E.g.: 50.00 (enter 0 if none)",
+  "@paymentsFormChargesHint": {
+    "description": "Hint/example text of the charges amount field in the payment form."
+  },
+  "paymentsFormPaymentMethodLabel": "Payment method *",
+  "@paymentsFormPaymentMethodLabel": {
+    "description": "Label of the required payment method dropdown field in the payment form."
+  },
+  "paymentsMethodTransfer": "Bank transfer",
+  "@paymentsMethodTransfer": {
+    "description": "PaymentMethod.virement label, shown in the payment method dropdown (payment form) and in the payment list tile subtitle."
+  },
+  "paymentsMethodCheck": "Check",
+  "@paymentsMethodCheck": {
+    "description": "PaymentMethod.cheque label, shown in the payment method dropdown (payment form) and in the payment list tile subtitle."
+  },
+  "paymentsMethodCash": "Cash",
+  "@paymentsMethodCash": {
+    "description": "PaymentMethod.especes label, shown in the payment method dropdown (payment form) and in the payment list tile subtitle."
+  },
+  "paymentsMethodDirectDebit": "Direct debit",
+  "@paymentsMethodDirectDebit": {
+    "description": "PaymentMethod.prelevement label, shown in the payment method dropdown (payment form) and in the payment list tile subtitle."
+  },
+  "paymentsMethodOther": "Other",
+  "@paymentsMethodOther": {
+    "description": "PaymentMethod.autre label (also the defensive fallback for an unknown stored value), shown in the payment method dropdown and payment list tile subtitle."
+  },
+  "paymentsFormReferenceLabel": "Reference (transfer/check no., optional)",
+  "@paymentsFormReferenceLabel": {
+    "description": "Label of the optional payment reference field in the payment form."
+  },
+  "paymentsFormReferenceHint": "E.g.: VIR-2024-001",
+  "@paymentsFormReferenceHint": {
+    "description": "Hint/example text of the payment reference field in the payment form."
+  },
+  "paymentsFormReferenceHelper": "For accounting reconciliation",
+  "@paymentsFormReferenceHelper": {
+    "description": "Helper text of the payment reference field, explaining its purpose."
+  },
+  "paymentsFormReferenceWhitespaceError": "The reference cannot be only spaces.",
+  "@paymentsFormReferenceWhitespaceError": {
+    "description": "Inline validation error shown under the reference field when it contains only whitespace characters."
+  },
+  "paymentsFormReferenceTooLongError": "The reference cannot exceed 100 characters.",
+  "@paymentsFormReferenceTooLongError": {
+    "description": "Inline validation error shown under the reference field when it exceeds 100 characters."
+  },
+  "paymentsFormPeriodStartLabel": "Period start *",
+  "@paymentsFormPeriodStartLabel": {
+    "description": "Label of the required period-start date field in the payment form."
+  },
+  "paymentsFormPeriodEndLabel": "Period end *",
+  "@paymentsFormPeriodEndLabel": {
+    "description": "Label of the required period-end date field in the payment form."
+  },
+  "paymentsFormPaidAtLabel": "Payment date *",
+  "@paymentsFormPaidAtLabel": {
+    "description": "Label of the required paid-at (collection date) field in the payment form."
+  },
+  "paymentsFormSelectDatePlaceholder": "Select a date",
+  "@paymentsFormSelectDatePlaceholder": {
+    "description": "Placeholder text shown in a payment form date field (period start, period end, or paid-at) before any date has been picked."
+  },
+  "paymentsFormNotesLabel": "Reason / notes (optional)",
+  "@paymentsFormNotesLabel": {
+    "description": "Label of the optional reason/notes field in the payment form."
+  },
+  "paymentsFormNotesHint": "E.g.: 2025 charge regularization, exceptional charge",
+  "@paymentsFormNotesHint": {
+    "description": "Hint/example text of the reason/notes field in the payment form."
+  },
+  "paymentsFormNotesHelper": "This reason appears on the receipt or rent receipt generated for this payment.",
+  "@paymentsFormNotesHelper": {
+    "description": "Helper text of the reason/notes field, describing (UI chrome only) that the text will later be printed on the generated PDF receipt/rent-receipt; does not translate or alter the legal PDF content itself (owned by the receipts module)."
+  },
+  "paymentsAmountWarningBelowMessage": "Amount below the lease amount — a receipt will be issued (not a legally discharging rent receipt).",
+  "@paymentsAmountWarningBelowMessage": {
+    "description": "Non-blocking warning banner shown when the entered amount (rent+charges) is below the lease's contractual total; explains that a plain 'reçu' (receipt) will be issued instead of a legally discharging 'quittance' (rent receipt under loi du 6 juillet 1989). Informational UI copy only — does not affect the actual PDF documents."
+  },
+  "paymentsAmountWarningAboveMessage": "Amount above the lease amount — check whether this is a regularization.",
+  "@paymentsAmountWarningAboveMessage": {
+    "description": "Non-blocking warning banner shown when the entered amount (rent+charges) is above the lease's contractual total; suggests checking whether this is a charge regularization payment."
+  },
+  "paymentsSectionTitle": "Payments",
+  "@paymentsSectionTitle": {
+    "description": "Section header of the payments list embedded in the lease detail page."
+  },
+  "paymentsAddDisabledTooltip": "This lease is closed.",
+  "@paymentsAddDisabledTooltip": {
+    "description": "Tooltip shown on the disabled 'add payment' button when the parent lease is closed (terminated/archived)."
+  },
+  "paymentsAddTooltip": "Add a payment",
+  "@paymentsAddTooltip": {
+    "description": "Tooltip shown on the 'add payment' button when the parent lease is active."
+  },
+  "paymentsAddButton": "Add",
+  "@paymentsAddButton": {
+    "description": "Label of the button (with a '+' icon) that navigates to the new-payment form, in the payments section of the lease detail page."
+  },
+  "paymentsListErrorLoading": "Error loading payments.",
+  "@paymentsListErrorLoading": {
+    "description": "Error message shown inside the payments section when the payments list fails to load."
+  },
+  "paymentsArchiveSuccessSnackbar": "Payment archived",
+  "@paymentsArchiveSuccessSnackbar": {
+    "description": "SnackBar shown after successfully archiving a payment."
+  },
+  "paymentsTotalCollectedLabel": "Total collected",
+  "@paymentsTotalCollectedLabel": {
+    "description": "Label of the total row at the bottom of the payments list (sum of rent+charges collected for this lease)."
+  },
+  "paymentsEmptyClosedMessage": "No payment recorded for this closed lease.",
+  "@paymentsEmptyClosedMessage": {
+    "description": "Empty-state message shown in the payments section when the lease is closed and has no recorded payment."
+  },
+  "paymentsEmptyMessage": "No payment recorded. Click \"Add\" to record the first payment.",
+  "@paymentsEmptyMessage": {
+    "description": "Empty-state message shown in the payments section when the lease is active and has no recorded payment yet; the quoted word references the paymentsAddButton label."
+  },
+  "paymentsListReferencePrefix": "Ref: {reference}",
+  "@paymentsListReferencePrefix": {
+    "description": "Payment list tile subtitle segment showing the payment's reference; {reference} is the raw text entered by the user (transfer/check number), only shown when non-empty.",
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentsArchiveTooltip": "Archive",
+  "@paymentsArchiveTooltip": {
+    "description": "Tooltip on the archive icon button of a payment list tile."
+  },
+  "paymentsArchiveDialogTitle": "Archive this payment?",
+  "@paymentsArchiveDialogTitle": {
+    "description": "Title of the archive confirmation dialog (shared ArchiveConfirmDialog) for a payment."
+  },
+  "paymentsArchiveDialogEntityLabel": "This payment",
+  "@paymentsArchiveDialogEntityLabel": {
+    "description": "Entity label injected into the shared ArchiveConfirmDialog copy for a payment."
+  },
+  "paymentsArchiveDialogMessage": "Do you want to archive this payment? It will no longer appear in the list.",
+  "@paymentsArchiveDialogMessage": {
+    "description": "Confirmation message shown in the archive dialog for a payment; passed as both standardMessage and activeLeaseMessage since a payment has no active-lease distinction (hasActiveLease is always false for payments)."
+  },
+
+  "documentsSectionTitle": "Documents",
+  "@documentsSectionTitle": {
+    "description": "Section header of the Documents card embedded in the lease detail page."
+  },
+  "documentsLoadErrorMessage": "Error loading documents.",
+  "@documentsLoadErrorMessage": {
+    "description": "Inline error text shown inside the Documents section when the lease's document list fails to load."
+  },
+  "documentsEmptyTitle": "Your documents will appear here",
+  "@documentsEmptyTitle": {
+    "description": "Empty-state title shown in a lease's document list when no document has been uploaded yet."
+  },
+  "documentsUploadPromptText": "Click to select your files",
+  "@documentsUploadPromptText": {
+    "description": "Prompt text inviting the landlord to pick files — shared verbatim between the upload drop zone and the second line of the documents empty-state."
+  },
+  "documentsUploadFormatsHint": "PDF, JPG, PNG, WEBP · Max 10 MB per file · Max 10 files",
+  "@documentsUploadFormatsHint": {
+    "description": "Hint line under the upload prompt in the drop zone, listing accepted formats and the size/count limits (mirrors the kMaxFileSizeBytes/kMaxFilesPerBatch constants as static text, not dynamically interpolated — same as the original French copy)."
+  },
+  "documentsUploadPickFilesButton": "Select files",
+  "@documentsUploadPickFilesButton": {
+    "description": "Button label in the upload drop zone that opens the native multi-file picker."
+  },
+  "documentsQuotaExceededWarning": "You have exceeded 100 MB of storage space. Consider deleting outdated documents.",
+  "@documentsQuotaExceededWarning": {
+    "description": "Warning shown when the landlord's total document storage exceeds the 100 MB soft limit (DocumentsQuota.isOverSoftLimit). Reused verbatim by the non-dismissable banner above the documents list and by the SnackBar shown when picking files while already over quota."
+  },
+  "documentsUploadMaxFilesError": "Maximum {count} files at a time. Please redo in several batches.",
+  "@documentsUploadMaxFilesError": {
+    "description": "SnackBar error shown when the landlord selects more files than the per-batch limit in one go; {count} is that limit (currently 10, kMaxFilesPerBatch).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsUploadSummarySuccess": "{count} {count, plural, one{document added} other{documents added}}",
+  "@documentsUploadSummarySuccess": {
+    "description": "Upload batch completion summary shown when every file succeeded; {count} is the number of documents successfully uploaded. Uses ICU plural (same pattern as leasesCardPeriodWithYears).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsUploadSummaryWithFailures": "{successCount} {successCount, plural, one{document added} other{documents added}} ({failureCount} {failureCount, plural, one{failure} other{failures}})",
+  "@documentsUploadSummaryWithFailures": {
+    "description": "Upload batch completion summary shown when at least one file failed; {successCount}/{failureCount} are the counts of succeeded/failed files in the batch. Uses ICU plural for both counts independently.",
+    "placeholders": {
+      "successCount": {
+        "type": "int"
+      },
+      "failureCount": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsUploadSummaryDismissButton": "OK",
+  "@documentsUploadSummaryDismissButton": {
+    "description": "Dismiss button on the upload batch completion summary row (resets the upload controller to idle)."
+  },
+  "documentsQuotaUsedLabel": "Storage used: {used} / {limit}",
+  "@documentsQuotaUsedLabel": {
+    "description": "Storage quota indicator shown below the upload drop zone; {used} and {limit} are already formatted byte-size strings (e.g. '5,0 Mo') produced by ByteFormat.format, which is currently hardcoded to French units/locale regardless of the active app locale (see notes).",
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsCategoryBailSigne": "Signed lease",
+  "@documentsCategoryBailSigne": {
+    "description": "DocumentCategory.bailSigne label — the signed lease document, always under legal hold."
+  },
+  "documentsCategoryEtatDesLieux": "Inventory report",
+  "@documentsCategoryEtatDesLieux": {
+    "description": "DocumentCategory.etatDesLieux label — a generic move-in OR move-out property inventory report file category, always under legal hold. Distinct from leasesDetailEntryInventoryLabel/leasesDetailEntryInventoryBadge, which refer to the lease's own 'move-in inventory completed' boolean flag, not to an uploaded file."
+  },
+  "documentsCategoryAttestationAssurance": "Insurance certificate",
+  "@documentsCategoryAttestationAssurance": {
+    "description": "DocumentCategory.attestationAssurance label — landlord or tenant insurance certificate."
+  },
+  "documentsCategoryQuittanceScannee": "Scanned receipt",
+  "@documentsCategoryQuittanceScannee": {
+    "description": "DocumentCategory.quittanceScannee label — a scanned paper rent receipt uploaded by the landlord, as opposed to a receipt generated in-app."
+  },
+  "documentsCategoryExpenseReceipt": "Expense receipt",
+  "@documentsCategoryExpenseReceipt": {
+    "description": "DocumentCategory.expenseReceipt label (FEAT-041b) — proof of an expense (invoice, condo statement) linked to a property/lease expense; distinct from a rent receipt. Always under legal hold."
+  },
+  "documentsCategoryAutre": "Other",
+  "@documentsCategoryAutre": {
+    "description": "DocumentCategory.autre label — fallback category for uncategorized documents."
+  },
+  "documentsEditCategoryDialogTitle": "Edit category",
+  "@documentsEditCategoryDialogTitle": {
+    "description": "Title of the dialog letting the landlord pick a new category for a document."
+  },
+  "documentsActionEditCategory": "Edit category",
+  "@documentsActionEditCategory": {
+    "description": "Popup menu item on a document list tile that opens the category-edit dialog. Kept as a separate key from documentsEditCategoryDialogTitle (different UI role: menu action vs dialog title) even though the copy currently matches, for future translation flexibility."
+  },
+  "documentsCategoryUpdateSuccessSnackbar": "Category updated.",
+  "@documentsCategoryUpdateSuccessSnackbar": {
+    "description": "Snackbar confirmation shown after successfully updating a document's category."
+  },
+  "documentsCategoryUpdateErrorUnexpected": "Unable to update. Please try again.",
+  "@documentsCategoryUpdateErrorUnexpected": {
+    "description": "Snackbar error shown when updating a document's category fails for an uncategorized reason (UpdateCategoryErrorReason.unexpected, i.e. not a FirebaseException)."
+  },
+  "documentsActionDownload": "Download",
+  "@documentsActionDownload": {
+    "description": "Popup menu item on a document list tile: generates a signed URL and opens the file in a new tab."
+  },
+  "documentsDownloadErrorCantOpen": "Unable to open the document.",
+  "@documentsDownloadErrorCantOpen": {
+    "description": "Snackbar error shown when the signed download URL cannot be launched (canLaunchUrl returns false)."
+  },
+  "documentsDownloadErrorGeneric": "Error while downloading. Please try again.",
+  "@documentsDownloadErrorGeneric": {
+    "description": "Snackbar error shown when generating or opening the signed download URL throws an exception."
+  },
+  "documentsLegalHoldBadge": "Legal requirement",
+  "@documentsLegalHoldBadge": {
+    "description": "Small badge label shown next to a document in the list when it is under legal hold (signed lease, inventory report, expense receipt)."
+  },
+  "documentsDeleteDialogTitle": "Delete this document?",
+  "@documentsDeleteDialogTitle": {
+    "description": "Title of the delete confirmation dialog for a document that is NOT under legal hold."
+  },
+  "documentsDeleteDialogContent": "The file \"{filename}\" will be permanently deleted. This action is irreversible.",
+  "@documentsDeleteDialogContent": {
+    "description": "Body text of the delete confirmation dialog for a document without legal hold; {filename} is the document's original filename.",
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsDeleteHideButton": "Hide",
+  "@documentsDeleteHideButton": {
+    "description": "Confirm button on the delete dialog's legal-hold variant: hides the document from the list (soft-delete) while the underlying file stays archived in Storage."
+  },
+  "documentsDeleteLegalHoldDialogTitle": "Document kept (legal requirement)",
+  "@documentsDeleteLegalHoldDialogTitle": {
+    "description": "Title of the delete dialog shown when the document is under legal hold (signed lease, inventory report, expense receipt)."
+  },
+  "documentsDeleteLegalHoldDialogContent": "This document will be hidden from your list but kept in archive (law of 6 July 1989 art. 21 / GDPR — 5-year retention period).",
+  "@documentsDeleteLegalHoldDialogContent": {
+    "description": "Body text of the delete dialog shown when the document is under legal hold — explains the file is archived, not erased. This is app UI chrome explaining a legal constraint (translatable), not the body of a legal document itself, which stays out of i18n scope per l10n_convention.dart rule 7."
+  },
+  "documentsDeleteSuccessSnackbar": "Document deleted.",
+  "@documentsDeleteSuccessSnackbar": {
+    "description": "Snackbar confirmation shown after deleting a document that was NOT under legal hold (the underlying Storage file was also removed)."
+  },
+  "documentsDeleteSuccessLegalHoldSnackbar": "Document removed from the list. The file is kept for legal reasons.",
+  "@documentsDeleteSuccessLegalHoldSnackbar": {
+    "description": "Snackbar confirmation shown after soft-deleting a document under legal hold (the underlying Storage file is kept)."
+  },
+  "documentsDeleteErrorUnexpected": "Unable to delete. Please try again.",
+  "@documentsDeleteErrorUnexpected": {
+    "description": "Snackbar error shown when deleting a document fails for an uncategorized reason (DeleteDocumentErrorReason.unexpected, i.e. not a FirebaseException)."
+  },
+  "documentsErrorConnection": "Error. Check your connection and try again.",
+  "@documentsErrorConnection": {
+    "description": "Shared connection-error message for the documents module, used whenever a FirebaseException occurs during delete, category-update or per-file upload (DeleteDocumentErrorReason.connectionError, UpdateCategoryErrorReason.connectionError, UploadFileErrorReason.connectionError). Same wording as the already-existing leasesErrorConnection/propertiesListErrorConnection keys; kept module-scoped rather than promoted to a new common* key, consistent with how those two modules did not converge on a shared key either — flagging in case a future pass wants to consolidate."
+  },
+  "documentsUploadErrorFileTooLarge": "The file exceeds 10 MB.",
+  "@documentsUploadErrorFileTooLarge": {
+    "description": "Per-file upload error shown when a picked file is larger than the 10 MB client-side limit (UploadFileErrorReason.fileTooLarge, kMaxFileSizeBytes)."
+  },
+  "documentsUploadErrorUnsupportedFormat": "Unsupported format. Accepted formats: PDF, JPG, PNG, WEBP.",
+  "@documentsUploadErrorUnsupportedFormat": {
+    "description": "Per-file upload error shown when a picked file's MIME type is not in the allowed whitelist (UploadFileErrorReason.unsupportedFormat, kAllowedMimeTypes)."
+  },
+  "documentsUploadErrorStorage": "Error while uploading. Please try again.",
+  "@documentsUploadErrorStorage": {
+    "description": "Per-file upload error shown when the Firebase Storage upload itself fails (UploadFileErrorReason.storageError, FirebaseException with plugin == 'firebase_storage')."
+  },
+  "documentsUploadErrorUnexpected": "Error while sending. Please try again.",
+  "@documentsUploadErrorUnexpected": {
+    "description": "Per-file upload error shown for an uncategorized exception during upload (UploadFileErrorReason.unexpected)."
   }
 }

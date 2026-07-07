@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/upload_file_status.dart';
+import '../upload_file_error_reason_l10n.dart';
 
 /// Liste les statuts d'upload par fichier pendant et après un batch.
 ///
@@ -56,7 +57,7 @@ class _UploadFileRow extends StatelessWidget {
         filename: filename,
         trailing: null,
       ),
-      FileError(:final filename, :final message) => Column(
+      FileError(:final filename, :final reason) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildRow(
@@ -69,7 +70,7 @@ class _UploadFileRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 40, bottom: 4),
             child: Text(
-              message,
+              reason.message(context),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.error,
               ),

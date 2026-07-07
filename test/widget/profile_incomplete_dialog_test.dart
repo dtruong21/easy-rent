@@ -4,7 +4,9 @@
 /// liste des champs manquants affichée, bouton "Plus tard" ferme.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/profile_incomplete_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -38,7 +40,12 @@ Widget _buildDialog({List<String> missing = const []}) {
     ],
   );
 
-  return MaterialApp.router(routerConfig: router);
+  return MaterialApp.router(
+    routerConfig: router,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
+  );
 }
 
 Future<void> _openDialog(WidgetTester tester) async {

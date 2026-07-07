@@ -139,7 +139,10 @@ void main() {
         updateDocumentCategoryControllerProvider('doc-1'),
       );
       expect(state, isA<UpdateCategoryError>());
-      expect((state as UpdateCategoryError).message, isNotEmpty);
+      expect(
+        (state as UpdateCategoryError).reason,
+        UpdateCategoryErrorReason.unexpected,
+      );
     });
   });
 

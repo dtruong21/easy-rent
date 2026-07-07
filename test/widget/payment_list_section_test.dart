@@ -4,6 +4,7 @@
 /// liste vide → état placeholder.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -14,6 +15,7 @@ import 'package:easyrent/features/payments/data/payment_repository.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/payments/presentation/widgets/payment_list_section.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -171,7 +173,12 @@ Widget _buildSection({required Lease lease, required List<Payment> payments}) {
       leaseRepositoryProvider.overrideWithValue(_FakeLeaseRepo(lease)),
       paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo(payments)),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 

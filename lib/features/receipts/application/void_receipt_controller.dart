@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../data/receipts_repository.dart';
+import '../domain/receipt_action_error.dart';
 import 'lease_receipts_provider.dart';
 import '../../dashboard/application/dashboard_provider.dart';
 
@@ -60,19 +61,17 @@ class VoidReceiptController extends StateNotifier<VoidReceiptState> {
         e,
         st,
       );
-      final msg = switch (e.code) {
-        'permission-denied' || 'unauthenticated' => 'Action non autorisée.',
-        'not-found' => 'Quittance introuvable.',
-        'failed-precondition' =>
-          'La quittance est déjà annulée ou ne peut pas être annulée.',
-        _ => 'Erreur lors de l\'annulation. Veuillez réessayer.',
+      final code = switch (e.code) {
+        'permission-denied' ||
+        'unauthenticated' => ReceiptActionError.permissionDenied,
+        'not-found' => ReceiptActionError.receiptNotFound,
+        'failed-precondition' => ReceiptActionError.alreadyVoidedOrInvalid,
+        _ => ReceiptActionError.voidFailed,
       };
-      state = VoidReceiptError(message: msg);
+      state = VoidReceiptError(message: code.name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de void_receipt', e, st);
-      state = const VoidReceiptError(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = VoidReceiptError(message: ReceiptActionError.unknown.name);
     }
   }
 

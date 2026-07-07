@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/byte_format.dart';
 import '../../application/documents_quota_provider.dart';
 import '../../application/upload_documents_controller.dart';
@@ -83,10 +84,7 @@ class UploadDocumentsDropZone extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Vous avez dépassé 100 Mo d\'espace de stockage. '
-            'Pensez à supprimer les documents obsolètes.',
-          ),
+          content: Text(context.l10n.documentsQuotaExceededWarning),
           backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
         ),
       );
@@ -109,8 +107,7 @@ class UploadDocumentsDropZone extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Maximum $kMaxFilesPerBatch fichiers à la fois. '
-            'Recommencez en plusieurs lots.',
+            context.l10n.documentsUploadMaxFilesError(kMaxFilesPerBatch),
           ),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
@@ -186,14 +183,14 @@ class _DropZoneArea extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Cliquez pour sélectionner vos fichiers',
+            context.l10n.documentsUploadPromptText,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
           Text(
-            'PDF, JPG, PNG, WEBP · Max 10 Mo par fichier · Max 10 fichiers',
+            context.l10n.documentsUploadFormatsHint,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
             ),
@@ -204,7 +201,7 @@ class _DropZoneArea extends StatelessWidget {
             key: const Key('btn_pick_files'),
             onPressed: isUploading ? null : onPickFiles,
             icon: const Icon(Icons.upload_file_outlined),
-            label: const Text('Sélectionner des fichiers'),
+            label: Text(context.l10n.documentsUploadPickFilesButton),
           ),
         ],
       ),
@@ -221,10 +218,13 @@ class _CompletionSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final msg = state.failureCount > 0
-        ? '${state.successCount} document${state.successCount > 1 ? 's' : ''} ajouté${state.successCount > 1 ? 's' : ''} '
-              '(${state.failureCount} échec${state.failureCount > 1 ? 's' : ''})'
-        : '${state.successCount} document${state.successCount > 1 ? 's' : ''} ajouté${state.successCount > 1 ? 's' : ''}';
+        ? l10n.documentsUploadSummaryWithFailures(
+            state.successCount,
+            state.failureCount,
+          )
+        : l10n.documentsUploadSummarySuccess(state.successCount);
 
     return Row(
       children: [
@@ -238,7 +238,10 @@ class _CompletionSummary extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(onPressed: onDismiss, child: const Text('OK')),
+        TextButton(
+          onPressed: onDismiss,
+          child: Text(l10n.documentsUploadSummaryDismissButton),
+        ),
       ],
     );
   }
@@ -257,7 +260,7 @@ class _QuotaIndicator extends StatelessWidget {
     final isOver = quota.isOverSoftLimit;
 
     return Text(
-      'Espace utilisé : $used / $limit',
+      context.l10n.documentsQuotaUsedLabel(used, limit),
       style: theme.textTheme.bodySmall?.copyWith(
         color: isOver ? theme.colorScheme.error : theme.colorScheme.outline,
       ),

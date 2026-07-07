@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../application/documents_quota_provider.dart';
 import '../../application/lease_documents_provider.dart';
 import 'documents_list.dart';
@@ -30,7 +31,10 @@ class DocumentsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Titre de section
-            Text('Documents', style: theme.textTheme.titleMedium),
+            Text(
+              context.l10n.documentsSectionTitle,
+              style: theme.textTheme.titleMedium,
+            ),
 
             // Banner quota si dépassement
             asyncQuota.when(
@@ -62,7 +66,7 @@ class DocumentsSection extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'Erreur lors du chargement des documents.',
+                    context.l10n.documentsLoadErrorMessage,
                     style: TextStyle(color: theme.colorScheme.error),
                   ),
                 );
@@ -99,8 +103,7 @@ class _QuotaWarningBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Vous avez dépassé 100 Mo d\'espace de stockage. '
-              'Pensez à supprimer les documents obsolètes.',
+              context.l10n.documentsQuotaExceededWarning,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onErrorContainer,
               ),
