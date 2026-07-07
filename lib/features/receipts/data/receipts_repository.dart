@@ -34,8 +34,9 @@ abstract interface class ReceiptsRepository {
 
   /// Rend le PDF d'une quittance côté client à partir des denorms Firestore.
   ///
-  /// Retourne les bytes du PDF — caller utilise `Printing.layoutPdf`,
-  /// `Printing.sharePdf`, ou convertit en data URL pour `launchUrl`.
+  /// Retourne les bytes du PDF — caller partage via `WebShareService`
+  /// (Web Share API web, share_plus mobile) ou convertit en data URL pour
+  /// `launchUrl`.
   Future<Uint8List> renderPdfBytes(String receiptId);
 
   /// Compat layer — accepte le `pdfPath` historique (ignoré) OU directement

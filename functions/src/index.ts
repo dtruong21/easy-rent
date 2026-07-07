@@ -66,6 +66,7 @@ export {
   setUpdatedAtExpenses,
 } from "./callable/expenses";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
+export {deleteAccount} from "./callable/delete_account";
 
 // ---------- Scheduled ----------
 export {cleanupExpiredAnon} from "./scheduled/cleanup_expired_anon";

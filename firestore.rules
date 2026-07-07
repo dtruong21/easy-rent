@@ -161,7 +161,14 @@ service cloud.firestore {
     // ====================================================================
     match /properties/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn(); // filtré par .where('landlordId', '==', uid)
+      // AUDIT FEAT-045 : les rules ne sont PAS des filtres — `isSignedIn()`
+      // laissait n'importe quel compte signé requêter les données d'un autre
+      // landlord en fournissant son UID. `isOwner(resource.data.landlordId)`
+      // force statiquement toute query à porter la contrainte
+      // `where('landlordId', '==', request.auth.uid)` (déjà le cas de toutes
+      // les requêtes de l'app). Pas d'isActive : le filtrage soft-delete
+      // reste un choix de requête du propriétaire, pas un enjeu d'accès.
+      allow list: if isOwner(resource.data.landlordId);
 
       // BAILLAN-M1 : create/update réservés aux comptes complets — un
       // anonyme n'a accès qu'au simulateur, jamais au registre de biens.
@@ -191,7 +198,8 @@ service cloud.firestore {
     // ====================================================================
     match /tenants/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn();
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      allow list: if isOwner(resource.data.landlordId);
 
       // BAILLAN-M1 : create/update réservés aux comptes complets.
       allow create: if isFullyAuthed()
@@ -224,7 +232,8 @@ service cloud.firestore {
     // ====================================================================
     match /leases/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn();
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      allow list: if isOwner(resource.data.landlordId);
 
       // Tout passe par Callable `createLease`, `updateLease`, `softDeleteLease`.
       allow create, update, delete: if false;
@@ -235,7 +244,8 @@ service cloud.firestore {
     // ====================================================================
     match /payments/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn();
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      allow list: if isOwner(resource.data.landlordId);
 
       allow create, update, delete: if false;
     }
@@ -248,7 +258,12 @@ service cloud.firestore {
     // ====================================================================
     match /receipts/{id} {
       allow get: if isOwner(resource.data.landlordId);
-      allow list: if isSignedIn();
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      // Doublement critique ici : les quittances d'un compte SUPPRIMÉ sont
+      // conservées 5 ans (FEAT-045) — l'UID orphelin ne doit résoudre pour
+      // personne (la promesse « archivée et inaccessible » du flux et de la
+      // privacy policy v1.2 repose sur cette rule).
+      allow list: if isOwner(resource.data.landlordId);
 
       // generateReceipt / voidReceipt / markReceiptAsSent en Callable.
       allow create, update, delete: if false;
@@ -259,7 +274,8 @@ service cloud.firestore {
     // ====================================================================
     match /documents/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn();
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      allow list: if isOwner(resource.data.landlordId);
 
       // createDocument calcule legalHold côté serveur depuis category.
       // softDeleteDocument refuse si legalHold == true.
@@ -277,7 +293,8 @@ service cloud.firestore {
     // ====================================================================
     match /expenses/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn(); // filtré côté requête .where landlordId==uid && deletedAt==null
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      allow list: if isOwner(resource.data.landlordId);
 
       // Tout passe par Callable `createExpense`/`updateExpense` +
       // `softDeleteEntity`. Un anonyme n'accède jamais au registre de
@@ -290,7 +307,8 @@ service cloud.firestore {
     // ====================================================================
     match /investment_scenarios/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
-      allow list: if isSignedIn();
+      // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
+      allow list: if isOwner(resource.data.landlordId);
 
       allow create: if isSignedIn()
         && request.resource.data.landlordId == request.auth.uid

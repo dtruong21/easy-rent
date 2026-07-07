@@ -49,11 +49,15 @@ class AuthErrorMapper {
         return 'Méthode d\'authentification non activée. '
             'Contactez le support.';
 
+      // Codes Firebase génériques, émis quel que soit le provider OAuth
+      // (Google comme Apple — ex. re-auth de suppression de compte,
+      // FEAT-045) : libellés neutres. Les messages spécifiques Google/Apple
+      // restent portés par les codes baillan/* posés par les flows dédiés.
       case 'popup-closed-by-user':
-        return 'Connexion Google annulée.';
+        return 'Connexion annulée.';
 
       case 'popup-blocked':
-        return 'Votre navigateur a bloqué la fenêtre Google. '
+        return 'Votre navigateur a bloqué la fenêtre de connexion. '
             'Autorisez les pop-ups pour ce site et réessayez.';
 
       case 'account-exists-with-different-credential':
@@ -61,7 +65,7 @@ class AuthErrorMapper {
             'méthode. Connectez-vous d\'abord avec votre mot de passe.';
 
       case 'cancelled-popup-request':
-        return 'Une autre fenêtre Google est déjà ouverte.';
+        return 'Une autre fenêtre de connexion est déjà ouverte.';
 
       case 'web-storage-unsupported':
         return 'Votre navigateur bloque les cookies tiers nécessaires à '
@@ -72,6 +76,14 @@ class AuthErrorMapper {
       // 'popup-closed-by-user' côté Firebase.
       case 'user-cancelled':
         return 'Connexion Apple annulée.';
+
+      // Flux OAuth natif mobile (signInWithProvider, FEAT-024) :
+      // l'utilisateur a refermé le navigateur intégré avant de valider —
+      // équivalent mobile de 'popup-closed-by-user'. Deux orthographes :
+      // Android émet 'canceled', iOS 'cancelled'.
+      case 'web-context-canceled':
+      case 'web-context-cancelled':
+        return 'Connexion annulée.';
 
       case GoogleAuthErrorCode.newUserOnLogin:
         return 'Aucun compte Baillan associé à ce Google. '

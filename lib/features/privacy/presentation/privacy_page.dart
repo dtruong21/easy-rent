@@ -7,8 +7,9 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 /// Accessible sans login (route `/privacy` publique).
 /// Référencée depuis [LoginPage] et [ProfilePage].
 ///
-/// Dernière mise à jour : juillet 2026 (v1.1 — collecte demandes de support,
-/// FEAT-025)
+/// Dernière mise à jour : juillet 2026 (v1.2 — suppression de compte
+/// in-app et rétention des quittances, FEAT-045 ; v1.1 — collecte demandes
+/// de support, FEAT-025)
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
 
@@ -48,7 +49,7 @@ class _PrivacyContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Version 1.1 — Dernière mise à jour : juillet 2026',
+          'Version 1.2 — Dernière mise à jour : juillet 2026',
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 24),
@@ -160,7 +161,18 @@ class _PrivacyContent extends StatelessWidget {
               'compte en régime standard de conservation.\n\n'
               '• Demandes de support : conservées le temps du traitement de la '
               'demande, puis au plus 12 mois après le dernier échange (suivi '
-              'qualité), avant suppression.',
+              'qualité), avant suppression.\n\n'
+              '• Suppression de compte : la suppression (accessible dans '
+              'l\'application via Profil → « Supprimer mon compte », ou via la '
+              'page publique /delete-account) efface immédiatement et '
+              'définitivement l\'ensemble des données du compte — biens, '
+              'locataires, baux, paiements, documents et fichiers stockés, '
+              'dépenses, simulations, demandes de support, profil et compte '
+              'de connexion (y compris la révocation du jeton « Se connecter '
+              'avec Apple »). Seules les quittances de loyer émises sont '
+              'conservées 5 ans à titre de preuve (loi n° 89-462 du 6 juillet '
+              '1989 ; art. 2224 du Code civil), sous forme archivée '
+              'inaccessible, puis supprimées à l\'échéance.',
         ),
 
         // 6. Sécurité
@@ -210,8 +222,12 @@ class _PrivacyContent extends StatelessWidget {
               'et une copie de vos données.\n\n'
               '• Art. 16 — Droit de rectification : faire corriger des données '
               'inexactes ou incomplètes.\n\n'
-              '• Art. 17 — Droit à l\'effacement ("droit à l\'oubli") : demander '
-              'la suppression, sous réserve des obligations légales de conservation.\n\n'
+              '• Art. 17 — Droit à l\'effacement ("droit à l\'oubli") : le '
+              'bailleur peut supprimer son compte et l\'ensemble de ses données '
+              'directement dans l\'application (Profil → « Supprimer mon '
+              'compte ») ou depuis la page publique /delete-account, sous '
+              'réserve des obligations légales de conservation (quittances, '
+              'cf. §5).\n\n'
               '• Art. 18 — Droit à la limitation : demander la suspension temporaire '
               'du traitement.\n\n'
               '• Art. 20 — Droit à la portabilité : recevoir vos données dans un '

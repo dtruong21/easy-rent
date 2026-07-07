@@ -19,6 +19,18 @@ class Env {
     defaultValue: 'dev',
   );
 
+  /// URL publique de l'app web (sans slash final).
+  ///
+  /// Sert de fallback aux liens email Firebase (vérification, reset password)
+  /// quand `Uri.base.origin` n'est pas résoluble — c'est-à-dire sur les
+  /// builds mobiles iOS/Android (FEAT-024) : les pages /login et
+  /// /reset-password restent hébergées par l'app web. Sur le web, l'origin
+  /// courant (prod ou channel staging) reste prioritaire.
+  static const String publicAppUrl = String.fromEnvironment(
+    'APP_PUBLIC_URL',
+    defaultValue: 'https://easy-rent-54cd4.web.app',
+  );
+
   /// `true` si on tourne en environnement de prod.
   static bool get isProd => appEnv == 'prod';
 
