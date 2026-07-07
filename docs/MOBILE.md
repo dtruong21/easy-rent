@@ -39,9 +39,19 @@ Réalisé :
   détectée via `ShareResultStatus.dismissed`) sur
   Android/iOS ; no-op inchangé sur VM tests/desktop.
 - `<queries>` Android 11+ (https + mailto) pour `url_launcher`.
+- **Conformité stores (2026-07-07)** : `PrivacyInfo.xcprivacy` (privacy
+  manifest app, exigence Apple 05/2024) créé et embarqué dans Runner.app ;
+  `ITSAppUsesNonExemptEncryption=false` dans Info.plist. **Audit complet
+  Play + App Store + UE/France : [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md).**
 
 Reste à faire (itérations suivantes) :
 
+- **🔴 Bloquants review stores** (détail + plan d'action ordonné dans
+  [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md)) : suppression de compte
+  in-app (FEAT-045 proposé) + page web `/delete-account`, page `/legal`
+  (mentions LCEN), formulaires consoles (Data safety, privacy labels, App
+  access, Financial features, âge), déclaration DSA trader, test fermé Play
+  12 testeurs × 14 j si compte perso nouveau.
 - **Signing release** : keystore Android + certificat/profil Apple Developer,
   puis SHA-1 release à ajouter dans Firebase.
 - **Apple Sign-In iOS** : capability « Sign in with Apple » (nécessite compte
@@ -50,6 +60,8 @@ Reste à faire (itérations suivantes) :
   Flutter par défaut) — `flutter_launcher_icons` à envisager.
 - **CI** : job build APK debug en PR (non bloquant), distribution différée.
 - QA parcours métier complet sur devices réels (J4 du plan).
+- **SDK 37 (Android 17)** : rien à faire avant ~août 2027 — targetSdk 36
+  conforme (cf. [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md) §1.1 et §4).
 
 Build local :
 

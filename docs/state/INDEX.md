@@ -63,8 +63,9 @@
 - **Firebase** : apps Android + iOS enregistrées sur `easy-rent-54cd4`, `firebase_options.dart` couvre web/android/ios, SHA debug déclarées
 - **Auth** : OAuth Google/Apple via `signInWithProvider`/`linkWithProvider` sur mobile (popup conservé web) ; liens email fallback `Env.publicAppUrl`
 - **Partage quittances/régularisations** : share sheet natif `share_plus` (`web_share_service_io.dart`, annulation détectée → invariant `sent_at` préservé)
-- **Validé** : analyze clean, 2378 tests, APK debug, parcours anonyme complet sur émulateur Pixel 9
-- **Reste** : signing release, capability Apple Sign-In, icônes natives, QA devices — détail dans [`MOBILE.md`](../MOBILE.md)
+- **Validé** : analyze clean, 2386 tests, APK debug, parcours anonyme complet sur émulateur Pixel 9, build iOS simulateur
+- **Conformité stores (2026-07-07)** : audit complet Play/App Store/UE dans [`STORE_COMPLIANCE.md`](../STORE_COMPLIANCE.md) — targetSdk 36 conforme (SDK 37 requis ~08/2027), PrivacyInfo.xcprivacy + ITSAppUsesNonExemptEncryption faits ; **bloquants release** : suppression de compte in-app (FEAT-045), formulaires consoles, DSA trader, mentions LCEN
+- **Reste** : FEAT-045 + signing release, capability Apple Sign-In, icônes natives, QA devices — détail dans [`MOBILE.md`](../MOBILE.md)
 
 ### FEAT-042 : Mode de charges (provisions/forfait) + éligibilité régularisation
 
