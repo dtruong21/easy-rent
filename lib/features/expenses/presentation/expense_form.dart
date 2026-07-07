@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/utils/expense_form_validators.dart';
 import '../../../core/utils/french_date.dart';
+import '../../../core/validation/validation_error_l10n.dart';
 import '../../leases/domain/lease.dart';
 import '../../leases/domain/lease_status.dart';
 import '../domain/expense_category.dart';
@@ -320,7 +321,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             },
             validator: (v) {
               if (!_amountTouched) return null;
-              return ExpenseFormValidators.validateAmount(v);
+              return ExpenseFormValidators.validateAmount(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -331,7 +332,9 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             initialValue: _expenseDate,
             validator: (_) {
               if (!_expenseDateTouched) return null;
-              return ExpenseFormValidators.validateExpenseDate(_expenseDate);
+              return ExpenseFormValidators.validateExpenseDate(
+                _expenseDate,
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickExpenseDate : null,
@@ -388,7 +391,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
                     return ExpenseFormValidators.validatePeriodStart(
                       _periodStart,
                       isRecoverable: _isRecoverable,
-                    );
+                    )?.message(context);
                   },
                   builder: (state) => InkWell(
                     onTap: widget.enabled ? _pickPeriodStart : null,
@@ -420,7 +423,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
                       _periodEnd,
                       _periodStart,
                       isRecoverable: _isRecoverable,
-                    );
+                    )?.message(context);
                   },
                   builder: (state) => InkWell(
                     onTap: widget.enabled ? _pickPeriodEnd : null,
@@ -465,7 +468,8 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             ),
             maxLines: 3,
             maxLength: 2000,
-            validator: (v) => ExpenseFormValidators.validateNotes(v),
+            validator: (v) =>
+                ExpenseFormValidators.validateNotes(v)?.message(context),
           ),
         ],
       ),

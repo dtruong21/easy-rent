@@ -115,6 +115,316 @@
     "description": "Validation error: the email field does not match a valid email format."
   },
 
+  "validationDateOutOfRange": "Invalid date (year out of range)",
+  "@validationDateOutOfRange": {
+    "description": "Validation error: date outside the accepted range (1900-01-01 to 2100-12-31). Shared by lease, payment and expense date fields."
+  },
+  "validationAmountTooLargeWithCap": "Amount too high (maximum €1,000,000.00)",
+  "@validationAmountTooLargeWithCap": {
+    "description": "Validation error: amount above the maximum cap, with the cap value spelled out. Shared by rent, charges and non-recoverable charges fields."
+  },
+  "validationAmountTooLarge": "Amount too high",
+  "@validationAmountTooLarge": {
+    "description": "Validation error: amount above the maximum cap, without spelling out the cap value. Shared by the security deposit and agency fees fields (lease)."
+  },
+  "validationEndDateBeforeStartDate": "The end date must be after the start date",
+  "@validationEndDateBeforeStartDate": {
+    "description": "Validation error: end date is before or equal to the start date. Shared by the lease end date and the payment period end date."
+  },
+
+  "validationRentRequired": "Rent is required",
+  "@validationRentRequired": {
+    "description": "Validation error: the rent amount field was left empty (lease or payment form)."
+  },
+  "validationRentNotPositive": "Rent must be a positive amount",
+  "@validationRentNotPositive": {
+    "description": "Validation error: the rent amount is zero or negative (lease or payment form)."
+  },
+  "validationChargesRequired": "Charges are required (enter 0 if none)",
+  "@validationChargesRequired": {
+    "description": "Validation error: the charges amount field was left empty (lease or payment form)."
+  },
+  "validationChargesNegative": "Charges cannot be negative",
+  "@validationChargesNegative": {
+    "description": "Validation error: the charges amount is negative or not numeric (lease or payment form)."
+  },
+  "validationActualExpensesRequired": "The actual expenses amount is required (enter 0 if none)",
+  "@validationActualExpensesRequired": {
+    "description": "Validation error: dedicated wording for the 'actual expenses' field of the charge regularization form -- the field represents actual expenses, not lease/payment charges, hence a different message than validationChargesRequired."
+  },
+
+  "validationAmountRequired": "The amount is required",
+  "@validationAmountRequired": {
+    "description": "Validation error: the expense amount field was left empty."
+  },
+  "validationAmountNotPositive": "The amount must be a positive amount",
+  "@validationAmountNotPositive": {
+    "description": "Validation error: the expense amount is zero or negative."
+  },
+  "validationExpenseDateRequired": "The expense date is required",
+  "@validationExpenseDateRequired": {
+    "description": "Validation error: the expense date field was left empty."
+  },
+  "validationPeriodRequiredForRecoverable": "The billing period is required for a recoverable expense",
+  "@validationPeriodRequiredForRecoverable": {
+    "description": "Validation error: the billing period start/end is required when the expense is recoverable (decree n87-713). Shared by the period start and period end fields."
+  },
+  "validationPeriodEndBeforeStart": "The period end must be after the start",
+  "@validationPeriodEndBeforeStart": {
+    "description": "Validation error: the expense billing period end is before or equal to its start."
+  },
+  "validationExpenseNotesTooLong": "Notes cannot exceed 2000 characters",
+  "@validationExpenseNotesTooLong": {
+    "description": "Validation error: expense notes field exceeds the 2000 character limit."
+  },
+
+  "validationPropertyRequired": "Please select a property",
+  "@validationPropertyRequired": {
+    "description": "Validation error: no property selected on the lease form."
+  },
+  "validationTenantRequired": "Please select a tenant",
+  "@validationTenantRequired": {
+    "description": "Validation error: no tenant selected on the lease form."
+  },
+  "validationStartDateRequired": "The start date is required",
+  "@validationStartDateRequired": {
+    "description": "Validation error: the lease start date field was left empty."
+  },
+  "validationDepositNegative": "The security deposit cannot be negative",
+  "@validationDepositNegative": {
+    "description": "Validation error: the lease security deposit amount is negative."
+  },
+  "validationPaymentDayRequired": "The due day is required",
+  "@validationPaymentDayRequired": {
+    "description": "Validation error: the lease rent due day field was left empty."
+  },
+  "validationPaymentDayInvalid": "Invalid value",
+  "@validationPaymentDayInvalid": {
+    "description": "Validation error: the lease rent due day is not a number."
+  },
+  "validationPaymentDayOutOfRange": "The day must be between 1 and 28",
+  "@validationPaymentDayOutOfRange": {
+    "description": "Validation error: the lease rent due day is outside the 1-28 range."
+  },
+  "validationIrlValueInvalid": "Invalid value (e.g., 142.43)",
+  "@validationIrlValueInvalid": {
+    "description": "Validation error: the lease IRL (rent reference index) value is not a number."
+  },
+  "validationIrlValueNotPositive": "The IRL value must be positive",
+  "@validationIrlValueNotPositive": {
+    "description": "Validation error: the lease IRL value is zero or negative."
+  },
+  "validationIrlValueTooHigh": "The IRL value must be less than 10,000",
+  "@validationIrlValueTooHigh": {
+    "description": "Validation error: the lease IRL value is 10,000 or above."
+  },
+  "validationIrlQuarterInvalidFormat": "Expected format: T1-2026, T2-2026, etc.",
+  "@validationIrlQuarterInvalidFormat": {
+    "description": "Validation error: the lease IRL reference quarter does not match the expected TQ-YYYY format."
+  },
+  "validationAgencyFeesNegative": "Agency fees cannot be negative",
+  "@validationAgencyFeesNegative": {
+    "description": "Validation error: the lease agency fees amount is negative."
+  },
+  "validationNonRecoverableChargesNegative": "Non-recoverable charges cannot be negative",
+  "@validationNonRecoverableChargesNegative": {
+    "description": "Validation error: the lease non-recoverable charges amount is negative (FEAT-036)."
+  },
+
+  "validationPropertyNameRequired": "The property name is required",
+  "@validationPropertyNameRequired": {
+    "description": "Validation error: the property name field was left empty."
+  },
+  "validationPropertyAddressRequired": "The address is required",
+  "@validationPropertyAddressRequired": {
+    "description": "Validation error: the property address field was left empty."
+  },
+  "validationPostalCodeInvalid": "Invalid postal code (5 digits required, e.g., 75001)",
+  "@validationPostalCodeInvalid": {
+    "description": "Validation error: the property postal code does not match the 5-digit format."
+  },
+  "validationRoomsInvalid": "Invalid number of rooms (1 to 50)",
+  "@validationRoomsInvalid": {
+    "description": "Validation error: the property number of rooms is outside the 1-50 range."
+  },
+  "validationBedroomsInvalid": "Invalid number of bedrooms (0 to 50)",
+  "@validationBedroomsInvalid": {
+    "description": "Validation error: the property number of bedrooms is outside the 0-50 range."
+  },
+  "validationFloorInvalid": "Invalid floor (-5 to 200, 0 = ground floor)",
+  "@validationFloorInvalid": {
+    "description": "Validation error: the property floor is outside the -5 to 200 range."
+  },
+  "validationConstructionYearInvalid": "Invalid year (1700 to {maxYear})",
+  "@validationConstructionYearInvalid": {
+    "description": "Validation error: the property construction year is outside the 1700 to current-year-plus-one range. {maxYear} is computed at validation/display time (PropertyFormValidators.maxConstructionYear).",
+    "placeholders": {
+      "maxYear": {
+        "type": "int"
+      }
+    }
+  },
+  "validationDpeLetterInvalid": "Invalid DPE rating (A to G)",
+  "@validationDpeLetterInvalid": {
+    "description": "Validation error: the property DPE (energy performance) letter rating is not A to G."
+  },
+  "validationDpeValueInvalid": "Invalid DPE value (1 to 1999 kWh/m²/year)",
+  "@validationDpeValueInvalid": {
+    "description": "Validation error: the property DPE numeric value is outside the 1-1999 kWh/m²/year range."
+  },
+  "validationGesLetterInvalid": "Invalid GES rating (A to G)",
+  "@validationGesLetterInvalid": {
+    "description": "Validation error: the property GES (greenhouse gas) letter rating is not A to G."
+  },
+  "validationPurchasePriceInvalid": "The purchase price must be a positive whole number",
+  "@validationPurchasePriceInvalid": {
+    "description": "Validation error: the property purchase price is not a positive whole number."
+  },
+  "validationPurchasePriceTooHigh": "The purchase price cannot exceed 1 billion euros",
+  "@validationPurchasePriceTooHigh": {
+    "description": "Validation error: the property purchase price exceeds the 1 billion euro cap."
+  },
+  "validationNotaryFeesInvalid": "Notary fees must be zero or a positive number",
+  "@validationNotaryFeesInvalid": {
+    "description": "Validation error: the property notary fees amount is negative."
+  },
+  "validationAnnualAmountInvalid": "The amount must be zero or a positive number",
+  "@validationAnnualAmountInvalid": {
+    "description": "Validation error: an annual amount (property tax, PNO insurance, condo fees) is negative."
+  },
+  "validationLoanRateInvalid": "Invalid rate (0% to 30%)",
+  "@validationLoanRateInvalid": {
+    "description": "Validation error: the property loan nominal rate is outside the 0-30% range."
+  },
+  "validationLoanDurationInvalid": "Invalid duration (12 to 360 months)",
+  "@validationLoanDurationInvalid": {
+    "description": "Validation error: the property loan duration is outside the 12-360 month range."
+  },
+  "validationInsuranceRateInvalid": "Invalid insurance rate (0% to 2%)",
+  "@validationInsuranceRateInvalid": {
+    "description": "Validation error: the property loan borrower insurance rate is outside the 0-2% range."
+  },
+  "validationLoanPrincipalInvalid": "The loan principal must be a positive whole number",
+  "@validationLoanPrincipalInvalid": {
+    "description": "Validation error: the property loan principal is not a positive whole number."
+  },
+
+  "validationFullNameRequired": "Full name is required (needed for receipts)",
+  "@validationFullNameRequired": {
+    "description": "Validation error: the landlord full name field was left empty (required for legal receipts)."
+  },
+  "validationFullNameTooShort": "Full name must be at least 2 characters",
+  "@validationFullNameTooShort": {
+    "description": "Validation error: the landlord full name is shorter than 2 characters."
+  },
+  "validationFullNameTooLong": "Full name cannot exceed 200 characters",
+  "@validationFullNameTooLong": {
+    "description": "Validation error: the landlord full name exceeds 200 characters."
+  },
+  "validationProfileAddressRequired": "The address is required (needed for receipts)",
+  "@validationProfileAddressRequired": {
+    "description": "Validation error: the landlord address field was left empty (required for legal receipts)."
+  },
+  "validationProfileAddressTooShort": "The address must be at least 5 characters",
+  "@validationProfileAddressTooShort": {
+    "description": "Validation error: the landlord address is shorter than 5 characters."
+  },
+  "validationProfileAddressTooLong": "The address cannot exceed 500 characters",
+  "@validationProfileAddressTooLong": {
+    "description": "Validation error: the landlord address exceeds 500 characters."
+  },
+  "validationPhoneInvalid": "Invalid phone number (e.g., 06 12 34 56 78 or +33612345678)",
+  "@validationPhoneInvalid": {
+    "description": "Validation error: the landlord phone number does not match the accepted loose format."
+  },
+
+  "validationPeriodStartRequired": "The period start date is required",
+  "@validationPeriodStartRequired": {
+    "description": "Validation error: the payment period start date field was left empty."
+  },
+  "validationPeriodEndRequired": "The period end date is required",
+  "@validationPeriodEndRequired": {
+    "description": "Validation error: the payment period end date field was left empty."
+  },
+  "validationPaidAtRequired": "The payment date is required",
+  "@validationPaidAtRequired": {
+    "description": "Validation error: the payment date field was left empty."
+  },
+  "validationPaymentMethodRequired": "The payment method is required",
+  "@validationPaymentMethodRequired": {
+    "description": "Validation error: no payment method selected."
+  },
+  "validationPaymentNotesTooLong": "Notes cannot exceed 500 characters",
+  "@validationPaymentNotesTooLong": {
+    "description": "Validation error: payment notes field exceeds the 500 character limit."
+  },
+
+  "validationFirstNameRequired": "First name is required",
+  "@validationFirstNameRequired": {
+    "description": "Validation error: the tenant first name field was left empty."
+  },
+  "validationLastNameRequired": "Last name is required",
+  "@validationLastNameRequired": {
+    "description": "Validation error: the tenant last name field was left empty."
+  },
+  "validationBirthDateTooEarly": "Invalid date of birth (1900 minimum)",
+  "@validationBirthDateTooEarly": {
+    "description": "Validation error: the tenant date of birth is before 1900."
+  },
+  "validationTenantMustBeAdult": "The tenant must be at least 18 years old",
+  "@validationTenantMustBeAdult": {
+    "description": "Validation error: the tenant date of birth implies an age below 18."
+  },
+  "validationBirthPlaceTooLong": "Place of birth too long (100 characters maximum)",
+  "@validationBirthPlaceTooLong": {
+    "description": "Validation error: the tenant place of birth exceeds 100 characters."
+  },
+  "validationNationalityTooLong": "Nationality too long (60 characters maximum)",
+  "@validationNationalityTooLong": {
+    "description": "Validation error: the tenant nationality exceeds 60 characters."
+  },
+  "validationProfessionTooLong": "Occupation too long (100 characters maximum)",
+  "@validationProfessionTooLong": {
+    "description": "Validation error: the tenant occupation exceeds 100 characters."
+  },
+  "validationEmployerTooLong": "Employer too long (100 characters maximum)",
+  "@validationEmployerTooLong": {
+    "description": "Validation error: the tenant employer exceeds 100 characters."
+  },
+  "validationMonthlyIncomeInvalid": "Invalid income",
+  "@validationMonthlyIncomeInvalid": {
+    "description": "Validation error: the tenant monthly income is outside the accepted range."
+  },
+  "validationPreviousAddressTooLong": "Previous address too long (300 characters maximum)",
+  "@validationPreviousAddressTooLong": {
+    "description": "Validation error: the tenant previous address exceeds 300 characters."
+  },
+  "validationGuarantorNameTooLong": "Guarantor name too long (200 characters maximum)",
+  "@validationGuarantorNameTooLong": {
+    "description": "Validation error: the tenant guarantor name exceeds 200 characters."
+  },
+  "validationInvalidGuarantorEmail": "Invalid guarantor email (e.g., guarantor@email.com)",
+  "@validationInvalidGuarantorEmail": {
+    "description": "Validation error: the tenant guarantor email does not match a valid email format."
+  },
+  "validationGuarantorPhoneTooLong": "Guarantor phone too long (30 characters maximum)",
+  "@validationGuarantorPhoneTooLong": {
+    "description": "Validation error: the tenant guarantor phone exceeds 30 characters."
+  },
+
+  "validationSurfaceInvalid": "Invalid surface area",
+  "@validationSurfaceInvalid": {
+    "description": "Validation error: the property surface area is not a number."
+  },
+  "validationSurfaceNotPositive": "The surface area must be positive",
+  "@validationSurfaceNotPositive": {
+    "description": "Validation error: the property surface area is zero or negative."
+  },
+  "validationSurfaceTooLarge": "Maximum surface area 9999.99 m²",
+  "@validationSurfaceTooLarge": {
+    "description": "Validation error: the property surface area exceeds 9999.99 m²."
+  },
+
   "leasesFilterAll": "All",
   "@leasesFilterAll": {
     "description": "Lease list filter option: show all leases (no filter)."
@@ -3768,10 +4078,6 @@
   "chargeRegularizationActualExpensesHint": "Amount evidenced by the property manager's statement",
   "@chargeRegularizationActualExpensesHint": {
     "description": "Hint text of the 'actual expenses' amount field in ChargeRegularizationForm."
-  },
-  "chargeRegularizationActualExpensesRequiredError": "The actual expenses amount is required (enter 0 if none)",
-  "@chargeRegularizationActualExpensesRequiredError": {
-    "description": "Custom requiredMessage string passed by ChargeRegularizationForm to the shared core validator MoneyValidators.validateChargesAmount (lib/core/utils/money_validators.dart, out of this module's scope) for the 'actual expenses' field — this field represents actual expenses, not lease charges, hence the dedicated wording instead of the validator's default message."
   },
   "chargeRegularizationExpensesPrefillHint": "Pre-filled from {count} {count, plural, one{expense} other{expenses}} — editable.",
   "@chargeRegularizationExpensesPrefillHint": {

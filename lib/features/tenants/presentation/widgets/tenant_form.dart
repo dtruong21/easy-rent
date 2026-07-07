@@ -105,7 +105,9 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_firstNameTouched) return null;
-              return TenantFormValidators.validateFirstName(v);
+              return TenantFormValidators.validateFirstName(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -130,7 +132,7 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_lastNameTouched) return null;
-              return TenantFormValidators.validateLastName(v);
+              return TenantFormValidators.validateLastName(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -156,11 +158,9 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_emailTouched) return null;
-              // Exemple pilote FEAT-043 (i18n) : le validateur retourne un
-              // ValidationError (pur, sans BuildContext), traduit ici.
-              return TenantFormValidators.validateEmailError(
-                v,
-              )?.message(context);
+              // FEAT-043 (i18n) : le validateur retourne un ValidationError
+              // (pur, sans BuildContext), traduit ici.
+              return TenantFormValidators.validateEmail(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -324,13 +324,14 @@ class _BirthDateField extends StatelessWidget {
         birthDate ?? DateTime(now.year - 30, now.month, now.day);
 
     final errorText = touched
-        ? TenantFormValidators.validateBirthDate(birthDate)
+        ? TenantFormValidators.validateBirthDate(birthDate)?.message(context)
         : null;
 
     return FormField<DateTime>(
       initialValue: birthDate,
-      validator: (_) =>
-          touched ? TenantFormValidators.validateBirthDate(birthDate) : null,
+      validator: (_) => touched
+          ? TenantFormValidators.validateBirthDate(birthDate)?.message(context)
+          : null,
       builder: (state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,7 +487,7 @@ class _SituationProfessionnelleSection extends StatelessWidget {
               // Convertir en centimes pour valider la borne.
               return TenantFormValidators.validateMonthlyIncomeCents(
                 euros * 100,
-              );
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -578,7 +579,9 @@ class _GuarantorSection extends StatelessWidget {
             },
             validator: (v) {
               if (!guarantorEmailTouched) return null;
-              return TenantFormValidators.validateGuarantorEmail(v);
+              return TenantFormValidators.validateGuarantorEmail(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),

@@ -1,4 +1,5 @@
 import 'package:easyrent/core/utils/property_form_validators.dart';
+import 'package:easyrent/core/validation/validation_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -19,10 +20,11 @@ void main() {
       expect(PropertyFormValidators.validateName('Appartement Lyon'), isNull);
     });
 
-    test('message erreur contient "nom"', () {
-      final msg = PropertyFormValidators.validateName('');
-      expect(msg, isNotNull);
-      expect(msg!.toLowerCase(), contains('nom'));
+    test('vide retourne ValidationError.propertyNameRequired', () {
+      expect(
+        PropertyFormValidators.validateName(''),
+        ValidationError.propertyNameRequired,
+      );
     });
 
     test('valeur avec espaces autour retourne null (trim implicite)', () {
@@ -52,10 +54,11 @@ void main() {
       );
     });
 
-    test('message erreur contient "adresse"', () {
-      final msg = PropertyFormValidators.validateAddress('');
-      expect(msg, isNotNull);
-      expect(msg!.toLowerCase(), contains('adresse'));
+    test('vide retourne ValidationError.propertyAddressRequired', () {
+      expect(
+        PropertyFormValidators.validateAddress(''),
+        ValidationError.propertyAddressRequired,
+      );
     });
   });
 

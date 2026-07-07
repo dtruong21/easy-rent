@@ -5,6 +5,7 @@ import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/lease_form_validators.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../../../features/payments/domain/payment_method.dart';
 import '../../../../features/properties/domain/property.dart';
 import '../../../../features/tenants/domain/tenant.dart';
@@ -339,7 +340,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialValue: _selectedProperty,
       validator: (_) {
         if (!_propertyTouched) return null;
-        return LeaseFormValidators.validateProperty(_selectedProperty);
+        return LeaseFormValidators.validateProperty(
+          _selectedProperty,
+        )?.message(context);
       },
       builder: (state) => DropdownButtonFormField<Property>(
         initialValue: _selectedProperty,
@@ -412,7 +415,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialValue: _selectedTenant,
       validator: (_) {
         if (!_tenantTouched) return null;
-        return LeaseFormValidators.validateTenant(_selectedTenant);
+        return LeaseFormValidators.validateTenant(
+          _selectedTenant,
+        )?.message(context);
       },
       builder: (state) => DropdownButtonFormField<Tenant>(
         initialValue: _selectedTenant,
@@ -469,7 +474,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     },
     validator: (v) {
       if (!_rentTouched) return null;
-      return LeaseFormValidators.validateRentAmount(v);
+      return LeaseFormValidators.validateRentAmount(v)?.message(context);
     },
   );
 
@@ -513,7 +518,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       },
       validator: (v) {
         if (!_chargesTouched) return null;
-        return LeaseFormValidators.validateChargesAmount(v);
+        return LeaseFormValidators.validateChargesAmount(v)?.message(context);
       },
     );
   }
@@ -545,7 +550,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       },
       validator: (v) {
         if (!_nonRecoverableChargesTouched) return null;
-        return LeaseFormValidators.validateNonRecoverableCharges(v);
+        return LeaseFormValidators.validateNonRecoverableCharges(
+          v,
+        )?.message(context);
       },
     );
   }
@@ -573,7 +580,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       if (!_depositTouched) return null;
       if (v == null || v.trim().isEmpty) return null;
       final cents = MoneyFormat.eurosToCents(v);
-      return LeaseFormValidators.validateDepositCents(cents);
+      return LeaseFormValidators.validateDepositCents(cents)?.message(context);
     },
   );
 
@@ -600,7 +607,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       if (!_agencyFeesTouched) return null;
       if (v == null || v.trim().isEmpty) return null;
       final cents = MoneyFormat.eurosToCents(v);
-      return LeaseFormValidators.validateAgencyFees(cents);
+      return LeaseFormValidators.validateAgencyFees(cents)?.message(context);
     },
   );
 
@@ -694,7 +701,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialValue: _startDate,
       validator: (_) {
         if (!_startDateTouched) return null;
-        return LeaseFormValidators.validateStartDate(_startDate);
+        return LeaseFormValidators.validateStartDate(
+          _startDate,
+        )?.message(context);
       },
       builder: (state) => InkWell(
         onTap: widget.enabled ? _pickStartDate : null,
@@ -744,8 +753,10 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     return FormField<DateTime>(
       key: const Key('field_end_date'),
       initialValue: _endDate,
-      validator: (_) =>
-          LeaseFormValidators.validateEndDate(_endDate, _startDate),
+      validator: (_) => LeaseFormValidators.validateEndDate(
+        _endDate,
+        _startDate,
+      )?.message(context),
       builder: (state) => InkWell(
         onTap: widget.enabled ? _pickEndDate : null,
         child: InputDecorator(
@@ -879,7 +890,9 @@ class _PaymentSection extends StatelessWidget {
             validator: (v) {
               if (!paymentDayTouched) return null;
               if (v == null || v.trim().isEmpty) return null;
-              return LeaseFormValidators.validatePaymentDay(v);
+              return LeaseFormValidators.validatePaymentDay(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -964,7 +977,7 @@ class _IrlClausesSection extends StatelessWidget {
             },
             validator: (v) {
               if (!irlValueTouched) return null;
-              return LeaseFormValidators.validateIrlValue(v);
+              return LeaseFormValidators.validateIrlValue(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -986,7 +999,9 @@ class _IrlClausesSection extends StatelessWidget {
             },
             validator: (v) {
               if (!irlQuarterTouched) return null;
-              return LeaseFormValidators.validateIrlQuarter(v);
+              return LeaseFormValidators.validateIrlQuarter(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 8),

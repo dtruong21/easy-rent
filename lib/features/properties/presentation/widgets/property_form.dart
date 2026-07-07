@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/property_form_validators.dart';
 import '../../../../core/utils/surface_validator.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../domain/heating_type.dart';
 import '../../domain/property_type.dart';
 import 'heating_type_l10n.dart';
@@ -195,7 +196,7 @@ class PropertyFormWidgetState extends State<PropertyForm> {
             },
             validator: (v) {
               if (!_nameTouched) return null;
-              return PropertyFormValidators.validateName(v);
+              return PropertyFormValidators.validateName(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -221,7 +222,9 @@ class PropertyFormWidgetState extends State<PropertyForm> {
             },
             validator: (v) {
               if (!_addressTouched) return null;
-              return PropertyFormValidators.validateAddress(v);
+              return PropertyFormValidators.validateAddress(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -252,7 +255,9 @@ class PropertyFormWidgetState extends State<PropertyForm> {
                   },
                   validator: (v) {
                     if (!_postalCodeTouched) return null;
-                    return PropertyFormValidators.validatePostalCode(v);
+                    return PropertyFormValidators.validatePostalCode(
+                      v,
+                    )?.message(context);
                   },
                 ),
               ),
@@ -317,7 +322,7 @@ class PropertyFormWidgetState extends State<PropertyForm> {
             },
             validator: (v) {
               if (!_surfaceTouched) return null;
-              return SurfaceValidator.validate(v);
+              return SurfaceValidator.validate(v)?.message(context);
             },
           ),
 
@@ -587,7 +592,9 @@ class _CaracteristiquesSection extends StatelessWidget {
                   },
                   validator: (v) {
                     if (!roomsTouched) return null;
-                    return PropertyFormValidators.validateRooms(v);
+                    return PropertyFormValidators.validateRooms(
+                      v,
+                    )?.message(context);
                   },
                 ),
               ),
@@ -609,7 +616,9 @@ class _CaracteristiquesSection extends StatelessWidget {
                   },
                   validator: (v) {
                     if (!bedroomsTouched) return null;
-                    return PropertyFormValidators.validateBedrooms(v);
+                    return PropertyFormValidators.validateBedrooms(
+                      v,
+                    )?.message(context);
                   },
                 ),
               ),
@@ -635,7 +644,7 @@ class _CaracteristiquesSection extends StatelessWidget {
             },
             validator: (v) {
               if (!floorTouched) return null;
-              return PropertyFormValidators.validateFloor(v);
+              return PropertyFormValidators.validateFloor(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -702,7 +711,9 @@ class _CaracteristiquesSection extends StatelessWidget {
             },
             validator: (v) {
               if (!constructionYearTouched) return null;
-              return PropertyFormValidators.validateConstructionYear(v);
+              return PropertyFormValidators.validateConstructionYear(
+                v,
+              )?.message(context);
             },
           ),
         ],
@@ -839,7 +850,9 @@ class _FinancementSection extends StatelessWidget {
             },
             validator: (v) {
               if (!purchasePriceTouched) return null;
-              return PropertyFormValidators.validatePurchasePrice(v);
+              return PropertyFormValidators.validatePurchasePrice(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -902,7 +915,9 @@ class _FinancementSection extends StatelessWidget {
             },
             validator: (v) {
               if (!notaryFeesTouched) return null;
-              return PropertyFormValidators.validateNotaryFees(v);
+              return PropertyFormValidators.validateNotaryFees(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 8),
@@ -936,7 +951,9 @@ class _FinancementSection extends StatelessWidget {
             },
             validator: (v) {
               if (!propertyTaxTouched) return null;
-              return PropertyFormValidators.validateAnnualAmount(v);
+              return PropertyFormValidators.validateAnnualAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -959,7 +976,9 @@ class _FinancementSection extends StatelessWidget {
             },
             validator: (v) {
               if (!insurancePnoTouched) return null;
-              return PropertyFormValidators.validateAnnualAmount(v);
+              return PropertyFormValidators.validateAnnualAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -983,7 +1002,9 @@ class _FinancementSection extends StatelessWidget {
             },
             validator: (v) {
               if (!condoFeesTouched) return null;
-              return PropertyFormValidators.validateAnnualAmount(v);
+              return PropertyFormValidators.validateAnnualAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 24),
@@ -1098,7 +1119,9 @@ class _LoanSubSection extends StatelessWidget {
           },
           validator: (v) {
             if (!loanPrincipalTouched) return null;
-            return PropertyFormValidators.validateLoanPrincipal(v);
+            return PropertyFormValidators.validateLoanPrincipal(
+              v,
+            )?.message(context);
           },
         ),
         const SizedBox(height: 16),
@@ -1126,7 +1149,9 @@ class _LoanSubSection extends StatelessWidget {
                 },
                 validator: (v) {
                   if (!loanRateTouched) return null;
-                  return PropertyFormValidators.validateLoanRate(v);
+                  return PropertyFormValidators.validateLoanRate(
+                    v,
+                  )?.message(context);
                 },
               ),
             ),
@@ -1149,7 +1174,9 @@ class _LoanSubSection extends StatelessWidget {
                 },
                 validator: (v) {
                   if (!loanDurationTouched) return null;
-                  return PropertyFormValidators.validateLoanDuration(v);
+                  return PropertyFormValidators.validateLoanDuration(
+                    v,
+                  )?.message(context);
                 },
               ),
             ),
@@ -1175,7 +1202,9 @@ class _LoanSubSection extends StatelessWidget {
           },
           validator: (v) {
             if (!loanInsuranceRateTouched) return null;
-            return PropertyFormValidators.validateInsuranceRate(v);
+            return PropertyFormValidators.validateInsuranceRate(
+              v,
+            )?.message(context);
           },
         ),
         const SizedBox(height: 16),
@@ -1229,7 +1258,9 @@ class _LoanSubSection extends StatelessWidget {
           },
           validator: (v) {
             if (!loanPaymentOverrideTouched) return null;
-            return PropertyFormValidators.validatePurchasePrice(v);
+            return PropertyFormValidators.validatePurchasePrice(
+              v,
+            )?.message(context);
           },
         ),
         const SizedBox(height: 8),
@@ -1323,7 +1354,9 @@ class _DpeSection extends StatelessWidget {
                   },
                   validator: (v) {
                     if (!dpeValueTouched) return null;
-                    return PropertyFormValidators.validateDpeValue(v);
+                    return PropertyFormValidators.validateDpeValue(
+                      v,
+                    )?.message(context);
                   },
                 ),
               ),

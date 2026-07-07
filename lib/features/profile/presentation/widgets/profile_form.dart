@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/profile_form_validators.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 
 /// Champs du formulaire profil bailleur.
 ///
@@ -64,7 +65,9 @@ class ProfileFormWidgetState extends State<ProfileForm> {
             },
             validator: (v) {
               if (!_fullNameTouched) return null;
-              return ProfileFormValidators.validateFullName(v);
+              return ProfileFormValidators.validateFullName(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -80,7 +83,8 @@ class ProfileFormWidgetState extends State<ProfileForm> {
               border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,
-            validator: (v) => ProfileFormValidators.validatePhone(v),
+            validator: (v) =>
+                ProfileFormValidators.validatePhone(v)?.message(context),
           ),
           const SizedBox(height: 16),
 
@@ -107,7 +111,7 @@ class ProfileFormWidgetState extends State<ProfileForm> {
             },
             validator: (v) {
               if (!_addressTouched) return null;
-              return ProfileFormValidators.validateAddress(v);
+              return ProfileFormValidators.validateAddress(v)?.message(context);
             },
           ),
         ],

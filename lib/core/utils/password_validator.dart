@@ -2,6 +2,19 @@
 ///
 /// Politique : 8 caractères min + au moins 1 lettre + au moins 1 chiffre.
 /// Alignée sur la config Supabase (password_min_length=8, require_uppercase=false).
+///
+/// **FEAT-043 (i18n) — non migré vers [ValidationError] (déviation
+/// volontaire)** : contrairement aux autres validateurs de ce dossier,
+/// [validate] reste `String?` FR en dur. Ses seuls appelants sont des
+/// contrôleurs `application/` (`SignupController`, `ResetPasswordController`,
+/// `ChangePasswordController`) qui réinjectent tel quel le message retourné
+/// dans leur propre état d'erreur (`XxxState.error(message: ...)`) — un
+/// pipeline explicitement hors périmètre de cette passe (« messages d'erreur
+/// des contrôleurs », cf. ticket FEAT-043 validateurs). Aucun widget
+/// n'utilise [validate] comme `FormField.validator` (seulement des
+/// comparaisons `== null` pour activer/désactiver un bouton). Migrer ce
+/// validateur nécessiterait de toucher ces contrôleurs et leurs states —
+/// prévu dans une passe dédiée « messages d'erreur des contrôleurs ».
 class PasswordValidator {
   const PasswordValidator._();
 

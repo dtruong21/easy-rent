@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/utils/money_validators.dart';
+import '../../../../core/validation/validation_error.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../../expenses/domain/expense.dart';
 import '../../../expenses/presentation/expense_list_tile.dart';
 import '../../../payments/domain/payment.dart';
@@ -109,9 +111,8 @@ class ChargeRegularizationForm extends StatelessWidget {
               onActualExpensesChanged(MoneyFormat.eurosToCents(v) ?? 0),
           validator: (v) => MoneyValidators.validateChargesAmount(
             v,
-            requiredMessage:
-                context.l10n.chargeRegularizationActualExpensesRequiredError,
-          ),
+            requiredError: ValidationError.actualExpensesRequired,
+          )?.message(context),
         ),
         if (recoverableExpenses.isNotEmpty) ...[
           const SizedBox(height: 4),

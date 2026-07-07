@@ -4,6 +4,7 @@ import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/utils/payment_form_validators.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../domain/payment_method.dart';
 import '../payment_method_l10n.dart';
 import 'payment_amount_warning.dart';
@@ -201,7 +202,9 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             },
             validator: (v) {
               if (!_rentTouched) return null;
-              return PaymentFormValidators.validateRentAmount(v);
+              return PaymentFormValidators.validateRentAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -227,7 +230,9 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             },
             validator: (v) {
               if (!_chargesTouched) return null;
-              return PaymentFormValidators.validateChargesAmount(v);
+              return PaymentFormValidators.validateChargesAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 8),
@@ -244,7 +249,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
               if (!_paymentMethodTouched) return null;
               return PaymentFormValidators.validatePaymentMethod(
                 _paymentMethod,
-              );
+              )?.message(context);
             },
             builder: (state) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +315,9 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             initialValue: _periodStart,
             validator: (_) {
               if (!_periodStartTouched) return null;
-              return PaymentFormValidators.validatePeriodStart(_periodStart);
+              return PaymentFormValidators.validatePeriodStart(
+                _periodStart,
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickPeriodStart : null,
@@ -345,7 +352,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
               return PaymentFormValidators.validatePeriodEnd(
                 _periodEnd,
                 _periodStart,
-              );
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickPeriodEnd : null,
@@ -377,7 +384,9 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             initialValue: _paidAt,
             validator: (_) {
               if (!_paidAtTouched) return null;
-              return PaymentFormValidators.validatePaidAt(_paidAt);
+              return PaymentFormValidators.validatePaidAt(
+                _paidAt,
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickPaidAt : null,
@@ -416,7 +425,8 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             ),
             maxLines: 3,
             maxLength: 500,
-            validator: (v) => PaymentFormValidators.validateNotes(v),
+            validator: (v) =>
+                PaymentFormValidators.validateNotes(v)?.message(context),
           ),
         ],
       ),
