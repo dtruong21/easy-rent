@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
-import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
 import '../domain/delete_account_reauth_method.dart';
 import '../domain/delete_account_state.dart';
@@ -122,7 +121,10 @@ class DeleteAccountController extends StateNotifier<DeleteAccountState> {
         return 'Le compte confirmé ne correspond pas au compte connecté. '
             'Réessayez avec le même compte.';
       default:
-        return AuthErrorMapper.fromException(e);
+        // FEAT-045 : flux de suppression encore FR (non couvert par
+        // l'i18n FEAT-043 — arrivé après les vagues d'extraction).
+        // Suivi : migrer ce contrôleur vers AuthError + AuthErrorL10n.
+        return 'La suppression a échoué. Veuillez réessayer.';
     }
   }
 
