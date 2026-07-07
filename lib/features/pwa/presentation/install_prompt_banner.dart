@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../application/install_prompt_controller.dart';
 
 /// Banner Material 3 affichant le prompt d'installation PWA.
@@ -16,6 +17,7 @@ class InstallPromptBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(installPromptControllerProvider);
+    final l10n = context.l10n;
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -25,9 +27,8 @@ class InstallPromptBanner extends ConsumerWidget {
         hidden: () => const SizedBox.shrink(key: ValueKey('banner_hidden')),
         visibleNative: () => _BannerCard(
           key: const ValueKey('banner_native'),
-          subtitle:
-              'Accédez à votre gestion locative en un clic, même hors-ligne.',
-          buttonLabel: 'Installer',
+          subtitle: l10n.pwaInstallBannerNativeSubtitle,
+          buttonLabel: l10n.pwaInstallBannerInstallButton,
           onButton: () =>
               ref.read(installPromptControllerProvider.notifier).trigger(),
           onClose: () =>
@@ -35,8 +36,8 @@ class InstallPromptBanner extends ConsumerWidget {
         ),
         visibleIos: () => _BannerCard(
           key: const ValueKey('banner_ios'),
-          subtitle: 'Appuyez sur Partager puis « Sur l\'écran d\'accueil ».',
-          buttonLabel: 'OK, compris',
+          subtitle: l10n.pwaInstallBannerIosSubtitle,
+          buttonLabel: l10n.pwaInstallBannerIosConfirmButton,
           onButton: () =>
               ref.read(installPromptControllerProvider.notifier).dismiss(),
           onClose: () =>
@@ -71,6 +72,7 @@ class _BannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
       child: Card(
@@ -91,7 +93,7 @@ class _BannerCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Installez Baillan.',
+                      l10n.pwaInstallBannerTitle,
                       style: theme.textTheme.titleSmall,
                     ),
                     Text(subtitle, style: theme.textTheme.bodySmall),
@@ -109,7 +111,7 @@ class _BannerCard extends StatelessWidget {
               IconButton(
                 key: const Key('btn_banner_close'),
                 icon: const Icon(Icons.close),
-                tooltip: 'Fermer',
+                tooltip: l10n.commonClose,
                 onPressed: onClose,
               ),
             ],

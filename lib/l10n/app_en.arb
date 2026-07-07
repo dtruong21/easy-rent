@@ -4158,5 +4158,142 @@
   "simulatorTierChipPaid": "PRO PLAN · UNLIMITED",
   "@simulatorTierChipPaid": {
     "description": "Uppercase tier chip label shown at the top of the simulator page for Pro-plan accounts. Uppercase is intentional (brand styling) — keep the translation uppercase too."
+  },
+
+  "landingAnonymousSignInErrorSnackbar": "Sign-in failed. Please try again.",
+  "@landingAnonymousSignInErrorSnackbar": {
+    "description": "SnackBar message shown on the public landing page when starting an anonymous Firebase session fails (FirebaseAuthException caught from signInAnonymously, triggered by the 'Continue without an account' CTA)."
+  },
+  "landingFolioCaption": "Register · Cover Page",
+  "@landingFolioCaption": {
+    "description": "Small italic caption painted on the desk background under the landing cover sheet (decorative folio label at the bottom of the public landing page, below LandingSheet)."
+  },
+  "landingCartoucheLabel": "COVER PAGE",
+  "@landingCartoucheLabel": {
+    "description": "Small-caps kicker label in the landing cover sheet's cartouche header (top-right, next to the date), naming the page as the register's cover/title page. Editorial branding concept mirroring authLoginCartoucheOpening's 'Opening' kicker on the login page, but kept as its own landing* key per module convention."
+  },
+  "landingTagline": "Keep the register.",
+  "@landingTagline": {
+    "description": "Italic tagline under the wordmark in the landing cover sheet masthead (brand copy, 'notarial register' concept). Same wording as authLoginTagline on the login page; intentionally duplicated under the landing* prefix per the per-module key ownership convention (see lib/l10n/l10n_convention.dart)."
+  },
+  "landingPitch": "Simulate your next rental investment, or manage the register of your properties.",
+  "@landingPitch": {
+    "description": "Italic editorial pitch sentence on the landing cover sheet, summarizing the app's two entry points: the investment simulator and the property/rental register."
+  },
+  "landingSommaireSimulatorTitle": "Investment simulator",
+  "@landingSommaireSimulatorTitle": {
+    "description": "Title of the first 'sommaire' (table of contents) entry on the landing cover sheet, numbered article I — the investment simulator. Same wording as simulatorPageTitle (different module's AppBar title); kept as a separate landing* key per module convention."
+  },
+  "landingSommaireSimulatorDetail": "yield, cash flow, loan cost",
+  "@landingSommaireSimulatorDetail": {
+    "description": "Detail text (after the em dash) for the first 'sommaire' entry, article I, on the landing cover sheet — lists the simulator's key outputs."
+  },
+  "landingSommaireRegisterTitle": "Property register",
+  "@landingSommaireRegisterTitle": {
+    "description": "Title of the second 'sommaire' (table of contents) entry on the landing cover sheet, numbered article II — the property/rental management register."
+  },
+  "landingSommaireRegisterDetail": "leases, receipts, due dates",
+  "@landingSommaireRegisterDetail": {
+    "description": "Detail text (after the em dash) for the second 'sommaire' entry, article II, on the landing cover sheet — lists the register's key features."
+  },
+  "landingCtaAnonymousButton": "Continue without an account",
+  "@landingCtaAnonymousButton": {
+    "description": "Primary CTA button label starting an anonymous Firebase session (redirects to /simulator on success); replaced by a spinner while the sign-in is in flight. Must keep equal visual weight to landingCtaSignupButton (product lock: no visual bias between the two paths — translations should stay similarly short)."
+  },
+  "landingCtaSignupButton": "Create an account",
+  "@landingCtaSignupButton": {
+    "description": "Primary CTA button label navigating to the signup page (/signup). Must keep equal visual weight to landingCtaAnonymousButton (product lock: no visual bias between the two paths — translations should stay similarly short)."
+  },
+  "landingCtaLoginLink": "I already have an account",
+  "@landingCtaLoginLink": {
+    "description": "Discreet text-button link under the two main CTAs on the landing cover sheet, navigating to the login page (/login) for landlords who already have an account."
+  },
+  "landingFooterSignature": "Done on {date} · {appName}",
+  "@landingFooterSignature": {
+    "description": "Footer caption at the bottom of the landing cover sheet, styled like a French contract's 'Fait à… le…' mention; {date} is already formatted for the active locale (e.g. '1er juillet 2026' / 'July 1, 2026' — computed via package:intl DateFormat, FR keeps the '1er' ordinal on the 1st of the month), {appName} is the app wordmark (pass context.l10n.appTitle). Identical pattern to authLoginSheetFooter on the login page; intentionally duplicated under the landing* prefix per the per-module key ownership convention. IMPORTANT: gen_l10n generates this as a positional method String landingFooterSignature(String date, String appName) — placeholder order (date first, then appName) must be preserved.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "supportPageTitle": "Contact us",
+  "@supportPageTitle": {
+    "description": "AppBar title of the support/contact page (`/profile/support`)."
+  },
+  "supportPageIntro": "A question, a concern? Write to us.",
+  "@supportPageIntro": {
+    "description": "Intro text shown above the contact form on the support page."
+  },
+  "supportFormSubjectLabel": "Subject",
+  "@supportFormSubjectLabel": {
+    "description": "Label of the subject text field in the 'Contact us' form."
+  },
+  "supportFormMessageLabel": "Message",
+  "@supportFormMessageLabel": {
+    "description": "Label of the message text field in the 'Contact us' form."
+  },
+  "supportFormSubmitButton": "Send",
+  "@supportFormSubmitButton": {
+    "description": "Submit button label of the 'Contact us' form; replaced by a spinner while submitting."
+  },
+  "supportFormSuccessSnackbar": "Message sent. We'll get back to you by email.",
+  "@supportFormSuccessSnackbar": {
+    "description": "SnackBar confirmation shown after successfully submitting the contact form."
+  },
+  "supportFormSubjectRequiredError": "Subject is required",
+  "@supportFormSubjectRequiredError": {
+    "description": "Contact form validation error (SupportSubmitError.subjectRequired): the subject field was left empty."
+  },
+  "supportFormSubjectTooLongError": "The subject cannot exceed {limit} characters.",
+  "@supportFormSubjectTooLongError": {
+    "description": "Contact form validation error (SupportSubmitError.subjectTooLong): the subject exceeds the maximum length; {limit} is always the hardcoded constant kSupportSubjectMaxLength (120), mirrored server-side by the support_requests Firestore rules.",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "supportFormMessageRequiredError": "Message is required",
+  "@supportFormMessageRequiredError": {
+    "description": "Contact form validation error (SupportSubmitError.messageRequired): the message field was left empty."
+  },
+  "supportFormMessageTooLongError": "The message cannot exceed {limit} characters.",
+  "@supportFormMessageTooLongError": {
+    "description": "Contact form validation error (SupportSubmitError.messageTooLong): the message exceeds the maximum length; {limit} is always the hardcoded constant kSupportMessageMaxLength (2000), mirrored server-side by the support_requests Firestore rules.",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "supportFormSendFailedError": "Unable to send. Please try again in a moment.",
+  "@supportFormSendFailedError": {
+    "description": "Contact form submission error (SupportSubmitError.sendFailed): generic Firestore/network failure while submitting the support request."
+  },
+
+  "pwaInstallBannerTitle": "Install Baillan.",
+  "@pwaInstallBannerTitle": {
+    "description": "Title shown in the PWA install banner (top of dashboard), shared by both the native (Chrome/Edge) and iOS Safari variants. 'Baillan' is the brand name — keep untranslated (endonym) in every locale, matching appTitle."
+  },
+  "pwaInstallBannerNativeSubtitle": "Access your rental management in one click, even offline.",
+  "@pwaInstallBannerNativeSubtitle": {
+    "description": "Subtitle of the PWA install banner shown on browsers that support the native 'beforeinstallprompt' event (Chrome/Edge), explaining the benefit of installing the app to the home screen."
+  },
+  "pwaInstallBannerInstallButton": "Install",
+  "@pwaInstallBannerInstallButton": {
+    "description": "Button label in the PWA install banner (native/Chrome-Edge variant) that triggers the browser's native install prompt (beforeinstallprompt.prompt())."
+  },
+  "pwaInstallBannerIosSubtitle": "Tap Share then \"Add to Home Screen\".",
+  "@pwaInstallBannerIosSubtitle": {
+    "description": "Subtitle of the PWA install banner shown on iOS Safari (no native install-prompt API), giving manual installation instructions. The FR source quotes the iOS share-sheet menu item with French guillemets « »; the EN draft uses plain double quotes since English doesn't use guillemets — flag for translator/house-style review."
+  },
+  "pwaInstallBannerIosConfirmButton": "OK, got it",
+  "@pwaInstallBannerIosConfirmButton": {
+    "description": "Button label in the PWA install banner (iOS Safari variant) that dismisses the banner once the user has read the manual install instructions."
   }
 }

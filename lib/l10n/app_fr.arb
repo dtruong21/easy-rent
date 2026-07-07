@@ -948,5 +948,37 @@
   "simulatorFundingThanksButtonLabel": "Merci ! Nous vous recontacterons",
   "simulatorTierChipAnonymous": "MODE DÉMO · 1 SCÉNARIO",
   "simulatorTierChipFree": "COMPTE GRATUIT · {count}/3 SCÉNARIOS",
-  "simulatorTierChipPaid": "PLAN PRO · ILLIMITÉ"
+  "simulatorTierChipPaid": "PLAN PRO · ILLIMITÉ",
+
+  "landingAnonymousSignInErrorSnackbar": "Connexion impossible, réessayez.",
+  "landingFolioCaption": "Registre · Page de garde",
+  "landingCartoucheLabel": "PAGE DE GARDE",
+  "landingTagline": "Tenir registre.",
+  "landingPitch": "Simulez votre prochain investissement locatif, ou gérez le registre de vos biens.",
+  "landingSommaireSimulatorTitle": "Simulateur d'investissement",
+  "landingSommaireSimulatorDetail": "rendement, cash-flow, coût du crédit",
+  "landingSommaireRegisterTitle": "Registre des biens",
+  "landingSommaireRegisterDetail": "baux, quittances, échéances",
+  "landingCtaAnonymousButton": "Continuer sans compte",
+  "landingCtaSignupButton": "Créer un compte",
+  "landingCtaLoginLink": "J'ai déjà un compte",
+  "landingFooterSignature": "Fait le {date} · {appName}",
+
+  "supportPageTitle": "Nous contacter",
+  "supportPageIntro": "Une question, un souci ? Écrivez-nous.",
+  "supportFormSubjectLabel": "Sujet",
+  "supportFormMessageLabel": "Message",
+  "supportFormSubmitButton": "Envoyer",
+  "supportFormSuccessSnackbar": "Message envoyé. Nous reviendrons vers vous par email.",
+  "supportFormSubjectRequiredError": "Sujet requis",
+  "supportFormSubjectTooLongError": "Le sujet doit faire {limit} caractères max.",
+  "supportFormMessageRequiredError": "Message requis",
+  "supportFormMessageTooLongError": "Le message doit faire {limit} caractères max.",
+  "supportFormSendFailedError": "Envoi impossible. Réessayez dans quelques instants.",
+
+  "pwaInstallBannerTitle": "Installez Baillan.",
+  "pwaInstallBannerNativeSubtitle": "Accédez à votre gestion locative en un clic, même hors-ligne.",
+  "pwaInstallBannerInstallButton": "Installer",
+  "pwaInstallBannerIosSubtitle": "Appuyez sur Partager puis « Sur l'écran d'accueil ».",
+  "pwaInstallBannerIosConfirmButton": "OK, compris"
 }

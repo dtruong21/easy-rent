@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 
 /// Fallback du sérif EB Garamond bundlé en asset (miroir de
@@ -90,27 +92,27 @@ class LandingSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildCartouche(),
+            _buildCartouche(context),
             SizedBox(height: isDesktop ? 56 : 40),
-            _buildMasthead(),
+            _buildMasthead(context),
             const SizedBox(height: 26),
             _buildDoubleRule(),
             SizedBox(height: isDesktop ? 40 : 30),
-            _buildPitch(),
+            _buildPitch(context),
             SizedBox(height: isDesktop ? 40 : 30),
-            _buildSommaire(),
+            _buildSommaire(context),
             SizedBox(height: isDesktop ? 48 : 36),
-            _buildCtas(),
+            _buildCtas(context),
             const SizedBox(height: 10),
             Center(
               child: TextButton(
                 key: const Key('landing_cta_login'),
                 onPressed: onLogin,
-                child: const Text('J\'ai déjà un compte'),
+                child: Text(context.l10n.landingCtaLoginLink),
               ),
             ),
             SizedBox(height: isDesktop ? 32 : 22),
-            _buildFooter(),
+            _buildFooter(context),
           ],
         ),
       ),
@@ -118,12 +120,12 @@ class LandingSheet extends StatelessWidget {
   }
 
   /// Cartouche d'en-tête : date à gauche, intitulé à droite.
-  Widget _buildCartouche() {
+  Widget _buildCartouche(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          _formatFrenchDate(DateTime.now()),
+          _formatFrenchDate(context, DateTime.now()),
           style: const TextStyle(
             fontFamily: 'EB Garamond',
             fontFamilyFallback: serifFallback,
@@ -133,9 +135,9 @@ class LandingSheet extends StatelessWidget {
             color: AppTheme.inkMuted,
           ),
         ),
-        const Text(
-          'PAGE DE GARDE',
-          style: TextStyle(
+        Text(
+          context.l10n.landingCartoucheLabel,
+          style: const TextStyle(
             fontSize: 11,
             letterSpacing: 2.5,
             fontWeight: FontWeight.w500,
@@ -147,11 +149,12 @@ class LandingSheet extends StatelessWidget {
   }
 
   /// Masthead centré : wordmark + tagline — composition de page de titre.
-  Widget _buildMasthead() {
+  Widget _buildMasthead(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       children: [
         Text(
-          'Baillan.',
+          l10n.appTitle,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'EB Garamond',
@@ -163,10 +166,10 @@ class LandingSheet extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Tenir registre.',
+        Text(
+          l10n.landingTagline,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'EB Garamond',
             fontFamilyFallback: serifFallback,
             fontStyle: FontStyle.italic,
@@ -207,12 +210,11 @@ class LandingSheet extends StatelessWidget {
   }
 
   /// Le pitch produit — phrase inchangée (testée), en italique de couverture.
-  Widget _buildPitch() {
-    return const Text(
-      'Simulez votre prochain investissement locatif, ou gérez le '
-      'registre de vos biens.',
+  Widget _buildPitch(BuildContext context) {
+    return Text(
+      context.l10n.landingPitch,
       textAlign: TextAlign.center,
-      style: TextStyle(
+      style: const TextStyle(
         fontFamily: 'EB Garamond',
         fontFamilyFallback: serifFallback,
         fontStyle: FontStyle.italic,
@@ -225,23 +227,24 @@ class LandingSheet extends StatelessWidget {
   }
 
   /// Sommaire du registre — deux articles, numérotation romaine olive.
-  Widget _buildSommaire() {
+  Widget _buildSommaire(BuildContext context) {
+    final l10n = context.l10n;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: const [
+          children: [
             _SommaireEntry(
               numeral: 'I.',
-              title: 'Simulateur d\'investissement',
-              detail: 'rendement, cash-flow, coût du crédit',
+              title: l10n.landingSommaireSimulatorTitle,
+              detail: l10n.landingSommaireSimulatorDetail,
             ),
-            SizedBox(height: 14),
+            const SizedBox(height: 14),
             _SommaireEntry(
               numeral: 'II.',
-              title: 'Registre des biens',
-              detail: 'baux, quittances, échéances',
+              title: l10n.landingSommaireRegisterTitle,
+              detail: l10n.landingSommaireRegisterDetail,
             ),
           ],
         ),
@@ -251,7 +254,8 @@ class LandingSheet extends StatelessWidget {
 
   /// Les 2 CTAs — POIDS VISUEL ÉQUIVALENT (product lock #2) : mêmes
   /// FilledButton olive, même taille. Empilés quand la feuille est étroite.
-  Widget _buildCtas() {
+  Widget _buildCtas(BuildContext context) {
+    final l10n = context.l10n;
     final anonymous = FilledButton(
       key: const Key('landing_cta_anonymous'),
       onPressed: isStartingAnonymous ? null : onContinueWithoutAccount,
@@ -264,7 +268,7 @@ class LandingSheet extends StatelessWidget {
               width: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Text('Continuer sans compte'),
+          : Text(l10n.landingCtaAnonymousButton),
     );
     final signup = FilledButton(
       key: const Key('landing_cta_signup'),
@@ -272,7 +276,7 @@ class LandingSheet extends StatelessWidget {
       style: FilledButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 18),
       ),
-      child: const Text('Créer un compte'),
+      child: Text(l10n.landingCtaSignupButton),
     );
 
     return LayoutBuilder(
@@ -295,7 +299,8 @@ class LandingSheet extends StatelessWidget {
   }
 
   /// Pied de feuille « Fait le … · Baillan. » entre deux hairlines.
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
+    final l10n = context.l10n;
     return Row(
       children: [
         Expanded(
@@ -307,7 +312,10 @@ class LandingSheet extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'Fait le ${_formatFrenchDate(DateTime.now())} · Baillan.',
+            l10n.landingFooterSignature(
+              _formatFrenchDate(context, DateTime.now()),
+              l10n.appTitle,
+            ),
             style: const TextStyle(
               fontFamily: 'EB Garamond',
               fontFamilyFallback: serifFallback,
@@ -330,6 +338,9 @@ class LandingSheet extends StatelessWidget {
 }
 
 /// Une entrée du sommaire : numéral romain olive + intitulé + détail.
+///
+/// `numeral` reste en dur (chiffre romain, identique dans toutes les
+/// locales) — seuls `title`/`detail` sont déjà localisés par l'appelant.
 class _SommaireEntry extends StatelessWidget {
   const _SommaireEntry({
     required this.numeral,
@@ -389,24 +400,20 @@ class _SommaireEntry extends StatelessWidget {
   }
 }
 
-/// Formate une date française style contrat : « 1er juillet 2026 ».
-/// Ordinal seulement sur le 1er du mois (convention FR) — miroir de
-/// `login_page.dart`.
-String _formatFrenchDate(DateTime d) {
-  const months = [
-    'janvier',
-    'février',
-    'mars',
-    'avril',
-    'mai',
-    'juin',
-    'juillet',
-    'août',
-    'septembre',
-    'octobre',
-    'novembre',
-    'décembre',
-  ];
-  final day = d.day == 1 ? '1er' : d.day.toString();
-  return '$day ${months[d.month - 1]} ${d.year}';
+/// Formate une date style contrat dans la locale active de l'app, ex.
+/// « 1er juillet 2026 » (FR, ordinal réservé au 1er du mois — convention
+/// FR) ou « July 1, 2026 » (EN via `DateFormat.yMMMMd`).
+///
+/// FEAT-043 : délègue à `package:intl` (piloté par la locale résolue,
+/// symboles initialisés via les délégués `AppLocalizations`) — même pattern
+/// que `login_page.dart`/`dashboard_header.dart` (nom conservé pour la
+/// continuité avec le fichier miroir, bien qu'il formate désormais aussi
+/// l'anglais).
+String _formatFrenchDate(BuildContext context, DateTime d) {
+  final localeName = Localizations.localeOf(context).toString();
+  if (localeName.startsWith('fr') && d.day == 1) {
+    final month = DateFormat.MMMM(localeName).format(d);
+    return '1er $month ${d.year}';
+  }
+  return DateFormat.yMMMMd(localeName).format(d);
 }
