@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../application/landlord_profile_provider.dart';
 import '../application/profile_form_controller.dart';
 import '../domain/landlord_profile.dart';
 import '../domain/profile_form_state.dart';
+import 'profile_form_error_reason_l10n.dart';
 import 'widgets/profile_form.dart';
 
 final _log = Logger('ProfileDetailsPage');
@@ -82,6 +84,8 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     // Écouter les changements d'état pour les toasts.
     ref.listen<ProfileFormState>(profileFormControllerProvider, (_, next) {
       if (!context.mounted) return;
@@ -89,7 +93,7 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
         success: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Profil mis à jour'),
+              content: Text(l10n.profileDetailsUpdatedSnackbar),
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
           );
@@ -106,13 +110,13 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (reason) => reason.message(context),
       orElse: () => null,
     );
 
     return Scaffold(
       appBar: AppAppBar(
-        title: 'Informations personnelles',
+        title: l10n.profileDetailsTitle,
         fallbackRoute: '/profile',
       ),
       body: _buildBody(isSubmitting: isSubmitting, errorMessage: errorMessage),
@@ -124,6 +128,7 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
     required String? errorMessage,
   }) {
     final asyncProfile = ref.watch(landlordProfileProvider);
+    final l10n = context.l10n;
 
     return asyncProfile.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -134,7 +139,7 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Impossible de charger le profil.',
+                l10n.profileDetailsLoadError,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
                 textAlign: TextAlign.center,
               ),
@@ -143,7 +148,7 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
                 onPressed: () =>
                     ref.read(landlordProfileProvider.notifier).refresh(),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Réessayer'),
+                label: Text(l10n.commonRetry),
               ),
             ],
           ),
@@ -205,7 +210,7 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Enregistrer'),
+                    : Text(context.l10n.commonSave),
               ),
             ],
           ),
@@ -226,15 +231,16 @@ class _EmailReadOnlyField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return TextFormField(
       key: const Key('field_email_readonly'),
       initialValue: email,
       readOnly: true,
-      decoration: const InputDecoration(
-        labelText: 'Email',
-        helperText: "L'email ne peut pas être modifié",
-        border: OutlineInputBorder(),
-        suffixIcon: Icon(Icons.lock_outline),
+      decoration: InputDecoration(
+        labelText: l10n.profileDetailsEmailLabel,
+        helperText: l10n.profileDetailsEmailHelper,
+        border: const OutlineInputBorder(),
+        suffixIcon: const Icon(Icons.lock_outline),
       ),
     );
   }

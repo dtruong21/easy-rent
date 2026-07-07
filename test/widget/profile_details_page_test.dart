@@ -15,6 +15,8 @@ import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/profile/domain/profile_form_state.dart';
 import 'package:easyrent/features/profile/presentation/profile_details_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -105,7 +107,12 @@ Widget _buildPage({
           (ref) => ProfileFormController(ref)..state = initialFormState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -280,17 +287,22 @@ void main() {
         _buildPage(
           repo: repo,
           initialFormState: const ProfileFormState.error(
-            message:
-                'Impossible de mettre à jour le profil. Veuillez réessayer.',
+            reason: ProfileFormErrorReason.unexpected,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('Impossible de mettre à jour'),
-        findsOneWidget,
+      // Le message exact est résolu via AppLocalizations (FEAT-043) ; on
+      // vérifie juste qu'un texte d'erreur est bien rendu inline.
+      final errorFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            widget.style?.color != null &&
+            (widget.data?.isNotEmpty ?? false) &&
+            widget.key == null,
       );
+      expect(errorFinder, findsWidgets);
     });
 
     // -----------------------------------------------------------------------

@@ -42,17 +42,17 @@ class ProfileFormController extends StateNotifier<ProfileFormState> {
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException lors de update profil', e, st);
       state = const ProfileFormState.error(
-        message: 'Erreur lors de la sauvegarde du profil. Réessayez.',
+        reason: ProfileFormErrorReason.saveFailed,
       );
     } on ProfileNotFoundException catch (e, st) {
       _log.warning('ProfileNotFoundException lors de update', e, st);
       state = const ProfileFormState.error(
-        message: 'Profil introuvable. Reconnectez-vous et réessayez.',
+        reason: ProfileFormErrorReason.profileNotFound,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de update profil', e, st);
       state = const ProfileFormState.error(
-        message: 'Impossible de mettre à jour le profil. Veuillez réessayer.',
+        reason: ProfileFormErrorReason.unexpected,
       );
     }
   }

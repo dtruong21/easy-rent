@@ -1,41 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 
 /// Header du dashboard avec salutation et date du jour.
 ///
-/// Affiche "Bonjour, [firstName]" + date du jour formatée en français.
-/// [firstName] est nullable (profil incomplet lors du 1er login).
+/// Affiche "Bonjour, [firstName]" + date du jour formatée dans la locale
+/// active (jour de semaine + jour + mois + année, ex. « lundi 6 juillet
+/// 2026 » / « Monday, July 6, 2026 »). [firstName] est nullable (profil
+/// incomplet lors du 1er login).
 ///
-/// On utilise un formatage manuel pour éviter la dépendance sur
-/// les données de locale intl (non chargées automatiquement dans les tests).
+/// FEAT-043 : le formatage de date délègue à `DateFormat.yMMMMEEEEd` de
+/// `package:intl`, piloté par la locale résolue de l'app (les symboles de
+/// date sont initialisés via les délégués `AppLocalizations`, cf.
+/// `main.dart`) — remplace l'ancien tableau de mois/jours FR en dur.
 class DashboardHeader extends StatelessWidget {
   const DashboardHeader({super.key, this.firstName});
 
   /// Prénom du bailleur (peut être null si profil incomplet).
   final String? firstName;
 
-  static const _months = [
-    '', // index 0 inutilisé
-    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-  ];
-
-  static const _days = [
-    '', // index 0 inutilisé
-    'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
-    final now = DateTime.now();
-    final dayName = _days[now.weekday]; // weekday 1=lundi..7=dimanche
-    final dateLabel = '$dayName ${now.day} ${_months[now.month]} ${now.year}';
+    final localeName = Localizations.localeOf(context).toString();
+    final dateLabel = DateFormat.yMMMMEEEEd(localeName).format(DateTime.now());
+    final l10n = context.l10n;
     final greeting = firstName != null && firstName!.isNotEmpty
-        ? 'Bonjour, $firstName'
-        : 'Bonjour';
+        ? l10n.dashboardGreetingWithName(firstName!)
+        : l10n.dashboardGreeting;
 
     return Padding(
       padding: EdgeInsets.only(bottom: spacing.lg),

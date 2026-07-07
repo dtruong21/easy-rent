@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../data/auth_repository.dart';
 import 'widgets/reset_password_form.dart';
 
@@ -50,7 +51,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Nouveau mot de passe',
+                    context.l10n.authResetPasswordTitle,
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -89,6 +90,7 @@ class _InvalidLinkView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -96,26 +98,25 @@ class _InvalidLinkView extends StatelessWidget {
         Icon(Icons.link_off_outlined, size: 56, color: theme.colorScheme.error),
         const SizedBox(height: 24),
         Text(
-          'Lien invalide ou expiré',
+          l10n.authInvalidLinkTitle,
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
         Text(
-          'Ce lien de réinitialisation est invalide ou a expiré. '
-          'Demandez-en un nouveau.',
+          l10n.authInvalidLinkMessage,
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
         FilledButton(
           onPressed: () => context.go('/forgot-password'),
-          child: const Text('Demander un nouveau lien'),
+          child: Text(l10n.authRequestNewLinkButton),
         ),
         const SizedBox(height: 12),
         TextButton(
           onPressed: () => context.go('/login'),
-          child: const Text('Retour à la connexion'),
+          child: Text(l10n.authBackToLoginButton),
         ),
       ],
     );

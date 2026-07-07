@@ -1,7 +1,9 @@
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
+import '../../../core/i18n/l10n_extensions.dart';
 import 'widgets/login_form.dart';
 
 /// Page de connexion — concept "La Page du Registre".
@@ -231,7 +233,7 @@ class _LoginPageState extends State<LoginPage>
         children: [
           sheet,
           const SizedBox(height: 20),
-          _buildFooterPagination(mutedColor: marginMuted),
+          _buildFooterPagination(context: context, mutedColor: marginMuted),
         ],
       );
     }
@@ -244,6 +246,7 @@ class _LoginPageState extends State<LoginPage>
           child: Padding(
             padding: const EdgeInsets.only(top: 72, right: 24),
             child: _buildOuterMargin(
+              context: context,
               mutedColor: marginMuted,
               oliveTone: marginOlive,
             ),
@@ -259,6 +262,7 @@ class _LoginPageState extends State<LoginPage>
   /// La marge extérieure gauche (desktop uniquement) : paraphe SVG + pagination
   /// verticale. C'est là qu'on met la signature notariale.
   Widget _buildOuterMargin({
+    required BuildContext context,
     required Color mutedColor,
     required Color oliveTone,
   }) {
@@ -271,7 +275,7 @@ class _LoginPageState extends State<LoginPage>
         RotatedBox(
           quarterTurns: 3,
           child: Text(
-            'Contrat  —  Ouverture',
+            context.l10n.authLoginMarginHeading,
             style: TextStyle(
               fontFamily: 'EB Garamond',
               fontFamilyFallback: _serifFallback,
@@ -416,13 +420,13 @@ class _LoginPageState extends State<LoginPage>
                   color: oliveTone.withValues(alpha: 0.25),
                 ),
                 SizedBox(height: isDesktop ? 44 : 32),
-                _buildAphorism(mutedColor: mutedColor),
+                _buildAphorism(context: context, mutedColor: mutedColor),
                 SizedBox(height: isDesktop ? 40 : 28),
                 // Le formulaire — inchangé, importé tel quel.
                 const LoginForm(),
                 SizedBox(height: isDesktop ? 40 : 28),
                 // Bas de page : mention légale style pied de registre.
-                _buildSheetFooter(mutedColor: mutedColor),
+                _buildSheetFooter(context: context, mutedColor: mutedColor),
               ],
             ),
           ),
@@ -446,7 +450,7 @@ class _LoginPageState extends State<LoginPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Baillan.',
+                context.l10n.appTitle,
                 style: theme.textTheme.displayMedium?.copyWith(
                   color: inkColor,
                   height: 1.0,
@@ -454,7 +458,7 @@ class _LoginPageState extends State<LoginPage>
               ),
               const SizedBox(height: 6),
               Text(
-                'Tenir registre.',
+                context.l10n.authLoginTagline,
                 style: TextStyle(
                   fontFamily: 'EB Garamond',
                   fontFamilyFallback: _serifFallback,
@@ -474,7 +478,7 @@ class _LoginPageState extends State<LoginPage>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _formatFrenchDate(DateTime.now()),
+                _formatFrenchDate(context, DateTime.now()),
                 style: TextStyle(
                   fontFamily: 'EB Garamond',
                   fontFamilyFallback: _serifFallback,
@@ -486,7 +490,7 @@ class _LoginPageState extends State<LoginPage>
               ),
               const SizedBox(height: 2),
               Text(
-                'Ouverture',
+                context.l10n.authLoginCartoucheOpening,
                 style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 2.5,
@@ -502,12 +506,15 @@ class _LoginPageState extends State<LoginPage>
   }
 
   /// L'aphorisme éditorial au-dessus du formulaire.
-  Widget _buildAphorism({required Color mutedColor}) {
+  Widget _buildAphorism({
+    required BuildContext context,
+    required Color mutedColor,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'En cas de doute, sortez le registre.',
+          context.l10n.authLoginAphorismTitle,
           style: TextStyle(
             fontFamily: 'EB Garamond',
             fontFamilyFallback: _serifFallback,
@@ -520,8 +527,7 @@ class _LoginPageState extends State<LoginPage>
         ),
         const SizedBox(height: 12),
         Text(
-          'Signez votre entrée. Vos identifiants ouvrent le registre du '
-          'bailliage — quittances, baux, échéances.',
+          context.l10n.authLoginAphorismBody,
           style: TextStyle(fontSize: 13.5, height: 1.55, color: mutedColor),
         ),
       ],
@@ -529,7 +535,10 @@ class _LoginPageState extends State<LoginPage>
   }
 
   /// Pied de la feuille — style "Fait à… le…" d'une feuille de contrat FR.
-  Widget _buildSheetFooter({required Color mutedColor}) {
+  Widget _buildSheetFooter({
+    required BuildContext context,
+    required Color mutedColor,
+  }) {
     return Row(
       children: [
         Expanded(
@@ -541,7 +550,10 @@ class _LoginPageState extends State<LoginPage>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'Fait le ${_formatFrenchDate(DateTime.now())} · Baillan.',
+            context.l10n.authLoginSheetFooter(
+              _formatFrenchDate(context, DateTime.now()),
+              context.l10n.appTitle,
+            ),
             style: TextStyle(
               fontFamily: 'EB Garamond',
               fontFamilyFallback: _serifFallback,
@@ -564,10 +576,13 @@ class _LoginPageState extends State<LoginPage>
 
   /// Pied de repli affiché sous la feuille sur mobile (la marge extérieure
   /// desktop étant masquée). Style contract minimaliste.
-  Widget _buildFooterPagination({required Color mutedColor}) {
+  Widget _buildFooterPagination({
+    required BuildContext context,
+    required Color mutedColor,
+  }) {
     return Center(
       child: Text(
-        'Contrat · Ouverture',
+        context.l10n.authLoginCartoucheOpening,
         style: TextStyle(
           fontFamily: 'EB Garamond',
           fontFamilyFallback: _serifFallback,
@@ -608,25 +623,21 @@ class _LoginPageState extends State<LoginPage>
 /// d'asset manquant.
 const List<String> _serifFallback = ['Georgia', 'serif'];
 
-/// Formate une date française style contrat : « 1er juillet 2026 »,
-/// « 15 mars 2026 ». Ordinal seulement sur le 1er du mois (convention FR).
-String _formatFrenchDate(DateTime d) {
-  const months = [
-    'janvier',
-    'février',
-    'mars',
-    'avril',
-    'mai',
-    'juin',
-    'juillet',
-    'août',
-    'septembre',
-    'octobre',
-    'novembre',
-    'décembre',
-  ];
-  final day = d.day == 1 ? '1er' : d.day.toString();
-  return '$day ${months[d.month - 1]} ${d.year}';
+/// Formate une date style contrat dans la locale active de l'app, ex.
+/// « 1er juillet 2026 » (FR, ordinal réservé au 1er du mois — convention
+/// FR) ou « July 1, 2026 » (EN via `DateFormat.yMMMMd`).
+///
+/// FEAT-043 : délègue à `package:intl` (piloté par la locale résolue,
+/// symboles initialisés via les délégués `AppLocalizations`) — remplace
+/// l'ancien tableau de mois FR en dur (voir `dashboard_header.dart` pour le
+/// même pattern).
+String _formatFrenchDate(BuildContext context, DateTime d) {
+  final localeName = Localizations.localeOf(context).toString();
+  if (localeName.startsWith('fr') && d.day == 1) {
+    final month = DateFormat.MMMM(localeName).format(d);
+    return '1er $month ${d.year}';
+  }
+  return DateFormat.yMMMMd(localeName).format(d);
 }
 
 /// Peint un watermark "ORIGINAL" en filigrane très pâle sur la feuille.

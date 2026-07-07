@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/auth_repository.dart';
@@ -29,8 +30,9 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppAppBar(title: 'Mon profil', showBackButton: false),
+      appBar: AppAppBar(title: l10n.profileHubTitle, showBackButton: false),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -39,13 +41,13 @@ class ProfilePage extends ConsumerWidget {
             const _ProfileHeader(),
             const SizedBox(height: 32),
 
-            const SectionHeader(title: 'Compte'),
+            SectionHeader(title: l10n.profileHubAccountSection),
             const SizedBox(height: 8),
             ListTile(
               key: const Key('tile_profile_details'),
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.person_outline),
-              title: const Text('Informations personnelles'),
+              title: Text(l10n.profileHubPersonalInfoTile),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/profile/details'),
             ),
@@ -54,7 +56,7 @@ class ProfilePage extends ConsumerWidget {
                 key: const Key('tile_change_password'),
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.lock_outline),
-                title: const Text('Changer le mot de passe'),
+                title: Text(l10n.profileHubChangePasswordTile),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/profile/password'),
               ),
@@ -66,13 +68,13 @@ class ProfilePage extends ConsumerWidget {
             const ProfileLanguageSection(),
             const SizedBox(height: 32),
 
-            const SectionHeader(title: 'Aide'),
+            SectionHeader(title: l10n.profileHubHelpSection),
             const SizedBox(height: 8),
             ListTile(
               key: const Key('tile_support'),
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.support_agent),
-              title: const Text('Nous contacter'),
+              title: Text(l10n.profileHubContactUsTile),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/profile/support'),
             ),

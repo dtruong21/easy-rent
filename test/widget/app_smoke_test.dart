@@ -1,7 +1,9 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/application/login_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/login_page_state.dart';
 import 'package:easyrent/features/auth/presentation/login_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,7 +95,12 @@ Widget _buildApp(Widget child) {
     overrides: [
       authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
     ],
-    child: MaterialApp(home: child),
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+      home: child,
+    ),
   );
 }
 
@@ -155,7 +162,12 @@ void main() {
                 ),
             ),
           ],
-          child: const MaterialApp(home: LoginPage()),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: supportedLocales,
+            locale: const Locale('fr'),
+            home: const LoginPage(),
+          ),
         ),
       );
       await tester.pump();

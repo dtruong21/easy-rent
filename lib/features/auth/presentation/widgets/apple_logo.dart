@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Logo silhouette officiel Apple pour le bouton "Continuer avec Apple".
 ///
 /// Le SVG inline ci-dessous reprend le path canonique de la silhouette Apple
@@ -40,7 +42,7 @@ class AppleLogo extends StatelessWidget {
       width: size,
       height: size,
       colorFilter: ColorFilter.mode(resolvedColor, BlendMode.srcIn),
-      semanticsLabel: 'Apple',
+      semanticsLabel: context.l10n.authAppleBrandName,
     );
   }
 }

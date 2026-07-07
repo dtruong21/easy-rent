@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Écran affiché après l'envoi du lien de réinitialisation.
 class PasswordResetSentView extends StatelessWidget {
   const PasswordResetSentView({super.key});
@@ -8,6 +10,7 @@ class PasswordResetSentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -19,21 +22,20 @@ class PasswordResetSentView extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         Text(
-          'Lien envoyé',
+          l10n.authLinkSentTitle,
           style: theme.textTheme.headlineSmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
         Text(
-          'Vérifiez votre boîte mail et cliquez sur le lien de '
-          'réinitialisation. Le lien expire après 1 heure.',
+          l10n.authLinkSentMessage,
           style: theme.textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
         FilledButton(
           onPressed: () => context.go('/login'),
-          child: const Text('Retour à la connexion'),
+          child: Text(l10n.authBackToLoginButton),
         ),
       ],
     );

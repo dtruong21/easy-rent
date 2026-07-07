@@ -1830,5 +1830,683 @@
   "tenantsErrorUnknown": "An error occurred. Please try again.",
   "@tenantsErrorUnknown": {
     "description": "Tenant form submission error (TenantSubmitError.unknown): unexpected exception caught during submit()."
+  },
+
+  "authEmailLabel": "Email address",
+  "@authEmailLabel": {
+    "description": "Label of the email text field, shared by login, signup and forgot-password forms."
+  },
+  "authEmailHint": "you@example.com",
+  "@authEmailHint": {
+    "description": "Hint/example text of the email text field, shared by login, signup and forgot-password forms."
+  },
+  "authPasswordLabel": "Password",
+  "@authPasswordLabel": {
+    "description": "Label of the password field on the login form."
+  },
+  "authSignInButton": "Sign in",
+  "@authSignInButton": {
+    "description": "Submit button label on the login form (email/password)."
+  },
+  "authForgotPasswordLink": "Forgot password?",
+  "@authForgotPasswordLink": {
+    "description": "Link/button on the login form navigating to the forgot-password page."
+  },
+  "authCreateAccountLink": "Create an account",
+  "@authCreateAccountLink": {
+    "description": "Generic link/button label navigating to the signup page. Used on the login form footer link, the quit-demo dialog's convert-to-account action, and the anon-expiry warning dialog's CTA (all share the exact same French wording)."
+  },
+  "authPrivacyPolicyLink": "Privacy policy",
+  "@authPrivacyPolicyLink": {
+    "description": "Underlined inline link text navigating to the /privacy page, shown standalone (title-style) under the login form."
+  },
+  "authConsentPrivacyPolicyLink": "privacy policy",
+  "@authConsentPrivacyPolicyLink": {
+    "description": "Underlined inline link text navigating to the /privacy page, mid-sentence (lowercase) as part of the RGPD consent sentence on the signup form — distinct from authPrivacyPolicyLink which is capitalized (standalone title-style link)."
+  },
+  "authFullNameLabel": "Full name",
+  "@authFullNameLabel": {
+    "description": "Label of the full name text field on the signup form."
+  },
+  "authFullNameHint": "E.g.: John Smith",
+  "@authFullNameHint": {
+    "description": "Hint/example text of the full name text field on the signup form."
+  },
+  "authPasswordRequirementsHelper": "8 characters min, 1 letter, 1 digit",
+  "@authPasswordRequirementsHelper": {
+    "description": "Helper text under a new-password field summarizing the password policy. Shared by the signup form, the reset-password form, and (out of scope, profile module) the in-app change-password form which mirrors the same text."
+  },
+  "authConfirmPasswordLabel": "Confirm password",
+  "@authConfirmPasswordLabel": {
+    "description": "Label of the password-confirmation field, shared by the signup form and the reset-password form."
+  },
+  "authCreateAccountButton": "Create my account",
+  "@authCreateAccountButton": {
+    "description": "Submit button label on the signup form (first-person wording, distinct from the generic authCreateAccountLink)."
+  },
+  "authAlreadyHaveAccountLink": "I already have an account",
+  "@authAlreadyHaveAccountLink": {
+    "description": "Link on the signup form navigating back to the login page."
+  },
+  "authConsentPrefix": "I accept the ",
+  "@authConsentPrefix": {
+    "description": "First plain-text segment of the RGPD consent sentence on the signup form, immediately followed by the authTermsOfServiceLink inline link. Trailing/leading spaces are significant (concatenated with the next TextSpan)."
+  },
+  "authTermsOfServiceLink": "terms of service",
+  "@authTermsOfServiceLink": {
+    "description": "Underlined inline link text navigating to the /terms page, part of the RGPD consent sentence on the signup form."
+  },
+  "authConsentMiddle": " and the ",
+  "@authConsentMiddle": {
+    "description": "Middle plain-text segment of the RGPD consent sentence on the signup form, between the terms-of-service link and the privacy-policy link. Leading/trailing spaces are significant."
+  },
+  "authConsentSuffix": ".",
+  "@authConsentSuffix": {
+    "description": "Final plain-text segment (closing punctuation) of the RGPD consent sentence on the signup form, right after the privacy-policy link."
+  },
+  "authConsentRequiredError": "You must accept the terms of service and the privacy policy.",
+  "@authConsentRequiredError": {
+    "description": "Error message shown under the RGPD consent checkbox on the signup form when the user tries to submit without checking it."
+  },
+  "authPasswordShowTooltip": "Show",
+  "@authPasswordShowTooltip": {
+    "description": "Tooltip of the visibility-toggle icon button on a password field, shown when the password is currently obscured (tapping reveals it)."
+  },
+  "authPasswordHideTooltip": "Hide",
+  "@authPasswordHideTooltip": {
+    "description": "Tooltip of the visibility-toggle icon button on a password field, shown when the password is currently visible (tapping obscures it)."
+  },
+  "authOrDividerLabel": "or",
+  "@authOrDividerLabel": {
+    "description": "Centered label on the horizontal divider between the email/password block and the OAuth buttons (login and signup forms)."
+  },
+  "authContinueWithAppleButton": "Continue with Apple",
+  "@authContinueWithAppleButton": {
+    "description": "Default label of the Apple sign-in/sign-up button (login and signup forms)."
+  },
+  "authContinueWithGoogleButton": "Continue with Google",
+  "@authContinueWithGoogleButton": {
+    "description": "Default label of the Google sign-in/sign-up button (login and signup forms)."
+  },
+  "authAppleBrandName": "Apple",
+  "@authAppleBrandName": {
+    "description": "Accessibility semantics label for the Apple brand mark icon on the Apple sign-in button. Proper noun, intentionally identical in every locale (same pattern as profileLanguageFrench/English)."
+  },
+  "authGoogleBrandName": "Google",
+  "@authGoogleBrandName": {
+    "description": "Accessibility semantics label for the Google brand mark icon on the Google sign-in button. Proper noun, intentionally identical in every locale (same pattern as profileLanguageFrench/English)."
+  },
+  "authAnonBannerDemoMode": "Demo mode · 1 scenario",
+  "@authAnonBannerDemoMode": {
+    "description": "Default message on the persistent anonymous-session banner shown on public pages (landing, simulator, privacy) when the session is not close to expiring."
+  },
+  "authAnonBannerExpiresUnder24h": "Demo mode — your session expires in less than 24h",
+  "@authAnonBannerExpiresUnder24h": {
+    "description": "Message on the anonymous-session banner shown when less than 24 hours remain before expiry."
+  },
+  "authAnonBannerExpiresInDays": "Demo mode — your session expires in {days} days",
+  "@authAnonBannerExpiresInDays": {
+    "description": "Message on the anonymous-session banner shown when 2 to 3 days remain before expiry; {days} is an integer already clamped to [2,14] by the caller (always plural wording in French, never 0 or 1).",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "authAnonBannerUnlockCta": "Create an account to unlock everything",
+  "@authAnonBannerUnlockCta": {
+    "description": "Call-to-action button on the anonymous-session banner navigating to signup."
+  },
+  "authAnonExpiryDialogTitle": "Demo session — last day",
+  "@authAnonExpiryDialogTitle": {
+    "description": "Title of the blocking modal shown at J-1 (less than 24h before an anonymous session expires)."
+  },
+  "authAnonExpiryDialogContent": "Your demo session expires in less than 24 hours. After that, your saved scenarios will be deleted. Create a free account to keep them.",
+  "@authAnonExpiryDialogContent": {
+    "description": "Body text of the blocking J-1 anonymous-session-expiry warning dialog."
+  },
+  "authAnonExpiryDialogLaterButton": "Later",
+  "@authAnonExpiryDialogLaterButton": {
+    "description": "Dismiss button on the anonymous-session-expiry warning dialog (does not create an account)."
+  },
+  "authQuitDemoDialogTitle": "Quit demo mode?",
+  "@authQuitDemoDialogTitle": {
+    "description": "Title of the confirmation dialog shown when a user tries to leave/abandon their anonymous demo session."
+  },
+  "authQuitDemoDialogContent": "Your demo session will be closed and its scenario permanently lost. Create a free account to keep it.",
+  "@authQuitDemoDialogContent": {
+    "description": "Body text of the quit-demo confirmation dialog."
+  },
+  "authQuitDemoDialogConfirmButton": "Quit",
+  "@authQuitDemoDialogConfirmButton": {
+    "description": "Destructive confirm button on the quit-demo dialog, styled with the error color (session abandoned, scenario lost)."
+  },
+  "authForgotPasswordTitle": "Forgot password",
+  "@authForgotPasswordTitle": {
+    "description": "Headline title of the forgot-password page."
+  },
+  "authForgotPasswordInstructions": "Enter your email to receive a reset link.",
+  "@authForgotPasswordInstructions": {
+    "description": "Instructional text on the forgot-password page, shown before the email has been sent."
+  },
+  "authSendResetLinkButton": "Send reset link",
+  "@authSendResetLinkButton": {
+    "description": "Submit button label on the forgot-password form."
+  },
+  "authBackToLoginButton": "Back to login",
+  "@authBackToLoginButton": {
+    "description": "Button/link navigating back to the login page. Shared by the forgot-password form, the password-reset-sent view, the signup-confirmation-sent view, and the invalid-reset-link view."
+  },
+  "authLinkSentTitle": "Link sent",
+  "@authLinkSentTitle": {
+    "description": "Headline title shown after successfully requesting a password-reset email."
+  },
+  "authLinkSentMessage": "Check your inbox and click the reset link. The link expires after 1 hour.",
+  "@authLinkSentMessage": {
+    "description": "Body text shown after successfully requesting a password-reset email."
+  },
+  "authResetPasswordTitle": "New password",
+  "@authResetPasswordTitle": {
+    "description": "Headline title of the reset-password page (setting a new password via the emailed link)."
+  },
+  "authInvalidLinkTitle": "Invalid or expired link",
+  "@authInvalidLinkTitle": {
+    "description": "Title shown on the reset-password page when the oobCode from the URL is missing or Firebase rejects it."
+  },
+  "authInvalidLinkMessage": "This reset link is invalid or has expired. Request a new one.",
+  "@authInvalidLinkMessage": {
+    "description": "Body text shown on the reset-password page when the link is invalid or expired."
+  },
+  "authRequestNewLinkButton": "Request a new link",
+  "@authRequestNewLinkButton": {
+    "description": "Button on the invalid-link view navigating back to the forgot-password page to request a new reset email."
+  },
+  "authNewPasswordLabel": "New password",
+  "@authNewPasswordLabel": {
+    "description": "Label of the new-password field on the reset-password form (distinct widget from the page title authResetPasswordTitle, though same text)."
+  },
+  "authResetPasswordButton": "Reset password",
+  "@authResetPasswordButton": {
+    "description": "Submit button label on the reset-password form."
+  },
+  "authPasswordUpdatedSnackbar": "Password updated. Please sign in.",
+  "@authPasswordUpdatedSnackbar": {
+    "description": "SnackBar confirmation shown after successfully resetting the password via the emailed oobCode link, right before redirecting to /login."
+  },
+  "authSignupSubtitle": "Create your landlord account",
+  "@authSignupSubtitle": {
+    "description": "Subtitle under the wordmark on the signup page."
+  },
+  "authCheckYourEmailTitle": "Check your inbox",
+  "@authCheckYourEmailTitle": {
+    "description": "Headline title shown after a successful signup, asking the user to confirm their email."
+  },
+  "authSignupConfirmationMessage": "A confirmation email has been sent to you. Click the link in that email to activate your account, then sign in.",
+  "@authSignupConfirmationMessage": {
+    "description": "Body text shown after a successful signup, explaining the email-confirmation step."
+  },
+  "authLoginTagline": "Keep the register.",
+  "@authLoginTagline": {
+    "description": "Italic editorial tagline under the wordmark in the login page's cartouche header (brand copy, 'notarial register' concept)."
+  },
+  "authLoginCartoucheOpening": "Opening",
+  "@authLoginCartoucheOpening": {
+    "description": "Small-caps editorial label in the login page cartouche (top-right, under the date) and reused verbatim as the mobile footer pagination label ('Contrat · Ouverture' is composed from authLoginMarginHeading-style text, but this specific bare word appears twice with identical wording)."
+  },
+  "authLoginMarginHeading": "Contract  —  Opening",
+  "@authLoginMarginHeading": {
+    "description": "Vertical rotated heading in the login page's desktop left margin, styled like a contract header (double-space around the em dash is intentional, part of the editorial layout)."
+  },
+  "authLoginAphorismTitle": "When in doubt, pull out the register.",
+  "@authLoginAphorismTitle": {
+    "description": "Italic editorial aphorism displayed above the login form (brand copy, 'notarial register' concept)."
+  },
+  "authLoginAphorismBody": "Sign your entry. Your credentials open the bailiwick's register — receipts, leases, due dates.",
+  "@authLoginAphorismBody": {
+    "description": "Body text of the editorial aphorism block above the login form, under authLoginAphorismTitle."
+  },
+  "authLoginSheetFooter": "Done on {date} · {appName}",
+  "@authLoginSheetFooter": {
+    "description": "Footer caption at the bottom of the login page's paper sheet, styled like a French contract's 'Fait à… le…' mention; {date} is already formatted for the active locale (e.g. '1er juillet 2026' / 'July 1, 2026'), {appName} is the app wordmark (pass context.l10n.appTitle).",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "dashboardGreeting": "Hello",
+  "@dashboardGreeting": {
+    "description": "DashboardHeader greeting shown when the landlord's first name is unavailable (incomplete profile)."
+  },
+  "dashboardGreetingWithName": "Hello, {firstName}",
+  "@dashboardGreetingWithName": {
+    "description": "DashboardHeader greeting including the landlord's first name.",
+    "placeholders": {
+      "firstName": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardOverviewSectionTitle": "Overview",
+  "@dashboardOverviewSectionTitle": {
+    "description": "SectionHeader title above the KPI grid on the dashboard home tab (non-onboarding state)."
+  },
+  "dashboardLoadErrorMessage": "Unable to load the dashboard.",
+  "@dashboardLoadErrorMessage": {
+    "description": "Error message shown on the dashboard when the snapshot fails to load; paired with a commonRetry button."
+  },
+  "dashboardKpiRentLabel": "Rent this month",
+  "@dashboardKpiRentLabel": {
+    "description": "KPI card label: total rent collected this month (KpiGrid, key kpi_loyers)."
+  },
+  "dashboardKpiRentDueSubtitle": "Due: {amount}",
+  "@dashboardKpiRentDueSubtitle": {
+    "description": "KPI card subtitle showing the theoretical amount due this month; {amount} is already formatted in euros (e.g. '900,00 €').",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardKpiLateLabel": "Late payments",
+  "@dashboardKpiLateLabel": {
+    "description": "KPI card label: count of tenants with a late payment (KpiGrid, key kpi_retards)."
+  },
+  "dashboardKpiLateSubtitle": "tenant(s) late",
+  "@dashboardKpiLateSubtitle": {
+    "description": "KPI card subtitle shown when the late-payment count is greater than zero."
+  },
+  "dashboardKpiLateNoneSubtitle": "Everything is up to date",
+  "@dashboardKpiLateNoneSubtitle": {
+    "description": "KPI card subtitle shown when the late-payment count is zero."
+  },
+  "dashboardKpiRenewalsLabel": "Leases to renew",
+  "@dashboardKpiRenewalsLabel": {
+    "description": "KPI card label: count of leases due for renewal soon (KpiGrid, key kpi_renouvellements)."
+  },
+  "dashboardKpiRenewalsSubtitle": "within the next 30 days",
+  "@dashboardKpiRenewalsSubtitle": {
+    "description": "KPI card subtitle clarifying the renewal window for the renewals KPI."
+  },
+  "dashboardKpiDocsPendingLabel": "Pending documents",
+  "@dashboardKpiDocsPendingLabel": {
+    "description": "KPI card label: count of documents in the 'other' category awaiting action (KpiGrid, key kpi_docs)."
+  },
+  "dashboardKpiDocsPendingSubtitle": "\"other\" category",
+  "@dashboardKpiDocsPendingSubtitle": {
+    "description": "KPI card subtitle clarifying which document category is counted by the pending-documents KPI."
+  },
+  "dashboardPortfolioYieldSectionTitle": "Portfolio yield",
+  "@dashboardPortfolioYieldSectionTitle": {
+    "description": "Section title above the portfolio yield summary on the dashboard."
+  },
+  "dashboardPortfolioYieldErrorMessage": "Unable to compute the portfolio yield.",
+  "@dashboardPortfolioYieldErrorMessage": {
+    "description": "Error message shown when the portfolio yield computation fails."
+  },
+  "dashboardPortfolioYieldEmptyMessage": "No property in the portfolio.",
+  "@dashboardPortfolioYieldEmptyMessage": {
+    "description": "Message shown when the landlord has zero properties (portfolio yield section)."
+  },
+  "dashboardPortfolioYieldNoComputableMessage": "Enter the purchase price and create a lease on your properties to display the portfolio yield.",
+  "@dashboardPortfolioYieldNoComputableMessage": {
+    "description": "Message shown when properties exist but none has both a purchase price and an active lease (yield not computable)."
+  },
+  "dashboardPortfolioYieldGrossLabel": "Avg. gross yield",
+  "@dashboardPortfolioYieldGrossLabel": {
+    "description": "Portfolio yield mini-KPI card label: weighted average gross yield (key kpi_portfolio_gross_yield)."
+  },
+  "dashboardPortfolioYieldGrossSubtitle": "Weighted by purchase price",
+  "@dashboardPortfolioYieldGrossSubtitle": {
+    "description": "Subtitle under the average gross yield mini-KPI card, clarifying the weighting method."
+  },
+  "dashboardPortfolioYieldNetLabel": "Avg. net yield",
+  "@dashboardPortfolioYieldNetLabel": {
+    "description": "Portfolio yield mini-KPI card label: weighted average net yield (key kpi_portfolio_net_yield)."
+  },
+  "dashboardPortfolioYieldCashflowLabel": "Total monthly cash flow",
+  "@dashboardPortfolioYieldCashflowLabel": {
+    "description": "Portfolio yield mini-KPI card label: total monthly cash flow across the portfolio (key kpi_portfolio_cashflow)."
+  },
+  "dashboardPortfolioYieldBeforeTaxSubtitle": "Before tax",
+  "@dashboardPortfolioYieldBeforeTaxSubtitle": {
+    "description": "Subtitle shared by the net yield and cash flow mini-KPI cards, clarifying the amount is pre-tax."
+  },
+  "dashboardPortfolioYieldFootnote": "{computedCount} of {totalCount} propert{totalCount, plural, one{y} other{ies}} with a purchase price and active lease. Pre-tax estimates.",
+  "@dashboardPortfolioYieldFootnote": {
+    "description": "Footnote under the portfolio yield mini-KPI cards, summarizing how many properties are included in the computation out of the total portfolio size.",
+    "placeholders": {
+      "computedCount": {
+        "type": "int"
+      },
+      "totalCount": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardMonthlyChartTitle": "Rent",
+  "@dashboardMonthlyChartTitle": {
+    "description": "Title of the monthly rent chart card header (MonthlyBarchart), shown even when there is no data yet (toggles hidden)."
+  },
+  "dashboardMonthlyChartErrorMessage": "Unable to load rent data for this period.",
+  "@dashboardMonthlyChartErrorMessage": {
+    "description": "Error message shown in the monthly rent chart body when the monthlyAmountsProvider fails."
+  },
+  "dashboardMonthlyChartEmptyTitle": "No history yet",
+  "@dashboardMonthlyChartEmptyTitle": {
+    "description": "CardEmptyState title shown in the monthly rent chart when all amounts for the period are zero."
+  },
+  "dashboardMonthlyChartEmptyMessage": "Rent will appear here after the first payment.",
+  "@dashboardMonthlyChartEmptyMessage": {
+    "description": "CardEmptyState message shown in the monthly rent chart when all amounts for the period are zero."
+  },
+  "dashboardMonthlyChartEncaisseLabel": "Collected",
+  "@dashboardMonthlyChartEncaisseLabel": {
+    "description": "Label for the 'collected rent' series, used in chart tooltips (bar/line) and in the chart legend chip."
+  },
+  "dashboardMonthlyChartDueLabel": "Due",
+  "@dashboardMonthlyChartDueLabel": {
+    "description": "Label for the 'due rent' series, used in chart tooltips (bar/line) and in the chart legend chip."
+  },
+  "dashboardChartPeriod6Months": "6 months",
+  "@dashboardChartPeriod6Months": {
+    "description": "ChartPeriod.m6 label shown in the monthly rent chart's period SegmentedButton."
+  },
+  "dashboardChartPeriod12Months": "12 months",
+  "@dashboardChartPeriod12Months": {
+    "description": "ChartPeriod.m12 label shown in the monthly rent chart's period SegmentedButton."
+  },
+  "dashboardChartPeriod24Months": "24 months",
+  "@dashboardChartPeriod24Months": {
+    "description": "ChartPeriod.m24 label shown in the monthly rent chart's period SegmentedButton."
+  },
+  "dashboardChartFormatBars": "Bars",
+  "@dashboardChartFormatBars": {
+    "description": "ChartFormat.bars tooltip shown on the monthly rent chart's format SegmentedButton icon."
+  },
+  "dashboardChartFormatLine": "Lines",
+  "@dashboardChartFormatLine": {
+    "description": "ChartFormat.line tooltip shown on the monthly rent chart's format SegmentedButton icon."
+  },
+  "dashboardChartFormatArea": "Areas",
+  "@dashboardChartFormatArea": {
+    "description": "ChartFormat.area tooltip shown on the monthly rent chart's format SegmentedButton icon."
+  },
+  "dashboardRecentActivityTitle": "Recent activity",
+  "@dashboardRecentActivityTitle": {
+    "description": "Title of the recent-activity section card on the dashboard."
+  },
+  "dashboardRecentActivityShowAllButton": "Show all",
+  "@dashboardRecentActivityShowAllButton": {
+    "description": "Button label expanding the recent-activity list beyond the first 5 items (key btn_activity_toggle, collapsed state)."
+  },
+  "dashboardRecentActivityCollapseButton": "Collapse",
+  "@dashboardRecentActivityCollapseButton": {
+    "description": "Button label collapsing the recent-activity list back to 5 items (key btn_activity_toggle, expanded state)."
+  },
+  "dashboardRecentActivityEmptyTitle": "No recent activity",
+  "@dashboardRecentActivityEmptyTitle": {
+    "description": "CardEmptyState title shown when the recent-activity list is empty."
+  },
+  "dashboardRecentActivityEmptyMessage": "Start by recording a payment.",
+  "@dashboardRecentActivityEmptyMessage": {
+    "description": "CardEmptyState message shown when the recent-activity list is empty."
+  },
+  "dashboardActivityPaymentRecordedTitle": "Payment recorded · {tenantName}",
+  "@dashboardActivityPaymentRecordedTitle": {
+    "description": "Recent-activity tile title for a payment-recorded event; {tenantName} is the tenant's display name (already resolved).",
+    "placeholders": {
+      "tenantName": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardActivityReceiptGeneratedTitle": "Receipt generated · {periodLabel}",
+  "@dashboardActivityReceiptGeneratedTitle": {
+    "description": "Recent-activity tile title for a receipt-generated event; {periodLabel} is a data-layer-formatted period string (e.g. an ISO date range, or the fallback 'Période inconnue'/'Unknown period' — see agent notes).",
+    "placeholders": {
+      "periodLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardActivityFileSizeBytes": "{bytes} B",
+  "@dashboardActivityFileSizeBytes": {
+    "description": "Recent-activity file size, byte-scale (< 1024 bytes); used for document-uploaded tile subtitles.",
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardActivityFileSizeKilobytes": "{kilobytes} KB",
+  "@dashboardActivityFileSizeKilobytes": {
+    "description": "Recent-activity file size, kilobyte-scale (1024 B to 1 MB, rounded to the nearest integer); used for document-uploaded tile subtitles.",
+    "placeholders": {
+      "kilobytes": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardActivityFileSizeMegabytes": "{megabytes} MB",
+  "@dashboardActivityFileSizeMegabytes": {
+    "description": "Recent-activity file size, megabyte-scale (>= 1 MB); {megabytes} is a raw double (e.g. 2.3) formatted with exactly one decimal digit.",
+    "placeholders": {
+      "megabytes": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        }
+      }
+    }
+  },
+  "dashboardOnboardingTitle": "Welcome! First steps",
+  "@dashboardOnboardingTitle": {
+    "description": "Title of the onboarding checklist card shown when the landlord has zero properties, tenants and leases."
+  },
+  "dashboardOnboardingSubtitle": "Follow these 3 steps to get started.",
+  "@dashboardOnboardingSubtitle": {
+    "description": "Subtitle of the onboarding checklist card."
+  },
+  "dashboardOnboardingStepAddPropertyLabel": "Add a property",
+  "@dashboardOnboardingStepAddPropertyLabel": {
+    "description": "Onboarding checklist step 1 label, navigates to /properties/new."
+  },
+  "dashboardOnboardingStepAddTenantLabel": "Add a tenant",
+  "@dashboardOnboardingStepAddTenantLabel": {
+    "description": "Onboarding checklist step 2 label, navigates to /tenants/new."
+  },
+  "dashboardOnboardingStepCreateLeaseLabel": "Create a lease",
+  "@dashboardOnboardingStepCreateLeaseLabel": {
+    "description": "Onboarding checklist step 3 label, navigates to /leases/new."
+  },
+  "dashboardShortcutSimulatorLabel": "Simulate an investment",
+  "@dashboardShortcutSimulatorLabel": {
+    "description": "ShortcutsRow card label navigating to the investment simulator (/simulator), shown on mobile only."
+  },
+
+  "profileHubTitle": "My profile",
+  "@profileHubTitle": {
+    "description": "AppBar title of the /profile hub page."
+  },
+  "profileHubAccountSection": "Account",
+  "@profileHubAccountSection": {
+    "description": "Section header in the /profile hub grouping personal-info and change-password tiles."
+  },
+  "profileHubPersonalInfoTile": "Personal information",
+  "@profileHubPersonalInfoTile": {
+    "description": "List tile label navigating to /profile/details (landlord identity form)."
+  },
+  "profileHubChangePasswordTile": "Change password",
+  "@profileHubChangePasswordTile": {
+    "description": "List tile label navigating to /profile/password; only shown when hasPasswordProvider is true (email/password accounts)."
+  },
+  "profileHubHelpSection": "Help",
+  "@profileHubHelpSection": {
+    "description": "Section header in the /profile hub grouping support and legal tiles."
+  },
+  "profileHubContactUsTile": "Contact us",
+  "@profileHubContactUsTile": {
+    "description": "List tile label navigating to /profile/support (contact form)."
+  },
+  "profileHubTermsTile": "Terms of use",
+  "@profileHubTermsTile": {
+    "description": "List tile label navigating to /terms. Chrome UI only — the legal document body itself (terms_page.dart content) stays French, out of this extraction's scope."
+  },
+  "profileHubPrivacyTile": "Privacy policy",
+  "@profileHubPrivacyTile": {
+    "description": "List tile label navigating to /privacy. Chrome UI only — the legal document body itself (privacy_page.dart content) stays French, out of this extraction's scope."
+  },
+  "profileAboutTitle": "About",
+  "@profileAboutTitle": {
+    "description": "Section header in the /profile hub showing the app version and environment."
+  },
+  "profileAboutVersionValue": "v{version} (build {buildNumber})",
+  "@profileAboutVersionValue": {
+    "description": "Formatted app version string; {version} is the semver string (e.g. '1.2.3'), {buildNumber} is the numeric build identifier — both already formatted, no locale-specific formatting needed.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "profileAboutVersionUnknown": "unknown version",
+  "@profileAboutVersionUnknown": {
+    "description": "Fallback shown in place of the version string when appInfoProvider fails to load (FutureProvider error state)."
+  },
+  "profileAboutEnvProduction": "production",
+  "@profileAboutEnvProduction": {
+    "description": "Environment label shown next to the app version when Env.isProd is true."
+  },
+  "profileAboutEnvDevStaging": "dev/staging",
+  "@profileAboutEnvDevStaging": {
+    "description": "Environment label shown next to the app version when Env.isProd is false (dev or staging deployment)."
+  },
+  "profileAboutSummary": "{appName} {version} · {env}",
+  "@profileAboutSummary": {
+    "description": "Full about-section summary line; {appName} is the already-localized app title (l10n.appTitle, e.g. 'Baillan.'), {version} is the already-formatted version string (profileAboutVersionValue or profileAboutVersionUnknown), {env} is the already-localized environment label (profileAboutEnvProduction/profileAboutEnvDevStaging).",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      },
+      "env": {
+        "type": "String"
+      }
+    }
+  },
+  "profileSessionTitle": "Session",
+  "@profileSessionTitle": {
+    "description": "Section header in the /profile hub grouping the logout button."
+  },
+  "profileSessionLogoutButton": "Sign out",
+  "@profileSessionLogoutButton": {
+    "description": "Button label to sign out; router guard redirects to /login automatically after signOut()."
+  },
+  "profileDetailsTitle": "Personal information",
+  "@profileDetailsTitle": {
+    "description": "AppBar title of the /profile/details page (landlord identity form, loi 1989 art. 21)."
+  },
+  "profileDetailsUpdatedSnackbar": "Profile updated",
+  "@profileDetailsUpdatedSnackbar": {
+    "description": "SnackBar confirmation shown after successfully saving the landlord profile form."
+  },
+  "profileDetailsLoadError": "Unable to load the profile.",
+  "@profileDetailsLoadError": {
+    "description": "Full-page error message shown on /profile/details when the initial profile fetch fails; paired with a Retry button (commonRetry)."
+  },
+  "profileDetailsEmailLabel": "Email",
+  "@profileDetailsEmailLabel": {
+    "description": "Label of the read-only email field on the profile details form (auth identifier, not editable)."
+  },
+  "profileDetailsEmailHelper": "Email cannot be changed",
+  "@profileDetailsEmailHelper": {
+    "description": "Helper text under the read-only email field explaining why it cannot be edited."
+  },
+  "profileDetailsSaveErrorMessage": "Error while saving the profile. Please try again.",
+  "@profileDetailsSaveErrorMessage": {
+    "description": "Inline error message shown under the profile form when ProfileFormController.submit fails with a FirebaseException (ProfileFormErrorReason.saveFailed)."
+  },
+  "profileDetailsNotFoundErrorMessage": "Profile not found. Please sign in again and retry.",
+  "@profileDetailsNotFoundErrorMessage": {
+    "description": "Inline error message shown under the profile form when submit fails with ProfileNotFoundException (ProfileFormErrorReason.profileNotFound)."
+  },
+  "profileDetailsUnexpectedErrorMessage": "Unable to update the profile. Please try again.",
+  "@profileDetailsUnexpectedErrorMessage": {
+    "description": "Inline error message shown under the profile form for any uncategorized exception during submit (ProfileFormErrorReason.unexpected)."
+  },
+  "profileFormFullNameLabel": "Full name *",
+  "@profileFormFullNameLabel": {
+    "description": "Label of the required full-name field in the landlord profile form (loi 1989 art. 21)."
+  },
+  "profileFormFullNameHint": "E.g.: John Smith",
+  "@profileFormFullNameHint": {
+    "description": "Hint/example text of the full-name field in the landlord profile form."
+  },
+  "profileFormFullNameHelper": "Required to generate receipts",
+  "@profileFormFullNameHelper": {
+    "description": "Helper text under the full-name field (masculine agreement in French, matches 'nom' — distinct from profileFormAddressHelper which agrees with the feminine 'adresse')."
+  },
+  "profileFormPhoneLabel": "Phone (optional)",
+  "@profileFormPhoneLabel": {
+    "description": "Label of the optional phone field in the landlord profile form."
+  },
+  "profileFormPhoneHint": "E.g.: 06 12 34 56 78",
+  "@profileFormPhoneHint": {
+    "description": "Hint/example text of the phone field in the landlord profile form. Kept as a French-style number in both locales since the app targets French landlords; not translated to an international format."
+  },
+  "profileFormAddressLabel": "Postal address *",
+  "@profileFormAddressLabel": {
+    "description": "Label of the required postal address field in the landlord profile form (loi 1989 art. 21)."
+  },
+  "profileFormAddressHint": "E.g.: 12 rue de la Paix\n75001 Paris",
+  "@profileFormAddressHint": {
+    "description": "Hint/example text (two lines) of the postal address field in the landlord profile form."
+  },
+  "profileFormAddressHelper": "Required to generate receipts",
+  "@profileFormAddressHelper": {
+    "description": "Helper text under the address field (feminine agreement in French, matches 'adresse' — distinct from profileFormFullNameHelper which agrees with the masculine 'nom')."
+  },
+  "profilePasswordTitle": "Change password",
+  "@profilePasswordTitle": {
+    "description": "AppBar title of the /profile/password page."
+  },
+  "profilePasswordManagedByProviderNotice": "This account's password is managed by your sign-in provider.",
+  "@profilePasswordManagedByProviderNotice": {
+    "description": "Message shown instead of the password form when the connected account has no Firebase Auth password (Google/Apple sign-in, or direct URL access)."
+  },
+  "profilePasswordCurrentLabel": "Current password",
+  "@profilePasswordCurrentLabel": {
+    "description": "Label of the current-password field in the inline change-password form (re-authentication step)."
+  },
+  "profilePasswordNewLabel": "New password",
+  "@profilePasswordNewLabel": {
+    "description": "Label of the new-password field in the inline change-password form."
+  },
+  "profilePasswordRequirementsHelper": "Min. 8 characters, 1 letter, 1 digit",
+  "@profilePasswordRequirementsHelper": {
+    "description": "Helper text under the new-password field describing the password policy (PasswordValidator rules)."
+  },
+  "profilePasswordConfirmLabel": "Confirm new password",
+  "@profilePasswordConfirmLabel": {
+    "description": "Label of the confirm-new-password field in the inline change-password form."
+  },
+  "profilePasswordSubmitButton": "Change my password",
+  "@profilePasswordSubmitButton": {
+    "description": "Submit button label of the inline change-password form."
+  },
+  "profilePasswordUpdatedSnackbar": "Password updated",
+  "@profilePasswordUpdatedSnackbar": {
+    "description": "SnackBar confirmation shown after successfully changing the password."
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../application/forgot_password_controller.dart';
 
@@ -42,6 +43,7 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
       orElse: () => null,
     );
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,10 +55,10 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
           autocorrect: false,
           autofillHints: const [AutofillHints.email],
           enabled: !isSubmitting,
-          decoration: const InputDecoration(
-            labelText: 'Adresse email',
-            hintText: 'vous@exemple.fr',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.authEmailLabel,
+            hintText: l10n.authEmailHint,
+            border: const OutlineInputBorder(),
           ),
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _canSubmit ? _submit() : null,
@@ -80,12 +82,12 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
                     color: theme.colorScheme.onPrimary,
                   ),
                 )
-              : const Text('Envoyer le lien de réinitialisation'),
+              : Text(l10n.authSendResetLinkButton),
         ),
         const SizedBox(height: 12),
         TextButton(
           onPressed: () => context.go('/login'),
-          child: const Text('Retour à la connexion'),
+          child: Text(l10n.authBackToLoginButton),
         ),
       ],
     );

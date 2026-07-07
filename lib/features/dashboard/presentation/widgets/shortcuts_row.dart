@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 
 /// Point d'entrée compact vers le simulateur d'investissement.
@@ -20,11 +21,11 @@ class ShortcutsRow extends StatelessWidget {
     return Wrap(
       spacing: spacing.md,
       runSpacing: 8,
-      children: const [
+      children: [
         _ShortcutCard(
-          key: Key('shortcut_simulator'),
+          key: const Key('shortcut_simulator'),
           icon: Icons.calculate_outlined,
-          label: 'Simuler un investissement',
+          label: context.l10n.dashboardShortcutSimulatorLabel,
           route: '/simulator',
         ),
       ],

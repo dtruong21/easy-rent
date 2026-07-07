@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/profile_form_validators.dart';
 
 /// Champs du formulaire profil bailleur.
@@ -36,6 +37,7 @@ class ProfileFormWidgetState extends State<ProfileForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Form(
       key: widget.formKey,
       child: Column(
@@ -46,11 +48,11 @@ class ProfileFormWidgetState extends State<ProfileForm> {
             key: const Key('field_full_name'),
             controller: widget.fullNameController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Nom complet *',
-              hintText: 'Ex. : Jean Dupont',
-              helperText: 'Requis pour générer des quittances',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.profileFormFullNameLabel,
+              hintText: l10n.profileFormFullNameHint,
+              helperText: l10n.profileFormFullNameHelper,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
             onChanged: (_) {
@@ -72,10 +74,10 @@ class ProfileFormWidgetState extends State<ProfileForm> {
             key: const Key('field_phone'),
             controller: widget.phoneController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Téléphone (optionnel)',
-              hintText: 'Ex. : 06 12 34 56 78',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.profileFormPhoneLabel,
+              hintText: l10n.profileFormPhoneHint,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,
             validator: (v) => ProfileFormValidators.validatePhone(v),
@@ -87,11 +89,11 @@ class ProfileFormWidgetState extends State<ProfileForm> {
             key: const Key('field_address'),
             controller: widget.addressController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Adresse postale *',
-              hintText: 'Ex. : 12 rue de la Paix\n75001 Paris',
-              helperText: 'Requise pour générer des quittances',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.profileFormAddressLabel,
+              hintText: l10n.profileFormAddressHint,
+              helperText: l10n.profileFormAddressHelper,
+              border: const OutlineInputBorder(),
             ),
             maxLines: 3,
             minLines: 3,

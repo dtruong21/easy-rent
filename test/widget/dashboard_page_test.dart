@@ -14,6 +14,8 @@ import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/pwa/application/install_prompt_controller.dart';
 import 'package:easyrent/features/pwa/data/install_prompt_storage.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -201,6 +203,9 @@ Widget _wrap({bool onboarding = false, int retards = 0}) {
     child: MaterialApp.router(
       routerConfig: router,
       theme: ThemeData(extensions: const [AppColors.light]),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
     ),
   );
 }

@@ -14,6 +14,8 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/presentation/change_password_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -187,7 +189,12 @@ Widget _buildPage({required _FakeAuthRepository authRepo}) {
 
   return ProviderScope(
     overrides: [authRepositoryProvider.overrideWithValue(authRepo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 

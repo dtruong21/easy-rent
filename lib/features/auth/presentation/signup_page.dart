@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../application/signup_controller.dart';
 import 'widgets/signup_confirmation_sent_view.dart';
 import 'widgets/signup_form.dart';
@@ -16,6 +17,7 @@ class SignupPage extends ConsumerWidget {
       awaitingConfirmation: () => true,
       orElse: () => false,
     );
+    final l10n = context.l10n;
 
     return Scaffold(
       body: SafeArea(
@@ -29,13 +31,13 @@ class SignupPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Baillan.',
+                    l10n.appTitle,
                     style: Theme.of(context).textTheme.displayMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Créez votre compte bailleur',
+                    l10n.authSignupSubtitle,
                     style: Theme.of(context).textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),

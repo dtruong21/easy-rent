@@ -127,6 +127,7 @@ class ProfileLegalTiles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -134,7 +135,7 @@ class ProfileLegalTiles extends StatelessWidget {
           key: const Key('tile_terms'),
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.gavel_outlined),
-          title: const Text("Conditions générales d'utilisation"),
+          title: Text(l10n.profileHubTermsTile),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/terms'),
         ),
@@ -142,7 +143,7 @@ class ProfileLegalTiles extends StatelessWidget {
           key: const Key('tile_privacy'),
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.privacy_tip_outlined),
-          title: const Text('Politique de confidentialité'),
+          title: Text(l10n.profileHubPrivacyTile),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/privacy'),
         ),
@@ -165,19 +166,23 @@ class ProfileAboutSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final asyncInfo = ref.watch(appInfoProvider);
 
     final versionLabel = asyncInfo.when(
-      data: (info) => 'v${info.version} (build ${info.buildNumber})',
+      data: (info) =>
+          l10n.profileAboutVersionValue(info.version, info.buildNumber),
       loading: () => '…',
-      error: (_, _) => 'version inconnue',
+      error: (_, _) => l10n.profileAboutVersionUnknown,
     );
-    final envLabel = Env.isProd ? 'production' : 'dev/staging';
+    final envLabel = Env.isProd
+        ? l10n.profileAboutEnvProduction
+        : l10n.profileAboutEnvDevStaging;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'À propos'),
+        SectionHeader(title: l10n.profileAboutTitle),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -188,7 +193,7 @@ class ProfileAboutSection extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'Baillan. $versionLabel · $envLabel',
+              l10n.profileAboutSummary(l10n.appTitle, versionLabel, envLabel),
               key: const Key('txt_app_version'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -213,17 +218,18 @@ class ProfileSessionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Session'),
+        SectionHeader(title: l10n.profileSessionTitle),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           key: const Key('btn_logout_profile'),
           onPressed: () => ref.read(loginControllerProvider.notifier).signOut(),
           icon: const Icon(Icons.logout),
-          label: const Text('Se déconnecter'),
+          label: Text(l10n.profileSessionLogoutButton),
           style: OutlinedButton.styleFrom(foregroundColor: colorScheme.error),
         ),
       ],

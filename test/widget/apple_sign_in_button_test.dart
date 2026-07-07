@@ -1,6 +1,17 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/presentation/widgets/apple_sign_in_button.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+Widget _wrap(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: supportedLocales,
+    locale: const Locale('fr'),
+    home: Scaffold(body: child),
+  );
+}
 
 void main() {
   group('AppleSignInButton', () {
@@ -8,11 +19,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: AppleSignInButton(onPressed: () {}, isLoading: false),
-          ),
-        ),
+        _wrap(AppleSignInButton(onPressed: () {}, isLoading: false)),
       );
 
       expect(find.text('Continuer avec Apple'), findsOneWidget);
@@ -22,11 +29,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: AppleSignInButton(onPressed: () {}, isLoading: true),
-          ),
-        ),
+        _wrap(AppleSignInButton(onPressed: () {}, isLoading: true)),
       );
 
       expect(find.text('Continuer avec Apple'), findsNothing);
@@ -35,11 +38,7 @@ void main() {
 
     testWidgets('onPressed=null désactive le bouton', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: AppleSignInButton(onPressed: null, isLoading: false),
-          ),
-        ),
+        _wrap(AppleSignInButton(onPressed: null, isLoading: false)),
       );
 
       final btn = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
@@ -49,13 +48,8 @@ void main() {
     testWidgets('tap déclenche le callback quand actif', (tester) async {
       var tapped = false;
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: AppleSignInButton(
-              onPressed: () => tapped = true,
-              isLoading: false,
-            ),
-          ),
+        _wrap(
+          AppleSignInButton(onPressed: () => tapped = true, isLoading: false),
         ),
       );
 
@@ -67,11 +61,7 @@ void main() {
 
     testWidgets('le logo Apple (CustomPaint) est présent', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: AppleSignInButton(onPressed: () {}, isLoading: false),
-          ),
-        ),
+        _wrap(AppleSignInButton(onPressed: () {}, isLoading: false)),
       );
 
       expect(find.byType(CustomPaint), findsWidgets);

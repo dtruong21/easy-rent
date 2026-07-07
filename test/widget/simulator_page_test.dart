@@ -11,6 +11,8 @@ import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/simulator/data/investment_scenario_repository.dart';
 import 'package:easyrent/features/simulator/domain/investment_scenario.dart';
 import 'package:easyrent/features/simulator/presentation/simulator_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -164,7 +166,12 @@ Widget _buildPage({
       if (authRepository != null)
         authRepositoryProvider.overrideWithValue(authRepository),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 

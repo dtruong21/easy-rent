@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../../auth/application/change_password_controller.dart';
 import '../../../auth/domain/change_password_state.dart';
@@ -76,11 +77,14 @@ class _ProfileChangePasswordFormState
       submitting: () => true,
       orElse: () => false,
     );
+    // Message déjà composé par ChangePasswordController (module `auth`, hors
+    // périmètre de cette extraction) — passé tel quel.
     final errorMessage = formState.maybeWhen(
       error: (msg) => msg,
       orElse: () => null,
     );
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     ref.listen<ChangePasswordState>(changePasswordControllerProvider, (
       _,
@@ -93,7 +97,7 @@ class _ProfileChangePasswordFormState
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Mot de passe mis à jour'),
+              content: Text(l10n.profilePasswordUpdatedSnackbar),
               backgroundColor: theme.colorScheme.primaryContainer,
             ),
           );
@@ -110,7 +114,7 @@ class _ProfileChangePasswordFormState
           PasswordField(
             key: const Key('field_current_password'),
             controller: _currentController,
-            labelText: 'Mot de passe actuel',
+            labelText: l10n.profilePasswordCurrentLabel,
             autofillHints: const [AutofillHints.password],
             enabled: !isSubmitting,
           ),
@@ -118,13 +122,13 @@ class _ProfileChangePasswordFormState
           PasswordField(
             key: const Key('field_new_password'),
             controller: _newController,
-            labelText: 'Nouveau mot de passe',
+            labelText: l10n.profilePasswordNewLabel,
             autofillHints: const [AutofillHints.newPassword],
             enabled: !isSubmitting,
           ),
           const SizedBox(height: 4),
           Text(
-            '8 caractères min, 1 lettre, 1 chiffre',
+            l10n.profilePasswordRequirementsHelper,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -133,7 +137,7 @@ class _ProfileChangePasswordFormState
           PasswordField(
             key: const Key('field_confirm_password'),
             controller: _confirmController,
-            labelText: 'Confirmer le nouveau mot de passe',
+            labelText: l10n.profilePasswordConfirmLabel,
             autofillHints: const [AutofillHints.newPassword],
             enabled: !isSubmitting,
             onSubmitted: _canSubmit ? _submit : null,
@@ -158,7 +162,7 @@ class _ProfileChangePasswordFormState
                       color: theme.colorScheme.onPrimary,
                     ),
                   )
-                : const Text('Changer mon mot de passe'),
+                : Text(l10n.profilePasswordSubmitButton),
           ),
         ],
       ),

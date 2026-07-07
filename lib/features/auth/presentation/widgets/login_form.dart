@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../application/login_controller.dart';
 import 'apple_sign_in_button.dart';
@@ -104,6 +105,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       orElse: () => null,
     );
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AutofillGroup(
       child: Column(
@@ -116,10 +118,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             autocorrect: false,
             autofillHints: const [AutofillHints.username, AutofillHints.email],
             enabled: !isSubmitting,
-            decoration: const InputDecoration(
-              labelText: 'Adresse email',
-              hintText: 'vous@exemple.fr',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.authEmailLabel,
+              hintText: l10n.authEmailHint,
+              border: const OutlineInputBorder(),
             ),
             onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _canSubmit ? _submit() : null,
@@ -127,7 +129,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           const SizedBox(height: 16),
           PasswordField(
             controller: _passwordController,
-            labelText: 'Mot de passe',
+            labelText: l10n.authPasswordLabel,
             autofillHints: const [AutofillHints.password],
             enabled: !isSubmitting,
             onSubmitted: _canSubmit ? _submit : null,
@@ -160,7 +162,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                       color: theme.colorScheme.onPrimary,
                     ),
                   )
-                : const Text('Se connecter'),
+                : Text(l10n.authSignInButton),
           ),
           const OrDivider(),
           GoogleSignInButton(
@@ -175,14 +177,14 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => context.go('/forgot-password'),
-            child: const Text('Mot de passe oublié ?'),
+            child: Text(l10n.authForgotPasswordLink),
           ),
           TextButton(
             onPressed: () => context.go('/signup'),
-            child: const Text('Créer un compte'),
+            child: Text(l10n.authCreateAccountLink),
           ),
           const SizedBox(height: 16),
-          _PrivacyLink(),
+          const _PrivacyLink(),
         ],
       ),
     );
@@ -190,6 +192,8 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 }
 
 class _PrivacyLink extends StatefulWidget {
+  const _PrivacyLink();
+
   @override
   State<_PrivacyLink> createState() => _PrivacyLinkState();
 }
@@ -214,7 +218,7 @@ class _PrivacyLinkState extends State<_PrivacyLink> {
           style: Theme.of(context).textTheme.bodySmall,
           children: [
             TextSpan(
-              text: 'Politique de confidentialité',
+              text: context.l10n.authPrivacyPolicyLink,
               style: TextStyle(
                 color: colorScheme.primary,
                 decoration: TextDecoration.underline,
