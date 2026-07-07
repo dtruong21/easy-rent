@@ -11,6 +11,7 @@ library;
 
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/presentation/delete_account_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
@@ -105,7 +106,11 @@ Widget _buildPage({required _FakeAuthRepository authRepo}) {
 
   return ProviderScope(
     overrides: [authRepositoryProvider.overrideWithValue(authRepo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    ),
   );
 }
 
