@@ -1,5 +1,6 @@
 import 'package:easyrent/features/auth/application/change_password_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/change_password_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -172,7 +173,7 @@ void main() {
         expect(repo.reauthenticateCalled, isFalse);
         expect(repo.updatePasswordCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), '8 caractères minimum');
+        expect(_errorMsg(ctrl.state), AuthError.passwordTooShort.name);
       });
 
       test('nouveau mot de passe sans chiffre → error', () async {
@@ -184,7 +185,7 @@ void main() {
           confirmPassword: 'abcdefgh',
         );
         expect(repo.reauthenticateCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Au moins un chiffre');
+        expect(_errorMsg(ctrl.state), AuthError.passwordMissingDigit.name);
       });
 
       test(
@@ -198,10 +199,7 @@ void main() {
             confirmPassword: 'Different3',
           );
           expect(repo.reauthenticateCalled, isFalse);
-          expect(
-            _errorMsg(ctrl.state),
-            'Les mots de passe ne correspondent pas',
-          );
+          expect(_errorMsg(ctrl.state), AuthError.passwordsMismatch.name);
         },
       );
 
@@ -220,7 +218,7 @@ void main() {
           expect(_isError(ctrl.state), isTrue);
           expect(
             _errorMsg(ctrl.state),
-            'Le nouveau mot de passe doit être différent de l\'actuel.',
+            AuthError.newPasswordSameAsCurrent.name,
           );
         },
       );
@@ -235,14 +233,14 @@ void main() {
             newPassword: 'abc',
             confirmPassword: 'xyz',
           );
-          expect(_errorMsg(ctrl.state), '8 caractères minimum');
+          expect(_errorMsg(ctrl.state), AuthError.passwordTooShort.name);
         },
       );
     });
 
     group('submit — erreurs Firebase', () {
       test(
-        'wrong-password sur reauthenticate → message dédié « Mot de passe actuel incorrect. »',
+        'wrong-password sur reauthenticate → AuthError.currentPasswordIncorrect',
         () async {
           final repo = _FakeAuthRepository()
             ..reauthenticateError = FirebaseAuthException(
@@ -256,13 +254,16 @@ void main() {
             confirmPassword: 'NewPassword2',
           );
           expect(_isError(ctrl.state), isTrue);
-          expect(_errorMsg(ctrl.state), 'Mot de passe actuel incorrect.');
+          expect(
+            _errorMsg(ctrl.state),
+            AuthError.currentPasswordIncorrect.name,
+          );
           expect(repo.updatePasswordCalled, isFalse);
         },
       );
 
       test(
-        'invalid-credential sur reauthenticate → même message dédié',
+        'invalid-credential sur reauthenticate → même AuthError dédié',
         () async {
           final repo = _FakeAuthRepository()
             ..reauthenticateError = FirebaseAuthException(
@@ -275,7 +276,10 @@ void main() {
             newPassword: 'NewPassword2',
             confirmPassword: 'NewPassword2',
           );
-          expect(_errorMsg(ctrl.state), 'Mot de passe actuel incorrect.');
+          expect(
+            _errorMsg(ctrl.state),
+            AuthError.currentPasswordIncorrect.name,
+          );
           expect(repo.updatePasswordCalled, isFalse);
         },
       );
@@ -292,14 +296,11 @@ void main() {
           newPassword: 'NewPassword2',
           confirmPassword: 'NewPassword2',
         );
-        expect(
-          _errorMsg(ctrl.state),
-          'Trop de demandes. Réessayez dans quelques minutes.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.tooManyRequests.name);
       });
 
       test(
-        'requires-recent-login sur updatePassword → message reconnexion',
+        'requires-recent-login sur updatePassword → AuthError.requiresRecentLogin',
         () async {
           final repo = _FakeAuthRepository()
             ..updatePasswordError = FirebaseAuthException(
@@ -314,14 +315,11 @@ void main() {
           );
           expect(repo.reauthenticateCalled, isTrue);
           expect(_isError(ctrl.state), isTrue);
-          expect(
-            _errorMsg(ctrl.state),
-            'Pour des raisons de sécurité, reconnectez-vous puis réessayez.',
-          );
+          expect(_errorMsg(ctrl.state), AuthError.requiresRecentLogin.name);
         },
       );
 
-      test('exception inconnue → message générique', () async {
+      test('exception inconnue → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..reauthenticateError = Exception('network error');
         final ctrl = _makeController(repo);
@@ -330,10 +328,7 @@ void main() {
           newPassword: 'NewPassword2',
           confirmPassword: 'NewPassword2',
         );
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
 

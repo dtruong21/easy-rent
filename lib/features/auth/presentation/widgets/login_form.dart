@@ -6,6 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../application/login_controller.dart';
+import '../../domain/auth_cta_label.dart';
+import '../../domain/auth_error.dart';
+import '../auth_cta_label_l10n.dart';
+import '../auth_error_l10n.dart';
 import 'apple_sign_in_button.dart';
 import 'google_sign_in_button.dart';
 import 'or_divider.dart';
@@ -95,13 +99,20 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       submitting: () => true,
       orElse: () => false,
     );
-    final errorMessage = formState.maybeWhen(
+    final errorCode = formState.maybeWhen(
       error: (msg, ctaRoute, ctaLabel) => msg,
       orElse: () => null,
     );
+    final errorMessage = errorCode != null
+        ? AuthError.fromCode(errorCode).message(context)
+        : null;
     final errorCta = formState.maybeWhen(
-      error: (msg, ctaRoute, ctaLabel) =>
-          (ctaRoute != null && ctaLabel != null) ? (ctaRoute, ctaLabel) : null,
+      error: (msg, ctaRoute, ctaLabel) {
+        final label = AuthCtaLabel.fromCode(ctaLabel);
+        return (ctaRoute != null && label != null)
+            ? (ctaRoute, label.label(context))
+            : null;
+      },
       orElse: () => null,
     );
     final theme = Theme.of(context);

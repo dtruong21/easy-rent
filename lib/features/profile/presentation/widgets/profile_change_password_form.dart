@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../../auth/application/change_password_controller.dart';
+import '../../../auth/domain/auth_error.dart';
 import '../../../auth/domain/change_password_state.dart';
+import '../../../auth/presentation/auth_error_l10n.dart';
 import '../../../auth/presentation/widgets/password_field.dart';
 
 /// Formulaire inline de changement de mot de passe (mot de passe actuel,
@@ -77,12 +79,16 @@ class _ProfileChangePasswordFormState
       submitting: () => true,
       orElse: () => false,
     );
-    // Message déjà composé par ChangePasswordController (module `auth`, hors
-    // périmètre de cette extraction) — passé tel quel.
-    final errorMessage = formState.maybeWhen(
+    // ChangePasswordController (module `auth`) stocke un `AuthError.name`
+    // technique dans `message` — reconverti ici via `AuthErrorL10n.message`
+    // (coordination inter-module FEAT-043, voir doc `AuthError`).
+    final errorCode = formState.maybeWhen(
       error: (msg) => msg,
       orElse: () => null,
     );
+    final errorMessage = errorCode != null
+        ? AuthError.fromCode(errorCode).message(context)
+        : null;
     final theme = Theme.of(context);
     final l10n = context.l10n;
 

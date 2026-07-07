@@ -88,7 +88,8 @@ enum ValidationError {
   /// Fin de période antérieure ou égale au début (dépense).
   periodEndBeforeStart,
 
-  /// Notes de dépense au-delà de 2000 caractères.
+  /// Notes de dépense au-delà de 2000 caractères. Texte identique réutilisé
+  /// par `ScenarioFormValidators.validateNotes` (simulateur, même plafond).
   expenseNotesTooLong,
 
   // ---------------------------------------------------------------------
@@ -294,4 +295,47 @@ enum ValidationError {
 
   /// Surface au-delà de 9999,99 m².
   surfaceTooLarge,
+
+  // ---------------------------------------------------------------------
+  // ScenarioFormValidators (lib/features/simulator/presentation/widgets/
+  // scenario_form_validators.dart)
+  // ---------------------------------------------------------------------
+
+  /// Nom du scénario laissé vide.
+  scenarioNameRequired,
+
+  /// Nom du scénario au-delà de 120 caractères.
+  scenarioNameTooLong,
+
+  /// Prix d'achat laissé vide.
+  scenarioPurchasePriceRequired,
+
+  /// Prix d'achat nul ou négatif.
+  scenarioPurchasePriceNotPositive,
+
+  /// Montant optionnel non numérique (frais notaire, travaux, apport,
+  /// capital emprunté, taxe foncière, assurance PNO, charges de copropriété).
+  /// Message générique — ne mentionne plus le nom du champ (FEAT-043 : l'ex.
+  /// paramètre `label` de `validateOptionalPositiveAmount` était un FR en dur
+  /// composé à l'appel, incompatible avec `ValidationErrorL10n.message`, qui
+  /// ne prend qu'un `BuildContext`).
+  amountNegative,
+
+  /// Loyer mensuel HC laissé vide (simulateur).
+  scenarioMonthlyRentRequired,
+
+  /// Loyer mensuel HC nul ou négatif (simulateur).
+  scenarioMonthlyRentNotPositive,
+
+  /// Taux d'emprunt non numérique ou négatif (simulateur).
+  scenarioLoanRateInvalid,
+
+  /// Taux d'emprunt au-delà de 30 % (simulateur).
+  scenarioLoanRateTooHigh,
+
+  /// Durée d'emprunt en-dessous de 12 mois (simulateur).
+  scenarioLoanDurationTooShort,
+
+  /// Durée d'emprunt au-delà de 360 mois (simulateur).
+  scenarioLoanDurationTooLong,
 }

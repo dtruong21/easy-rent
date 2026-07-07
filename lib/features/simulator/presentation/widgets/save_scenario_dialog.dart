@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../widgets/scenario_form_validators.dart';
 
 /// Dialog de saisie du nom avant sauvegarde d'un scénario.
@@ -70,7 +71,8 @@ class _SaveScenarioDialogState extends State<_SaveScenarioDialog> {
           ),
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => _submit(),
-          validator: ScenarioFormValidators.validateName,
+          validator: (v) =>
+              ScenarioFormValidators.validateName(v)?.message(context),
           maxLength: 120,
         ),
       ),

@@ -26,6 +26,8 @@ import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_status.dart';
+import '../domain/lease_submit_error.dart';
+import 'lease_submit_error_l10n.dart';
 import 'lease_type_l10n.dart';
 import 'widgets/close_lease_dialog.dart';
 
@@ -116,7 +118,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg),
+              content: Text(LeaseSubmitError.fromCode(msg).message(context)),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );

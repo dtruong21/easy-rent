@@ -8,6 +8,7 @@ import 'package:easyrent/features/leases/domain/lease_filter.dart';
 import 'package:easyrent/features/leases/domain/lease_form_state.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/leases/domain/lease_submit_error.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/leases/presentation/lease_form_page.dart';
 import 'package:easyrent/features/leases/presentation/widgets/lease_form.dart';
@@ -721,16 +722,22 @@ void main() {
     // État erreur — message inline
     // -----------------------------------------------------------------------
     testWidgets('état erreur — message affiché inline', (tester) async {
+      // FEAT-043 : LeaseFormState.error.message porte désormais le `name`
+      // technique d'un LeaseSubmitError (pas un texte FR en dur) — la
+      // présentation le retraduit via LeaseSubmitErrorL10n.
       await tester.pumpWidget(
         _buildForm(
-          initialState: const LeaseFormState.error(
-            message: 'Erreur de connexion',
+          initialState: LeaseFormState.error(
+            message: LeaseSubmitError.serviceUnavailable.name,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Erreur de connexion'), findsOneWidget);
+      expect(
+        find.text('Service temporairement indisponible. Réessayez.'),
+        findsOneWidget,
+      );
     });
   });
 

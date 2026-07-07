@@ -14,6 +14,8 @@ import '../application/payment_detail_provider.dart';
 import '../application/payment_form_controller.dart';
 import '../domain/payment.dart';
 import '../domain/payment_form_state.dart';
+import '../domain/payment_submit_error.dart';
+import 'payment_submit_error_l10n.dart';
 import 'widgets/payment_form.dart';
 
 final _log = Logger('PaymentFormPage');
@@ -194,7 +196,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
           _log.warning('PaymentFormPage error state: $msg');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg),
+              content: Text(PaymentSubmitError.fromCode(msg).message(context)),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
@@ -208,7 +210,7 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg) => PaymentSubmitError.fromCode(msg).message(context),
       orElse: () => null,
     );
 

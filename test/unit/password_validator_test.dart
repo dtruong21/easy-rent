@@ -1,4 +1,5 @@
 import 'package:easyrent/core/utils/password_validator.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -23,39 +24,51 @@ void main() {
     });
 
     group('invalide — vide ou null', () {
-      test('null → "Mot de passe requis"', () {
-        expect(PasswordValidator.validate(null), 'Mot de passe requis');
+      test('null → AuthError.passwordRequired', () {
+        expect(PasswordValidator.validate(null), AuthError.passwordRequired);
       });
 
-      test('chaîne vide → "Mot de passe requis"', () {
-        expect(PasswordValidator.validate(''), 'Mot de passe requis');
+      test('chaîne vide → AuthError.passwordRequired', () {
+        expect(PasswordValidator.validate(''), AuthError.passwordRequired);
       });
     });
 
     group('invalide — trop court', () {
       final shortPasswords = ['a1', 'Ab1', '1234567', 'abcdefg'];
       for (final pw in shortPasswords) {
-        test('"$pw" (${pw.length} chars) → "8 caractères minimum"', () {
-          expect(PasswordValidator.validate(pw), '8 caractères minimum');
+        test('"$pw" (${pw.length} chars) → AuthError.passwordTooShort', () {
+          expect(PasswordValidator.validate(pw), AuthError.passwordTooShort);
         });
       }
     });
 
     group('invalide — pas de lettre', () {
-      test('chiffres seuls → "Au moins une lettre"', () {
-        expect(PasswordValidator.validate('12345678'), 'Au moins une lettre');
+      test('chiffres seuls → AuthError.passwordMissingLetter', () {
+        expect(
+          PasswordValidator.validate('12345678'),
+          AuthError.passwordMissingLetter,
+        );
       });
-      test('chiffres + symboles seuls → "Au moins une lettre"', () {
-        expect(PasswordValidator.validate('1234!@#%'), 'Au moins une lettre');
+      test('chiffres + symboles seuls → AuthError.passwordMissingLetter', () {
+        expect(
+          PasswordValidator.validate('1234!@#%'),
+          AuthError.passwordMissingLetter,
+        );
       });
     });
 
     group('invalide — pas de chiffre', () {
-      test('lettres seules → "Au moins un chiffre"', () {
-        expect(PasswordValidator.validate('abcdefgh'), 'Au moins un chiffre');
+      test('lettres seules → AuthError.passwordMissingDigit', () {
+        expect(
+          PasswordValidator.validate('abcdefgh'),
+          AuthError.passwordMissingDigit,
+        );
       });
-      test('lettres + symboles → "Au moins un chiffre"', () {
-        expect(PasswordValidator.validate('abcd!@#%'), 'Au moins un chiffre');
+      test('lettres + symboles → AuthError.passwordMissingDigit', () {
+        expect(
+          PasswordValidator.validate('abcd!@#%'),
+          AuthError.passwordMissingDigit,
+        );
       });
     });
 
@@ -69,15 +82,21 @@ void main() {
       });
 
       test('exactement 7 chars → trop court', () {
-        expect(PasswordValidator.validate('abcde1f'), '8 caractères minimum');
+        expect(
+          PasswordValidator.validate('abcde1f'),
+          AuthError.passwordTooShort,
+        );
       });
 
       test(
         'mot de passe purement avec accents sans lettre ASCII → invalide',
         () {
           // Les lettres accentuées seules ne satisfont pas [a-zA-Z] — cohérent
-          // avec la contrainte Supabase qui requiert a-z ou A-Z.
-          expect(PasswordValidator.validate('éàü12345'), 'Au moins une lettre');
+          // avec la contrainte Firebase Auth qui requiert a-z ou A-Z.
+          expect(
+            PasswordValidator.validate('éàü12345'),
+            AuthError.passwordMissingLetter,
+          );
         },
       );
 

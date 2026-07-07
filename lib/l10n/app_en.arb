@@ -51,6 +51,18 @@
   "@commonUnknown": {
     "description": "Generic fallback for an unknown/unavailable value."
   },
+  "commonViewModeCards": "Cards",
+  "@commonViewModeCards": {
+    "description": "Card view segment label in the shared card/table view mode toggle (ViewModeToggle, core/ui/cards) — used on leases, properties and tenants list pages."
+  },
+  "commonViewModeTable": "Table",
+  "@commonViewModeTable": {
+    "description": "Table view segment label in the shared card/table view mode toggle (ViewModeToggle, core/ui/cards) — used on leases, properties and tenants list pages."
+  },
+  "commonArchive": "Archive",
+  "@commonArchive": {
+    "description": "Generic archive confirmation button in the shared ArchiveConfirmDialog (core/widgets), used by properties, tenants, leases and payments to confirm a soft-delete/archive action."
+  },
 
   "navHome": "Home",
   "@navHome": {
@@ -71,6 +83,18 @@
   "navProfile": "Profile",
   "@navProfile": {
     "description": "Shell navigation destination label: profile branch."
+  },
+  "navRailExpandTooltip": "Expand menu",
+  "@navRailExpandTooltip": {
+    "description": "Tooltip shown on the collapsed navigation rail brand logo (desktop/tablet, >=600px) — tapping it expands the rail."
+  },
+  "navRailCollapseTooltip": "Collapse menu",
+  "@navRailCollapseTooltip": {
+    "description": "Tooltip on the icon button that collapses the expanded navigation rail (desktop/tablet, >=600px)."
+  },
+  "navRailSimulatorAction": "Simulate an investment",
+  "@navRailSimulatorAction": {
+    "description": "Tooltip (rail collapsed) and label (rail expanded) for the investment simulator shortcut pinned at the bottom of the navigation rail. Same wording as dashboardShortcutSimulatorLabel used on the dashboard shortcut card — kept as a separate key because it lives in a different UI location (core navigation shell vs. dashboard)."
   },
 
   "profileAppearanceTitle": "Appearance",
@@ -424,6 +448,50 @@
   "@validationSurfaceTooLarge": {
     "description": "Validation error: the property surface area exceeds 9999.99 m²."
   },
+  "validationScenarioNameRequired": "The scenario name is required",
+  "@validationScenarioNameRequired": {
+    "description": "ValidationError.scenarioNameRequired: ScenarioFormValidators.validateName, empty scenario name (investment simulator save dialog)."
+  },
+  "validationScenarioNameTooLong": "The name cannot exceed 120 characters",
+  "@validationScenarioNameTooLong": {
+    "description": "ValidationError.scenarioNameTooLong: ScenarioFormValidators.validateName, scenario name longer than 120 characters."
+  },
+  "validationScenarioPurchasePriceRequired": "The purchase price is required",
+  "@validationScenarioPurchasePriceRequired": {
+    "description": "ValidationError.scenarioPurchasePriceRequired: ScenarioFormValidators.validatePurchasePrice, empty purchase price field."
+  },
+  "validationScenarioPurchasePriceNotPositive": "The purchase price must be positive",
+  "@validationScenarioPurchasePriceNotPositive": {
+    "description": "ValidationError.scenarioPurchasePriceNotPositive: ScenarioFormValidators.validatePurchasePrice, zero or negative purchase price."
+  },
+  "validationAmountNegative": "This amount cannot be negative",
+  "@validationAmountNegative": {
+    "description": "ValidationError.amountNegative: ScenarioFormValidators.validateOptionalPositiveAmount, generic message shared by every optional amount field of the investment simulator form (notary fees, works, down payment, loan principal, property tax, PNO insurance, condo fees) — FEAT-043 dropped the per-field name that used to be interpolated here (incompatible with the shared ValidationErrorL10n.message(BuildContext) signature)."
+  },
+  "validationScenarioMonthlyRentRequired": "The monthly rent excl. charges is required",
+  "@validationScenarioMonthlyRentRequired": {
+    "description": "ValidationError.scenarioMonthlyRentRequired: ScenarioFormValidators.validateMonthlyRent, empty monthly rent field."
+  },
+  "validationScenarioMonthlyRentNotPositive": "The rent must be positive",
+  "@validationScenarioMonthlyRentNotPositive": {
+    "description": "ValidationError.scenarioMonthlyRentNotPositive: ScenarioFormValidators.validateMonthlyRent, zero or negative rent."
+  },
+  "validationScenarioLoanRateInvalid": "The rate must be between 0% and 30%",
+  "@validationScenarioLoanRateInvalid": {
+    "description": "ValidationError.scenarioLoanRateInvalid: ScenarioFormValidators.validateLoanRate, non-numeric or negative loan rate."
+  },
+  "validationScenarioLoanRateTooHigh": "The maximum rate is 30%",
+  "@validationScenarioLoanRateTooHigh": {
+    "description": "ValidationError.scenarioLoanRateTooHigh: ScenarioFormValidators.validateLoanRate, loan rate above 30%."
+  },
+  "validationScenarioLoanDurationTooShort": "The minimum duration is 12 months",
+  "@validationScenarioLoanDurationTooShort": {
+    "description": "ValidationError.scenarioLoanDurationTooShort: ScenarioFormValidators.validateLoanDuration, loan duration below 12 months."
+  },
+  "validationScenarioLoanDurationTooLong": "The maximum duration is 360 months",
+  "@validationScenarioLoanDurationTooLong": {
+    "description": "ValidationError.scenarioLoanDurationTooLong: ScenarioFormValidators.validateLoanDuration, loan duration above 360 months."
+  },
 
   "leasesFilterAll": "All",
   "@leasesFilterAll": {
@@ -470,6 +538,38 @@
   "leasesErrorUnableToLoad": "Unable to load your leases.",
   "@leasesErrorUnableToLoad": {
     "description": "Title of the full-page error view for the leases list."
+  },
+  "leasesErrorNotFound": "Lease not found. It may have been archived.",
+  "@leasesErrorNotFound": {
+    "description": "LeaseSubmitError.notFound: LeaseFormController.submit, LeaseNotFoundException on update (lease archived/deleted between load and submit)."
+  },
+  "leasesErrorAlreadyClosed": "This lease is already closed.",
+  "@leasesErrorAlreadyClosed": {
+    "description": "LeaseSubmitError.alreadyClosed: LeaseFormController.close, LeaseAlreadyClosedException (lease already has status=terminated)."
+  },
+  "leasesErrorPropertyOrTenantNotOwned": "The property or tenant does not belong to you.",
+  "@leasesErrorPropertyOrTenantNotOwned": {
+    "description": "LeaseSubmitError.propertyOrTenantNotOwned: server-side ownership guard (property not owned / tenant not owned) on LeaseFormController.submit."
+  },
+  "leasesErrorPropertyOrTenantArchived": "The property or tenant has been archived.",
+  "@leasesErrorPropertyOrTenantArchived": {
+    "description": "LeaseSubmitError.propertyOrTenantArchived: server-side guard (property is deleted / tenant is deleted) on LeaseFormController.submit."
+  },
+  "leasesErrorPermissionDenied": "Action not allowed.",
+  "@leasesErrorPermissionDenied": {
+    "description": "LeaseSubmitError.permissionDenied: Callable permission-denied/unauthenticated code."
+  },
+  "leasesErrorInvalidState": "Operation not possible — check the lease's status.",
+  "@leasesErrorInvalidState": {
+    "description": "LeaseSubmitError.invalidState: Callable failed-precondition code, distinct from LeaseSubmitError.alreadyClosed."
+  },
+  "leasesErrorServiceUnavailable": "Service temporarily unavailable. Please try again.",
+  "@leasesErrorServiceUnavailable": {
+    "description": "LeaseSubmitError.serviceUnavailable: Callable unavailable/deadline-exceeded code."
+  },
+  "leasesErrorSaveFailed": "Error while saving. Please try again.",
+  "@leasesErrorSaveFailed": {
+    "description": "LeaseSubmitError.saveFailed: fallback for any other Callable error code on LeaseFormController.submit/close."
   },
   "leasesEmptyFilterTitle": "No lease matches this filter",
   "@leasesEmptyFilterTitle": {
@@ -1674,6 +1774,30 @@
   "@propertiesProfitabilityDisclaimer": {
     "description": "Legal/financial disclaimer shown at the bottom of the profitability card."
   },
+  "propertiesErrorNotFound": "Property not found. It may have been archived.",
+  "@propertiesErrorNotFound": {
+    "description": "PropertySubmitError.notFound: PropertyFormController.submit, PropertyNotFoundException on update (property archived/deleted between load and submit)."
+  },
+  "propertiesErrorHasActiveLeases": "This property has active leases — end them before archiving.",
+  "@propertiesErrorHasActiveLeases": {
+    "description": "PropertySubmitError.hasActiveLeases: server-side archive rejection (property_has_active_leases) — archiving a property that still has active leases is forbidden."
+  },
+  "propertiesErrorPermissionDenied": "Action not allowed.",
+  "@propertiesErrorPermissionDenied": {
+    "description": "PropertySubmitError.permissionDenied: Callable permission-denied/unauthenticated code."
+  },
+  "propertiesErrorServiceUnavailable": "Service temporarily unavailable. Please try again.",
+  "@propertiesErrorServiceUnavailable": {
+    "description": "PropertySubmitError.serviceUnavailable: Callable unavailable/deadline-exceeded code."
+  },
+  "propertiesErrorConnectionError": "Save failed. Check your connection and try again.",
+  "@propertiesErrorConnectionError": {
+    "description": "PropertySubmitError.connectionError: generic FirebaseException (non-Callable, e.g. Firestore write) on PropertyFormController.submit."
+  },
+  "propertiesErrorSaveFailed": "Error while saving. Please try again.",
+  "@propertiesErrorSaveFailed": {
+    "description": "PropertySubmitError.saveFailed: fallback for any other Callable error code on PropertyFormController.submit."
+  },
 
   "tenantsListTitle": "My tenants",
   "@tenantsListTitle": {
@@ -2388,6 +2512,119 @@
     }
   },
 
+  "authErrorInvalidCredentials": "Incorrect email or password.",
+  "@authErrorInvalidCredentials": {
+    "description": "AuthError.invalidCredentials: Firebase invalid-credential/invalid-email/wrong-password/user-not-found, grouped for OWASP anti-enumeration (never reveal which of email/password is wrong)."
+  },
+  "authErrorUserDisabled": "This account has been disabled.",
+  "@authErrorUserDisabled": {
+    "description": "AuthError.userDisabled: Firebase user-disabled code."
+  },
+  "authErrorEmailAlreadyInUse": "An account already exists with this email. Sign in or reset your password.",
+  "@authErrorEmailAlreadyInUse": {
+    "description": "AuthError.emailAlreadyInUse: Firebase email-already-in-use code (signup)."
+  },
+  "authErrorWeakPassword": "Password too weak (6 characters min on Firebase side, 8 + 1 letter + 1 digit on the app side).",
+  "@authErrorWeakPassword": {
+    "description": "AuthError.weakPassword: native Firebase weak-password rejection, distinct from the app-side PasswordValidator rules."
+  },
+  "authErrorTooManyRequests": "Too many requests. Try again in a few minutes.",
+  "@authErrorTooManyRequests": {
+    "description": "AuthError.tooManyRequests: Firebase too-many-requests code."
+  },
+  "authErrorRequiresRecentLogin": "For security reasons, please sign in again and retry.",
+  "@authErrorRequiresRecentLogin": {
+    "description": "AuthError.requiresRecentLogin: Firebase requires-recent-login code (FEAT-025 in-app password change)."
+  },
+  "authErrorExpiredActionCode": "Reset link expired or invalid. Request a new one.",
+  "@authErrorExpiredActionCode": {
+    "description": "AuthError.expiredActionCode: Firebase expired-action-code/invalid-action-code codes."
+  },
+  "authErrorNetworkRequestFailed": "Could not connect. Check your internet access.",
+  "@authErrorNetworkRequestFailed": {
+    "description": "AuthError.networkRequestFailed: Firebase network-request-failed code."
+  },
+  "authErrorOperationNotAllowed": "This sign-in method is not enabled. Contact support.",
+  "@authErrorOperationNotAllowed": {
+    "description": "AuthError.operationNotAllowed: Firebase operation-not-allowed code."
+  },
+  "authErrorGooglePopupClosed": "Google sign-in cancelled.",
+  "@authErrorGooglePopupClosed": {
+    "description": "AuthError.googlePopupClosed: Firebase popup-closed-by-user / GoogleAuthErrorCode.popupClosed (user closed the Google popup)."
+  },
+  "authErrorGooglePopupBlocked": "Your browser blocked the Google window. Allow pop-ups for this site and try again.",
+  "@authErrorGooglePopupBlocked": {
+    "description": "AuthError.googlePopupBlocked: Firebase popup-blocked / GoogleAuthErrorCode.popupBlocked."
+  },
+  "authErrorAccountExistsDifferentCredential": "An account already exists with this email via another method. Sign in with your password first.",
+  "@authErrorAccountExistsDifferentCredential": {
+    "description": "AuthError.accountExistsWithDifferentCredential: Firebase account-exists-with-different-credential code, shared by Google and Apple sign-in."
+  },
+  "authErrorGooglePopupCancelledRequest": "Another Google window is already open.",
+  "@authErrorGooglePopupCancelledRequest": {
+    "description": "AuthError.googlePopupCancelledRequest: Firebase cancelled-popup-request code."
+  },
+  "authErrorWebStorageUnsupported": "Your browser blocks the third-party cookies required by Google. Enable them or use the email form.",
+  "@authErrorWebStorageUnsupported": {
+    "description": "AuthError.webStorageUnsupported: Firebase web-storage-unsupported code."
+  },
+  "authErrorGoogleNewUserOnLogin": "No Baillan account is linked to this Google account. Please create an account first.",
+  "@authErrorGoogleNewUserOnLogin": {
+    "description": "AuthError.googleNewUserOnLogin: GoogleAuthErrorCode.newUserOnLogin (Google sign-in attempted on /login with no matching Baillan account)."
+  },
+  "authErrorApplePopupClosed": "Apple sign-in cancelled.",
+  "@authErrorApplePopupClosed": {
+    "description": "AuthError.applePopupClosed: Firebase user-cancelled / AppleAuthErrorCode.popupClosed (user closed the Apple popup)."
+  },
+  "authErrorAppleNewUserOnLogin": "No Baillan account is linked to this Apple account. Please create an account first.",
+  "@authErrorAppleNewUserOnLogin": {
+    "description": "AuthError.appleNewUserOnLogin: AppleAuthErrorCode.newUserOnLogin (Apple sign-in attempted on /login with no matching Baillan account)."
+  },
+  "authErrorApplePopupBlocked": "Your browser blocked the Apple window. Allow pop-ups for this site and try again.",
+  "@authErrorApplePopupBlocked": {
+    "description": "AuthError.applePopupBlocked: AppleAuthErrorCode.popupBlocked."
+  },
+  "authErrorPasswordRequired": "Password required",
+  "@authErrorPasswordRequired": {
+    "description": "AuthError.passwordRequired: password left empty on LoginController.signIn, also returned by PasswordValidator.validate on an empty value."
+  },
+  "authErrorEmailNotVerified": "Your email is not verified yet. We just resent the confirmation link — check your inbox.",
+  "@authErrorEmailNotVerified": {
+    "description": "AuthError.emailNotVerified: FEAT-021 guard in LoginController.signIn, successful sign-in but emailVerified=false (verification email auto-resent, then forced sign-out)."
+  },
+  "authErrorFullNameRequired": "Full name required",
+  "@authErrorFullNameRequired": {
+    "description": "AuthError.fullNameRequired: full name left empty on SignupController.signUp."
+  },
+  "authErrorPasswordsMismatch": "Passwords do not match",
+  "@authErrorPasswordsMismatch": {
+    "description": "AuthError.passwordsMismatch: password confirmation differs from the new password, shared by SignupController, ResetPasswordController and ChangePasswordController."
+  },
+  "authErrorMissingResetCode": "Missing reset code.",
+  "@authErrorMissingResetCode": {
+    "description": "AuthError.missingResetCode: the oobCode query parameter is empty in ResetPasswordController.confirmReset."
+  },
+  "authErrorNewPasswordSameAsCurrent": "The new password must be different from the current one.",
+  "@authErrorNewPasswordSameAsCurrent": {
+    "description": "AuthError.newPasswordSameAsCurrent: ChangePasswordController.submit guard, new password equals current password."
+  },
+  "authErrorCurrentPasswordIncorrect": "Current password incorrect.",
+  "@authErrorCurrentPasswordIncorrect": {
+    "description": "AuthError.currentPasswordIncorrect: dedicated mapping in ChangePasswordController for wrong-password/invalid-credential during reauthentication (the generic invalidCredentials label mentions 'email', which does not apply here since the user is already signed in)."
+  },
+  "authErrorPasswordTooShort": "8 characters minimum",
+  "@authErrorPasswordTooShort": {
+    "description": "AuthError.passwordTooShort: PasswordValidator.validate, password shorter than minLength (8)."
+  },
+  "authErrorPasswordMissingLetter": "At least one letter",
+  "@authErrorPasswordMissingLetter": {
+    "description": "AuthError.passwordMissingLetter: PasswordValidator.validate, no a-z/A-Z character in the password."
+  },
+  "authErrorPasswordMissingDigit": "At least one digit",
+  "@authErrorPasswordMissingDigit": {
+    "description": "AuthError.passwordMissingDigit: PasswordValidator.validate, no digit in the password."
+  },
+
   "dashboardGreeting": "Hello",
   "@dashboardGreeting": {
     "description": "DashboardHeader greeting shown when the landlord's first name is unavailable (incomplete profile)."
@@ -2577,12 +2814,16 @@
   },
   "dashboardActivityReceiptGeneratedTitle": "Receipt generated · {periodLabel}",
   "@dashboardActivityReceiptGeneratedTitle": {
-    "description": "Recent-activity tile title for a receipt-generated event; {periodLabel} is a data-layer-formatted period string (e.g. an ISO date range, or the fallback 'Période inconnue'/'Unknown period' — see agent notes).",
+    "description": "Recent-activity tile title for a receipt-generated event; {periodLabel} is a locale-agnostic ISO date range (e.g. '2026-05-01 → 2026-05-31') already resolved by the caller — see dashboardActivityUnknownPeriod for the edge-case fallback.",
     "placeholders": {
       "periodLabel": {
         "type": "String"
       }
     }
+  },
+  "dashboardActivityUnknownPeriod": "Unknown period",
+  "@dashboardActivityUnknownPeriod": {
+    "description": "Fallback substituted for {periodLabel} in dashboardActivityReceiptGeneratedTitle when a receipt is missing its periodStart/periodEnd Firestore fields (malformed data edge case that should never happen in practice) — DashboardRepository produces a French sentinel (kUnknownPeriodLabelSentinel, no BuildContext in the data layer) which RecentActivitySection detects and relocalizes at render time."
   },
   "dashboardActivityFileSizeBytes": "{bytes} B",
   "@dashboardActivityFileSizeBytes": {
@@ -3473,6 +3714,26 @@
   "paymentsArchiveDialogMessage": "Do you want to archive this payment? It will no longer appear in the list.",
   "@paymentsArchiveDialogMessage": {
     "description": "Confirmation message shown in the archive dialog for a payment; passed as both standardMessage and activeLeaseMessage since a payment has no active-lease distinction (hasActiveLease is always false for payments)."
+  },
+  "paymentsErrorNotFound": "Payment not found. It may have been archived.",
+  "@paymentsErrorNotFound": {
+    "description": "PaymentSubmitError.notFound: PaymentFormController.submit, PaymentNotFoundException on update (payment archived/deleted between load and submit)."
+  },
+  "paymentsErrorPermissionDenied": "Action not allowed.",
+  "@paymentsErrorPermissionDenied": {
+    "description": "PaymentSubmitError.permissionDenied: Callable permission-denied/unauthenticated code."
+  },
+  "paymentsErrorInvalidState": "Operation not possible — check the payment's status.",
+  "@paymentsErrorInvalidState": {
+    "description": "PaymentSubmitError.invalidState: Callable failed-precondition code."
+  },
+  "paymentsErrorServiceUnavailable": "Service temporarily unavailable. Please try again.",
+  "@paymentsErrorServiceUnavailable": {
+    "description": "PaymentSubmitError.serviceUnavailable: Callable unavailable/deadline-exceeded code."
+  },
+  "paymentsErrorSaveFailed": "Error while saving. Please try again.",
+  "@paymentsErrorSaveFailed": {
+    "description": "PaymentSubmitError.saveFailed: fallback for any other Callable error code on PaymentFormController.submit/archive."
   },
 
   "documentsSectionTitle": "Documents",

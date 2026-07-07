@@ -1,5 +1,6 @@
 import 'package:easyrent/features/auth/application/reset_password_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/reset_password_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -167,7 +168,7 @@ void main() {
         );
         expect(repo.confirmResetCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), contains('Code'));
+        expect(_errorMsg(ctrl.state), AuthError.missingResetCode.name);
       });
 
       test('mot de passe trop court → error sans appel repo', () async {
@@ -180,7 +181,7 @@ void main() {
         );
         expect(repo.confirmResetCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), '8 caractères minimum');
+        expect(_errorMsg(ctrl.state), AuthError.passwordTooShort.name);
       });
 
       test('mot de passe sans chiffre → error', () async {
@@ -192,7 +193,7 @@ void main() {
           confirmPassword: 'abcdefgh',
         );
         expect(repo.confirmResetCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Au moins un chiffre');
+        expect(_errorMsg(ctrl.state), AuthError.passwordMissingDigit.name);
       });
 
       test(
@@ -206,16 +207,13 @@ void main() {
             confirmPassword: 'Password2',
           );
           expect(repo.confirmResetCalled, isFalse);
-          expect(
-            _errorMsg(ctrl.state),
-            'Les mots de passe ne correspondent pas',
-          );
+          expect(_errorMsg(ctrl.state), AuthError.passwordsMismatch.name);
         },
       );
     });
 
     group('confirmReset — erreurs Firebase', () {
-      test('expired-action-code → lien expiré', () async {
+      test('expired-action-code → AuthError.expiredActionCode', () async {
         final repo = _FakeAuthRepository()
           ..confirmError = FirebaseAuthException(
             code: 'expired-action-code',
@@ -228,10 +226,10 @@ void main() {
           confirmPassword: 'Password1',
         );
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), contains('expiré'));
+        expect(_errorMsg(ctrl.state), AuthError.expiredActionCode.name);
       });
 
-      test('exception inconnue → message générique', () async {
+      test('exception inconnue → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..confirmError = Exception('network error');
         final ctrl = _makeController(repo);
@@ -240,10 +238,7 @@ void main() {
           newPassword: 'Password1',
           confirmPassword: 'Password1',
         );
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
   });

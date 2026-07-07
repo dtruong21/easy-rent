@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../application/reset_password_controller.dart';
+import '../../domain/auth_error.dart';
 import '../../domain/reset_password_state.dart';
+import '../auth_error_l10n.dart';
 import 'password_field.dart';
 
 /// Formulaire de réinitialisation du mot de passe.
@@ -64,10 +66,13 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
       submitting: () => true,
       orElse: () => false,
     );
-    final errorMessage = formState.maybeWhen(
+    final errorCode = formState.maybeWhen(
       error: (msg) => msg,
       orElse: () => null,
     );
+    final errorMessage = errorCode != null
+        ? AuthError.fromCode(errorCode).message(context)
+        : null;
     final theme = Theme.of(context);
     final l10n = context.l10n;
 

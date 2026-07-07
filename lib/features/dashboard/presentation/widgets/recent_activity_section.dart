@@ -127,7 +127,14 @@ class _ActivityTile extends StatelessWidget {
       ) =>
         _Tile(
           icon: Icons.description_outlined,
-          title: l10n.dashboardActivityReceiptGeneratedTitle(periodLabel),
+          title: l10n.dashboardActivityReceiptGeneratedTitle(
+            // Sentinel FR produit côté data/ (pas de BuildContext là-bas,
+            // cf. kUnknownPeriodLabelSentinel) — relocalisé ici (FEAT-043,
+            // même pattern que LeaseListItemDisplayL10n).
+            periodLabel == kUnknownPeriodLabelSentinel
+                ? l10n.dashboardActivityUnknownPeriod
+                : periodLabel,
+          ),
           subtitle:
               '${MoneyFormat.formatEurosFromCents(totalCents)} · ${FrenchDate.format(occurredAt)}',
           // push() (pas go()) — voir F-1 ci-dessus.

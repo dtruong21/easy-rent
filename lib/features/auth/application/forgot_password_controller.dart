@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/email_validator.dart';
 import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
+import '../domain/auth_error.dart';
 import '../domain/forgot_password_state.dart';
 
 final _log = Logger('ForgotPasswordController');
@@ -17,8 +18,8 @@ class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
 
   Future<void> sendResetEmail(String email) async {
     if (!EmailValidator.isValid(email)) {
-      state = const ForgotPasswordState.error(
-        message: 'Adresse email invalide',
+      state = ForgotPasswordState.error(
+        message: AuthError.invalidEmailFormat.name,
       );
       return;
     }
@@ -39,7 +40,7 @@ class ForgotPasswordController extends StateNotifier<ForgotPasswordState> {
       // pas une fuite d'existence de compte).
       if (e.code == 'too-many-requests') {
         state = ForgotPasswordState.error(
-          message: AuthErrorMapper.fromException(e),
+          message: AuthErrorMapper.fromException(e).name,
         );
       } else {
         state = const ForgotPasswordState.emailSent();

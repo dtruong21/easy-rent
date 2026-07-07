@@ -1,6 +1,7 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/application/login_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/login_page_state.dart';
 import 'package:easyrent/features/auth/presentation/login_page.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
@@ -157,8 +158,8 @@ void main() {
             authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
             loginControllerProvider.overrideWith(
               (ref) => LoginController(ref.read(authRepositoryProvider))
-                ..state = const LoginPageState.error(
-                  message: 'Email ou mot de passe incorrect.',
+                ..state = LoginPageState.error(
+                  message: AuthError.invalidCredentials.name,
                 ),
             ),
           ],

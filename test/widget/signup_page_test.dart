@@ -1,5 +1,6 @@
 import 'package:easyrent/features/auth/application/signup_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/signup_page_state.dart';
 import 'package:easyrent/features/auth/presentation/signup_page.dart';
 import 'package:flutter/gestures.dart';
@@ -218,11 +219,14 @@ void main() {
     });
 
     testWidgets("affiche le message d'erreur en état error", (tester) async {
+      // FEAT-043 : SignupPageState.error.message porte désormais le `name`
+      // technique d'un AuthError (pas un texte FR en dur) — la présentation
+      // le retraduit via AuthErrorL10n.
       await tester.pumpWidget(
         _buildSignupPage(
           repo: _FakeAuthRepository(),
-          initialState: const SignupPageState.error(
-            message: 'Un compte existe déjà avec cet email.',
+          initialState: SignupPageState.error(
+            message: AuthError.emailAlreadyInUse.name,
           ),
         ),
       );

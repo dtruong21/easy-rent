@@ -124,6 +124,27 @@ extension ValidationErrorL10n on ValidationError {
       ValidationError.surfaceInvalid => l10n.validationSurfaceInvalid,
       ValidationError.surfaceNotPositive => l10n.validationSurfaceNotPositive,
       ValidationError.surfaceTooLarge => l10n.validationSurfaceTooLarge,
+
+      ValidationError.scenarioNameRequired =>
+        l10n.validationScenarioNameRequired,
+      ValidationError.scenarioNameTooLong => l10n.validationScenarioNameTooLong,
+      ValidationError.scenarioPurchasePriceRequired =>
+        l10n.validationScenarioPurchasePriceRequired,
+      ValidationError.scenarioPurchasePriceNotPositive =>
+        l10n.validationScenarioPurchasePriceNotPositive,
+      ValidationError.amountNegative => l10n.validationAmountNegative,
+      ValidationError.scenarioMonthlyRentRequired =>
+        l10n.validationScenarioMonthlyRentRequired,
+      ValidationError.scenarioMonthlyRentNotPositive =>
+        l10n.validationScenarioMonthlyRentNotPositive,
+      ValidationError.scenarioLoanRateInvalid =>
+        l10n.validationScenarioLoanRateInvalid,
+      ValidationError.scenarioLoanRateTooHigh =>
+        l10n.validationScenarioLoanRateTooHigh,
+      ValidationError.scenarioLoanDurationTooShort =>
+        l10n.validationScenarioLoanDurationTooShort,
+      ValidationError.scenarioLoanDurationTooLong =>
+        l10n.validationScenarioLoanDurationTooLong,
     };
   }
 }

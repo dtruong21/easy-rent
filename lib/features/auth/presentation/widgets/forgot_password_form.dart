@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../application/forgot_password_controller.dart';
+import '../../domain/auth_error.dart';
+import '../auth_error_l10n.dart';
 
 /// Formulaire de demande de réinitialisation de mot de passe.
 class ForgotPasswordForm extends ConsumerStatefulWidget {
@@ -38,10 +40,13 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
       submitting: () => true,
       orElse: () => false,
     );
-    final errorMessage = formState.maybeWhen(
+    final errorCode = formState.maybeWhen(
       error: (msg) => msg,
       orElse: () => null,
     );
+    final errorMessage = errorCode != null
+        ? AuthError.fromCode(errorCode).message(context)
+        : null;
     final theme = Theme.of(context);
     final l10n = context.l10n;
 

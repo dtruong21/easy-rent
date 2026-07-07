@@ -18,7 +18,9 @@ import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_filter.dart';
 import '../domain/lease_form_state.dart';
+import '../domain/lease_submit_error.dart';
 import '../domain/lease_type.dart';
+import 'lease_submit_error_l10n.dart';
 import 'widgets/active_lease_warning_dialog.dart';
 import 'widgets/lease_form.dart';
 
@@ -326,7 +328,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           _log.warning('LeaseFormPage error state');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg),
+              content: Text(LeaseSubmitError.fromCode(msg).message(context)),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
@@ -340,7 +342,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg) => LeaseSubmitError.fromCode(msg).message(context),
       orElse: () => null,
     );
 

@@ -1,5 +1,6 @@
 import 'package:easyrent/features/auth/application/forgot_password_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/forgot_password_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -167,7 +168,7 @@ void main() {
         await ctrl.sendResetEmail('bademail');
         expect(repo.sendResetCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), 'Adresse email invalide');
+        expect(_errorMsg(ctrl.state), AuthError.invalidEmailFormat.name);
       });
 
       test('email vide → error sans appel repo', () async {
@@ -191,7 +192,7 @@ void main() {
           final ctrl = _makeController(repo);
           await ctrl.sendResetEmail('user@exemple.fr');
           expect(_isError(ctrl.state), isTrue);
-          expect(_errorMsg(ctrl.state), contains('Trop de demandes'));
+          expect(_errorMsg(ctrl.state), AuthError.tooManyRequests.name);
         },
       );
 
@@ -238,7 +239,7 @@ void main() {
         await ctrl.sendResetEmail('bademail');
         // La validation locale n'est pas concernée par l'anti-énumération.
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), 'Adresse email invalide');
+        expect(_errorMsg(ctrl.state), AuthError.invalidEmailFormat.name);
       });
     });
   });

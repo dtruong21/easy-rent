@@ -9,6 +9,7 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/validation/validation_error_l10n.dart';
 import '../../auth/application/anon_expiry_renewer.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/application/login_controller.dart';
@@ -814,7 +815,9 @@ class _AcquisitionSection extends StatelessWidget {
                 key: const Key('field_purchase_price'),
                 controller: purchasePriceCtrl,
                 label: context.l10n.simulatorFieldPurchasePriceLabel,
-                validator: ScenarioFormValidators.validatePurchasePrice,
+                validator: (v) => ScenarioFormValidators.validatePurchasePrice(
+                  v,
+                )?.message(context),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
@@ -836,8 +839,7 @@ class _AcquisitionSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Les frais de notaire',
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
@@ -847,8 +849,7 @@ class _AcquisitionSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Les travaux',
-                    ),
+                    )?.message(context),
               ),
             ],
           ),
@@ -890,8 +891,7 @@ class _FinancementSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: "L'apport",
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
@@ -902,8 +902,7 @@ class _FinancementSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Le capital emprunté',
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -917,7 +916,9 @@ class _FinancementSection extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: ScenarioFormValidators.validateLoanRate,
+                validator: (v) => ScenarioFormValidators.validateLoanRate(
+                  v,
+                )?.message(context),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -929,7 +930,9 @@ class _FinancementSection extends StatelessWidget {
                   suffixText: 'mois',
                 ),
                 keyboardType: TextInputType.number,
-                validator: ScenarioFormValidators.validateLoanDuration,
+                validator: (v) => ScenarioFormValidators.validateLoanDuration(
+                  v,
+                )?.message(context),
               ),
             ],
           ),
@@ -959,7 +962,8 @@ class _RevenusSection extends StatelessWidget {
             controller: monthlyRentCtrl,
             label: context.l10n.simulatorFieldMonthlyRentLabel,
             helperText: context.l10n.simulatorFieldMonthlyRentHelper,
-            validator: ScenarioFormValidators.validateMonthlyRent,
+            validator: (v) =>
+                ScenarioFormValidators.validateMonthlyRent(v)?.message(context),
           ),
         ),
       ],
@@ -998,8 +1002,7 @@ class _ChargesSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'La taxe foncière',
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
@@ -1009,8 +1012,7 @@ class _ChargesSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: "L'assurance PNO",
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
@@ -1021,8 +1023,7 @@ class _ChargesSection extends StatelessWidget {
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Les charges de copropriété',
-                    ),
+                    )?.message(context),
               ),
             ],
           ),
@@ -1057,7 +1058,8 @@ class _NotesSection extends StatelessWidget {
             minLines: 2,
             maxLines: 5,
             maxLength: 2000,
-            validator: ScenarioFormValidators.validateNotes,
+            validator: (v) =>
+                ScenarioFormValidators.validateNotes(v)?.message(context),
           ),
         ),
       ],

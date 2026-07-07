@@ -204,6 +204,7 @@ class _RailBrand extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final toggle = ref.read(railExpandedProvider.notifier).toggle;
 
     if (!expanded) {
@@ -211,7 +212,7 @@ class _RailBrand extends ConsumerWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Tooltip(
-          message: 'Déplier le menu',
+          message: l10n.navRailExpandTooltip,
           child: InkWell(
             key: const Key('rail_menu_toggle'),
             onTap: toggle,
@@ -253,7 +254,7 @@ class _RailBrand extends ConsumerWidget {
           IconButton(
             key: const Key('rail_menu_toggle'),
             icon: const Icon(Icons.menu_open),
-            tooltip: 'Replier le menu',
+            tooltip: l10n.navRailCollapseTooltip,
             onPressed: toggle,
           ),
         ],
@@ -276,13 +277,14 @@ class _RailSimulatorAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onSurfaceVariant;
+    final label = context.l10n.navRailSimulatorAction;
     void go() => context.push('/simulator');
 
     if (!expanded) {
       return IconButton(
         key: const Key('rail_simulator_action'),
         icon: const Icon(Icons.calculate_outlined),
-        tooltip: 'Simuler un investissement',
+        tooltip: label,
         color: color,
         onPressed: go,
       );
@@ -302,7 +304,7 @@ class _RailSimulatorAction extends StatelessWidget {
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
-                  'Simuler un investissement',
+                  label,
                   style: theme.textTheme.labelLarge?.copyWith(color: color),
                 ),
               ),

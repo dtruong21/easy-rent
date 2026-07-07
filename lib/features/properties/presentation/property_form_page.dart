@@ -11,7 +11,9 @@ import '../application/property_form_controller.dart';
 import '../domain/heating_type.dart';
 import '../domain/property.dart';
 import '../domain/property_form_state.dart';
+import '../domain/property_submit_error.dart';
 import '../domain/property_type.dart';
+import 'property_submit_error_l10n.dart';
 import 'widgets/property_form.dart';
 
 final _log = Logger('PropertyFormPage');
@@ -292,7 +294,7 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg) => PropertySubmitError.fromCode(msg).message(context),
       orElse: () => null,
     );
 
