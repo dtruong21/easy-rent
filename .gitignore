@@ -107,3 +107,4 @@ backups/
 
 # Config de preview locale (par développeur)
 .claude/launch.json
+firestore-debug.log

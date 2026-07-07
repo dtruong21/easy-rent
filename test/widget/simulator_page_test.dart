@@ -101,6 +101,16 @@ class _FakeRepo implements InvestmentScenarioRepository {
 /// Fake [AuthRepository] minimal — seule [signOut] est exercée par les tests
 /// « quitter le mode démo » ; tout autre appel lève via [noSuchMethod].
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   bool signOutCalled = false;
 
   @override

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:logging/logging.dart';
 
 import 'core/config/env.dart';
@@ -18,6 +19,14 @@ import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // URLs path-based sur le web (« /delete-account », pas « /#/delete-account »)
+  // — FEAT-045 : l'URL de suppression de compte déclarée sur la fiche Google
+  // Play doit résoudre telle quelle ; rend au passage les liens email Firebase
+  // ($origin/login, $origin/reset-password?oobCode=…) routables en accès
+  // direct. No-op sur iOS/Android. Le serving SPA est déjà en place
+  // (firebase.json : rewrites ** → /index.html).
+  usePathUrlStrategy();
 
   // Système de logs : WARNING+ en prod (Env.isProd), ALL en dev.
   Logger.root.level = Env.isProd ? Level.WARNING : Level.ALL;

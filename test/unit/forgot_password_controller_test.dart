@@ -11,6 +11,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   bool sendResetCalled = false;
   String? lastEmail;
   Exception? sendError;

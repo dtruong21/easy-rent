@@ -13,6 +13,16 @@ import 'package:flutter_test/flutter_test.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   _FakeAuthRepository({User? currentUser}) : _currentUser = currentUser;
 
   final User? _currentUser;

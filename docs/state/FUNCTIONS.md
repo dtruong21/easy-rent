@@ -1,6 +1,6 @@
 # Cloud Functions et Triggers — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Dernière sync** : 2026-07-05 (FEAT-036 + FEAT-041 V1 merged, `createExpense`, `updateExpense`, `setUpdatedAtExpenses`; `createDocument` v2 FEAT-041b). **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
+> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Dernière sync** : 2026-07-07 (FEAT-045 : callable `deleteAccount` — purge RGPD art. 17, rétention quittances). **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
 
 ## Architecture 3-couches
 
@@ -94,7 +94,7 @@
 
 ---
 
-## Callable Cloud Functions (27 total)
+## Callable Cloud Functions (28 total)
 
 ### 🔒 Lease Management (FEAT-005, FEAT-036)
 
@@ -484,6 +484,35 @@ export const softDeleteEntity = onCall(async (request) => {
 
 ---
 
+### 🗑️ Account Deletion (FEAT-045, RGPD art. 17)
+
+#### `deleteAccount`
+
+**Type** : Callable (client invoke, tout compte authentifié y compris anonyme)
+
+**Exigence stores** : Google Play « Account deletion » (13327111) + App Store 5.1.1(v).
+
+**Garde** : token non-anonyme dont `auth_time` > 5 min → `failed-precondition` (`recent-login-required`) — le client réauthentifie juste avant (mot de passe ou flux OAuth). Sessions anonymes exemptées — exemption confirmée côté Admin SDK (`getUser().providerData` vide, audit M1 : le claim `sign_in_provider` reste 'anonymous' sur les tokens émis avant un upgrade par linking).
+
+**Purge (ordre)** :
+1. `receipts` du landlord : **CONSERVÉES** (loi 6 juillet 1989, 5 ans) — stamp `accountDeletedAt` + `retentionUntil` (purge différée par futur cron)
+2. Hard-delete paginé (400/batch) : properties, tenants, leases, payments, documents (y compris legalHold — flux client avertit), expenses, investment_scenarios, support_requests (`where landlordId == uid`)
+3. Singletons : `paid_plan_interest/{uid}` + `landlords/{uid}`
+4. Storage : `deleteFiles(prefix: documents/{uid}/)`
+5. Auth **en dernier** : `admin.auth().deleteUser(uid)` (idempotent sur user-not-found)
+
+**Ordre inverse de cleanupExpiredAnon** : le retry est porté par l'utilisateur encore connecté — un échec en cours de route laisse le compte Auth vivant pour relancer (idempotent).
+
+**Révocation Apple** : côté CLIENT avant l'appel (`revokeTokenWithAuthorizationCode` avec l'authorizationCode de la re-auth — iOS/macOS, best-effort ailleurs).
+
+**Retour** : `{deleted: true, receiptsRetained: number}`
+
+**Fichier** : `functions/src/callable/delete_account.ts`
+
+**Tests** : `functions/src/__tests__/delete_account.test.ts` (15 tests : fraîcheur, exemption anonyme vérifiée providerData, purge cross-collections, isolation landlords, rétention quittances, idempotence, échecs Auth/Storage/getUser) + `functions/rules-tests/firestore_rules.test.ts` (28 tests émulateur, `npm run test:rules`)
+
+---
+
 ## Scheduled Functions (Cron)
 
 ### `cleanupExpiredAnon` (BAILLAN-M1)
@@ -613,3 +642,4 @@ firebase deploy --only functions
 | **FEAT-041a** (Dépenses CRUD) | **createExpense, updateExpense** | **setUpdatedAtExpenses** | ✅ DONE |
 | **FEAT-041b** (Documents v2) | **createDocument v2** (expenseId, category=expense_receipt, legalHold) | — | ✅ DONE |
 | **FEAT-041c** (Régularisation) | — | **recomputeChargeRegularization** (planned) | 📋 PLANNED V1.1 |
+| **FEAT-045** (Suppression compte) | **deleteAccount** | — | ✅ DONE |

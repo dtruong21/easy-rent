@@ -20,6 +20,8 @@ Cet index pointe vers un snapshot à jour du schéma, des routes, des features e
 | Système de ticketing (GitHub Issues + agents) | [`docs/TICKETING.md`](docs/TICKETING.md) |
 | Git Flow (branches, releases, hotfixes) | [`docs/GITFLOW.md`](docs/GITFLOW.md) |
 | Stratégie multi-environnement (dev/prod sur 1 projet) | [`docs/ENVIRONMENTS.md`](docs/ENVIRONMENTS.md) |
+| App mobile iOS/Android (FEAT-024 : setup, build, décisions) | [`docs/MOBILE.md`](docs/MOBILE.md) |
+| Conformité Play Store / App Store (release production) | [`docs/STORE_COMPLIANCE.md`](docs/STORE_COMPLIANCE.md) |
 | Gestion des secrets et sécurité | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | Schéma Supabase courant | [`docs/state/SCHEMA.md`](docs/state/SCHEMA.md) |
 | Routes Flutter courantes | [`docs/state/ROUTES.md`](docs/state/ROUTES.md) |

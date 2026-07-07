@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-07-05 (FEAT-036 + FEAT-041 V1 mergés, post-MVP M1 feature-complete staging, `expenses` collection live).
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-07-07 (FEAT-045 suppression de compte in-app — bloquant stores levé).
 
 ## Légende
 
@@ -37,7 +37,6 @@
 | FEAT-021 | Vérification email post-signup | — | ✅ done | — | Firebase Auth verification link |
 | FEAT-022 | Redesign login "La Page du Registre" | — | ✅ done | — | Landing publique, simulator carrefour, quit demo dialog |
 | FEAT-023 | Réglages app (thème + légal) | — | ✅ done | — | ProfilePage tuiles, themeModeProvider persisté, /terms page |
-| FEAT-024 | _(Reserve)_ | — | 💡 idea | — | — |
 | FEAT-025 | Sécurité + support in-app | — | ✅ done | — | Changement mot de passe + formulaire support → support_requests |
 | FEAT-025b | /profile HUB de réglages | — | ✅ done | — | Sous-pages /profile/details, /profile/password, /profile/support |
 | FEAT-026 | Navigation shell adaptative | — | ✅ done | — | StatefulShellRoute.indexedStack 5 branches, NavigationBar/Rail responsive |
@@ -54,10 +53,24 @@
 | **FEAT-036** | **Charges récupérables vs non-récupérables** | M1 | ✅ **done** | PR #66 (2026-07-05) | **nonRecoverableChargesCents, FEAT-036 merged** |
 | **FEAT-041** | **Suivi dépenses unifié** | M1 | ✅ **done (V1)** | PR #67 (2026-07-05) | **`expenses` collection, CF exclusive, FEAT-041a/b/c planifiées** |
 | **FEAT-042** | **Mode de charges (provisions/forfait) + éligibilité régularisation** | M1 | ✅ **done** | PR #68 (2026-07-06) | **`leases.chargeMode`, `resolveChargeMode` CF, `effectiveChargeMode` getter, `canRegularizeCharges` predicate** |
+| **FEAT-045** | **Suppression de compte in-app + page publique /delete-account** | Mobile/Stores | ✅ **done** | feature/045-account-deletion (2026-07-07) | **Bloquant Play « Account deletion » + App Store 5.1.1(v) levé — callable `deleteAccount` (purge Firestore+Storage+Auth, quittances conservées 5 ans), re-auth par provider, révocation token Apple, privacy policy v1.2** |
+| **FEAT-048** | **FAQ produit publique /faq** | UX/Support | ✅ **done** | feature/045-account-deletion (2026-07-07) | **11 Q/R (quittances loi 1989, essai anonyme, RGPD, suppression, charges…), page publique + tuile Profil → Aide ; hub /profile réordonné (suppression dans Compte)** |
+| **FEAT-024** | **App mobile iOS/Android (setup + parité)** | M1 | 🚧 **wip** | branche `claude/magical-jackson-d0116a` (2026-07-06) | **`android/`+`ios/` (`com.daki.baillan`), firebase_options 3 plateformes, auth `signInWithProvider`, partage natif `share_plus`, smoke test émulateur ✅ — reste : signing release, capability Apple, icônes, QA devices (cf. `docs/MOBILE.md`)** |
 
 ---
 
 ## Détails par feature (Post-MVP M1, session 2026-07-03–07-06)
+
+### FEAT-024 : App mobile iOS/Android — setup réalisé (2026-07-06)
+
+- **Plateformes** : `flutter create --platforms=android,ios`, applicationId/bundle ID **`com.daki.baillan`** (définitif stores), label « Baillan. »
+- **Firebase** : apps android (`…android:4511f9…`) + ios (`…ios:3be0b1…`) enregistrées sur `easy-rent-54cd4`, web réutilisée à l'identique ; `firebase_options.dart` régénéré (flutterfire), `google-services.json` + `GoogleService-Info.plist` committés (clés publiques), SHA-1/256 debug déclarées
+- **Auth multiplateforme** : `_signInWithOAuthProvider` + `_defaultLinkWithProvider` (popup web / `signInWithProvider`-`linkWithProvider` mobile), typedef renommé `LinkWithProviderFn` ; codes annulation mobile mappés (`web-context-canceled|cancelled`) ; liens email fallback `Env.publicAppUrl` (dart-define `APP_PUBLIC_URL`)
+- **Partage PDF natif** : `web_share_service_io.dart` (ex-stub) — share sheet Android/iOS via `share_plus` (annulation détectée → `sent_at` fiable ; `printing` retiré), data-URL décodée localement ; no-op inchangé VM tests/desktop ; bénéficie aux quittances ET régularisations
+- **Android** : `<queries>` https+mailto (url_launcher API 30+), minSdk 24 (défaut Flutter)
+- **iOS** : URL schemes OAuth (REVERSED_CLIENT_ID + app ID encodé) dans Info.plist
+- **Validation** : analyze clean, 2378 tests ✅, APK debug ✅, smoke test émulateur Pixel 9 ✅ (landing → auth anonyme → simulateur, Firestore OK)
+- **Référence complète** : [`docs/MOBILE.md`](../MOBILE.md)
 
 ### FEAT-042 : Mode de charges (provisions/forfait) + éligibilité régularisation
 

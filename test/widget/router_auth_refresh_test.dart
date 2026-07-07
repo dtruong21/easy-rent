@@ -41,6 +41,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// sign-in/sign-out À CHAUD (pendant que l'app tourne), contrairement aux
 /// overrides statiques de sessionStateProvider.
 class _StreamAuthRepo implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   final controller = StreamController<User?>.broadcast();
   User? current;
 

@@ -236,3 +236,7 @@ class ProfileSessionSection extends ConsumerWidget {
     );
   }
 }
+
+// NB (2026-07-07) : la tuile « Supprimer mon compte » (FEAT-045) vit
+// désormais dans le groupe « Compte » de ProfilePage — l'ancienne section
+// dédiée en fin de hub a été retirée (décision de réordonnancement).

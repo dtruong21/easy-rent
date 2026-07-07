@@ -72,6 +72,16 @@ class _FakeProfileRepository implements ProfileRepository {
 /// Fake [AuthRepository] dont on contrôle le [User] exposé (pour
 /// [hasPasswordProvider]).
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   _FakeAuthRepository(this._user);
 
   final User? _user;
@@ -251,6 +261,15 @@ Widget _buildPage({
       GoRoute(
         path: '/privacy',
         builder: (context, state) => const Scaffold(body: Text('page privacy')),
+      ),
+      GoRoute(
+        path: '/profile/delete-account',
+        builder: (context, state) =>
+            const Scaffold(body: Text('page suppression compte')),
+      ),
+      GoRoute(
+        path: '/faq',
+        builder: (context, state) => const Scaffold(body: Text('page faq')),
       ),
     ],
   );
@@ -579,6 +598,74 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('btn_logout_profile')), findsOneWidget);
+    });
+  });
+
+  group('ProfilePage — suppression de compte (FEAT-045)', () {
+    testWidgets(
+      'tuile Supprimer mon compte dans le groupe Compte (exigence stores) et navigable',
+      (tester) async {
+        final repo = _FakeProfileRepository()..seed(_makeProfile());
+        await tester.pumpWidget(_buildPage(repo: repo));
+        await tester.pumpAndSettle();
+
+        final tile = find.byKey(const Key('tile_delete_account'));
+        expect(tile, findsOneWidget);
+        // Dans le groupe « Compte » : au-dessus du header « Apparence »
+        // (l'ancienne section dédiée en fin de hub a été retirée).
+        expect(find.text('Suppression du compte'), findsNothing);
+        expect(
+          tester.getTopLeft(tile).dy <
+              tester.getTopLeft(find.text('Apparence')).dy,
+          isTrue,
+        );
+
+        await tester.ensureVisible(tile);
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        expect(find.text('page suppression compte'), findsOneWidget);
+      },
+    );
+  });
+
+  group('ProfilePage — ordre des groupes (décision 2026-07-07)', () {
+    testWidgets('Compte → Apparence → Aide → À propos → Session', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      double headerY(String title) => tester.getTopLeft(find.text(title)).dy;
+
+      expect(headerY('Compte') < headerY('Apparence'), isTrue);
+      expect(headerY('Apparence') < headerY('Aide'), isTrue);
+      expect(headerY('Aide') < headerY('À propos'), isTrue);
+      expect(headerY('À propos') < headerY('Session'), isTrue);
+    });
+
+    testWidgets('groupe Aide — tuile FAQ en tête, navigue vers /faq', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      final faqTile = find.byKey(const Key('tile_faq'));
+      expect(faqTile, findsOneWidget);
+      // FAQ avant « Nous contacter » dans le groupe Aide.
+      expect(
+        tester.getTopLeft(faqTile).dy <
+            tester.getTopLeft(find.byKey(const Key('tile_support'))).dy,
+        isTrue,
+      );
+
+      await tester.ensureVisible(faqTile);
+      await tester.tap(faqTile);
+      await tester.pumpAndSettle();
+
+      expect(find.text('page faq'), findsOneWidget);
     });
   });
 }

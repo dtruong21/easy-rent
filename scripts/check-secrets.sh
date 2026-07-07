@@ -48,11 +48,14 @@ for file in $FILES; do
   esac
 
   # Skip les fichiers de doc qui peuvent légitimement mentionner les patterns
-  # + lib/firebase_options.dart : la Firebase Web apiKey (AIza…) est PUBLIQUE
-  #   par design (équivalent du anon key Supabase) ; sécurité via Rules + App Check.
+  # + configs Firebase clientes : les apiKey Firebase (AIza…) y sont PUBLIQUES
+  #   par design (équivalent du anon key Supabase) ; sécurité via Rules +
+  #   App Check. Couvre le web (firebase_options.dart) et les apps natives
+  #   FEAT-024 (google-services.json Android, GoogleService-Info.plist iOS).
   case "$file" in
     docs/SECURITY.md|scripts/check-secrets.sh|scripts/install-hooks.sh|*.example.*|*.md.tmpl) continue ;;
     lib/firebase_options.dart) continue ;;
+    android/app/google-services.json|ios/Runner/GoogleService-Info.plist) continue ;;
   esac
 
   for pattern in "${PATTERNS[@]}"; do

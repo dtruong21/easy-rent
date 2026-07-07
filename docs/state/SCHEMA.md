@@ -1,6 +1,6 @@
 # Schéma Firestore — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-05 (FEAT-036 + FEAT-041 V1 merged, `expenses` collection). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
+> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-07 (FEAT-045 : rules `list` owner-scoped sur les 8 collections multi-tenant — audit H1 ; tests émulateur `functions/rules-tests/`). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
 
 ## Collections (11 total)
 
@@ -442,6 +442,7 @@ Tous les indices sont **Collection > Composite** sauf indication. Filtrages soft
 **Stratégie** : default deny + allowlist explicite. Aucune mutation cross-entity côté client (leases, payments, receipts, documents, expenses = CF exclusive).
 
 - **isOwner(uid)** : claim auth.uid == document.landlordId
+- **list owner-scoped (audit FEAT-045 H1)** : `allow list: if isOwner(resource.data.landlordId)` sur les 8 collections multi-tenant — toute query DOIT porter `where('landlordId','==',uid)` (les rules ne sont pas des filtres ; l'ancien `isSignedIn()` permettait la lecture cross-tenant par UID). Vérifié par tests émulateur (`npm run test:rules`)
 - **isActive(rsc)** : resource.data.deletedAt == null (filtrage systématique)
 - **preservesImmutables(rsc)** : Garde-fou mutations (landlordId, createdAt, deletedAt jamais changés client)
 - **isFullyAuthed()** : Compte complet (email/password, Google, Apple) — isSignedIn() && !isAnonymous()

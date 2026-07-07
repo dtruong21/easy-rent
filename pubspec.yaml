@@ -16,6 +16,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # URL strategy path-based web (FEAT-045 — URL /delete-account fiche Play)
+  flutter_web_plugins:
+    sdk: flutter
 
   # i18n (FEAT-043 — support FR/EN via gen_l10n officiel, ARB). Widgets natifs
   # localisés gratuitement (showDatePicker, MaterialLocalizations…).
@@ -41,7 +44,6 @@ dependencies:
 
   # PDF
   pdf: ^3.11.0
-  printing: ^5.13.0
 
   # i18n / locale FR + EN (FEAT-043). Version pinnée par flutter_localizations
   # (SDK) — voir contrainte transitive lors de `flutter pub get`.
@@ -70,6 +72,11 @@ dependencies:
   # JS interop (install prompt bridge)
   web: ^1.1.0
   package_info_plus: ^9.0.1
+
+  # Partage natif Android/iOS des PDF quittances/régularisations (FEAT-024).
+  # Remonte l'annulation du share sheet (dismissed) — requis pour l'invariant
+  # « sent_at après partage réussi ».
+  share_plus: ^12.0.2
 
 dev_dependencies:
   flutter_test:

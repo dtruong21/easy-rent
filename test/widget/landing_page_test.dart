@@ -12,6 +12,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   bool signInAnonymouslyCalled = false;
   Exception? signInAnonymouslyError;
 
@@ -109,6 +119,10 @@ Widget _buildApp(_FakeAuthRepository repo) {
         path: '/login',
         builder: (context, state) => const Scaffold(body: Text('Login')),
       ),
+      GoRoute(
+        path: '/faq',
+        builder: (context, state) => const Scaffold(body: Text('page faq')),
+      ),
     ],
   );
 
@@ -146,6 +160,22 @@ void main() {
       expect(find.text('Continuer sans compte'), findsOneWidget);
       expect(find.text('Créer un compte'), findsOneWidget);
       expect(find.text("J'ai déjà un compte"), findsOneWidget);
+    });
+
+    testWidgets('liens secondaires FAQ / Confidentialité / CGU présents, '
+        'FAQ navigable', (tester) async {
+      await tester.pumpWidget(_buildApp(_FakeAuthRepository()));
+      await tester.pump();
+
+      expect(find.byKey(const Key('landing_link_faq')), findsOneWidget);
+      expect(find.byKey(const Key('landing_link_privacy')), findsOneWidget);
+      expect(find.byKey(const Key('landing_link_terms')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('landing_link_faq')));
+      await tester.tap(find.byKey(const Key('landing_link_faq')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page faq'), findsOneWidget);
     });
   });
 

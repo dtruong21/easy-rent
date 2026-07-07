@@ -219,4 +219,22 @@ void main() {
       );
     });
   });
+
+  group('AuthErrorMapper.fromException (OAuth natif mobile, FEAT-024)', () {
+    FirebaseAuthException e(String code) => FirebaseAuthException(code: code);
+
+    test('web-context-canceled (Android) → googlePopupClosed', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-context-canceled')),
+        AuthError.googlePopupClosed,
+      );
+    });
+
+    test('web-context-cancelled (iOS) → googlePopupClosed', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-context-cancelled')),
+        AuthError.googlePopupClosed,
+      );
+    });
+  });
 }

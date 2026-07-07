@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
@@ -113,11 +114,43 @@ class LandingSheet extends StatelessWidget {
             ),
             SizedBox(height: isDesktop ? 32 : 22),
             _buildFooter(context),
+            const SizedBox(height: 8),
+            _buildSecondaryLinks(context),
           ],
         ),
       ),
     );
   }
+
+  /// Liens secondaires sous le pied : FAQ + pages légales — mêmes teintes
+  /// discrètes que le pied, jamais en concurrence avec les CTAs.
+  Widget _buildSecondaryLinks(BuildContext context) {
+    TextButton link(String label, String route, Key key) => TextButton(
+      key: key,
+      onPressed: () => context.push(route),
+      style: TextButton.styleFrom(
+        foregroundColor: AppTheme.inkMuted,
+        visualDensity: VisualDensity.compact,
+        textStyle: const TextStyle(fontSize: 12, letterSpacing: 0.4),
+      ),
+      child: Text(label),
+    );
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        link('FAQ', '/faq', const Key('landing_link_faq')),
+        _linkSeparator(),
+        link('Confidentialité', '/privacy', const Key('landing_link_privacy')),
+        _linkSeparator(),
+        link('CGU', '/terms', const Key('landing_link_terms')),
+      ],
+    );
+  }
+
+  Widget _linkSeparator() =>
+      const Text('·', style: TextStyle(fontSize: 12, color: AppTheme.inkMuted));
 
   /// Cartouche d'en-tête : date à gauche, intitulé à droite.
   Widget _buildCartouche(BuildContext context) {
