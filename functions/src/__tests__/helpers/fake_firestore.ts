@@ -132,15 +132,129 @@ export class FakeTransaction {
 
 let autoIdCounter = 0;
 
-export class FakeCollectionRef {
+/**
+ * Snapshot de doc retourné par les requêtes (FakeQuery) — expose `ref`
+ * en plus de `id`/`data()` pour permettre `batch.delete(doc.ref)`.
+ */
+export class FakeQueryDocSnapshot extends FakeDocSnapshot {
   constructor(
-    public readonly name: string,
-    private readonly store: Map<string, DocData>,
+    path: string,
+    data: DocData | undefined,
+    public readonly ref: FakeDocRef,
+  ) {
+    super(path, data);
+  }
+
+  get id(): string {
+    return this.ref.id;
+  }
+}
+
+/**
+ * Requête fake — couvre le sous-ensemble utilisé par `delete_account.ts` :
+ * `.where(field, "==", value)` (chaînable) + `.limit(n)` + `.get()`.
+ */
+export class FakeQuery {
+  constructor(
+    protected readonly collectionName: string,
+    protected readonly queryStore: Map<string, DocData>,
+    private readonly filters: ReadonlyArray<[string, unknown]> = [],
+    private readonly limitCount: number | null = null,
   ) {}
+
+  where(field: string, op: string, value: unknown): FakeQuery {
+    if (op !== "==") {
+      throw new Error(`FakeQuery: unsupported operator ${op}`);
+    }
+    return new FakeQuery(
+      this.collectionName,
+      this.queryStore,
+      [...this.filters, [field, value]],
+      this.limitCount,
+    );
+  }
+
+  limit(n: number): FakeQuery {
+    return new FakeQuery(
+      this.collectionName,
+      this.queryStore,
+      this.filters,
+      n,
+    );
+  }
+
+  get(): Promise<{
+    docs: FakeQueryDocSnapshot[];
+    empty: boolean;
+    size: number;
+  }> {
+    const prefix = `${this.collectionName}/`;
+    const docs: FakeQueryDocSnapshot[] = [];
+    for (const [path, data] of this.queryStore.entries()) {
+      // Ne matche que les docs DIRECTS de la collection (pas de sous-coll).
+      if (!path.startsWith(prefix)) continue;
+      if (path.slice(prefix.length).includes("/")) continue;
+      if (this.filters.every(([field, value]) => data[field] === value)) {
+        docs.push(
+          new FakeQueryDocSnapshot(
+            path,
+            data,
+            new FakeDocRef(path, this.queryStore),
+          ),
+        );
+      }
+      if (this.limitCount !== null && docs.length >= this.limitCount) break;
+    }
+    return Promise.resolve({docs, empty: docs.length === 0, size: docs.length});
+  }
+}
+
+export class FakeCollectionRef extends FakeQuery {
+  get name(): string {
+    return this.collectionName;
+  }
 
   doc(id?: string): FakeDocRef {
     const docId = id ?? `auto-${++autoIdCounter}`;
-    return new FakeDocRef(`${this.name}/${docId}`, this.store);
+    return new FakeDocRef(`${this.collectionName}/${docId}`, this.queryStore);
+  }
+}
+
+/**
+ * WriteBatch fake — `delete`/`update`/`set` bufferisés, appliqués au
+ * `commit()` (même sémantique atomique-en-apparence que l'Admin SDK pour
+ * des tests séquentiels).
+ */
+export class FakeWriteBatch {
+  private readonly ops: Array<() => void> = [];
+
+  constructor(private readonly store: Map<string, DocData>) {}
+
+  delete(ref: FakeDocRef): this {
+    this.ops.push(() => this.store.delete(ref.path));
+    return this;
+  }
+
+  update(ref: FakeDocRef, patch: DocData): this {
+    this.ops.push(() => {
+      const existing = this.store.get(ref.path);
+      if (existing === undefined) {
+        throw new Error(`batch.update() on missing doc: ${ref.path}`);
+      }
+      this.store.set(ref.path, resolveWrite(existing, patch));
+    });
+    return this;
+  }
+
+  set(ref: FakeDocRef, data: DocData): this {
+    this.ops.push(() => this.store.set(ref.path, resolveWrite(undefined, data)));
+    return this;
+  }
+
+  commit(): Promise<void> {
+    for (const op of this.ops) op();
+    this.ops.length = 0;
+    return Promise.resolve();
   }
 }
 
@@ -160,6 +274,10 @@ export class FakeFirestore {
     return fn(tx);
   }
 
+  batch(): FakeWriteBatch {
+    return new FakeWriteBatch(this.store);
+  }
+
   /** Helper de setup de test : injecte un doc directement dans le store. */
   seed(path: string, data: DocData): void {
     this.store.set(path, data);
@@ -173,19 +291,24 @@ export class FakeFirestore {
 
 /**
  * Fake Storage minimal — couvre le sous-ensemble utilisé par
- * `documents.ts` : `admin.storage().bucket().file(path).exists()` et
- * `.getSignedUrl()`. Par défaut tous les fichiers "existent" (upload
- * réputé réussi) ; `existingPaths` permet de simuler un upload manquant
- * pour les tests qui exercent ce garde-fou.
+ * `documents.ts` (`bucket().file(path).exists()` / `.getSignedUrl()`) et
+ * `delete_account.ts` (`bucket().deleteFiles({prefix})`). Par défaut tous
+ * les fichiers "existent" (upload réputé réussi) ; `existingPaths` permet
+ * de simuler un upload manquant pour les tests qui exercent ce garde-fou.
+ * `deletedPrefixes` enregistre les purges par préfixe ; `deleteFilesError`
+ * simule un échec GCS.
  */
 export class FakeStorage {
   existingPaths: Set<string> | null = null; // null = tout existe
+  readonly deletedPrefixes: string[] = [];
+  deleteFilesError: Error | null = null;
 
   bucket(): {
     file: (path: string) => {
       exists: () => Promise<[boolean]>;
       getSignedUrl: (opts: unknown) => Promise<[string]>;
     };
+    deleteFiles: (opts: {prefix: string}) => Promise<void>;
     } {
     return {
       file: (path: string) => ({
@@ -195,7 +318,34 @@ export class FakeStorage {
           ]),
         getSignedUrl: () => Promise.resolve([`https://fake-signed-url/${path}`]),
       }),
+      deleteFiles: (opts: {prefix: string}) => {
+        if (this.deleteFilesError) return Promise.reject(this.deleteFilesError);
+        this.deletedPrefixes.push(opts.prefix);
+        return Promise.resolve();
+      },
     };
+  }
+}
+
+/**
+ * Fake Auth Admin minimal — couvre `admin.auth().deleteUser(uid)`
+ * (delete_account.ts). `deleteUserError` simule un échec (ex. objet avec
+ * `code: "auth/user-not-found"` pour le chemin idempotent).
+ */
+export class FakeAuthAdmin {
+  readonly deletedUids: string[] = [];
+  deleteUserError: unknown = null;
+
+  deleteUser(uid: string): Promise<void> {
+    if (this.deleteUserError != null) {
+      return Promise.reject(
+        this.deleteUserError instanceof Error ?
+          this.deleteUserError :
+          Object.assign(new Error("auth error"), this.deleteUserError),
+      );
+    }
+    this.deletedUids.push(uid);
+    return Promise.resolve();
   }
 }
 
@@ -213,21 +363,38 @@ export class FakeStorage {
 export const fakeAdminFirestoreHolder: {
   db: FakeFirestore | undefined;
   storage: FakeStorage | undefined;
+  authAdmin: FakeAuthAdmin | undefined;
 } = {
   db: undefined,
   storage: undefined,
+  authAdmin: undefined,
+};
+
+/**
+ * `admin.firestore.Timestamp` fake — `fromMillis`/`fromDate` retournent des
+ * `Date` (suffisant pour asserter les champs écrits dans le store).
+ */
+export const fakeTimestamp = {
+  fromMillis: (ms: number) => new Date(ms),
+  fromDate: (d: Date) => d,
+  now: () => new Date(),
 };
 
 /** Factory prête à l'emploi pour `vi.mock("firebase-admin", makeFakeAdminModule)`. */
 export function makeFakeAdminModule(): {
-  firestore: (() => FakeFirestore | undefined) & {FieldValue: typeof fakeFieldValue};
+  firestore: (() => FakeFirestore | undefined) & {
+    FieldValue: typeof fakeFieldValue;
+    Timestamp: typeof fakeTimestamp;
+  };
   storage: () => FakeStorage | undefined;
+  auth: () => FakeAuthAdmin | undefined;
   } {
   return {
     firestore: Object.assign(
       () => fakeAdminFirestoreHolder.db,
-      {FieldValue: fakeFieldValue},
+      {FieldValue: fakeFieldValue, Timestamp: fakeTimestamp},
     ),
     storage: () => fakeAdminFirestoreHolder.storage,
+    auth: () => fakeAdminFirestoreHolder.authAdmin,
   };
 }

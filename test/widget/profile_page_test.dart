@@ -69,6 +69,16 @@ class _FakeProfileRepository implements ProfileRepository {
 /// Fake [AuthRepository] dont on contrôle le [User] exposé (pour
 /// [hasPasswordProvider]).
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   _FakeAuthRepository(this._user);
 
   final User? _user;
@@ -248,6 +258,11 @@ Widget _buildPage({
       GoRoute(
         path: '/privacy',
         builder: (context, state) => const Scaffold(body: Text('page privacy')),
+      ),
+      GoRoute(
+        path: '/profile/delete-account',
+        builder: (context, state) =>
+            const Scaffold(body: Text('page suppression compte')),
       ),
     ],
   );
@@ -523,5 +538,26 @@ void main() {
 
       expect(find.byKey(const Key('btn_logout_profile')), findsOneWidget);
     });
+  });
+
+  group('ProfilePage — suppression de compte (FEAT-045)', () {
+    testWidgets(
+      'tuile Supprimer mon compte présente (exigence stores) et navigable',
+      (tester) async {
+        final repo = _FakeProfileRepository()..seed(_makeProfile());
+        await tester.pumpWidget(_buildPage(repo: repo));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Suppression du compte'), findsOneWidget);
+        final tile = find.byKey(const Key('tile_delete_account'));
+        expect(tile, findsOneWidget);
+
+        await tester.ensureVisible(tile);
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        expect(find.text('page suppression compte'), findsOneWidget);
+      },
+    );
   });
 }

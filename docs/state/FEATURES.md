@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-07-05 (FEAT-036 + FEAT-041 V1 mergés, post-MVP M1 feature-complete staging, `expenses` collection live).
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-07-07 (FEAT-045 suppression de compte in-app — bloquant stores levé).
 
 ## Légende
 
@@ -53,6 +53,7 @@
 | **FEAT-036** | **Charges récupérables vs non-récupérables** | M1 | ✅ **done** | PR #66 (2026-07-05) | **nonRecoverableChargesCents, FEAT-036 merged** |
 | **FEAT-041** | **Suivi dépenses unifié** | M1 | ✅ **done (V1)** | PR #67 (2026-07-05) | **`expenses` collection, CF exclusive, FEAT-041a/b/c planifiées** |
 | **FEAT-042** | **Mode de charges (provisions/forfait) + éligibilité régularisation** | M1 | ✅ **done** | PR #68 (2026-07-06) | **`leases.chargeMode`, `resolveChargeMode` CF, `effectiveChargeMode` getter, `canRegularizeCharges` predicate** |
+| **FEAT-045** | **Suppression de compte in-app + page publique /delete-account** | Mobile/Stores | ✅ **done** | feature/045-account-deletion (2026-07-07) | **Bloquant Play « Account deletion » + App Store 5.1.1(v) levé — callable `deleteAccount` (purge Firestore+Storage+Auth, quittances conservées 5 ans), re-auth par provider, révocation token Apple, privacy policy v1.2** |
 | **FEAT-024** | **App mobile iOS/Android (setup + parité)** | M1 | 🚧 **wip** | branche `claude/magical-jackson-d0116a` (2026-07-06) | **`android/`+`ios/` (`com.daki.baillan`), firebase_options 3 plateformes, auth `signInWithProvider`, partage natif `share_plus`, smoke test émulateur ✅ — reste : signing release, capability Apple, icônes, QA devices (cf. `docs/MOBILE.md`)** |
 
 ---

@@ -17,6 +17,16 @@ import 'package:go_router/go_router.dart';
 
 class _NoOpRepo implements AuthRepository {
   @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
+  @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
   @override

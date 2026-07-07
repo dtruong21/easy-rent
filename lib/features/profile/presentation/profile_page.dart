@@ -17,6 +17,8 @@ import 'widgets/section_header.dart';
 /// - `/profile/password` : changement de mot de passe (comptes email
 ///   uniquement — tuile masquée sinon, via [hasPasswordProvider])
 /// - `/profile/support` : formulaire « Nous contacter »
+/// - `/profile/delete-account` : suppression de compte (FEAT-045 — exigence
+///   stores, point d'entrée volontairement visible en fin de hub)
 ///
 /// Restent inline dans le hub (contenus légers, pas besoin de sous-page) :
 /// Apparence (sélecteur de thème), À propos (version), Session
@@ -80,6 +82,9 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: 32),
 
             const ProfileSessionSection(),
+            const SizedBox(height: 32),
+
+            const ProfileDeleteAccountSection(),
           ],
         ),
       ),

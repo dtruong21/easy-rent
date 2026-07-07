@@ -15,7 +15,7 @@ administratifs** :
 
 | # | Bloquant | Stores | Nature |
 |---|---|---|---|
-| 1 | 🔴 **Suppression de compte in-app** + page web publique de demande | Play **et** App Store | Feature à développer (proposé : FEAT-045) |
+| 1 | ✅ **Suppression de compte in-app** + page web publique de demande | Play **et** App Store | **Livré (FEAT-045, 2026-07-07)** — reste à déclarer l'URL `/delete-account` dans Data safety (§5) |
 | 2 | 🔴 **Formulaires consoles** : Data safety, App access (compte démo), Financial features, Privacy labels, questionnaire d'âge | Play + App Store | Administratif (tables pré-remplies §5) |
 | 3 | 🔴 **DSA « trader status »** (UE) — coordonnées vérifiées et **publiées** sur les fiches | Play + App Store | Administratif + décision (perso vs orga) |
 | 4 | 🟠 **Compte Play personnel nouveau** : test fermé **12 testeurs × 14 jours** avant l'accès production | Play | Calendrier (~3-4 semaines) |
@@ -54,7 +54,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 
 | Exigence | Statut | Action |
 |---|---|---|
-| **Suppression de compte** : chemin in-app **+ URL web** de demande (sans réinstaller), déclarés dans Data safety ([13327111](https://support.google.com/googleplay/android-developer/answer/13327111)) | 🔴 gap | FEAT-045 : écran « Supprimer mon compte » (purge Auth + Firestore + Storage) + page `https://easy-rent-54cd4.web.app/delete-account`. La rétention légale 5 ans des quittances (loi 6/07/1989) est admise **si annoncée dans le flux** |
+| **Suppression de compte** : chemin in-app **+ URL web** de demande (sans réinstaller), déclarés dans Data safety ([13327111](https://support.google.com/googleplay/android-developer/answer/13327111)) | ✅ **fait (FEAT-045)** | Écran Profil → « Supprimer mon compte » (re-auth fraîche + callable `deleteAccount` : purge Firestore + Storage + Auth ; rétention 5 ans des quittances loi 6/07/1989 **annoncée dans le flux** + privacy policy v1.2) + page publique `https://easy-rent-54cd4.web.app/delete-account` (l'essai anonyme s'y supprime directement). Reste : déclarer cette URL dans le formulaire Data safety |
 | **Data safety form** ([10787469](https://support.google.com/googleplay/android-developer/answer/10787469)) | 🔴 formulaire | Pré-rempli §5 — inclut les **données de tiers (locataires)** |
 | **Test fermé nouveaux comptes perso** (créés après le 13/11/2023) : ≥ **12 testeurs opt-in 14 jours continus**, puis questionnaire d'accès production ([14151465](https://support.google.com/googleplay/android-developer/answer/14151465)) | 🟠 à vérifier | Si compte perso nouveau → prévoir 3-4 semaines. Comptes **organisation exemptés** (D-U-N-S requis) |
 | **App access** : identifiants de démo valides en permanence, instructions en anglais ([9859455](https://support.google.com/googleplay/android-developer/answer/9859455)) | 🔴 formulaire | Créer un compte `review@…` avec données de démo (1 bien, 1 locataire, 1 bail, paiements, 1 quittance) |
@@ -69,7 +69,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 
 | Exigence | Statut | Action |
 |---|---|---|
-| **5.1.1(v) Suppression de compte in-app** (depuis 30/06/2022) — la désactivation ne suffit pas ; pas de « contactez le support » ; **révoquer les tokens Sign in with Apple** (API REST `/auth/revoke`, exposée par Firebase Auth `revokeToken`) ([doc officielle](https://developer.apple.com/support/offering-account-deletion-in-your-app/)) | 🔴 gap | Même FEAT-045 que côté Play. Couvrir email/password, Google, Apple **et** anonymes ; afficher la mention de rétention légale des quittances |
+| **5.1.1(v) Suppression de compte in-app** (depuis 30/06/2022) — la désactivation ne suffit pas ; pas de « contactez le support » ; **révoquer les tokens Sign in with Apple** (API REST `/auth/revoke`, exposée par Firebase Auth `revokeToken`) ([doc officielle](https://developer.apple.com/support/offering-account-deletion-in-your-app/)) | ✅ **fait (FEAT-045)** | Flux unique web/iOS/Android couvrant email/password, Google, Apple **et** anonymes ; token Apple révoqué via `revokeTokenWithAuthorizationCode` (authorizationCode issu de la re-auth — effectif sur iOS/macOS, best-effort ailleurs) ; mention rétention quittances affichée dans le flux |
 | **4.8 Login Services** : Google Sign-In ⇒ une option équivalente préservant la vie privée obligatoire ([guidelines#login-services](https://developer.apple.com/app-store/review/guidelines/#login-services)) | ✅ prévu | Sign in with Apple déjà iso web — bouton Apple **au même niveau** que Google sur iOS |
 | **Privacy manifest de l'app** (bloque l'upload depuis le 01/05/2024, erreur ITMS-91053) ([doc](https://developer.apple.com/documentation/bundleresources/adding-a-privacy-manifest-to-your-app-or-third-party-sdk)) | ✅ **fait** | `ios/Runner/PrivacyInfo.xcprivacy` créé, enregistré dans Xcode, embarqué dans Runner.app (vérifié au build) |
 | **Privacy manifests des SDKs tiers** (rejet ITMS-91061 depuis le 12/02/2025) — Firebase*, Flutter, shared_preferences… sont sur la [liste officielle](https://developer.apple.com/support/third-party-SDK-requirements/) | ⚠️ à vérifier | Pods récents (firebase-ios-sdk ≥ 10.22 embarque les manifests). Contrôler les mails ITMS-9105x au premier upload TestFlight |
@@ -121,10 +121,11 @@ Aucun partage à des tiers, aucun tracking publicitaire, chiffrement en transit
 
 ## 6. Plan d'action ordonné avant la première release
 
-1. **Code** (bloquants review) : **FEAT-045 suppression de compte in-app**
-   (purge Auth + Firestore + Storage, révocation token Apple, mention
-   rétention quittances) + page web `/delete-account` + page `/legal`
-   (mentions LCEN) + § « données de tiers » dans la privacy policy.
+1. **Code** (bloquants review) : ✅ **FEAT-045 suppression de compte in-app
+   livrée (2026-07-07)** — purge Auth + Firestore + Storage (callable
+   `deleteAccount`), révocation token Apple, mention rétention quittances,
+   page web `/delete-account`, privacy policy v1.2. **Restent** : page
+   `/legal` (mentions LCEN) + § « données de tiers » dans la privacy policy.
 2. **Comptes & administratif** : type de compte Play (perso vs **organisation**
    — exempte du test fermé), Apple Developer Program, déclaration **DSA
    trader** des deux côtés (coordonnées dédiées, reco micro-entrepreneur).

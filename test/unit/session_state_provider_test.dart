@@ -10,6 +10,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// et le `currentUser` en cache — permet de tester chaque branche de
 /// [sessionStateProvider] sans dépendre de Firebase réel.
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   _FakeAuthRepository(this._user);
 
   final User? _user;

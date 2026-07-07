@@ -23,8 +23,9 @@
 | `/signup` | SignupPage | fade | !fullyAuthenticated | Nouvelles inscriptions + RGPD gate |
 | `/forgot-password` | ForgotPasswordPage | fade | public | Réinitialisation mot de passe |
 | `/reset-password` | ResetPasswordPage | fade | public | Lien email-reset |
-| `/privacy` | PrivacyPage | fade | public | Politique confidentialité (loi 6 juillet 1989) |
+| `/privacy` | PrivacyPage | fade | public | Politique confidentialité (v1.2, loi 6 juillet 1989) |
 | `/terms` | TermsPage | fade | public | CGU (v2-2026-07, FEAT-023) |
+| `/delete-account` | DeleteAccountRequestPage | fade | public (anonyme inclus) | **FEAT-045** — URL Google Play « Account deletion » ; adapte le CTA à la session (login / go profil / suppression essai anonyme) |
 
 ---
 
@@ -90,6 +91,7 @@
 | `/profile/details` | ProfileDetailsPage | standard | write | Email/fullName (FEAT-025, immutables) |
 | `/profile/password` | ChangePasswordPage | standard | write | Changement mot de passe (reauthenticateWithPassword + updatePassword, gated hasPasswordProvider) |
 | `/profile/support` | SupportPage | standard | write | Formulaire contact (FEAT-025, collection `support_requests`) |
+| `/profile/delete-account` | DeleteAccountPage | standard | write | **FEAT-045** — suppression de compte (re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée) |
 
 ---
 
@@ -294,6 +296,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 | **FEAT-023** (Settings) | /terms, /privacy | 2 | ✅ |
 | **FEAT-025** (Support) | /profile/support | 1 | ✅ |
 | **FEAT-025b** (Profile Hub) | /profile, /profile/details, /profile/password | 3 | ✅ |
+| **FEAT-045** (Suppression compte) | /delete-account, /profile/delete-account | 2 | ✅ |
 | **FEAT-026** (Shell Nav) | Shell wrapper (5 branches) | — | ✅ |
 | **FEAT-027** (Dashboard) | /dashboard | 1 | ✅ |
 | **FEAT-029** (Charges) | — (payment.notes field) | — | ✅ |

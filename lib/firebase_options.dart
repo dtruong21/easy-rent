@@ -70,7 +70,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '60344304540',
     projectId: 'easy-rent-54cd4',
     storageBucket: 'easy-rent-54cd4.firebasestorage.app',
-    iosClientId: '60344304540-uq690v4qgt5ic0iovi9q3po2ch2u5ak3.apps.googleusercontent.com',
+    iosClientId:
+        '60344304540-uq690v4qgt5ic0iovi9q3po2ch2u5ak3.apps.googleusercontent.com',
     iosBundleId: 'com.daki.baillan',
   );
 }

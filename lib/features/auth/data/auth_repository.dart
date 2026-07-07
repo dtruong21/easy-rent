@@ -221,6 +221,48 @@ abstract interface class AuthRepository {
   /// Vérifie qu'un oobCode est valide et retourne l'email associé.
   Future<String> verifyPasswordResetCode(String code);
 
+  /// Réauthentifie l'utilisateur courant via son provider OAuth
+  /// (`'google.com'` ou `'apple.com'`) — popup sur le web, flux natif sur
+  /// Android/iOS (même branchement que [_signInWithOAuthProvider]).
+  ///
+  /// Prérequis Firebase « recent login » pour les opérations sensibles
+  /// (suppression de compte, FEAT-045) — pendant équivalent de
+  /// [reauthenticateWithPassword] pour les comptes sociaux.
+  ///
+  /// Retourne l'`authorizationCode` Apple si la plateforme le fournit
+  /// (iOS/macOS uniquement — nécessaire à [revokeAppleToken], exigence
+  /// App Store 5.1.1(v)), `null` sinon (Google, web, Android).
+  ///
+  /// Lève `StateError` si aucun utilisateur n'est signé, `ArgumentError`
+  /// si le provider n'est pas supporté.
+  Future<String?> reauthenticateWithOAuthProvider(String providerId);
+
+  /// Révoque le token Sign in with Apple auprès d'Apple (endpoint REST
+  /// `/auth/revoke` exposé par Firebase Auth `revokeTokenWithAuthorization
+  /// Code`) — exigé par la guideline App Store 5.1.1(v) lors de la
+  /// suppression de compte.
+  ///
+  /// **Best-effort** : les échecs (plateforme sans implémentation — web,
+  /// Android —, réseau, code expiré) sont journalisés mais JAMAIS propagés.
+  /// Le droit à l'effacement RGPD prime : une révocation ratée ne doit pas
+  /// bloquer la suppression du compte (les sessions Firebase tombent de
+  /// toute façon avec le compte).
+  Future<void> revokeAppleToken(String authorizationCode);
+
+  /// Supprime définitivement le compte courant (FEAT-045, RGPD art. 17).
+  ///
+  /// Appelle la callable `deleteAccount` (purge Firestore + Storage + user
+  /// Firebase Auth côté Admin SDK — voir functions/src/callable/
+  /// delete_account.ts, quittances conservées 5 ans, loi 6 juillet 1989)
+  /// puis nettoie la session locale (`signOut`, toléré en échec : le
+  /// backend a déjà invalidé le compte).
+  ///
+  /// À appeler APRÈS une réauthentification fraîche ([reauthenticateWith
+  /// Password] ou [reauthenticateWithOAuthProvider]) : la callable rejette
+  /// les tokens non-anonymes dont l'authentification date de plus de
+  /// 5 minutes (`failed-precondition` / `recent-login-required`).
+  Future<void> deleteAccount();
+
   /// Révoque la session Firebase.
   Future<void> signOut();
 }
@@ -300,6 +342,47 @@ typedef FinalizeUpgradeFn =
       required String rgpdConsentVersion,
     });
 
+/// Lance le flux OAuth de RÉAUTHENTIFICATION pour l'utilisateur courant.
+///
+/// Extrait en fonction injectable pour la même raison que
+/// [LinkWithProviderFn] : `firebase_auth_mocks` (0.14.2) ne surcharge ni
+/// `User.reauthenticateWithPopup` ni `User.reauthenticateWithProvider`.
+/// En production, [_defaultReauthenticateWithProvider] délègue au SDK :
+/// popup sur le web, flux natif sur Android/iOS (FEAT-024).
+typedef ReauthenticateWithProviderFn =
+    Future<UserCredential> Function(User user, AuthProvider provider);
+
+Future<UserCredential> _defaultReauthenticateWithProvider(
+  User user,
+  AuthProvider provider,
+) => kIsWeb
+    ? user.reauthenticateWithPopup(provider)
+    : user.reauthenticateWithProvider(provider);
+
+/// Extrait l'`authorizationCode` Apple d'une [UserCredential] de
+/// réauthentification.
+///
+/// Injectable car `additionalUserInfo` lève `UnimplementedError` sur les
+/// test doubles `firebase_auth_mocks` (cf. [IsNewUserResolver]). En
+/// production le SDK le fournit sur iOS/macOS après un flux Apple natif,
+/// et le laisse `null` ailleurs (web, Android, Google) — accès null-safe,
+/// pas de fail-closed : la révocation Apple est best-effort hors iOS.
+typedef AppleAuthorizationCodeResolver = String? Function(UserCredential cred);
+
+String? _defaultAppleAuthorizationCode(UserCredential cred) =>
+    cred.additionalUserInfo?.authorizationCode;
+
+/// Appelle la Cloud Function callable `deleteAccount` (FEAT-045).
+///
+/// Injectable pour les mêmes raisons que [FinalizeUpgradeFn].
+typedef DeleteAccountCallableFn = Future<void> Function();
+
+/// Révoque le token Apple via le SDK Firebase Auth.
+///
+/// Injectable : `firebase_auth_mocks` n'implémente pas
+/// `revokeTokenWithAuthorizationCode`.
+typedef RevokeAppleTokenFn = Future<void> Function(String authorizationCode);
+
 /// Implémentation s'appuyant sur [FirebaseAuth] + [FirebaseFirestore].
 class FirebaseAuthRepository implements AuthRepository {
   /// [functions] est optionnel : requis uniquement par le chemin de
@@ -314,10 +397,19 @@ class FirebaseAuthRepository implements AuthRepository {
     IsNewUserResolver isNewUserResolver = _defaultIsNewUser,
     LinkWithProviderFn linkWithProvider = _defaultLinkWithProvider,
     LinkWithCredentialFn linkWithCredential = _defaultLinkWithCredential,
+    ReauthenticateWithProviderFn reauthenticateWithProvider =
+        _defaultReauthenticateWithProvider,
+    AppleAuthorizationCodeResolver appleAuthorizationCode =
+        _defaultAppleAuthorizationCode,
     FinalizeUpgradeFn? finalizeUpgrade,
+    DeleteAccountCallableFn? deleteAccountCallable,
+    RevokeAppleTokenFn? revokeAppleTokenFn,
   }) : _isNewUser = isNewUserResolver,
        _linkWithProvider = linkWithProvider,
        _linkWithCredential = linkWithCredential,
+       _reauthenticateWithProvider = reauthenticateWithProvider,
+       _appleAuthorizationCode = appleAuthorizationCode,
+       _revokeAppleTokenOverride = revokeAppleTokenFn,
        _finalizeUpgrade =
            finalizeUpgrade ??
            (({required rgpdConsent, required rgpdConsentVersion}) async {
@@ -332,6 +424,20 @@ class FirebaseAuthRepository implements AuthRepository {
                'rgpdConsent': rgpdConsent,
                'rgpdConsentVersion': rgpdConsentVersion,
              });
+           }),
+       _deleteAccountCallable =
+           deleteAccountCallable ??
+           (() async {
+             final fn = functions;
+             if (fn == null) {
+               throw StateError(
+                 'FirebaseAuthRepository built without FirebaseFunctions — '
+                 'cannot call deleteAccount.',
+               );
+             }
+             await fn
+                 .httpsCallable('deleteAccount')
+                 .call(const <String, dynamic>{});
            });
 
   final FirebaseAuth _auth;
@@ -339,7 +445,11 @@ class FirebaseAuthRepository implements AuthRepository {
   final IsNewUserResolver _isNewUser;
   final LinkWithProviderFn _linkWithProvider;
   final LinkWithCredentialFn _linkWithCredential;
+  final ReauthenticateWithProviderFn _reauthenticateWithProvider;
+  final AppleAuthorizationCodeResolver _appleAuthorizationCode;
+  final RevokeAppleTokenFn? _revokeAppleTokenOverride;
   final FinalizeUpgradeFn _finalizeUpgrade;
+  final DeleteAccountCallableFn _deleteAccountCallable;
 
   @override
   // CRITICAL fix — session-state refresh après link (BAILLAN-M1) :
@@ -864,6 +974,69 @@ class FirebaseAuthRepository implements AuthRepository {
   }) async {
     _log.info('confirmPasswordReset');
     await _auth.confirmPasswordReset(code: code, newPassword: newPassword);
+  }
+
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError(
+        'reauthenticateWithOAuthProvider requires a signed-in user.',
+      );
+    }
+    // Mêmes scopes que les flux sign-in/sign-up correspondants (Google :
+    // email+profile ; Apple : email+name — 'profile' n'existe pas chez
+    // Apple, cf. signInWithApple).
+    final AuthProvider provider;
+    switch (providerId) {
+      case 'google.com':
+        provider = GoogleAuthProvider()
+          ..addScope('email')
+          ..addScope('profile');
+      case 'apple.com':
+        provider = OAuthProvider('apple.com')
+          ..addScope('email')
+          ..addScope('name');
+      default:
+        throw ArgumentError.value(
+          providerId,
+          'providerId',
+          'unsupported OAuth provider for reauthentication',
+        );
+    }
+    _log.info('reauthenticateWithOAuthProvider requested ($providerId)');
+    final cred = await _reauthenticateWithProvider(user, provider);
+    return providerId == 'apple.com' ? _appleAuthorizationCode(cred) : null;
+  }
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {
+    try {
+      final revoke =
+          _revokeAppleTokenOverride ?? _auth.revokeTokenWithAuthorizationCode;
+      await revoke(authorizationCode);
+      _log.info('Apple token revoked (App Store 5.1.1(v))');
+    } catch (e, st) {
+      // Best-effort assumé (cf. contrat) : hors iOS/macOS le SDK n'implémente
+      // pas la révocation, et un échec réseau/code expiré ne doit pas bloquer
+      // le droit à l'effacement — les sessions tombent avec le compte.
+      _log.warning('revokeAppleToken failed — continuing deletion', e, st);
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    _log.info('deleteAccount requested');
+    await _deleteAccountCallable();
+    // Le backend a purgé données + compte Auth (Admin SDK) : il ne reste
+    // qu'à nettoyer la session locale. Un échec ici est toléré — le token
+    // local est déjà invalide côté serveur.
+    try {
+      await _auth.signOut();
+    } catch (e, st) {
+      _log.warning('signOut after deleteAccount failed (ignored)', e, st);
+    }
+    _log.info('deleteAccount completed');
   }
 
   @override

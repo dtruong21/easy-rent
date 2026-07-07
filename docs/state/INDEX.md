@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-06T07:45:00Z
-- **Commit ref** : `6367a8c` (develop, FEAT-036 + FEAT-041 V1 + FEAT-042 merged, 2026-07-06)
-- **Branche** : `develop`
-- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ (FEAT-001–042, `expenses` + charge modes collections live)
+- **Dernière mise à jour** : 2026-07-07T12:00:00Z
+- **Commit ref** : `feature/045-account-deletion` (base FEAT-024 mobile, FEAT-045 suppression de compte, 2026-07-07)
+- **Branche** : `feature/045-account-deletion`
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + préparation release stores (FEAT-024 mobile + FEAT-045)
 
 ## Pointeurs
 
@@ -17,7 +17,7 @@
 | Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 45+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041) |
 | Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–042, MVP ✅ + Post-MVP M1 ✅ (FEAT-036, FEAT-041 V1, FEAT-042 merged) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
-| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **27 callables** + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper**; **horloge injectable `listForDisplay`** |
+| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **28 callables** (+ `deleteAccount` FEAT-045) + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper** |
 | Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
 | Design tokens (sémantique métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) | Couleurs (error, warning, success), spacing (4dp grid) |
 
@@ -53,7 +53,18 @@
 | **Hosting** | Firebase Hosting | Staging + prod channels, CSP (fonts.gstatic.com) |
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
-## Changements récents (2026-07-03 — 2026-07-06)
+## Changements récents (2026-07-03 — 2026-07-07)
+
+### FEAT-045 : Suppression de compte in-app + page publique /delete-account
+
+**Status** : ✅ DONE (branche feature/045-account-deletion, 2026-07-07)
+
+- **Bloquant stores levé** : Google Play « Account deletion » (13327111) + App Store 5.1.1(v) — cf. [docs/STORE_COMPLIANCE.md](../STORE_COMPLIANCE.md)
+- **CF callable `deleteAccount`** : garde fraîcheur token (auth_time < 5 min, anonymes exemptés), quittances CONSERVÉES 5 ans (loi 6/07/1989, stamp accountDeletedAt + retentionUntil), hard-delete paginé 8 collections + singletons + Storage documents/{uid}/, Auth supprimé EN DERNIER (retry porté par l'utilisateur)
+- **AuthRepository** : `reauthenticateWithOAuthProvider` (popup web / provider natif mobile), `revokeAppleToken` (best-effort, App Store 5.1.1(v)), `deleteAccount` (callable + signOut)
+- **UI** : tuile « Supprimer mon compte » (hub /profile) → `/profile/delete-account` (avertissement + rétention quittances annoncée + re-auth par provider + checkbox + dialog) ; page publique `/delete-account` (URL fiche Play, essai anonyme supprimable directement)
+- **Privacy policy v1.2** : §5 suppression de compte + rétention quittances, §8 droit à l'effacement in-app (rgpdConsentVersion inchangé — clarification, pas de nouvelle finalité)
+- **Tests** : 11 vitest CF + 22 tests Flutter (repo, controller, 2 pages widget, tuile profil)
 
 ### FEAT-024 : App mobile iOS/Android — setup + parité (2026-07-06)
 

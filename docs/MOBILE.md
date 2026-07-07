@@ -47,9 +47,10 @@ Réalisé :
 Reste à faire (itérations suivantes) :
 
 - **🔴 Bloquants review stores** (détail + plan d'action ordonné dans
-  [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md)) : suppression de compte
-  in-app (FEAT-045 proposé) + page web `/delete-account`, page `/legal`
-  (mentions LCEN), formulaires consoles (Data safety, privacy labels, App
+  [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md)) — ✅ suppression de compte
+  in-app + page web `/delete-account` **livrées (FEAT-045, 2026-07-07)** ;
+  restent : page `/legal` (mentions LCEN), formulaires consoles (Data
+  safety — y déclarer l'URL `/delete-account` —, privacy labels, App
   access, Financial features, âge), déclaration DSA trader, test fermé Play
   12 testeurs × 14 j si compte perso nouveau.
 - **Signing release** : keystore Android + certificat/profil Apple Developer,
