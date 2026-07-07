@@ -9,6 +9,7 @@ import '../../documents/application/upload_documents_controller.dart'
     show kAllowedMimeTypes, kMaxFileSizeBytes;
 import '../../documents/data/documents_repository.dart';
 import '../../documents/domain/document_category.dart';
+import '../domain/expense_receipt_upload_error_reason.dart';
 import '../domain/expense_receipt_upload_state.dart';
 
 final _log = Logger('ExpenseReceiptUploadController');
@@ -44,14 +45,14 @@ class ExpenseReceiptUploadController
     if (bytes.length > kMaxFileSizeBytes) {
       state = ExpenseReceiptUploadState.error(
         filename: filename,
-        message: 'Le fichier dépasse 10 Mo.',
+        message: ExpenseReceiptUploadErrorReason.fileTooLarge.name,
       );
       return;
     }
     if (!_isAllowedMime(filename, mimeType)) {
       state = ExpenseReceiptUploadState.error(
         filename: filename,
-        message: 'Format non supporté. Formats acceptés : PDF, JPG, PNG, WEBP.',
+        message: ExpenseReceiptUploadErrorReason.unsupportedFormat.name,
       );
       return;
     }
@@ -87,14 +88,14 @@ class ExpenseReceiptUploadController
       state = ExpenseReceiptUploadState.error(
         filename: filename,
         message: e.plugin == 'firebase_storage'
-            ? "Erreur lors de l'upload. Réessayez."
-            : 'Erreur. Vérifiez votre connexion et réessayez.',
+            ? ExpenseReceiptUploadErrorReason.storageError.name
+            : ExpenseReceiptUploadErrorReason.connectionError.name,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue uploading receipt $filename', e, st);
       state = ExpenseReceiptUploadState.error(
         filename: filename,
-        message: "Erreur lors de l'envoi. Réessayez.",
+        message: ExpenseReceiptUploadErrorReason.unexpected.name,
       );
     }
   }

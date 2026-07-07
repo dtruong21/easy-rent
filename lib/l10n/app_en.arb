@@ -3351,5 +3351,812 @@
   "documentsUploadErrorUnexpected": "Error while sending. Please try again.",
   "@documentsUploadErrorUnexpected": {
     "description": "Per-file upload error shown for an uncategorized exception during upload (UploadFileErrorReason.unexpected)."
+  },
+
+  "expensesAddButton": "Add an expense",
+  "@expensesAddButton": {
+    "description": "Button/tooltip to create a new expense: AppBar action on the property expenses history page, and the CTA button in the expenses summary card on the property detail page (identical original text, reused for both)."
+  },
+  "expensesCategoryLockedLabel": "Category: {categoryLabel} (not editable)",
+  "@expensesCategoryLockedLabel": {
+    "description": "Label in the locked-category banner of the expense form, shown when the selected nature forces a non-editable category; {categoryLabel} is the already-localized ExpenseCategory label (ExpenseCategoryL10n.localizedLabel).",
+    "placeholders": {
+      "categoryLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesCategoryNonRecoverable": "Non-recoverable",
+  "@expensesCategoryNonRecoverable": {
+    "description": "ExpenseCategory.nonRecoverable localized label (dropdowns, chips, summary totals) — presentation counterpart of the domain's hardcoded ExpenseCategory.label getter (kept for test compatibility)."
+  },
+  "expensesCategoryOverrideWarningMessage": "You are classifying this expense as recoverable although it is not by default. {natureExplanation} A misclassification exposes you to a dispute from the tenant.",
+  "@expensesCategoryOverrideWarningMessage": {
+    "description": "Warning shown in the expense form when the landlord manually overrides an adjustable nature's default category to 'recoverable'; {natureExplanation} is the already-localized ExpenseNature.lockOrWarningExplanation fragment inserted mid-sentence.",
+    "placeholders": {
+      "natureExplanation": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesCategoryRecoverable": "Recoverable",
+  "@expensesCategoryRecoverable": {
+    "description": "ExpenseCategory.recoverable localized label (dropdowns, chips, summary totals) — presentation counterpart of the domain's hardcoded ExpenseCategory.label getter (kept for test compatibility)."
+  },
+  "expensesEditNotFoundMessage": "Expense not found.",
+  "@expensesEditNotFoundMessage": {
+    "description": "Error text on the expense edit page (AppBar error state) when the expense detail could not be loaded (archived, cross-user, or unknown id)."
+  },
+  "expensesEmptyFilterMessage": "No expense matches this filter",
+  "@expensesEmptyFilterMessage": {
+    "description": "Empty-state text on the full property expenses history page when the active ExpenseFilter (year/category/nature) hides every expense."
+  },
+  "expensesErrorCategoryLockedForNature": "This expense nature requires a non-editable category.",
+  "@expensesErrorCategoryLockedForNature": {
+    "description": "ExpenseSubmitError.categoryLockedForNature message — the Callable rejected a category override on a nature whose category is locked (decree no. 87-713)."
+  },
+  "expensesErrorInvalidFields": "Operation not possible — check the fields entered.",
+  "@expensesErrorInvalidFields": {
+    "description": "ExpenseSubmitError.invalidFields message — Callable returned failed-precondition (other than the locked-category case) while creating/updating/archiving an expense."
+  },
+  "expensesErrorNotFound": "Expense not found. It may have been archived.",
+  "@expensesErrorNotFound": {
+    "description": "ExpenseSubmitError.notFound message — the expense being edited/archived could not be found (ExpenseNotFoundException), e.g. archived concurrently."
+  },
+  "expensesErrorPermissionDenied": "Action not authorized.",
+  "@expensesErrorPermissionDenied": {
+    "description": "ExpenseSubmitError.permissionDenied message — Callable returned permission-denied/unauthenticated while creating/updating/archiving an expense."
+  },
+  "expensesErrorSaveFailed": "Error while saving. Please try again.",
+  "@expensesErrorSaveFailed": {
+    "description": "ExpenseSubmitError.saveFailed message — generic Callable failure (unmapped FirebaseFunctionsException code) while creating/updating an expense."
+  },
+  "expensesErrorServiceUnavailable": "Service temporarily unavailable. Please try again.",
+  "@expensesErrorServiceUnavailable": {
+    "description": "ExpenseSubmitError.serviceUnavailable message — Callable returned unavailable/deadline-exceeded."
+  },
+  "expensesErrorUnknown": "An error occurred. Please try again.",
+  "@expensesErrorUnknown": {
+    "description": "ExpenseSubmitError.unknown message — generic unexpected (non-Firebase) exception while submitting or archiving an expense."
+  },
+  "expensesFilterCategoryAllOption": "All",
+  "@expensesFilterCategoryAllOption": {
+    "description": "Dropdown item meaning 'no category filter' (feminine agreement with 'catégorie') in the expense history filter bar's category dropdown."
+  },
+  "expensesFilterCategoryHint": "Category",
+  "@expensesFilterCategoryHint": {
+    "description": "Hint text (no value selected) of the category filter dropdown in the expense history filter bar."
+  },
+  "expensesFilterNatureAllOption": "All",
+  "@expensesFilterNatureAllOption": {
+    "description": "Dropdown item meaning 'no nature filter' (feminine agreement with 'nature') in the expense history filter bar's nature dropdown."
+  },
+  "expensesFilterNatureHint": "Nature",
+  "@expensesFilterNatureHint": {
+    "description": "Hint text (no value selected) of the nature filter dropdown in the expense history filter bar."
+  },
+  "expensesFilterResetButton": "Reset",
+  "@expensesFilterResetButton": {
+    "description": "Button clearing all active filters (year/category/nature) in the expense history filter bar; shown only when at least one filter is active."
+  },
+  "expensesFilterTotalNonRecoverableLabel": "Total non-recoverable",
+  "@expensesFilterTotalNonRecoverableLabel": {
+    "description": "Label above the non-recoverable amount total in the expense history filter bar's totals row (reflects the current filtered selection)."
+  },
+  "expensesFilterTotalRecoverableLabel": "Total recoverable",
+  "@expensesFilterTotalRecoverableLabel": {
+    "description": "Label above the recoverable amount total in the expense history filter bar's totals row (reflects the current filtered selection)."
+  },
+  "expensesFilterYearAllOption": "All",
+  "@expensesFilterYearAllOption": {
+    "description": "Dropdown item meaning 'no year/period filter' (masculine agreement with 'exercice') in the expense history filter bar's year dropdown."
+  },
+  "expensesFilterYearHint": "Year",
+  "@expensesFilterYearHint": {
+    "description": "Hint text (no value selected) of the billing-year filter dropdown in the expense history filter bar; filters by Expense.periodYear (fiscal/accounting year the expense is attributed to)."
+  },
+  "expensesFormAmountFieldHint": "E.g.: 450.00",
+  "@expensesFormAmountFieldHint": {
+    "description": "Hint/example text of the amount field in the expense form."
+  },
+  "expensesFormAmountFieldLabel": "Amount incl. tax (€) *",
+  "@expensesFormAmountFieldLabel": {
+    "description": "Label of the required amount field (amountCents) in the expense form."
+  },
+  "expensesFormCategoryFieldLabel": "Category *",
+  "@expensesFormCategoryFieldLabel": {
+    "description": "Label of the category dropdown in the expense form, shown only when the selected nature allows adjusting the category (not locked)."
+  },
+  "expensesFormCreateSubmitButton": "Save expense",
+  "@expensesFormCreateSubmitButton": {
+    "description": "Submit button label on the expense form in creation mode (edit mode reuses commonSave, same pattern as leasesFormCreateSubmitButton)."
+  },
+  "expensesFormCreatedSnackbar": "Expense recorded",
+  "@expensesFormCreatedSnackbar": {
+    "description": "Snackbar shown after successfully creating an expense."
+  },
+  "expensesFormEditTitle": "Edit expense",
+  "@expensesFormEditTitle": {
+    "description": "AppBar title of the expense form page in edit mode; also reused on the expense edit page's error state (expense not found)."
+  },
+  "expensesFormExpenseDateFieldLabel": "Expense date (invoice/statement) *",
+  "@expensesFormExpenseDateFieldLabel": {
+    "description": "Label of the required expense date field (invoice/co-ownership statement date) in the expense form."
+  },
+  "expensesFormExpenseDatePickerHelp": "Expense date",
+  "@expensesFormExpenseDatePickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the expense date."
+  },
+  "expensesFormInvalidAmountSnackbar": "Check the amount entered.",
+  "@expensesFormInvalidAmountSnackbar": {
+    "description": "Snackbar shown when the amount field cannot be parsed into cents after validation passed (defensive edge case)."
+  },
+  "expensesFormLeaseFieldHelper": "Useful for allocating the regularization by tenant",
+  "@expensesFormLeaseFieldHelper": {
+    "description": "Helper text under the optional related-lease dropdown in the expense form."
+  },
+  "expensesFormLeaseFieldLabel": "Related lease (optional)",
+  "@expensesFormLeaseFieldLabel": {
+    "description": "Label of the optional related-lease dropdown in the expense form."
+  },
+  "expensesFormNatureFieldLabel": "Expense nature *",
+  "@expensesFormNatureFieldLabel": {
+    "description": "Label of the required expense nature dropdown in the expense form."
+  },
+  "expensesFormNatureRequiredError": "Nature is required",
+  "@expensesFormNatureRequiredError": {
+    "description": "Inline dropdown error shown when the required nature field is left unselected on submit (same pattern as propertiesFormTypeRequired, not part of the shared ValidationError enum)."
+  },
+  "expensesFormNewTitle": "New expense",
+  "@expensesFormNewTitle": {
+    "description": "AppBar title of the expense form page in creation mode."
+  },
+  "expensesFormNoLeaseOption": "No lease",
+  "@expensesFormNoLeaseOption": {
+    "description": "Dropdown item meaning 'no related lease selected' in the expense form's lease dropdown."
+  },
+  "expensesFormNotesFieldHint": "E.g.: co-ownership statement fiscal year 2025",
+  "@expensesFormNotesFieldHint": {
+    "description": "Hint/example text of the optional notes field in the expense form."
+  },
+  "expensesFormNotesFieldLabel": "Notes / free label (optional)",
+  "@expensesFormNotesFieldLabel": {
+    "description": "Label of the optional free-text notes field in the expense form."
+  },
+  "expensesFormPeriodEndFieldLabel": "End",
+  "@expensesFormPeriodEndFieldLabel": {
+    "description": "Label of the billing period end date field in the expense form."
+  },
+  "expensesFormPeriodEndPickerHelp": "End of the billing period",
+  "@expensesFormPeriodEndPickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the billing period end date."
+  },
+  "expensesFormPeriodHelperDerived": "Derived by default from the expense date — editable (e.g. shifted co-ownership fiscal year).",
+  "@expensesFormPeriodHelperDerived": {
+    "description": "Helper text under the billing-period section when the expense is non-recoverable (period optional, pre-filled from the expense date)."
+  },
+  "expensesFormPeriodHelperRequired": "Required for a recoverable expense — used to aggregate the annual regularization.",
+  "@expensesFormPeriodHelperRequired": {
+    "description": "Helper text under the billing-period section when the expense is recoverable (period mandatory for the annual charge regularization)."
+  },
+  "expensesFormPeriodSectionLabelOptional": "Billing period (optional)",
+  "@expensesFormPeriodSectionLabelOptional": {
+    "description": "Section label above the billing period start/end fields when the expense is non-recoverable (period optional)."
+  },
+  "expensesFormPeriodSectionLabelRequired": "Billing period *",
+  "@expensesFormPeriodSectionLabelRequired": {
+    "description": "Section label above the billing period start/end fields when the expense is recoverable (period mandatory)."
+  },
+  "expensesFormPeriodStartFieldLabel": "Start",
+  "@expensesFormPeriodStartFieldLabel": {
+    "description": "Label of the billing period start date field in the expense form."
+  },
+  "expensesFormPeriodStartPickerHelp": "Start of the billing period",
+  "@expensesFormPeriodStartPickerHelp": {
+    "description": "Help text shown in the native date picker header when picking the billing period start date."
+  },
+  "expensesFormPropertyNotFoundMessage": "Property not found.",
+  "@expensesFormPropertyNotFoundMessage": {
+    "description": "Text shown on the expense form page when the parent property could not be loaded."
+  },
+  "expensesFormReceiptUploadInProgressSnackbar": "Sending the receipt — please wait a few seconds.",
+  "@expensesFormReceiptUploadInProgressSnackbar": {
+    "description": "Snackbar shown when the landlord tries to submit the expense form while a receipt upload is still in progress (submission is blocked until it completes)."
+  },
+  "expensesFormSelectDatePlaceholder": "Select a date",
+  "@expensesFormSelectDatePlaceholder": {
+    "description": "Placeholder text shown in the expense date field before any date has been picked."
+  },
+  "expensesFormUpdatedSnackbar": "Changes saved",
+  "@expensesFormUpdatedSnackbar": {
+    "description": "Snackbar shown after successfully saving changes to an existing expense."
+  },
+  "expensesHistoryEmptyMessage": "No expense recorded for this property",
+  "@expensesHistoryEmptyMessage": {
+    "description": "Empty-state text in the expenses summary card on the property detail page when the property has no expense at all (distinct from expensesEmptyFilterMessage, which is filter-driven)."
+  },
+  "expensesHistoryLast12MonthsLabel": "Over the last 12 months",
+  "@expensesHistoryLast12MonthsLabel": {
+    "description": "Label above the recoverable/non-recoverable totals in the expenses summary card on the property detail page."
+  },
+  "expensesHistoryLoadErrorMessage": "Unable to load expenses.",
+  "@expensesHistoryLoadErrorMessage": {
+    "description": "Short error text shown in the expenses summary card on the property detail page when the expenses stream fails."
+  },
+  "expensesHistoryPageTitle": "Expense history",
+  "@expensesHistoryPageTitle": {
+    "description": "Fallback AppBar title of the property expenses history page, used while the parent property's name has not loaded yet."
+  },
+  "expensesHistorySectionTitle": "Expenses",
+  "@expensesHistorySectionTitle": {
+    "description": "Title of the expenses summary card/section on the property detail page."
+  },
+  "expensesHistoryViewAllButton": "View history",
+  "@expensesHistoryViewAllButton": {
+    "description": "Button in the expenses summary card on the property detail page, navigating to the full expense history page."
+  },
+  "expensesListErrorMessage": "Unable to load expenses. Please try again.",
+  "@expensesListErrorMessage": {
+    "description": "Error text shown on the full property expenses history page when the expenses stream fails."
+  },
+  "expensesNatureCondoCharges": "Co-ownership charges (syndic)",
+  "@expensesNatureCondoCharges": {
+    "description": "ExpenseNature.condoCharges localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesNatureExplanationCondoCharges": "Some lines of the co-ownership statement may be non-recoverable (major repairs, art. 606).",
+  "@expensesNatureExplanationCondoCharges": {
+    "description": "Contextual explanation for ExpenseNature.condoCharges (adjustable nature) shown when the landlord overrides its default category."
+  },
+  "expensesNatureExplanationInsurancePno": "Non-occupant landlord insurance is never recoverable.",
+  "@expensesNatureExplanationInsurancePno": {
+    "description": "Contextual explanation for ExpenseNature.insurancePno shown in the locked-category banner of the expense form."
+  },
+  "expensesNatureExplanationManagementFees": "Property management fees are never recoverable.",
+  "@expensesNatureExplanationManagementFees": {
+    "description": "Contextual explanation for ExpenseNature.managementFees shown in the locked-category banner of the expense form."
+  },
+  "expensesNatureExplanationOther": "Check the exact nature of the expense before classifying it as recoverable.",
+  "@expensesNatureExplanationOther": {
+    "description": "Contextual explanation for ExpenseNature.other (adjustable nature) shown when the landlord overrides its default category."
+  },
+  "expensesNatureExplanationPropertyTax": "Property tax is never recoverable from the tenant.",
+  "@expensesNatureExplanationPropertyTax": {
+    "description": "Contextual explanation for ExpenseNature.propertyTax shown in the locked-category banner of the expense form."
+  },
+  "expensesNatureExplanationRepairMaintenance": "Whether it is recoverable or not depends on the exact details of the work carried out (decree no. 87-713).",
+  "@expensesNatureExplanationRepairMaintenance": {
+    "description": "Contextual explanation for ExpenseNature.repairMaintenance (adjustable nature) shown when the landlord overrides its default category."
+  },
+  "expensesNatureExplanationWorks": "Improvement works are not recoverable; only minor maintenance may be — check the invoice details.",
+  "@expensesNatureExplanationWorks": {
+    "description": "Contextual explanation for ExpenseNature.works (adjustable nature) shown when the landlord overrides its default category."
+  },
+  "expensesNatureInsurancePno": "Non-occupant landlord insurance",
+  "@expensesNatureInsurancePno": {
+    "description": "ExpenseNature.insurancePno localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesNatureManagementFees": "Property management fees",
+  "@expensesNatureManagementFees": {
+    "description": "ExpenseNature.managementFees localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesNatureOther": "Other",
+  "@expensesNatureOther": {
+    "description": "ExpenseNature.other localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesNaturePropertyTax": "Property tax",
+  "@expensesNaturePropertyTax": {
+    "description": "ExpenseNature.propertyTax localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesNatureRepairMaintenance": "Repair / maintenance",
+  "@expensesNatureRepairMaintenance": {
+    "description": "ExpenseNature.repairMaintenance localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesNatureWorks": "Works",
+  "@expensesNatureWorks": {
+    "description": "ExpenseNature.works localized label — presentation counterpart of the domain's hardcoded ExpenseNature.label getter (kept for test compatibility)."
+  },
+  "expensesReceiptErrorConnection": "Error. Check your connection and try again.",
+  "@expensesReceiptErrorConnection": {
+    "description": "ExpenseReceiptUploadErrorReason.connectionError message — generic Firebase error (not Storage) while uploading an expense receipt."
+  },
+  "expensesReceiptErrorFileTooLarge": "The file exceeds 10 MB.",
+  "@expensesReceiptErrorFileTooLarge": {
+    "description": "ExpenseReceiptUploadErrorReason.fileTooLarge message — client-side pre-upload validation of the expense receipt file size."
+  },
+  "expensesReceiptErrorStorage": "Error while uploading. Please try again.",
+  "@expensesReceiptErrorStorage": {
+    "description": "ExpenseReceiptUploadErrorReason.storageError message — Firebase Storage error while uploading an expense receipt."
+  },
+  "expensesReceiptErrorUnexpected": "Error while sending. Please try again.",
+  "@expensesReceiptErrorUnexpected": {
+    "description": "ExpenseReceiptUploadErrorReason.unexpected message — generic unexpected exception while uploading an expense receipt."
+  },
+  "expensesReceiptErrorUnsupportedFormat": "Unsupported format. Accepted formats: PDF, JPG, PNG, WEBP.",
+  "@expensesReceiptErrorUnsupportedFormat": {
+    "description": "ExpenseReceiptUploadErrorReason.unsupportedFormat message — client-side pre-upload MIME-type validation of the expense receipt file."
+  },
+  "expensesReceiptExistingLabel": "Receipt already attached",
+  "@expensesReceiptExistingLabel": {
+    "description": "Label shown in the expense form's receipt field when editing an expense that already has a receipt attached, before any new interaction."
+  },
+  "expensesReceiptFieldHelper": "Invoice or co-ownership statement — kept for 5 to 10 years (rental and accounting proof). You can create the expense without a receipt.",
+  "@expensesReceiptFieldHelper": {
+    "description": "Helper text under the receipt field label in the expense form, explaining retention and that the receipt is optional."
+  },
+  "expensesReceiptFieldLabel": "Receipt (recommended)",
+  "@expensesReceiptFieldLabel": {
+    "description": "Label above the receipt upload field in the expense form."
+  },
+  "expensesReceiptPickButton": "Attach a receipt",
+  "@expensesReceiptPickButton": {
+    "description": "Button to pick a file for the expense receipt field, shown when no file is attached yet."
+  },
+  "expensesReceiptRemoveTooltip": "Remove the receipt",
+  "@expensesReceiptRemoveTooltip": {
+    "description": "Tooltip on the icon button removing the expense receipt — reused for both an already-attached receipt (edit mode) and a freshly uploaded one."
+  },
+  "expensesReceiptReplaceButton": "Replace",
+  "@expensesReceiptReplaceButton": {
+    "description": "Button to replace the expense receipt already attached to the expense being edited."
+  },
+  "expensesReceiptUploadingLabel": "Sending {filename}…",
+  "@expensesReceiptUploadingLabel": {
+    "description": "Progress row text shown while the expense receipt file is uploading; {filename} is the raw file name (not translated).",
+    "placeholders": {
+      "filename": {
+        "type": "String"
+      }
+    }
+  },
+
+  "chargeRegularizationSectionTitle": "Charge regularization",
+  "@chargeRegularizationSectionTitle": {
+    "description": "Title of the charge regularization card/section on the lease detail page (ChargeRegularizationSection), shown for every lease regardless of charge mode."
+  },
+  "chargeRegularizationOpenDialogButton": "Annual charge regularization",
+  "@chargeRegularizationOpenDialogButton": {
+    "description": "Label of the button that opens ChargeRegularizationDialog from the charge regularization section, shown only when the lease's effective charge mode is 'provisions' (Lease.canRegularizeCharges, FEAT-042). Same FR/EN text as chargeRegularizationDialogTitle today, but a distinct key (button vs. dialog title, different UI locations)."
+  },
+  "chargeRegularizationForfaitNotApplicable": "This lease uses a flat charge fee: the flat fee is final and does not require regularization (loi du 6 juillet 1989, art. 23 a contrario).",
+  "@chargeRegularizationForfaitNotApplicable": {
+    "description": "Informational text shown instead of the action button when the lease's effective charge mode is 'forfait' (flat fee, not eligible for regularization, FEAT-042). References the law for landlord context only — this is UI chrome/explanation, not the legal PDF document itself, so it is in scope for translation."
+  },
+  "chargeRegularizationDialogTitle": "Annual charge regularization",
+  "@chargeRegularizationDialogTitle": {
+    "description": "AlertDialog title of ChargeRegularizationDialog (the annual charge regularization workflow: reference period, provisions vs. actual expenses, balance, PDF + share)."
+  },
+  "chargeRegularizationPaymentsLoadError": "Failed to load payments.",
+  "@chargeRegularizationPaymentsLoadError": {
+    "description": "Error text shown inside ChargeRegularizationDialog's content area when the lease's payments (needed to compute collected charge provisions) fail to load."
+  },
+  "chargeRegularizationGenerateButton": "Generate and share",
+  "@chargeRegularizationGenerateButton": {
+    "description": "Label of the primary FilledButton in ChargeRegularizationDialog that generates the regularization notice PDF and triggers sharing (Web Share API or download+mailto fallback)."
+  },
+  "chargeRegularizationShareSuccessNative": "Regularization notice shared.",
+  "@chargeRegularizationShareSuccessNative": {
+    "description": "SnackBar shown after the regularization notice PDF was successfully shared via the native Web Share API (ChargeRegularizationShareState.shared, usedNativeShare=true)."
+  },
+  "chargeRegularizationShareSuccessFallback": "PDF downloaded. Remember to attach it manually to your email.",
+  "@chargeRegularizationShareSuccessFallback": {
+    "description": "SnackBar shown after the regularization notice PDF was downloaded via the fallback flow (Web Share API unavailable) instead of native sharing (ChargeRegularizationShareState.shared, usedNativeShare=false)."
+  },
+  "chargeRegularizationErrorShareFailed": "Sharing failed. Please try again.",
+  "@chargeRegularizationErrorShareFailed": {
+    "description": "ChargeRegularizationShareErrorReason.shareFailed — SnackBar shown when generating/sharing the regularization notice PDF fails (Web Share API, network, clipboard). Replaces the previous raw ShareReceiptException.message (sometimes an untranslated browser DOMException string) that was shown verbatim; the technical detail is still logged via Logger.warning. Deliberately module-scoped (not reused from receipts' equivalent receiptsErrorShareFailed) per the parallel-module isolation instruction."
+  },
+  "chargeRegularizationFormIntro": "Compare the provisions collected with the actual expenses evidenced by the property manager's statement to calculate the regularization balance.",
+  "@chargeRegularizationFormIntro": {
+    "description": "Intro paragraph at the top of ChargeRegularizationForm explaining the purpose of the form."
+  },
+  "chargeRegularizationPeriodStartLabel": "Period start",
+  "@chargeRegularizationPeriodStartLabel": {
+    "description": "Label of the reference-period start date picker field in ChargeRegularizationForm (passed as ChargeRegularizationPeriodPicker.label)."
+  },
+  "chargeRegularizationPeriodEndLabel": "Period end",
+  "@chargeRegularizationPeriodEndLabel": {
+    "description": "Label of the reference-period end date picker field in ChargeRegularizationForm (passed as ChargeRegularizationPeriodPicker.label)."
+  },
+  "chargeRegularizationPeriodInvalidError": "The end date must be after the start date",
+  "@chargeRegularizationPeriodInvalidError": {
+    "description": "Error text shown under the period-end date picker in ChargeRegularizationForm when the reference period is inverted or null (end <= start) — blocks PDF generation."
+  },
+  "chargeRegularizationActualExpensesLabel": "Actual expenses (€) *",
+  "@chargeRegularizationActualExpensesLabel": {
+    "description": "Label of the required 'actual expenses' amount TextFormField in ChargeRegularizationForm (amount evidenced by the property manager's annual statement). Distinct from chargeRegularizationBalanceActualExpensesLabel, the plain row label (no '(€) *' suffix) used in the read-only balance summary."
+  },
+  "chargeRegularizationActualExpensesHint": "Amount evidenced by the property manager's statement",
+  "@chargeRegularizationActualExpensesHint": {
+    "description": "Hint text of the 'actual expenses' amount field in ChargeRegularizationForm."
+  },
+  "chargeRegularizationActualExpensesRequiredError": "The actual expenses amount is required (enter 0 if none)",
+  "@chargeRegularizationActualExpensesRequiredError": {
+    "description": "Custom requiredMessage string passed by ChargeRegularizationForm to the shared core validator MoneyValidators.validateChargesAmount (lib/core/utils/money_validators.dart, out of this module's scope) for the 'actual expenses' field — this field represents actual expenses, not lease charges, hence the dedicated wording instead of the validator's default message."
+  },
+  "chargeRegularizationExpensesPrefillHint": "Pre-filled from {count} {count, plural, one{expense} other{expenses}} — editable.",
+  "@chargeRegularizationExpensesPrefillHint": {
+    "description": "Hint shown under the 'actual expenses' field when it was pre-filled from recoverable expenses (FEAT-041c); {count} is the number of recoverable expenses used for the pre-fill. Uses ICU plural, same pattern as documentsUploadSummarySuccess/receiptsBannerGeneratedCount.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chargeRegularizationExpensesDetailToggle": "See details ({count} {count, plural, one{expense} other{expenses}})",
+  "@chargeRegularizationExpensesDetailToggle": {
+    "description": "Title of the collapsible ExpansionTile listing the recoverable expenses that contributed to the 'actual expenses' pre-fill; {count} is the number of expenses. Uses ICU plural.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chargeRegularizationBalanceProvisionsLabel": "Provisions collected",
+  "@chargeRegularizationBalanceProvisionsLabel": {
+    "description": "Row label for the total charge provisions collected, in the read-only ChargeRegularizationBalanceSummary widget."
+  },
+  "chargeRegularizationBalanceActualExpensesLabel": "Actual expenses",
+  "@chargeRegularizationBalanceActualExpensesLabel": {
+    "description": "Row label for the actual expenses amount in the read-only ChargeRegularizationBalanceSummary widget (plain label, no '(€) *' suffix — distinct key from chargeRegularizationActualExpensesLabel used on the editable form field)."
+  },
+  "chargeRegularizationBalanceSoldeLabel": "Balance",
+  "@chargeRegularizationBalanceSoldeLabel": {
+    "description": "Row title above the computed balance amount in ChargeRegularizationBalanceSummary."
+  },
+  "chargeRegularizationBalanceDirectionDueByTenant": "due from the tenant",
+  "@chargeRegularizationBalanceDirectionDueByTenant": {
+    "description": "Localized label for ChargeRegularizationBalanceDirection.dueByTenant (actual expenses > provisions collected), shown on the on-screen StatusPill in ChargeRegularizationBalanceSummary via the new ChargeRegularizationBalanceDirectionL10n.localizedLabel(context) extension. The domain keeps ChargeRegularizationBalanceDirection.labelFr (FR hardcoded, same wording) untouched because it is also used verbatim by the legal PDF renderer and the tenant share email body, both out of i18n scope."
+  },
+  "chargeRegularizationBalanceDirectionDueToTenant": "to be refunded to the tenant",
+  "@chargeRegularizationBalanceDirectionDueToTenant": {
+    "description": "Localized label for ChargeRegularizationBalanceDirection.dueToTenant (actual expenses < provisions collected), shown on the on-screen StatusPill in ChargeRegularizationBalanceSummary."
+  },
+  "chargeRegularizationBalanceDirectionBalanced": "no balance",
+  "@chargeRegularizationBalanceDirectionBalanced": {
+    "description": "Localized label for ChargeRegularizationBalanceDirection.balanced (actual expenses == provisions collected), shown on the on-screen StatusPill in ChargeRegularizationBalanceSummary."
+  },
+
+  "simulatorPageTitle": "Investment simulator",
+  "@simulatorPageTitle": {
+    "description": "AppBar title of the investment simulator page (create/edit scenario), routes /simulator and /simulator/:id."
+  },
+  "simulatorQuitDemoTooltip": "Exit demo mode",
+  "@simulatorQuitDemoTooltip": {
+    "description": "Tooltip on the AppBar logout icon button shown to anonymous (demo) sessions on the simulator page; opens the quit-demo confirmation dialog."
+  },
+  "simulatorScenarioSavedSnackbar": "Scenario saved",
+  "@simulatorScenarioSavedSnackbar": {
+    "description": "SnackBar shown after successfully creating or updating an investment scenario."
+  },
+  "simulatorLoadErrorMessage": "Unable to load the scenario.",
+  "@simulatorLoadErrorMessage": {
+    "description": "Inline error message shown on the simulator page when loading an existing scenario (edit mode) fails."
+  },
+  "simulatorSaveErrorMessage": "An error occurred while saving. Please try again.",
+  "@simulatorSaveErrorMessage": {
+    "description": "Inline error message shown on the simulator page when saving (creating or updating) a scenario fails."
+  },
+  "simulatorUpdateScenarioButton": "Update scenario",
+  "@simulatorUpdateScenarioButton": {
+    "description": "Submit button label on the simulator page when editing an existing scenario (scenarioId != null)."
+  },
+  "simulatorSaveScenarioButton": "Save this scenario",
+  "@simulatorSaveScenarioButton": {
+    "description": "Submit button label on the simulator page when creating a new scenario (scenarioId == null)."
+  },
+  "simulatorCreateFreeAccountFirstHint": "Create a free account first to discover all of Baillan's upcoming features.",
+  "@simulatorCreateFreeAccountFirstHint": {
+    "description": "Hint banner shown at the bottom of the simulator page to anonymous (demo) sessions instead of the Pro plan teaser section, inviting them to create a free account."
+  },
+  "simulatorDisclaimerBanner": "Indicative estimate based on the data entered. This is not investment advice. Consult a professional.",
+  "@simulatorDisclaimerBanner": {
+    "description": "Permanent disclaimer banner at the top of the simulator form, reminding the user the results are indicative only."
+  },
+  "simulatorEmptyResultsHint": "Enter the purchase price and monthly rent to see the results.",
+  "@simulatorEmptyResultsHint": {
+    "description": "Hint shown instead of the KPI results card when the form does not yet have enough data (purchase price or rent missing/invalid) to compute results."
+  },
+  "simulatorSectionAcquisition": "Acquisition",
+  "@simulatorSectionAcquisition": {
+    "description": "ExpansionTile section title grouping the acquisition fields (purchase price, new-property toggle, notary fees, works) in the scenario form."
+  },
+  "simulatorFieldIsNewPropertyLabel": "New property",
+  "@simulatorFieldIsNewPropertyLabel": {
+    "description": "SwitchListTile title toggling whether the simulated property is newly built (affects the notary fees pre-fill rate)."
+  },
+  "simulatorFieldIsNewPropertySubtitle": "Notary fees ~2% (vs 8% for existing properties)",
+  "@simulatorFieldIsNewPropertySubtitle": {
+    "description": "SwitchListTile subtitle under the 'new property' toggle, explaining the notary fee rate impact."
+  },
+  "simulatorFieldPurchasePriceLabel": "Purchase price *",
+  "@simulatorFieldPurchasePriceLabel": {
+    "description": "Label of the required purchase price field in the acquisition section of the scenario form."
+  },
+  "simulatorFieldNotaryFeesLabel": "Notary fees",
+  "@simulatorFieldNotaryFeesLabel": {
+    "description": "Label of the optional notary fees field in the acquisition section of the scenario form."
+  },
+  "simulatorFieldNotaryFeesHelper": "Pre-filled: 8% for existing properties / 2% for new — editable",
+  "@simulatorFieldNotaryFeesHelper": {
+    "description": "Helper text under the notary fees field explaining the auto-fill rule."
+  },
+  "simulatorFieldWorksLabel": "Initial renovation works",
+  "@simulatorFieldWorksLabel": {
+    "description": "Label of the optional initial works/renovation budget field in the acquisition section of the scenario form."
+  },
+  "simulatorSectionFinancement": "Financing",
+  "@simulatorSectionFinancement": {
+    "description": "ExpansionTile section title grouping the financing fields (down payment, loan principal, rate, duration) in the scenario form."
+  },
+  "simulatorFieldDownPaymentLabel": "Down payment",
+  "@simulatorFieldDownPaymentLabel": {
+    "description": "Label of the optional personal down payment field in the financing section of the scenario form."
+  },
+  "simulatorFieldLoanPrincipalLabel": "Loan principal",
+  "@simulatorFieldLoanPrincipalLabel": {
+    "description": "Label of the optional loan principal (borrowed capital) field in the financing section of the scenario form."
+  },
+  "simulatorFieldLoanPrincipalHelper": "Pre-filled: price + notary fees + works − down payment — editable",
+  "@simulatorFieldLoanPrincipalHelper": {
+    "description": "Helper text under the loan principal field explaining the auto-fill formula."
+  },
+  "simulatorFieldLoanRateLabel": "Nominal rate (%)",
+  "@simulatorFieldLoanRateLabel": {
+    "description": "Label of the optional loan nominal interest rate field in the financing section of the scenario form."
+  },
+  "simulatorFieldLoanRateHint": "E.g.: 3.50",
+  "@simulatorFieldLoanRateHint": {
+    "description": "Hint/example text of the loan nominal rate field; locale-formatted decimal separator (comma in French, period in English)."
+  },
+  "simulatorFieldLoanDurationLabel": "Duration (months)",
+  "@simulatorFieldLoanDurationLabel": {
+    "description": "Label of the optional loan duration field in the financing section of the scenario form."
+  },
+  "simulatorSectionRevenus": "Rental income",
+  "@simulatorSectionRevenus": {
+    "description": "ExpansionTile section title grouping the rental income field in the scenario form."
+  },
+  "simulatorFieldMonthlyRentLabel": "Monthly rent excl. charges *",
+  "@simulatorFieldMonthlyRentLabel": {
+    "description": "Label of the required target monthly rent field (excluding charges) in the rental income section of the scenario form."
+  },
+  "simulatorFieldMonthlyRentHelper": "Excluding recoverable charges",
+  "@simulatorFieldMonthlyRentHelper": {
+    "description": "Helper text under the monthly rent field clarifying it excludes recoverable charges."
+  },
+  "simulatorSectionCharges": "Annual charges",
+  "@simulatorSectionCharges": {
+    "description": "ExpansionTile section title (collapsed by default) grouping the annual charges fields (property tax, PNO insurance, condo fees) in the scenario form."
+  },
+  "simulatorFieldPropertyTaxLabel": "Property tax",
+  "@simulatorFieldPropertyTaxLabel": {
+    "description": "Label of the optional annual property tax field in the charges section of the scenario form."
+  },
+  "simulatorFieldPropertyTaxHelper": "Net of recoverable TEOM",
+  "@simulatorFieldPropertyTaxHelper": {
+    "description": "Helper text under the property tax field. TEOM ('taxe d'enlèvement des ordures ménagères') is the French household waste collection tax, kept as an untranslated acronym — no common English equivalent, mirroring the DPE/GES pattern already used in the properties module."
+  },
+  "simulatorFieldInsurancePnoLabel": "PNO insurance",
+  "@simulatorFieldInsurancePnoLabel": {
+    "description": "Label of the optional annual non-occupant landlord insurance field ('assurance PNO') in the charges section. PNO = Propriétaire Non-Occupant, a France-specific insurance product kept untranslated as an acronym, mirroring the DPE/GES pattern already used in the properties module."
+  },
+  "simulatorFieldCondoFeesLabel": "Non-recoverable condo fees",
+  "@simulatorFieldCondoFeesLabel": {
+    "description": "Label of the optional annual non-recoverable condo (co-ownership) fees field in the charges section of the scenario form."
+  },
+  "simulatorFieldCondoFeesHelper": "Major works, property management, ALUR fund",
+  "@simulatorFieldCondoFeesHelper": {
+    "description": "Helper text under the condo fees field listing examples. ALUR refers to the French 'loi ALUR' mandatory works reserve fund for co-ownerships, kept untranslated as a legal reference."
+  },
+  "simulatorSectionNotes": "Notes",
+  "@simulatorSectionNotes": {
+    "description": "ExpansionTile section title (collapsed by default) grouping the free-form notes field in the scenario form."
+  },
+  "simulatorFieldNotesLabel": "Free-form notes",
+  "@simulatorFieldNotesLabel": {
+    "description": "Label of the optional free-form notes text field in the scenario form."
+  },
+  "simulatorFieldNotesHint": "Remarks, specific assumptions…",
+  "@simulatorFieldNotesHint": {
+    "description": "Hint text of the free-form notes text field in the scenario form."
+  },
+  "simulatorResultsTitle": "Estimated results",
+  "@simulatorResultsTitle": {
+    "description": "Title of the KPI results card (ScenarioResultsCard) shown once the scenario has enough data to compute results."
+  },
+  "simulatorResultsTaxDisclaimer": "Cash flow shown before tax — does not account for the tax regime or social security contributions (17.2%).",
+  "@simulatorResultsTaxDisclaimer": {
+    "description": "Disclaimer tile under the KPI grid in the results card, clarifying the cash-flow figure is pre-tax. The 17.2% is a fixed constant (French social security contribution rate on rental income), not interpolated."
+  },
+  "simulatorKpiMonthlyPaymentLabel": "Total monthly payment",
+  "@simulatorKpiMonthlyPaymentLabel": {
+    "description": "Label of the 'total monthly loan payment' KPI tile in the results card (principal + interest + insurance)."
+  },
+  "simulatorKpiPerMonthSuffix": "/month",
+  "@simulatorKpiPerMonthSuffix": {
+    "description": "Subtitle under the 'total monthly payment' KPI tile in the results card."
+  },
+  "simulatorKpiAnnualRentNetLabel": "Net annual rent",
+  "@simulatorKpiAnnualRentNetLabel": {
+    "description": "Label of the 'net annual rent' KPI tile in the results card (gross rent minus assumed vacancy)."
+  },
+  "simulatorKpiVacancyDeductedSubtitle": "5% vacancy deducted",
+  "@simulatorKpiVacancyDeductedSubtitle": {
+    "description": "Subtitle under the 'net annual rent' KPI tile in the results card, mentioning the fixed 5% vacancy assumption used by the v1 calculation engine (not interpolated, matches the ScenarioResults hardcoded constant)."
+  },
+  "simulatorKpiMonthlyCashflowLabel": "Monthly cash flow",
+  "@simulatorKpiMonthlyCashflowLabel": {
+    "description": "Label of the 'monthly cash flow' KPI tile in the results card."
+  },
+  "simulatorKpiBeforeTaxSubtitle": "before tax",
+  "@simulatorKpiBeforeTaxSubtitle": {
+    "description": "Subtitle reused by two KPI tiles in the results card ('monthly cash flow' and 'net yield'), clarifying both figures are computed before tax."
+  },
+  "simulatorKpiGrossYieldLabel": "Gross yield",
+  "@simulatorKpiGrossYieldLabel": {
+    "description": "Label of the 'gross yield' percentage KPI tile in the results card."
+  },
+  "simulatorKpiNetYieldLabel": "Net yield",
+  "@simulatorKpiNetYieldLabel": {
+    "description": "Label of the 'net yield' percentage KPI tile in the results card."
+  },
+  "simulatorKpiTotalInterestLabel": "Total interest paid",
+  "@simulatorKpiTotalInterestLabel": {
+    "description": "Label of the 'total interest paid over the loan duration' KPI tile in the results card."
+  },
+  "simulatorKpiTotalLoanCostLabel": "Total loan cost",
+  "@simulatorKpiTotalLoanCostLabel": {
+    "description": "Label of the 'total loan cost' KPI tile in the results card."
+  },
+  "simulatorKpiLoanCostBreakdownSubtitle": "principal + interest + insurance",
+  "@simulatorKpiLoanCostBreakdownSubtitle": {
+    "description": "Subtitle under the 'total loan cost' KPI tile in the results card, listing the cost components."
+  },
+  "simulatorKpiEstimatedValueLabel": "Estimated future value",
+  "@simulatorKpiEstimatedValueLabel": {
+    "description": "Label of the 'estimated property value at term' KPI tile in the results card."
+  },
+  "simulatorKpiAppreciationSubtitle": "+1.5%/year over 20 years",
+  "@simulatorKpiAppreciationSubtitle": {
+    "description": "Subtitle under the 'estimated future value' KPI tile in the results card, mentioning the fixed appreciation assumption used by the v1 calculation engine (not interpolated, matches the ScenarioResults hardcoded constants)."
+  },
+  "simulatorSaveDialogTitle": "Name the scenario",
+  "@simulatorSaveDialogTitle": {
+    "description": "AlertDialog title of the dialog prompting for a scenario name before saving (shown for both create and update)."
+  },
+  "simulatorSaveDialogNameLabel": "Scenario name",
+  "@simulatorSaveDialogNameLabel": {
+    "description": "Label of the scenario name text field in the save-scenario naming dialog."
+  },
+  "simulatorSaveDialogNameHint": "E.g.: Lyon City Center Apartment",
+  "@simulatorSaveDialogNameHint": {
+    "description": "Hint/example text of the scenario name text field in the save-scenario naming dialog."
+  },
+  "simulatorSavedScenariosTitle": "My scenarios",
+  "@simulatorSavedScenariosTitle": {
+    "description": "Section header above the horizontal list of saved scenarios on the simulator page."
+  },
+  "simulatorDeleteScenarioDialogTitle": "Delete this scenario?",
+  "@simulatorDeleteScenarioDialogTitle": {
+    "description": "AlertDialog title of the confirmation dialog shown before deleting a saved scenario."
+  },
+  "simulatorDeleteScenarioDialogContent": "The scenario \"{name}\" will be permanently deleted.",
+  "@simulatorDeleteScenarioDialogContent": {
+    "description": "AlertDialog content of the confirmation dialog shown before deleting a saved scenario; {name} is the scenario's display name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "simulatorLoadScenarioSemanticLabel": "Load scenario {name}",
+  "@simulatorLoadScenarioSemanticLabel": {
+    "description": "Accessibility semantic label (screen readers) for a saved-scenario card in the horizontal list; {name} is the scenario's display name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "simulatorLimitReachedTitleAnonymous": "Demo mode limit reached",
+  "@simulatorLimitReachedTitleAnonymous": {
+    "description": "Title of the scenario-limit-reached modal when shown to an anonymous (demo) session."
+  },
+  "simulatorLimitReachedTitleFree": "Limit reached",
+  "@simulatorLimitReachedTitleFree": {
+    "description": "Title of the scenario-limit-reached modal when shown to a free-tier account."
+  },
+  "simulatorLimitReachedContentAnonymous": "Demo mode lets you save a single scenario. Create an account to keep up to 3.",
+  "@simulatorLimitReachedContentAnonymous": {
+    "description": "Body text of the scenario-limit-reached modal when shown to an anonymous (demo) session."
+  },
+  "simulatorLimitReachedContentFree": "Your free account lets you save up to 3 scenarios. Upgrade to the Pro plan for unlimited scenarios.",
+  "@simulatorLimitReachedContentFree": {
+    "description": "Body text of the scenario-limit-reached modal when shown to a free-tier account."
+  },
+  "simulatorLimitReachedLaterButton": "Later",
+  "@simulatorLimitReachedLaterButton": {
+    "description": "Dismiss button label on the scenario-limit-reached modal (shown for both anonymous and free tiers)."
+  },
+  "simulatorLimitReachedSignupButton": "Create an account",
+  "@simulatorLimitReachedSignupButton": {
+    "description": "CTA button label on the scenario-limit-reached modal for anonymous sessions, navigating to /signup."
+  },
+  "simulatorLimitReachedNotifyMeSuccessSnackbar": "We will notify you at launch.",
+  "@simulatorLimitReachedNotifyMeSuccessSnackbar": {
+    "description": "SnackBar shown after successfully registering interest via the 'notify me' button on the scenario-limit-reached modal (free tier)."
+  },
+  "simulatorPaidPlanFeatureComparator": "Multi-scenario comparator",
+  "@simulatorPaidPlanFeatureComparator": {
+    "description": "Upcoming Pro-plan feature label, listed in the 'Coming soon' section on the simulator page."
+  },
+  "simulatorPaidPlanFeatureRateSensitivity": "Interest rate sensitivity analysis",
+  "@simulatorPaidPlanFeatureRateSensitivity": {
+    "description": "Upcoming Pro-plan feature label, listed in the 'Coming soon' section on the simulator page."
+  },
+  "simulatorPaidPlanFeatureTaxSimulation": "LMNP/LMP tax simulation",
+  "@simulatorPaidPlanFeatureTaxSimulation": {
+    "description": "Upcoming Pro-plan feature label, listed in the 'Coming soon' section on the simulator page. LMNP/LMP are French furnished-rental tax statuses, kept untranslated as domain-specific acronyms."
+  },
+  "simulatorPaidPlanFeatureExportPdf": "Professional PDF export",
+  "@simulatorPaidPlanFeatureExportPdf": {
+    "description": "Upcoming Pro-plan feature label, listed in the 'Coming soon' section on the simulator page."
+  },
+  "simulatorInterestSaveErrorSnackbar": "Unable to save your interest right now. Please try again.",
+  "@simulatorInterestSaveErrorSnackbar": {
+    "description": "SnackBar shown when registering interest in the Pro plan (notify-me or funding) fails. Reused by both the 'Coming soon' section and the scenario-limit-reached modal (3 call sites)."
+  },
+  "simulatorNotifyMeSuccessSnackbar": "You will be notified at launch.",
+  "@simulatorNotifyMeSuccessSnackbar": {
+    "description": "SnackBar shown after successfully registering interest via the 'notify me' button in the 'Coming soon — Pro plan' section on the simulator page."
+  },
+  "simulatorFundingInterestSuccessSnackbar": "Thank you for your support! We will get back to you.",
+  "@simulatorFundingInterestSuccessSnackbar": {
+    "description": "SnackBar shown after successfully registering interest in funding via the 'Coming soon — Pro plan' section on the simulator page."
+  },
+  "simulatorComingSoonTitle": "Coming soon — Pro plan",
+  "@simulatorComingSoonTitle": {
+    "description": "Title of the Pro-plan teaser section shown to free-tier accounts at the bottom of the simulator page."
+  },
+  "simulatorNotifyMeButton": "Notify me at launch",
+  "@simulatorNotifyMeButton": {
+    "description": "Button label to register interest in the Pro plan. Used both in the 'Coming soon' section (initial state) and in the scenario-limit-reached modal (free tier) — 2 call sites."
+  },
+  "simulatorNotifiedButtonLabel": "You will be notified at launch",
+  "@simulatorNotifiedButtonLabel": {
+    "description": "Persistent button label (disabled state) shown in the 'Coming soon' section after the user has successfully registered interest via the 'notify me' button."
+  },
+  "simulatorFundingSectionTitle": "Do you like Baillan?",
+  "@simulatorFundingSectionTitle": {
+    "description": "Title of the funding-interest sub-section under the 'Coming soon — Pro plan' section on the simulator page."
+  },
+  "simulatorFundingSectionBody": "Baillan is developed independently. If you find the product useful, let us know if you'd be interested in contributing to its funding — no commitment. We will get back to you.",
+  "@simulatorFundingSectionBody": {
+    "description": "Body text of the funding-interest sub-section under the 'Coming soon — Pro plan' section on the simulator page."
+  },
+  "simulatorFundingInterestButton": "I'm interested in contributing funding",
+  "@simulatorFundingInterestButton": {
+    "description": "Initial-state button label to register funding interest, in the funding-interest sub-section on the simulator page."
+  },
+  "simulatorFundingThanksButtonLabel": "Thank you! We will get back to you",
+  "@simulatorFundingThanksButtonLabel": {
+    "description": "Persistent button label (disabled state) shown after the user has successfully registered funding interest."
+  },
+  "simulatorTierChipAnonymous": "DEMO MODE · 1 SCENARIO",
+  "@simulatorTierChipAnonymous": {
+    "description": "Uppercase tier chip label shown at the top of the simulator page for anonymous (demo) sessions. Uppercase is intentional (brand styling, EB Garamond small-caps look, no .toUpperCase() call in code) — keep the translation uppercase too."
+  },
+  "simulatorTierChipFree": "FREE ACCOUNT · {count}/3 SCENARIOS",
+  "@simulatorTierChipFree": {
+    "description": "Uppercase tier chip label shown at the top of the simulator page for free-tier accounts; {count} is the live number of saved scenarios (the '3' limit is a fixed constant, not interpolated). Uppercase is intentional (brand styling) — keep the translation uppercase too.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "simulatorTierChipPaid": "PRO PLAN · UNLIMITED",
+  "@simulatorTierChipPaid": {
+    "description": "Uppercase tier chip label shown at the top of the simulator page for Pro-plan accounts. Uppercase is intentional (brand styling) — keep the translation uppercase too."
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../widgets/scenario_form_validators.dart';
 
 /// Dialog de saisie du nom avant sauvegarde d'un scénario.
@@ -54,17 +55,18 @@ class _SaveScenarioDialogState extends State<_SaveScenarioDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AlertDialog(
-      title: const Text('Nommer le scénario'),
+      title: Text(l10n.simulatorSaveDialogTitle),
       content: Form(
         key: _formKey,
         child: TextFormField(
           key: const Key('save_scenario_name_field'),
           controller: _nameController,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Nom du scénario',
-            hintText: 'Ex. : Appartement Lyon Centre',
+          decoration: InputDecoration(
+            labelText: l10n.simulatorSaveDialogNameLabel,
+            hintText: l10n.simulatorSaveDialogNameHint,
           ),
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => _submit(),
@@ -75,12 +77,12 @@ class _SaveScenarioDialogState extends State<_SaveScenarioDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           key: const Key('save_scenario_confirm'),
           onPressed: _submit,
-          child: const Text('Sauvegarder'),
+          child: Text(l10n.commonSave),
         ),
       ],
     );

@@ -9,9 +9,11 @@
 ///   message générique "charges obligatoires")
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_form.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -27,6 +29,9 @@ Widget _buildForm({
   final controller = TextEditingController();
   return MaterialApp(
     theme: AppTheme.light,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: SingleChildScrollView(
         child: ChargeRegularizationForm(

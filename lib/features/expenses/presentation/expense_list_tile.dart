@@ -4,6 +4,8 @@ import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
+import 'expense_category_l10n.dart';
+import 'expense_nature_l10n.dart';
 
 /// Tuile d'une dépense dans l'historique d'un bien.
 ///
@@ -35,7 +37,7 @@ class ExpenseListTile extends StatelessWidget {
           size: 20,
         ),
       ),
-      title: Text(expense.nature.label),
+      title: Text(expense.nature.localizedLabel(context)),
       subtitle: Wrap(
         spacing: 6,
         runSpacing: 4,
@@ -83,7 +85,7 @@ class _CategoryChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        category.label,
+        category.localizedLabel(context),
         style: theme.textTheme.labelSmall?.copyWith(color: color, fontSize: 10),
       ),
     );

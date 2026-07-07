@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
@@ -31,7 +32,7 @@ class SavedScenariosRow extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Mes scénarios',
+              context.l10n.simulatorSavedScenariosTitle,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
@@ -67,22 +68,23 @@ class SavedScenariosRow extends ConsumerWidget {
   }
 
   Future<bool> _confirmDelete(BuildContext context, String name) async {
+    final l10n = context.l10n;
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le scénario ?'),
-        content: Text('Le scénario "$name" sera supprimé définitivement.'),
+        title: Text(l10n.simulatorDeleteScenarioDialogTitle),
+        content: Text(l10n.simulatorDeleteScenarioDialogContent(name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Supprimer'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -104,7 +106,9 @@ class _ScenarioChip extends StatelessWidget {
       width: 180,
       child: EntityCard(
         onTap: () => context.go('/simulator/${scenario.id}'),
-        semanticLabel: 'Charger le scénario ${scenario.name}',
+        semanticLabel: context.l10n.simulatorLoadScenarioSemanticLabel(
+          scenario.name,
+        ),
         header: Row(
           children: [
             Expanded(
@@ -125,7 +129,7 @@ class _ScenarioChip extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               onPressed: onDelete,
-              tooltip: 'Supprimer',
+              tooltip: context.l10n.commonDelete,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),

@@ -7,6 +7,7 @@ import '../domain/expense.dart';
 import '../domain/expense_category.dart';
 import '../domain/expense_form_state.dart';
 import '../domain/expense_nature.dart';
+import '../domain/expense_submit_error.dart';
 import 'expenses_provider.dart';
 
 final _log = Logger('ExpenseFormController');
@@ -93,17 +94,13 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
       state = ExpenseFormState.success(expense: result);
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseFunctionsException lors de submit', e, st);
-      state = ExpenseFormState.error(message: _mapFirebaseError(e));
+      state = ExpenseFormState.error(message: _mapFirebaseError(e).name);
     } on ExpenseNotFoundException catch (notFound, st) {
       _log.warning('ExpenseNotFoundException lors de submit', notFound, st);
-      state = const ExpenseFormState.error(
-        message: 'Dépense introuvable. Elle a peut-être été archivée.',
-      );
+      state = ExpenseFormState.error(message: ExpenseSubmitError.notFound.name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de submit', e, st);
-      state = const ExpenseFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = ExpenseFormState.error(message: ExpenseSubmitError.unknown.name);
     }
   }
 
@@ -120,34 +117,32 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
       state = const ExpenseFormState.idle();
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseFunctionsException lors de archive', e, st);
-      state = ExpenseFormState.error(message: _mapFirebaseError(e));
+      state = ExpenseFormState.error(message: _mapFirebaseError(e).name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de archive', e, st);
-      state = const ExpenseFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = ExpenseFormState.error(message: ExpenseSubmitError.unknown.name);
     }
   }
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const ExpenseFormState.idle();
 
-  String _mapFirebaseError(FirebaseFunctionsException e) {
+  ExpenseSubmitError _mapFirebaseError(FirebaseFunctionsException e) {
     final code = e.code;
     final message = e.message ?? '';
     if (message.contains('category_locked_for_nature')) {
-      return 'Cette nature de dépense impose une catégorie non modifiable.';
+      return ExpenseSubmitError.categoryLockedForNature;
     }
     if (code == 'permission-denied' || code == 'unauthenticated') {
-      return 'Action non autorisée.';
+      return ExpenseSubmitError.permissionDenied;
     }
     if (code == 'failed-precondition') {
-      return 'Opération impossible — vérifiez les champs saisis.';
+      return ExpenseSubmitError.invalidFields;
     }
     if (code == 'unavailable' || code == 'deadline-exceeded') {
-      return 'Service temporairement indisponible. Réessayez.';
+      return ExpenseSubmitError.serviceUnavailable;
     }
-    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+    return ExpenseSubmitError.saveFailed;
   }
 }
 

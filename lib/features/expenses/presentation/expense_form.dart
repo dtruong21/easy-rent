@@ -1,11 +1,34 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/utils/expense_form_validators.dart';
 import '../../../core/utils/french_date.dart';
 import '../../leases/domain/lease.dart';
+import '../../leases/domain/lease_status.dart';
 import '../domain/expense_category.dart';
 import '../domain/expense_nature.dart';
+import 'expense_category_l10n.dart';
+import 'expense_nature_l10n.dart';
 import 'expense_receipt_field.dart';
+
+/// Libellé localisé d'un [LeaseStatus], pour l'item du dropdown "Bail
+/// concerné" (FEAT-043).
+///
+/// Petit mapping local plutôt qu'une extension `leases/presentation/` :
+/// [leaseStatusPill] (`lib/features/leases/presentation/widgets/lease_status_mapper.dart`)
+/// calcule aussi les statuts dérivés « en retard »/« à renouveler », ce qui
+/// nécessite l'historique des paiements du bail — hors de propos pour un
+/// simple libellé de dropdown. Réutilise les clés `leasesStatus*` déjà
+/// définies (pas de nouvelle clé `expenses*` pour un libellé qui appartient
+/// sémantiquement au domaine `leases`).
+String _leaseStatusLabel(BuildContext context, LeaseStatus status) {
+  final l10n = context.l10n;
+  return switch (status) {
+    LeaseStatus.active => l10n.leasesStatusActive,
+    LeaseStatus.terminated => l10n.leasesStatusTerminated,
+    LeaseStatus.archived => l10n.leasesStatusArchived,
+  };
+}
 
 /// Champs partagés du formulaire dépense.
 ///
@@ -149,7 +172,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
       initialDate: _expenseDate ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Date de la dépense',
+      helpText: context.l10n.expensesFormExpenseDatePickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -168,7 +191,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
       initialDate: _periodStart ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Début de la période de rattachement',
+      helpText: context.l10n.expensesFormPeriodStartPickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -184,7 +207,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
       initialDate: _periodEnd ?? (_periodStart ?? DateTime.now()),
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Fin de la période de rattachement',
+      helpText: context.l10n.expensesFormPeriodEndPickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -208,22 +231,22 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
           DropdownButtonFormField<String?>(
             key: const Key('field_lease_id'),
             initialValue: _leaseId,
-            decoration: const InputDecoration(
-              labelText: 'Bail concerné (optionnel)',
-              helperText: 'Utile pour ventiler la régularisation par locataire',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.expensesFormLeaseFieldLabel,
+              helperText: context.l10n.expensesFormLeaseFieldHelper,
+              border: const OutlineInputBorder(),
             ),
             items: [
-              const DropdownMenuItem<String?>(
+              DropdownMenuItem<String?>(
                 value: null,
-                child: Text('Aucun bail'),
+                child: Text(context.l10n.expensesFormNoLeaseOption),
               ),
               ...widget.leases.map(
                 (l) => DropdownMenuItem<String?>(
                   value: l.id,
                   child: Text(
                     '${FrenchDate.format(l.startDate)} — '
-                    '${l.status.labelFr}',
+                    '${_leaseStatusLabel(context, l.status)}',
                   ),
                 ),
               ),
@@ -239,10 +262,10 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             key: const Key('field_nature'),
             initialValue: nature,
             decoration: InputDecoration(
-              labelText: 'Nature de la dépense *',
+              labelText: context.l10n.expensesFormNatureFieldLabel,
               border: const OutlineInputBorder(),
               errorText: _natureTouched && nature == null
-                  ? 'La nature est obligatoire'
+                  ? context.l10n.expensesFormNatureRequiredError
                   : null,
             ),
             items: ExpenseNature.values
@@ -254,7 +277,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
                       children: [
                         Icon(n.icon, size: 18),
                         const SizedBox(width: 8),
-                        Text(n.label),
+                        Text(n.localizedLabel(context)),
                       ],
                     ),
                   ),
@@ -281,11 +304,11 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             key: const Key('field_amount'),
             controller: widget.amountController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Montant TTC (€) *',
-              hintText: 'Ex. : 450,00',
+            decoration: InputDecoration(
+              labelText: context.l10n.expensesFormAmountFieldLabel,
+              hintText: context.l10n.expensesFormAmountFieldHint,
               suffixText: '€',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) {
@@ -314,7 +337,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
               onTap: widget.enabled ? _pickExpenseDate : null,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Date de la dépense (facture/décompte) *',
+                  labelText: context.l10n.expensesFormExpenseDateFieldLabel,
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.calendar_today_outlined),
                   errorText: state.errorText,
@@ -322,7 +345,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
                 child: Text(
                   _expenseDate != null
                       ? FrenchDate.format(_expenseDate!)
-                      : 'Sélectionner une date',
+                      : context.l10n.expensesFormSelectDatePlaceholder,
                   style: _expenseDate == null
                       ? theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -336,8 +359,9 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
 
           // --- Période de rattachement ---
           Text(
-            'Période de rattachement'
-            '${_isRecoverable ? ' *' : ' (optionnel)'}',
+            _isRecoverable
+                ? context.l10n.expensesFormPeriodSectionLabelRequired
+                : context.l10n.expensesFormPeriodSectionLabelOptional,
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -345,10 +369,8 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
           const SizedBox(height: 4),
           Text(
             _isRecoverable
-                ? 'Obligatoire pour une dépense récupérable — sert à '
-                      "l'agrégation en régularisation annuelle."
-                : 'Dérivée par défaut de la date de la dépense — '
-                      'corrigeable (ex. exercice syndic décalé).',
+                ? context.l10n.expensesFormPeriodHelperRequired
+                : context.l10n.expensesFormPeriodHelperDerived,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
@@ -372,7 +394,8 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
                     onTap: widget.enabled ? _pickPeriodStart : null,
                     child: InputDecorator(
                       decoration: InputDecoration(
-                        labelText: 'Début',
+                        labelText:
+                            context.l10n.expensesFormPeriodStartFieldLabel,
                         border: const OutlineInputBorder(),
                         suffixIcon: const Icon(Icons.calendar_today_outlined),
                         errorText: state.errorText,
@@ -403,7 +426,7 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
                     onTap: widget.enabled ? _pickPeriodEnd : null,
                     child: InputDecorator(
                       decoration: InputDecoration(
-                        labelText: 'Fin',
+                        labelText: context.l10n.expensesFormPeriodEndFieldLabel,
                         border: const OutlineInputBorder(),
                         suffixIcon: const Icon(Icons.calendar_today_outlined),
                         errorText: state.errorText,
@@ -435,10 +458,10 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
             key: const Key('field_notes'),
             controller: _notesController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Notes / libellé libre (optionnel)',
-              hintText: 'Ex. : décompte syndic exercice 2025',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.expensesFormNotesFieldLabel,
+              hintText: context.l10n.expensesFormNotesFieldHint,
+              border: const OutlineInputBorder(),
             ),
             maxLines: 3,
             maxLength: 2000,
@@ -515,14 +538,16 @@ class _CategorySection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Catégorie : ${category.label} (non modifiable)',
+                    context.l10n.expensesCategoryLockedLabel(
+                      category.localizedLabel(context),
+                    ),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    nature.lockOrWarningExplanation,
+                    nature.localizedLockOrWarningExplanation(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -545,12 +570,17 @@ class _CategorySection extends StatelessWidget {
         DropdownButtonFormField<ExpenseCategory>(
           key: const Key('field_category'),
           initialValue: category,
-          decoration: const InputDecoration(
-            labelText: 'Catégorie *',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: context.l10n.expensesFormCategoryFieldLabel,
+            border: const OutlineInputBorder(),
           ),
           items: ExpenseCategory.values
-              .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
+              .map(
+                (c) => DropdownMenuItem(
+                  value: c,
+                  child: Text(c.localizedLabel(context)),
+                ),
+              )
               .toList(),
           onChanged: enabled ? onChanged : null,
         ),
@@ -574,10 +604,9 @@ class _CategorySection extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Vous classez cette dépense comme récupérable alors '
-                    'qu\'elle ne l\'est pas par défaut. ${nature.lockOrWarningExplanation} '
-                    'Un mauvais classement expose à une contestation du '
-                    'locataire.',
+                    context.l10n.expensesCategoryOverrideWarningMessage(
+                      nature.localizedLockOrWarningExplanation(context),
+                    ),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.error,
                     ),

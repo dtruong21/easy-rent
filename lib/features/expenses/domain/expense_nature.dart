@@ -45,6 +45,13 @@ enum ExpenseNature {
   };
 
   /// Libellé FR pour l'affichage dans l'UI.
+  ///
+  /// FEAT-043 (i18n) : conservé en dur pour ne pas casser
+  /// `test/widget/expense_form_test.dart` (référence directe à ce getter,
+  /// hors périmètre de ce ticket) — même approche que `DocumentCategory.label`
+  /// (`lib/features/documents/domain/document_category.dart`). Le nouveau
+  /// code présentation doit utiliser `ExpenseNatureL10n.localizedLabel`
+  /// (`lib/features/expenses/presentation/expense_nature_l10n.dart`).
   String get label => switch (this) {
     ExpenseNature.condoCharges => 'Charges de copropriété (syndic)',
     ExpenseNature.propertyTax => 'Taxe foncière',
@@ -93,6 +100,10 @@ enum ExpenseNature {
 
   /// Justification FR affichée à titre d'aide contextuelle (verrouillage ou
   /// avertissement d'ajustement).
+  ///
+  /// FEAT-043 (i18n) : conservé en dur (voir note sur [label]). Le nouveau
+  /// code présentation doit utiliser
+  /// `ExpenseNatureL10n.localizedLockOrWarningExplanation`.
   String get lockOrWarningExplanation => switch (this) {
     ExpenseNature.propertyTax =>
       'La taxe foncière n\'est jamais récupérable auprès du locataire.',

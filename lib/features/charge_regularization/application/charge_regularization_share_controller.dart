@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../receipts/data/web_share_service_bridge.dart';
 import '../domain/charge_regularization_balance.dart';
 import '../domain/charge_regularization_pdf_renderer.dart';
+import '../domain/charge_regularization_share_error_reason.dart';
 import '../domain/charge_regularization_share_payload_builder.dart';
 import '../domain/charge_regularization_share_state.dart';
 
@@ -114,11 +115,18 @@ class ChargeRegularizationShareController
       state = const ChargeRegularizationShareState.idle();
     } on ShareReceiptException catch (e, st) {
       _log.warning('erreur de partage', e, st);
-      state = ChargeRegularizationShareState.error(message: e.message);
+      // FEAT-043 : le message technique de [e] (parfois un DOMException brut,
+      // non traduit / non FR) n'est plus stocké tel quel — seul le code
+      // stable [ChargeRegularizationShareErrorReason.shareFailed] est
+      // conservé ; le détail reste consultable dans les logs ci-dessus (même
+      // pattern que `ShareReceiptController`, receipts, FEAT-043).
+      state = ChargeRegularizationShareState.error(
+        message: ChargeRegularizationShareErrorReason.shareFailed.name,
+      );
     } catch (e, st) {
       _log.severe('erreur inattendue génération/partage', e, st);
-      state = const ChargeRegularizationShareState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
+      state = ChargeRegularizationShareState.error(
+        message: ChargeRegularizationShareErrorReason.unknown.name,
       );
     }
   }
