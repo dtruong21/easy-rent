@@ -1,8 +1,8 @@
 /// Tests widget de [FaqPage] — page publique `/faq`.
 ///
-/// Couvre : rendu des questions (repliées par défaut), dépliage d'une
-/// réponse au tap, présence des sujets sensibles (suppression de compte,
-/// conformité quittances) et renvoi vers le support.
+/// Couvre : sections thématiques, questions repliées par défaut, dépliage
+/// d'une réponse au tap, présence des sujets sensibles (suppression de
+/// compte cohérente FEAT-045, conformité quittances) et renvoi support.
 library;
 
 import 'package:easyrent/features/support/presentation/faq_page.dart';
@@ -25,58 +25,61 @@ Widget _buildPage() {
 }
 
 void main() {
-  testWidgets('titre + questions affichées, réponses repliées par défaut', (
-    tester,
-  ) async {
+  testWidgets('titre + sections thématiques affichés', (tester) async {
     await tester.pumpWidget(_buildPage());
     await tester.pumpAndSettle();
 
     expect(find.text('Questions fréquentes'), findsOneWidget);
     expect(find.text('FAQ — Baillan'), findsOneWidget);
-    expect(find.text('Qu\'est-ce que Baillan ?'), findsOneWidget);
-    expect(find.byKey(const Key('faq_tile_0')), findsOneWidget);
-
-    // Replié par défaut : le corps de la première réponse n'est pas visible.
-    expect(
-      find.textContaining('outil de gestion locative', findRichText: true),
-      findsNothing,
-    );
+    expect(find.text('Découvrir Baillan'), findsOneWidget);
+    // Les autres sections existent plus bas dans le scroll (layout complet
+    // en test, même hors viewport).
+    expect(find.text('Loyers, paiements et quittances'), findsOneWidget);
+    expect(find.text('Charges et dépenses'), findsOneWidget);
+    expect(find.text('Données, sécurité et RGPD'), findsOneWidget);
+    expect(find.text('Compte et support'), findsOneWidget);
   });
 
-  testWidgets('tap sur une question → la réponse se déplie', (tester) async {
+  testWidgets('questions repliées par défaut, dépliage au tap', (tester) async {
     await tester.pumpWidget(_buildPage());
     await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('faq_tile_quoi')), findsOneWidget);
+    // Replié : le corps de la réponse n'est pas monté.
+    expect(find.textContaining('registre locatif'), findsNothing);
 
     await tester.tap(find.text('Qu\'est-ce que Baillan ?'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('outil de gestion locative'), findsOneWidget);
+    expect(find.textContaining('registre locatif'), findsOneWidget);
   });
 
   testWidgets(
-    'sujets clés présents : suppression de compte, quittances loi 1989, '
-    'données/RGPD, contact support',
+    'sujets clés présents : quittances loi 1989, retards, régularisation, '
+    'RGPD, support',
     (tester) async {
       await tester.pumpWidget(_buildPage());
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Comment supprimer mon compte et mes données ?'),
+        find.text('Les quittances sont-elles conformes à la loi ?'),
         findsOneWidget,
       );
       expect(
-        find.text('Les quittances générées sont-elles conformes à la loi ?'),
+        find.text('Comment Baillan détecte-t-il les retards de paiement ?'),
         findsOneWidget,
       );
-      await tester.scrollUntilVisible(
-        find.text('Comment contacter le support ?'),
-        200,
+      expect(
+        find.text(
+          'Comment fonctionne la régularisation annuelle des charges ?',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Qui est responsable des données de mes locataires (RGPD) ?'),
+        findsOneWidget,
       );
       expect(find.text('Comment contacter le support ?'), findsOneWidget);
-      expect(
-        find.text('Où sont stockées mes données et celles de mes locataires ?'),
-        findsOneWidget,
-      );
     },
   );
 
@@ -87,8 +90,7 @@ void main() {
       await tester.pumpWidget(_buildPage());
       await tester.pumpAndSettle();
 
-      // Index 8 dans _faqEntries = « Comment supprimer mon compte … ».
-      final deleteTile = find.byKey(const Key('faq_tile_8'));
+      final deleteTile = find.byKey(const Key('faq_tile_suppression-compte'));
       await tester.ensureVisible(deleteTile);
       await tester.pumpAndSettle();
       await tester.tap(deleteTile);
@@ -98,4 +100,19 @@ void main() {
       expect(find.textContaining('/delete-account'), findsOneWidget);
     },
   );
+
+  testWidgets('les features non livrées sont « à l\'étude », jamais promises '
+      '(rappels, import)', (tester) async {
+    await tester.pumpWidget(_buildPage());
+    await tester.pumpAndSettle();
+
+    final remindersTile = find.byKey(const Key('faq_tile_rappels'));
+    await tester.ensureVisible(remindersTile);
+    await tester.pumpAndSettle();
+    await tester.tap(remindersTile);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Pas encore'), findsOneWidget);
+    expect(find.textContaining('à l\'étude'), findsOneWidget);
+  });
 }
