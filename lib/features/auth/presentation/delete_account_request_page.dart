@@ -144,12 +144,17 @@ class _AnonymousDeleteAction extends ConsumerWidget {
       next.maybeWhen(
         success: () {
           if (!context.mounted) return;
+          // Pas de navigation explicite : /delete-account est publique pour
+          // tous les états de session — quand le flip anonymous →
+          // unauthenticated arrive (stream), la page se re-rend simplement
+          // avec le CTA « Se connecter ». Un context.go ici serait re-routé
+          // par la garde avec l'état de session PÉRIMÉ (cf. même commentaire
+          // dans DeleteAccountPage).
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Votre essai et ses données ont été supprimés.'),
             ),
           );
-          context.go('/');
         },
         orElse: () {},
       );

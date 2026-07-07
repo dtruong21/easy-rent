@@ -26,16 +26,34 @@ Obligations à respecter :
 - **Consentement explicite** lors du signup (case à cocher non pré-cochée)
 - **Politique de confidentialité** accessible (URL dans le footer)
 - **Droit d'accès** : possibilité d'exporter ses données (`GET /export`)
-- **Droit à l'effacement** : suppression du compte
-  - Exception : conserver les quittances 5 ans (obligation fiscale)
-  - Donc soft-delete des entités à valeur légale, hard-delete du reste
+- **Droit à l'effacement** : suppression du compte in-app (FEAT-045 —
+  écran Profil → « Supprimer mon compte » + page publique `/delete-account`)
+  - Exception : les **quittances émises** sont conservées 5 ans par la
+    plateforme (preuve de l'émission, art. 2224 C. civ. / obligation
+    fiscale), sous forme archivée inaccessible, puis purgées à l'échéance
+    (`retentionUntil`)
+  - **Tout le reste est hard-delete immédiat** (biens, locataires, baux,
+    paiements, documents — y compris `legalHold` —, dépenses, simulations,
+    profil, fichiers Storage, compte Auth). Position assumée : les devoirs
+    de conservation des baux (5 ans) et pièces comptables (10 ans)
+    incombent au **bailleur** pour ses propres documents — le flux de
+    suppression l'avertit explicitement de les télécharger avant ; la
+    plateforme ne conserve en son nom que la trace des quittances émises
+  - La rétention des quittances est annoncée dans le flux de suppression
+    ET dans la politique de confidentialité (v1.2, §5) — exigence des
+    politiques Google Play / App Store
 - **Nom du responsable de traitement** dans les emails sortants
 - **Lien de désabonnement** dans les emails non-transactionnels
 
 ## Conservation des données
 
-- Quittances et baux : **5 ans minimum** (obligation fiscale et prescription civile)
-- Documents comptables liés : **10 ans** (code de commerce)
+- Quittances et baux : **5 ans minimum** (obligation fiscale et prescription
+  civile) — devoir du **bailleur** pour ses documents ; côté plateforme,
+  tant que le compte est actif rien n'est purgé (`legalHold` sur les
+  documents à valeur légale), et après suppression du compte seules les
+  **quittances** sont archivées 5 ans (cf. « Droit à l'effacement »)
+- Documents comptables liés : **10 ans** (code de commerce) — devoir du
+  bailleur ; à télécharger avant toute suppression de compte
 - Données personnelles hors documents légaux : effaçables à la demande
 
 ## Mentions email

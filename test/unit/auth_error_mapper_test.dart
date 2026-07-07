@@ -113,14 +113,14 @@ void main() {
     test('popup-closed-by-user → connexion annulée', () {
       expect(
         AuthErrorMapper.fromException(e('popup-closed-by-user')),
-        'Connexion Google annulée.',
+        'Connexion annulée.',
       );
     });
 
     test('popup-blocked → message popup bloquée', () {
       expect(
         AuthErrorMapper.fromException(e('popup-blocked')),
-        contains('bloqué la fenêtre Google'),
+        contains('bloqué la fenêtre de connexion'),
       );
     });
 
@@ -136,7 +136,7 @@ void main() {
     test('cancelled-popup-request → message fenêtre déjà ouverte', () {
       expect(
         AuthErrorMapper.fromException(e('cancelled-popup-request')),
-        'Une autre fenêtre Google est déjà ouverte.',
+        'Une autre fenêtre de connexion est déjà ouverte.',
       );
     });
 

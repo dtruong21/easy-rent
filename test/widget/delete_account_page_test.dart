@@ -220,7 +220,9 @@ void main() {
           find.text('Votre compte a été supprimé. Au revoir.'),
           findsOneWidget,
         );
-        expect(find.text('landing-stub'), findsOneWidget);
+        // Pas de navigation explicite : c'est la garde du routeur (absente
+        // de ce harnais) qui redirige vers /login au flip de session réel.
+        expect(find.byType(DeleteAccountPage), findsOneWidget);
       },
     );
 

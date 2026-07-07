@@ -12,8 +12,9 @@
  *   (a) marque les quittances `receipts` du landlord — CONSERVÉES 5 ans
  *       (loi n° 89-462 du 6 juillet 1989 ; docs/LEGAL.md « droit à
  *       l'effacement ») : stamp `accountDeletedAt` + `retentionUntil`
- *       pour la purge différée. Inaccessibles dès la suppression du compte
- *       (rules = isOwner, l'UID n'existe plus) ;
+ *       pour la purge différée. Inaccessibles dès la suppression du compte :
+ *       `get` ET `list` sont owner-scoped dans firestore.rules (audit
+ *       FEAT-045) et l'UID ne résout plus pour personne ;
  *   (b) supprime TOUTES les autres collections du landlord (properties,
  *       tenants, leases, payments, documents — y compris legalHold : le
  *       flux client avertit de télécharger avant —, expenses,
@@ -31,8 +32,11 @@
  * doit provenir d'une (ré)authentification récente (`auth_time` < 5 min) —
  * même famille de garde que le `requires-recent-login` du SDK client pour
  * `User.delete()`. Un token volé « vieux » ne peut pas détruire le compte.
- * Les sessions anonymes en sont exemptées (aucun credential à re-présenter) ;
- * leur `auth_time` date du jour de création de l'essai.
+ * Les sessions anonymes en sont exemptées (aucun credential à re-présenter ;
+ * leur `auth_time` date du jour de création de l'essai) — l'exemption est
+ * confirmée par l'état Admin SDK (`providerData` vide), pas par le seul
+ * claim `sign_in_provider`, qui reste « anonymous » sur les tokens émis
+ * avant un upgrade par linking.
  */
 
 import * as admin from "firebase-admin";
@@ -70,7 +74,32 @@ export const deleteAccount = onCall(
   async (request) => {
     const uid = requireAuthUid(request);
     const token = request.auth?.token;
-    const isAnonymous = token?.firebase?.sign_in_provider === "anonymous";
+
+    // AUDIT FEAT-045 (M1) : le claim `sign_in_provider == 'anonymous'` reste
+    // porté par les tokens émis AVANT un linkWithCredential/Provider (upgrade
+    // d'essai anonyme → compte complet) — il ne prouve donc PAS que le compte
+    // est toujours anonyme. Pour ne pas exempter de la garde de fraîcheur un
+    // compte upgradé (qui contient de vraies données), on confirme l'état
+    // AUTORITATIF côté Admin SDK : anonyme ⇔ aucun provider lié.
+    let isAnonymous = token?.firebase?.sign_in_provider === "anonymous";
+    if (isAnonymous) {
+      try {
+        const userRecord = await admin.auth().getUser(uid);
+        isAnonymous = userRecord.providerData.length === 0;
+      } catch (err) {
+        const code =
+          typeof err === "object" && err !== null && "code" in err ?
+            (err as {code: unknown}).code :
+            undefined;
+        if (code !== "auth/user-not-found") {
+          logger.error(`deleteAccount: getUser failed for uid=${uid}`, err);
+          throw new HttpsError("internal", "account lookup failed — retry");
+        }
+        // user-not-found : compte Auth déjà supprimé par un run précédent
+        // interrompu — la garde de fraîcheur n'a plus d'objet, on laisse le
+        // nettoyage idempotent se terminer.
+      }
+    }
 
     if (!isAnonymous) {
       const authTime = typeof token?.auth_time === "number" ?

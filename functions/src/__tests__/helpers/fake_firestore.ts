@@ -328,24 +328,44 @@ export class FakeStorage {
 }
 
 /**
- * Fake Auth Admin minimal — couvre `admin.auth().deleteUser(uid)`
- * (delete_account.ts). `deleteUserError` simule un échec (ex. objet avec
- * `code: "auth/user-not-found"` pour le chemin idempotent).
+ * Fake Auth Admin minimal — couvre `admin.auth().deleteUser(uid)` et
+ * `admin.auth().getUser(uid)` (delete_account.ts). `deleteUserError` /
+ * `getUserError` simulent un échec (ex. objet avec `code:
+ * "auth/user-not-found"` pour les chemins idempotents). `providerDataByUid`
+ * pilote la vérification autoritative de l'exemption anonyme (M1) — par
+ * défaut, aucun provider lié (vrai compte anonyme).
  */
 export class FakeAuthAdmin {
   readonly deletedUids: string[] = [];
   deleteUserError: unknown = null;
+  getUserError: unknown = null;
+  readonly providerDataByUid = new Map<string, Array<{providerId: string}>>();
+
+  private static toError(raw: unknown): Error {
+    return raw instanceof Error ?
+      raw :
+      Object.assign(new Error("auth error"), raw);
+  }
 
   deleteUser(uid: string): Promise<void> {
     if (this.deleteUserError != null) {
-      return Promise.reject(
-        this.deleteUserError instanceof Error ?
-          this.deleteUserError :
-          Object.assign(new Error("auth error"), this.deleteUserError),
-      );
+      return Promise.reject(FakeAuthAdmin.toError(this.deleteUserError));
     }
     this.deletedUids.push(uid);
     return Promise.resolve();
+  }
+
+  getUser(uid: string): Promise<{
+    uid: string;
+    providerData: Array<{providerId: string}>;
+  }> {
+    if (this.getUserError != null) {
+      return Promise.reject(FakeAuthAdmin.toError(this.getUserError));
+    }
+    return Promise.resolve({
+      uid,
+      providerData: this.providerDataByUid.get(uid) ?? [],
+    });
   }
 }
 

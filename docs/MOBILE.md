@@ -57,6 +57,11 @@ Reste à faire (itérations suivantes) :
   puis SHA-1 release à ajouter dans Firebase.
 - **Apple Sign-In iOS** : capability « Sign in with Apple » (nécessite compte
   Apple Developer payant) — jusque-là, tester Google + email sur device.
+  **QA device dédiée (audit FEAT-045 L2)** : vérifier que la re-auth Apple du
+  flux de suppression fournit bien un `authorizationCode`
+  (`additionalUserInfo`) et que `revokeTokenWithAuthorizationCode` révoque
+  réellement (Réglages iOS → Apple ID → Connexion et sécurité) — la
+  révocation est best-effort dans le code, exigée par la 5.1.1(v).
 - **Icônes/splash natifs** : icône launcher Baillan (actuellement icône
   Flutter par défaut) — `flutter_launcher_icons` à envisager.
 - **CI** : job build APK debug en PR (non bloquant), distribution différée.

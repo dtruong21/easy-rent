@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/delete_account_controller.dart';
@@ -111,13 +110,17 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
         success: () {
           if (!context.mounted) return;
           // ScaffoldMessenger racine (MaterialApp) : le SnackBar survit à la
-          // navigation — le routeur redirige déjà (session terminée).
+          // navigation. AUCUN context.go ici : au moment où ce listener
+          // tourne, le flip de session (stream userChanges → signOut) n'est
+          // pas encore livré — une navigation explicite serait re-routée par
+          // la garde avec l'état PÉRIMÉ (fullyAuthenticated → /dashboard).
+          // On laisse la garde rediriger d'elle-même vers /login dès que
+          // sessionStateProvider bascule sur unauthenticated.
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Votre compte a été supprimé. Au revoir.'),
             ),
           );
-          context.go('/');
         },
         orElse: () {},
       );

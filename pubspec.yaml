@@ -16,6 +16,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # URL strategy path-based web (FEAT-045 — URL /delete-account fiche Play)
+  flutter_web_plugins:
+    sdk: flutter
 
   # Firebase (FEAT-019 — migration achevée)
   firebase_core: ^3.6.0

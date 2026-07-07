@@ -178,7 +178,9 @@ void main() {
         find.text('Votre essai et ses données ont été supprimés.'),
         findsOneWidget,
       );
-      expect(find.text('landing-stub'), findsOneWidget);
+      // Pas de navigation explicite : la page publique reste affichée et se
+      // re-rend seule au flip de session (anonymous → unauthenticated).
+      expect(find.byType(DeleteAccountRequestPage), findsOneWidget);
     });
   });
 }

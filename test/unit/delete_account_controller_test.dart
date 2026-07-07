@@ -205,7 +205,7 @@ void main() {
 
       final state = container.read(deleteAccountControllerProvider);
       state.maybeWhen(
-        error: (message) => expect(message, 'Connexion Google annulée.'),
+        error: (message) => expect(message, 'Connexion annulée.'),
         orElse: () => fail('expected error state, got $state'),
       );
       // Le compte n'a jamais été purgé.

@@ -184,6 +184,55 @@ describe("deleteAccount", () => {
     expect(fakeAuth.deletedUids).toEqual([LANDLORD_A]);
   });
 
+  it("REFUSE l'exemption anonyme si le compte a été upgradé par linking (claim périmé, audit M1)", async () => {
+    // Un token émis AVANT linkAnonymousWithGoogle porte encore
+    // sign_in_provider='anonymous' — mais le compte a un provider lié :
+    // la garde de fraîcheur doit s'appliquer.
+    seedLandlordDataset(LANDLORD_A, "a1");
+    fakeAuth.providerDataByUid.set(LANDLORD_A, [{providerId: "google.com"}]);
+
+    await expect(
+      deleteAccount.run(
+        makeRequest(LANDLORD_A, {
+          authTime: STALE_AUTH_TIME(),
+          signInProvider: "anonymous",
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "recent-login-required",
+    });
+
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("compte upgradé + token frais → purge acceptée (la garde ne bloque que le périmé)", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    fakeAuth.providerDataByUid.set(LANDLORD_A, [{providerId: "google.com"}]);
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {signInProvider: "anonymous"}),
+    );
+
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeAuth.deletedUids).toEqual([LANDLORD_A]);
+  });
+
+  it("échec getUser (hors user-not-found) → fail-closed en 'internal', rien n'est purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    fakeAuth.getUserError = {code: "auth/internal-error"};
+
+    await expect(
+      deleteAccount.run(
+        makeRequest(LANDLORD_A, {signInProvider: "anonymous"}),
+      ),
+    ).rejects.toMatchObject({code: "internal"});
+
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
   it("est idempotent : un second appel sur un compte déjà purgé réussit", async () => {
     seedLandlordDataset(LANDLORD_A, "a1");
 
@@ -240,5 +289,22 @@ describe("deleteAccount", () => {
 
     expect(fakeDb.peek("payments/pay-0")).toBeUndefined();
     expect(fakeDb.peek("payments/pay-449")).toBeUndefined();
+  });
+
+  it("stampe par chunks un volume de quittances > PURGE_PAGE_SIZE", async () => {
+    fakeDb.seed(`landlords/${LANDLORD_A}`, {id: LANDLORD_A});
+    for (let i = 0; i < 450; i++) {
+      fakeDb.seed(`receipts/rcpt-${i}`, {landlordId: LANDLORD_A});
+    }
+
+    const result = await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    expect(result).toMatchObject({receiptsRetained: 450});
+    expect(fakeDb.peek("receipts/rcpt-0")?.accountDeletedAt).toBeInstanceOf(
+      Date,
+    );
+    expect(fakeDb.peek("receipts/rcpt-449")?.accountDeletedAt).toBeInstanceOf(
+      Date,
+    );
   });
 });

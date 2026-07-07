@@ -492,7 +492,7 @@ export const softDeleteEntity = onCall(async (request) => {
 
 **Exigence stores** : Google Play « Account deletion » (13327111) + App Store 5.1.1(v).
 
-**Garde** : token non-anonyme dont `auth_time` > 5 min → `failed-precondition` (`recent-login-required`) — le client réauthentifie juste avant (mot de passe ou flux OAuth). Sessions anonymes exemptées.
+**Garde** : token non-anonyme dont `auth_time` > 5 min → `failed-precondition` (`recent-login-required`) — le client réauthentifie juste avant (mot de passe ou flux OAuth). Sessions anonymes exemptées — exemption confirmée côté Admin SDK (`getUser().providerData` vide, audit M1 : le claim `sign_in_provider` reste 'anonymous' sur les tokens émis avant un upgrade par linking).
 
 **Purge (ordre)** :
 1. `receipts` du landlord : **CONSERVÉES** (loi 6 juillet 1989, 5 ans) — stamp `accountDeletedAt` + `retentionUntil` (purge différée par futur cron)
@@ -509,7 +509,7 @@ export const softDeleteEntity = onCall(async (request) => {
 
 **Fichier** : `functions/src/callable/delete_account.ts`
 
-**Tests** : `functions/src/__tests__/delete_account.test.ts` (11 tests : fraîcheur, purge cross-collections, isolation landlords, rétention quittances, idempotence, échecs Auth/Storage)
+**Tests** : `functions/src/__tests__/delete_account.test.ts` (15 tests : fraîcheur, exemption anonyme vérifiée providerData, purge cross-collections, isolation landlords, rétention quittances, idempotence, échecs Auth/Storage/getUser) + `functions/rules-tests/firestore_rules.test.ts` (28 tests émulateur, `npm run test:rules`)
 
 ---
 
