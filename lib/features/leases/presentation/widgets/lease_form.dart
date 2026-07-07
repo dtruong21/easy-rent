@@ -7,6 +7,7 @@ import '../../../../core/utils/money_format.dart';
 import '../../../../features/payments/domain/payment_method.dart';
 import '../../../../features/properties/domain/property.dart';
 import '../../../../features/tenants/domain/tenant.dart';
+import '../../domain/charge_mode.dart';
 import '../../domain/lease_type.dart';
 
 /// Formulaire bail — 5 sections.
@@ -27,6 +28,7 @@ class LeaseForm extends StatefulWidget {
     required this.tenants,
     required this.rentController,
     required this.chargesController,
+    required this.nonRecoverableChargesController,
     required this.depositController,
     required this.agencyFeesController,
     required this.paymentDayController,
@@ -38,6 +40,7 @@ class LeaseForm extends StatefulWidget {
     this.initialStartDate,
     this.initialEndDate,
     this.initialLeaseType,
+    this.initialChargeMode,
     this.initialPaymentMethod,
     this.initialSolidarityClause = false,
     this.initialEntryInventoryDone = false,
@@ -55,6 +58,7 @@ class LeaseForm extends StatefulWidget {
   // --- Section 2 controllers ---
   final TextEditingController rentController;
   final TextEditingController chargesController;
+  final TextEditingController nonRecoverableChargesController;
   final TextEditingController depositController;
   final TextEditingController agencyFeesController;
 
@@ -78,6 +82,11 @@ class LeaseForm extends StatefulWidget {
   final DateTime? initialStartDate;
   final DateTime? initialEndDate;
   final LeaseType? initialLeaseType;
+
+  /// Mode de charges pré-sélectionné (mode édition). `null` en création ou
+  /// pour un bail pré-042 — le formulaire dérive alors le défaut à partir du
+  /// type de bail (FEAT-042, cf. `LeaseFormWidgetState._resolveChargeMode`).
+  final ChargeMode? initialChargeMode;
   final PaymentMethod? initialPaymentMethod;
   final bool initialSolidarityClause;
   final bool initialEntryInventoryDone;
@@ -100,6 +109,11 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   DateTime? _endDate;
   bool _isOpenEnded = false;
   LeaseType _leaseType = LeaseType.unfurnished;
+
+  /// Mode de charges courant — jamais `null` dans le formulaire (l'ambiguïté
+  /// "pré-042" n'a de sens qu'en base ; l'utilisateur choisit toujours
+  /// explicitement ou hérite d'un défaut cohérent avec le type, FEAT-042).
+  ChargeMode _chargeMode = ChargeMode.provisions;
   PaymentMethod _paymentMethod = PaymentMethod.virement;
   bool _solidarityClause = false;
   bool _entryInventoryDone = false;
@@ -113,6 +127,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   int _tenantFieldGeneration = 0;
   bool _rentTouched = false;
   bool _chargesTouched = false;
+  bool _nonRecoverableChargesTouched = false;
   bool _depositTouched = false;
   bool _agencyFeesTouched = false;
   bool _startDateTouched = false;
@@ -137,10 +152,33 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     _endDate = widget.initialEndDate;
     _isOpenEnded = widget.initialEndDate == null;
     _leaseType = widget.initialLeaseType ?? LeaseType.unfurnished;
+    _chargeMode = _resolveChargeMode(_leaseType, widget.initialChargeMode);
     _paymentMethod = widget.initialPaymentMethod ?? PaymentMethod.virement;
     _solidarityClause = widget.initialSolidarityClause;
     _entryInventoryDone = widget.initialEntryInventoryDone;
   }
+
+  /// Résout le mode de charges à appliquer pour un [type] de bail donné,
+  /// en tenant compte d'un [requested] mode (choix utilisateur ou valeur
+  /// pré-existante) — FEAT-042. Miroir client de la cohérence imposée côté
+  /// serveur (`resolveChargeMode` dans `lease_payment.ts`) :
+  /// - nu → provisions (forcé)
+  /// - mobilité → forfait (forcé)
+  /// - meublé / étudiant → [requested] si fourni, sinon provisions (défaut).
+  static ChargeMode _resolveChargeMode(LeaseType type, ChargeMode? requested) {
+    return switch (type) {
+      LeaseType.unfurnished => ChargeMode.provisions,
+      LeaseType.mobility => ChargeMode.forfait,
+      LeaseType.furnished ||
+      LeaseType.student => requested ?? ChargeMode.provisions,
+    };
+  }
+
+  /// Vrai si le mode de charges est verrouillé (non modifiable par
+  /// l'utilisateur) pour le type de bail courant — nu (provisions forcé) et
+  /// mobilité (forfait forcé, loi ELAN art. 25-18).
+  bool get _chargeModeLocked =>
+      _leaseType == LeaseType.unfurnished || _leaseType == LeaseType.mobility;
 
   /// Sélectionne le locataire [id] (créé inline depuis le formulaire) —
   /// no-op si l'id est absent de [LeaseForm.tenants] (liste pas encore
@@ -214,6 +252,8 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           const SizedBox(height: 16),
           _buildChargesField(),
           const SizedBox(height: 16),
+          _buildNonRecoverableChargesField(),
+          const SizedBox(height: 16),
           _buildDepositField(),
           const SizedBox(height: 16),
           _buildAgencyFeesField(),
@@ -226,6 +266,8 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           _SectionHeader(title: 'Type de bail et durée'),
           const SizedBox(height: 12),
           _buildLeaseTypeField(),
+          const SizedBox(height: 16),
+          _buildChargeModeField(),
           const SizedBox(height: 16),
           _buildStartDateField(),
           const SizedBox(height: 16),
@@ -428,29 +470,81 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     },
   );
 
-  Widget _buildChargesField() => TextFormField(
-    key: const Key('field_charges'),
-    controller: widget.chargesController,
-    enabled: widget.enabled,
-    decoration: const InputDecoration(
-      labelText: 'Charges (€) *',
-      hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
-      suffixText: '€',
-      border: OutlineInputBorder(),
+  /// Libellé + texte d'aide du champ charges — dynamique selon le mode de
+  /// charges (FEAT-042) : provisions récupérables (régularisables) vs
+  /// forfait libératoire (montant unique, non ventilable).
+  (String, String) get _chargesFieldLabels => switch (_chargeMode) {
+    ChargeMode.provisions => (
+      'Charges récupérables (€) *',
+      'Provisions mensuelles refacturables au locataire (décret n°87-713)',
     ),
-    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    onChanged: (_) {
-      if (_chargesTouched) setState(() {});
-    },
-    onEditingComplete: () {
-      setState(() => _chargesTouched = true);
-      FocusScope.of(context).nextFocus();
-    },
-    validator: (v) {
-      if (!_chargesTouched) return null;
-      return LeaseFormValidators.validateChargesAmount(v);
-    },
-  );
+    ChargeMode.forfait => (
+      'Forfait de charges (€) *',
+      'Forfait mensuel libératoire — non régularisable.',
+    ),
+  };
+
+  Widget _buildChargesField() {
+    final (label, helper) = _chargesFieldLabels;
+    return TextFormField(
+      key: const Key('field_charges'),
+      controller: widget.chargesController,
+      enabled: widget.enabled,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
+        helperText: helper,
+        suffixText: '€',
+        border: const OutlineInputBorder(),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (_) {
+        if (_chargesTouched) setState(() {});
+      },
+      onEditingComplete: () {
+        setState(() => _chargesTouched = true);
+        FocusScope.of(context).nextFocus();
+      },
+      validator: (v) {
+        if (!_chargesTouched) return null;
+        return LeaseFormValidators.validateChargesAmount(v);
+      },
+    );
+  }
+
+  /// Champ "Charges non récupérables" — masqué en mode forfait (FEAT-042) :
+  /// un forfait est un montant unique libératoire, non ventilable entre
+  /// récupérable/non récupérable (le serveur force la valeur à 0 dans ce
+  /// mode, cf. `lease_payment.ts`).
+  Widget _buildNonRecoverableChargesField() {
+    if (_chargeMode == ChargeMode.forfait) return const SizedBox.shrink();
+    return TextFormField(
+      key: const Key('field_non_recoverable_charges'),
+      controller: widget.nonRecoverableChargesController,
+      enabled: widget.enabled,
+      decoration: const InputDecoration(
+        labelText: 'Charges non récupérables (€)',
+        hintText: 'Ex. : 20,00 (saisir 0 si aucune)',
+        helperText:
+            'À la charge du bailleur — non refacturable au locataire. '
+            'Saisir 0 si aucune.',
+        suffixText: '€',
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (_) {
+        if (_nonRecoverableChargesTouched) setState(() {});
+      },
+      onEditingComplete: () {
+        setState(() => _nonRecoverableChargesTouched = true);
+        FocusScope.of(context).nextFocus();
+      },
+      validator: (v) {
+        if (!_nonRecoverableChargesTouched) return null;
+        return LeaseFormValidators.validateNonRecoverableCharges(v);
+      },
+    );
+  }
 
   Widget _buildDepositField() => TextFormField(
     key: const Key('field_deposit'),
@@ -522,9 +616,70 @@ class LeaseFormWidgetState extends State<LeaseForm> {
         .map((t) => DropdownMenuItem(value: t, child: Text(t.labelFr)))
         .toList(),
     onChanged: widget.enabled
-        ? (t) => setState(() => _leaseType = t ?? LeaseType.unfurnished)
+        ? (t) => setState(() {
+            _leaseType = t ?? LeaseType.unfurnished;
+            // FEAT-042 : recalculer le mode de charges pour respecter la
+            // cohérence type↔mode (nu→provisions, mobilité→forfait). Si le
+            // type reste libre (meublé/étudiant), on conserve le choix
+            // courant plutôt que de le réinitialiser.
+            _chargeMode = _resolveChargeMode(_leaseType, _chargeMode);
+          })
         : null,
   );
+
+  /// Sélecteur du mode de charges (FEAT-042).
+  ///
+  /// - Nu : provisions verrouillé + note légale.
+  /// - Meublé / étudiant : `SegmentedButton` Provisions | Forfait, libre.
+  /// - Mobilité : forfait verrouillé + note légale.
+  Widget _buildChargeModeField() {
+    final theme = Theme.of(context);
+    final locked = _chargeModeLocked;
+    final helperText = switch (_leaseType) {
+      LeaseType.unfurnished =>
+        'Bail vide : provisions + régularisation annuelle obligatoire '
+            '(art. 23).',
+      LeaseType.mobility =>
+        'Bail mobilité : forfait obligatoire, non régularisable '
+            '(loi ELAN art. 25-18).',
+      LeaseType.furnished || LeaseType.student =>
+        'Meublé : provisions (régularisables) ou forfait (libératoire, '
+            'art. 25-10).',
+    };
+
+    return FormField<ChargeMode>(
+      key: const Key('field_charge_mode'),
+      initialValue: _chargeMode,
+      builder: (state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Mode de charges', style: theme.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          SegmentedButton<ChargeMode>(
+            key: const Key('segmented_charge_mode'),
+            segments: const [
+              ButtonSegment(
+                value: ChargeMode.provisions,
+                label: Text('Provisions'),
+              ),
+              ButtonSegment(value: ChargeMode.forfait, label: Text('Forfait')),
+            ],
+            selected: {_chargeMode},
+            onSelectionChanged: (widget.enabled && !locked)
+                ? (selection) => setState(() => _chargeMode = selection.first)
+                : null,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            helperText,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildStartDateField() {
     final theme = Theme.of(context);
@@ -618,6 +773,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       _tenantTouched = true;
       _rentTouched = true;
       _chargesTouched = true;
+      _nonRecoverableChargesTouched = true;
       _depositTouched = true;
       _agencyFeesTouched = true;
       _startDateTouched = true;
@@ -633,6 +789,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   Property? get selectedProperty => _selectedProperty;
   Tenant? get selectedTenant => _selectedTenant;
   LeaseType get currentLeaseType => _leaseType;
+
+  /// Mode de charges courant (FEAT-042) — toujours non-null côté formulaire.
+  ChargeMode get currentChargeMode => _chargeMode;
   PaymentMethod get currentPaymentMethod => _paymentMethod;
   bool get currentSolidarityClause => _solidarityClause;
   bool get currentEntryInventoryDone => _entryInventoryDone;

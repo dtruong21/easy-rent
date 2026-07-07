@@ -32,6 +32,12 @@ jobs:
         run: |
           OVERRIDE="${{ github.event.inputs.target }}"
           BRANCH="${{ github.ref_name }}"
+          # Sur un `push` (pas un workflow_dispatch), inputs.target est VIDE —
+          # on le traite comme "auto" pour que la détection par branche joue.
+          # Sans ça, un push sur `main` retombait dans le `else` → déploiement
+          # STAGING au lieu de PROD (bug corrigé 2026-07-05 : release #65
+          # déployée à la main faute de ce fix).
+          [ -z "$OVERRIDE" ] && OVERRIDE="auto"
 
           if [ "$OVERRIDE" = "prod" ] || ([ "$OVERRIDE" = "auto" ] && [ "$BRANCH" = "main" ]); then
             echo "env_name=production" >> $GITHUB_OUTPUT
@@ -73,9 +79,14 @@ jobs:
         # Web keys sont publiques par design, sécurité via Rules + App Check).
         # --build-number : numéro de run GitHub → version.json → affiché dans
         # Profil → À propos (identifie le déploiement exact).
+        # --pwa-strategy=none sur les DEUX environnements : index.html porte un
+        # script qui désenregistre tout Service Worker (héritage FEAT-019, fix
+        # cache-poisoning). Tant que ce script est présent, prod DOIT aussi être
+        # SW-less — sinon le SW prod est tué à chaque session (churn + reload).
+        # Réactiver l'offline-first = retirer d'abord ce script d'index.html.
         run: |
           flutter build web --release \
-            ${{ needs.determine-env.outputs.env_name == 'staging' && '--pwa-strategy=none' || '' }} \
+            --pwa-strategy=none \
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
             --build-number=${{ github.run_number }}
 

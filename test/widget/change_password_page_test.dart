@@ -27,6 +27,16 @@ import 'package:go_router/go_router.dart';
 /// [hasPasswordProvider]) et les 2 appels du flow de changement de mot de
 /// passe in-app (FEAT-025).
 class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   _FakeAuthRepository(this._user);
 
   final User? _user;

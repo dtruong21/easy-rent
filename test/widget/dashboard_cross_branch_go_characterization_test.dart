@@ -27,6 +27,7 @@ import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -56,6 +57,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepo implements AuthRepository {
+  @override
+  Future<String?> reauthenticateWithOAuthProvider(String providerId) async =>
+      null;
+
+  @override
+  Future<void> revokeAppleToken(String authorizationCode) async {}
+
+  @override
+  Future<void> deleteAccount() async {}
+
   @override
   Stream<User?> get authStateChanges => const Stream<User?>.empty();
 
@@ -310,7 +321,7 @@ Lease _makeLease({required String id, required LeaseStatus status}) => Lease(
 
 class _FakeLeaseRepo implements LeaseRepository {
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [
     LeaseListItem(
       lease: _makeLease(id: 'lease-shell-1', status: LeaseStatus.active),
       propertyName: 'Appart Test',
@@ -335,6 +346,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
@@ -343,6 +355,7 @@ class _FakeLeaseRepo implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async => throw UnimplementedError();
 
   @override

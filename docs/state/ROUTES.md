@@ -1,250 +1,308 @@
-# Routes Flutter — snapshot
+# Routes Flutter & Navigation — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-07-05 (FEAT-023...FEAT-030 ✅ mergées) — landing publique `/`, simulator accessible anonymes, garde 3-états (unauthenticated / anonymous / fullyAuthenticated), shell adaptatif FEAT-026.
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-07-05 (FEAT-041a/b routes ajoutées, `/properties/:id/expenses*`). **Pivot** : FEAT-026 (StatefulShellRoute.indexedStack 5 branches) + FEAT-030 (navigation fixes).
 
-## Garde d'accès (redirects)
+## Architecture Navigation
 
-| SessionState | Landing `/` | Auth forms | Public | Simulator | Métier | Comportement |
-|---|---|---|---|---|---|---|
-| `unauthenticated` | ✅ Access | ✅ /login/signup/forgot/reset | ✅ /privacy | ❌ Deny | ❌ Deny | → /login |
-| `anonymous` | → /simulator | ❌ Deny | ✅ /privacy | ✅ /simulator/:id | ❌ Deny | → /simulator |
-| `fullyAuthenticated` | → /dashboard | ❌ Deny | ✅ /privacy | ✅ /simulator/:id | ✅ All métier | — |
+**Système** : GoRouter 14.6.0 (nested routing avec StatefulShellRoute)
+
+**Gardiennage** : 3-states (unauthenticated / anonymous / fullyAuthenticated) via `sessionStateProvider` (Riverpod StreamProvider)
+
+**Shell** : StatefulShellRoute.indexedStack 5 branches (Accueil / Biens / Locataires / Baux / Profil) — accessibles uniquement fullyAuthenticated (anonyme redirigé)
+
+**Transitions** : AppTransition.standard (slide) ou AppTransition.fade (auth forms)
+
+---
+
+## Routes Publiques (hors shell)
+
+| Chemin | Page | Transition | Guard | Notes |
+|---|---|---|---|---|
+| `/` | LandingPage | fade | unauthenticated OR anonyme → redir `/simulator` | Carrefour onboarding |
+| `/login` | LoginPage | fade | !fullyAuthenticated | Email/password + Google/Apple signup |
+| `/signup` | SignupPage | fade | !fullyAuthenticated | Nouvelles inscriptions + RGPD gate |
+| `/forgot-password` | ForgotPasswordPage | fade | public | Réinitialisation mot de passe |
+| `/reset-password` | ResetPasswordPage | fade | public | Lien email-reset |
+| `/privacy` | PrivacyPage | fade | public | Politique confidentialité (v1.2, loi 6 juillet 1989) |
+| `/terms` | TermsPage | fade | public | CGU (v2-2026-07, FEAT-023) |
+| `/delete-account` | DeleteAccountRequestPage | fade | public (anonyme inclus) | **FEAT-045** — URL Google Play « Account deletion » ; adapte le CTA à la session (login / go profil / suppression essai anonyme) |
+| `/faq` | FaqPage | fade | public (anonyme inclus) | **FEAT-048** — questions fréquentes produit (ExpansionTiles), aussi accessible via Profil → Aide |
+
+---
+
+## Routes Shell (5 branches, fullyAuthenticated only)
+
+### Branche 0 : Dashboard (Accueil)
+
+| Chemin | Page | Transition | Type | Notes |
+|---|---|---|---|---|
+| `/dashboard` | DashboardPage | standard | read | KPI cards (loyers encaissés, retards, charges) + CTA (Simulateur, Charges) |
+
+---
+
+### Branche 1 : Properties (Biens, FEAT-003)
+
+| Chemin | Page | Transition | Type | Notes |
+|---|---|---|---|---|
+| `/properties` | PropertiesListPage | standard | read | Listage biens (grid/table toggleable FEAT-012) |
+| `/properties/new` | PropertyFormPage | standard | write | Créer bien |
+| `/properties/:id` | PropertyDetailPage | standard | read | Fiche bien (détail, liens baux, onglet dépenses) |
+| `/properties/:id/edit` | PropertyFormPage | standard | write | Éditer bien |
+| **`/properties/:id/expenses`** | **PropertyExpensesPage** | standard | read | **NEW FEAT-041a — Listage dépenses bien** |
+| **`/properties/:id/expenses/new`** | **ExpenseFormPage** | standard | write | **NEW FEAT-041a — Créer dépense (pré-remplissage leaseId via extra)** |
+| **`/properties/:id/expenses/:eid/edit`** | **ExpenseEditPage** | standard | write | **NEW FEAT-041a — Éditer dépense** |
+
+**Notes FEAT-041** :
+- `/properties/:id/expenses/new?leaseId=xxx` : pré-remplissage depuis fiche bail (state.extra)
+- PropertyExpensesPage : onglet dépenses accessible depuis PropertyDetailPage
+- Flux : Dashboard → drill-down property → onglet dépenses → `/expenses` → `new` ou `:eid/edit`
+
+---
+
+### Branche 2 : Tenants (Locataires, FEAT-004)
+
+| Chemin | Page | Transition | Type | Notes |
+|---|---|---|---|---|
+| `/tenants` | TenantsListPage | standard | read | Listage locataires |
+| `/tenants/new` | TenantFormPage | standard | write | Créer locataire (optionnel `?picker=1` → pop tenantId au lieu de go `/tenants`) |
+| `/tenants/:id` | TenantDetailPage | standard | read | Fiche locataire |
+| `/tenants/:id/edit` | TenantEditPage | standard | write | Éditer locataire |
+
+---
+
+### Branche 3 : Leases (Baux, FEAT-005) + Payments (FEAT-006) + Receipts (FEAT-007)
+
+| Chemin | Page | Transition | Type | Notes |
+|---|---|---|---|---|
+| `/leases` | LeasesListPage | standard | read | Listage baux (filter drill-down via `?filter=active\|renewable\|late`) |
+| `/leases/new` | LeaseFormPage | standard | write | Créer bail |
+| `/leases/:id` | LeaseDetailPage | standard | read | Fiche bail (`?action=regularize` auto-ouvre dialog FEAT-030) |
+| `/leases/:id/edit` | LeaseEditPage | standard | write | Éditer bail (FEAT-036 : chargesAmountCents + nonRecoverableChargesCents) |
+| `/leases/:id/payments/new` | PaymentFormPage | standard | write | Créer paiement (FEAT-029 : notes motif) |
+| `/leases/:id/payments/:pid/edit` | PaymentEditPage | standard | write | Éditer paiement |
+| `/leases/:id/receipts` | LeaseReceiptsPage | standard | read | Quittances bail (FEAT-007, generate + share + archive) |
+
+---
+
+### Branche 4 : Profile (Profil, FEAT-025b)
+
+| Chemin | Page | Transition | Type | Notes |
+|---|---|---|---|---|
+| `/profile` | ProfilePage | standard | read | Hub réglages — ordre 2026-07-07 : Compte (détails, mot de passe, **suppression**) / Apparence / Aide (**FAQ**, contact, légal) / À propos / Session |
+| `/profile/details` | ProfileDetailsPage | standard | write | Email/fullName (FEAT-025, immutables) |
+| `/profile/password` | ChangePasswordPage | standard | write | Changement mot de passe (reauthenticateWithPassword + updatePassword, gated hasPasswordProvider) |
+| `/profile/support` | SupportPage | standard | write | Formulaire contact (FEAT-025, collection `support_requests`) |
+| `/profile/delete-account` | DeleteAccountPage | standard | write | **FEAT-045** — suppression de compte (re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée) |
+
+---
+
+## Routes hors Shell (plein écran, BAILLAN-M1)
+
+### Simulateur (FEAT-018)
+
+| Chemin | Page | Transition | Type | Guard | Notes |
+|---|---|---|---|---|
+| `/simulator` | SimulatorPage | standard | CRUD | unauthenticated OR anonymous OR fullyAuthenticated | Simulateur investissement (accessible anonymes, essai 14j) |
+| `/simulator/:id` | SimulatorPage(scenarioId) | standard | CRUD | (idem) | Édition scénario |
+
+**Comportement** :
+- Anonyme redirigé landing → `/simulator` (seul accès métier)
+- Compte complet peut `push()` par-dessus shell (simulateur modal, retour via pop)
+- Scenarios persistés (investment_scenarios collection, landlordId=uid invariant)
+
+---
+
+## Paramètres de Route (GoRouter patterns)
+
+| Route | Param | Type | Notes |
+|---|---|---|---|
+| `/properties/:id` | id | string (UUID) | Property UUID |
+| `/properties/:id/expenses/:eid/edit` | id, eid | string | Property UUID, Expense UUID (FEAT-041) |
+| `/tenants/:id` | id | string (UUID) | Tenant UUID |
+| `/leases/:id` | id | string (UUID) | Lease UUID |
+| `/leases/:id?action=regularize` | action (query) | string | Query param : 'regularize' → auto-ouvre dialog (FEAT-030) |
+| `/leases/:id/payments/:pid/edit` | id, pid | string | Lease UUID, Payment UUID |
+| `/simulator/:id` | id | string (UUID) | Scenario UUID |
+| `/tenants/new?picker=1` | picker (query) | '1' | Picker mode → pop tenantId au lieu go |
+| `/properties/:id/expenses/new?leaseId=xxx` | leaseId (extra) | string | Pré-remplissage depuis fiche bail (state.extra, FEAT-041) |
+
+---
+
+## Stratégie Redirect (sessionStateProvider)
+
+**Source** : `lib/core/router/app_router.dart`, fonction `redirect()` + listener `sessionStateProvider`.
 
 **Implémentation** :
-- `ref.listen<SessionState>(sessionStateProvider)` → `_RouterRefreshNotifier.refresh()`
-- Bypass ancien `GoRouterRefreshStream` (race condition signe-in chaud, commit 07f20a3)
-- Riverpod garanti état frais APRÈS intégration du changement
-
----
-
-## Public Routes
-
-| Route | Page | Transition | Accès | Feature | Notes |
-|---|---|---|---|---|---|
-| `/` | `LandingPage` | fade | unauthenticated + anonymous | BAILLAN-M1 | Carrefour onboarding (anons → /simulator) |
-| `/login` | `LoginPage` | fade | unauthenticated | FEAT-001 | Email + password |
-| `/signup` | `SignupPage` | fade | unauthenticated | FEAT-001, FEAT-021 | Email + password + RGPD gate (commit d9ad603) |
-| `/forgot-password` | `ForgotPasswordPage` | fade | unauthenticated | — | Demande lien reset |
-| `/reset-password` | `ResetPasswordPage` | fade | public (email link) | — | Reste accessible connecté (late-click email) |
-| `/privacy` | `PrivacyPage` | fade | public | — | Mentions RGPD + loi 6 juillet 1989 |
-| `/terms` | `TermsPage` | fade | public | FEAT-023 | CGU v1.0 (2026-07-03) — liée depuis /profile |
-
-**Notas** :
-- `/login` + `/signup` redirigent comptes connectés vers `/dashboard`
-- RGPD gate (`signup_form`) : consentement obligatoire au clic (pas pre-checked)
-- Landing `/` = première route, accès non-authed + anonymes
-
----
-
-## Authenticated Routes (compte complet)
-
-### Core Collections
-
-| Route | Page | Transition | Card | Feature |
-|---|---|---|---|---|
-| `/dashboard` | `DashboardPage` | standard | — | FEAT-010 |
-| `/properties` | `PropertiesListPage` | standard | PropertyCard | FEAT-003 |
-| `/properties/new` | `PropertyFormPage` | standard | — | FEAT-003 |
-| `/properties/:id` | `PropertyDetailPage` | standard | — | FEAT-003 |
-| `/properties/:id/edit` | `PropertyEditPage` | standard | — | FEAT-003 |
-| `/tenants` | `TenantsListPage` | standard | TenantCard | FEAT-004 |
-| `/tenants/new` | `TenantFormPage` | standard | — | FEAT-004 |
-| `/tenants/:id` | `TenantDetailPage` | standard | — | FEAT-004 |
-| `/tenants/:id/edit` | `TenantEditPage` | standard | — | FEAT-004 |
-| `/leases` | `LeasesListPage` | standard | LeaseCard + status pills | FEAT-005 |
-| `/leases/new` | `LeaseFormPage` | standard | — | FEAT-005 |
-| `/leases/:id` | `LeaseDetailPage` | standard | — | FEAT-005 |
-| `/leases/:id/edit` | `LeaseEditPage` | standard | — | FEAT-005 |
-
-### Lease Sub-Routes (Branche 3, FEAT-005...FEAT-030)
-
-| Route | Page | Transition | Feature | Parents |
-|---|---|---|---|---|
-| `/leases/:id/edit` | `LeaseEditPage` | standard | FEAT-005 | LeaseDetailPage |
-| `/leases/:id/payments/new` | `PaymentFormPage` | standard | FEAT-006, FEAT-029 | LeaseDetailPage |
-| `/leases/:id/payments/:pid/edit` | `PaymentEditPage` | standard | FEAT-006, FEAT-029 | LeaseDetailPage |
-| `/leases/:id/receipts` | `LeaseReceiptsPage` | standard | FEAT-007, FEAT-029 | LeaseDetailPage |
-
-**FEAT-029b (2026-07-04)** : Query param `/leases/:id?action=regularize` ouvre auto dialog charge_regularization (page détail + FEAT-029 button on card/list line).
-
-**FEAT-030 (2026-07-04)** : Navigation retour fixée :
-- Formulaires → `pop()` retour fiche (ex. PropertyEditPage → PropertyDetailPage)
-- Tuiles Accueil → `push()` (stack conservée)
-- Simulateur → `push()` par-dessus shell
-
-### User Routes (Shell, 5 branches FEAT-026)
-
-| Route | Page | Transition | Feature | Branche |
-|---|---|---|---|---|
-| `/dashboard` | `DashboardPage` | standard | FEAT-010, FEAT-027, FEAT-028 | Accueil |
-| `/properties` (+ sub-routes) | `PropertiesListPage` | standard | FEAT-003 | Biens |
-| `/tenants` (+ sub-routes) | `TenantsListPage` | standard | FEAT-004 | Locataires |
-| `/leases` (+ sub-routes) | `LeasesListPage` | standard | FEAT-005, FEAT-028, FEAT-029b | Baux |
-| `/profile` | `ProfilePage` | standard | FEAT-023, FEAT-025, FEAT-025b | Profil |
-
-**FEAT-026 (2026-07-03, commit ca2d10a)** : Navigation shell adaptative — `StatefulShellRoute.indexedStack` 5 branches, état préservé par branche :
-- **Desktop** (≥600px) : `NavigationRail` repliable (icônes + libellés compact/étendu, `railExpandedProvider` persisté SharedPreferences)
-- **Mobile** (<600px) : `NavigationBar` en bas (5 destinations)
-- **Marque** : Logo Baillan en tête (replié : icône / déplié : wordmark)
-- Landing/auth/légal/simulateur hors shell (3-états inchangée)
-- Référence : [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md)
-
-### Profile Sub-Routes (Branche 4, FEAT-025b)
-
-| Route | Page | Notes |
-|---|---|---|
-| `/profile` | `ProfilePage` | Hub tuiles (détails, password, support, légal, à propos) |
-| `/profile/details` | `ProfileDetailsPage` | Identité bailleur (form complet) |
-| `/profile/password` | `ChangePasswordPage` | Comptes email only (gate `hasPasswordProvider` + reauthenticateWithPassword) |
-| `/profile/support` | `SupportPage` | Formulaire « Nous contacter » → collection `support_requests` create-only (FEAT-025) |
-
-**FEAT-023 (2026-07-03)** : ProfilePage tuiles réglages app :
-- Thème Système/Clair/Sombre (`themeModeProvider`, SharedPreferences)
-- Liens `/terms` + `/privacy` 
-- Bouton déconnexion
-- Section « À propos » (version via `package_info_plus` → v1.0.0+BUILD)
-
----
-
-## Anonymous Routes (essai BAILLAN-M1)
-
-| Route | Page | Transition | Accès | Feature | Notes |
-|---|---|---|---|---|---|
-| `/simulator` | `SimulatorPage()` | standard | anonymous + fullyAuthenticated | FEAT-018 | CRUD investment_scenarios, pas parent |
-| `/simulator/:id` | `SimulatorPage(scenarioId: id)` | standard | anonymous + fullyAuthenticated | FEAT-018 | Edit scénario existant |
-
-**Notas** :
-- Anonyme = essai 14j dans `landlords.anonExpiresAt`
-- Pas accès collections métier (properties, leases, etc.) — Firestore RLS refuse
-- Quit demo dialog : `quit_demo_dialog.dart` + action deconnexion
-- Simulateur avant création de compte = route d'engagement maximal (MVP P1)
-
----
-
-## Session State (3-branch enum)
-
-```dart
-enum SessionState {
-  unauthenticated,  // Pas de compte Firebase Auth
-  anonymous,        // Firebase Auth anonymous (essai 14j)
-  fullyAuthenticated; // Email/Google/Apple vérifié
-}
-```
-
-**Dérivation** (FirebaseAuth + custom claims) :
-- `currentUser == null` → unauthenticated
-- `currentUser != null && firebase.sign_in_provider == 'anonymous'` → anonymous
-- `currentUser != null && !isAnonymous()` → fullyAuthenticated
-
-**Provider** : `lib/features/auth/application/auth_session_provider.dart`
-- StreamProvider sur `FirebaseAuth.authStateChanges`
-- Cache Firestore Doc `landlords/{uid}` en fallback (loading/error tolerance)
-
----
-
-## Page Transitions (AppTransition)
-
-```dart
-enum AppTransition { fade, standard }
-```
-
-Utilisé dans `appPage()` builder (inject animation) :
-
-| Transition | Duration | Cas d'usage |
-|---|---|---|
-| `fade` | 300ms | Landing ↔ auth forms ↔ privacy (changement radical contexte) |
-| `standard` | 400ms | Métier (dashboard, CRUD, navigation hiérarchique) |
-
-**Implementation** : `lib/core/router/transitions.dart` → custom PageBuilder.
-
----
-
-## RLS Guards (Firestore Rules)
-
-| Collection | Route | RLS Match | CF exclusive | Notes |
-|---|---|---|---|---|
-| `landlords/{uid}` | /profile | isOwner(uid) | — | Lecture doc self |
-| `properties` | /properties* | isFullyAuthed() | — | Anonyme denied |
-| `tenants` | /tenants* | isFullyAuthed() | — | Anonyme denied |
-| `leases` | /leases* | isFullyAuthed() | ✅ createLease/updateLease/softDeleteLease | Cross-entity FK validation |
-| `payments` | /leases/:id/payments* | isFullyAuthed() | ✅ createPayment/updatePayment | Cross-entity, déclenche generateReceipt |
-| `receipts` | /leases/:id/receipts | isFullyAuthed() | ✅ generateReceipt/voidReceipt/markSent | Immuable, rétention 5 ans |
-| `documents` | (TBD) | isFullyAuthed() | ✅ createDocument/softDeleteDocument | Catégorie → legalHold |
-| `investment_scenarios` | /simulator* | isSignedIn() | — | Anonymes + comptes autorisés |
-
-**Défense en profondeur** :
-- Client ne crée jamais `deletedAt` (CF exclusive)
-- Cross-entity valide FK côté serveur
-- Anonyme jamais en mutation métier (RLS refuse)
-- Quittances voided restent visibles (audit trail, pas de soft-delete)
-
----
-
-## Deep Linking (PWA)
-
-| URL | Résolution |
-|---|---|
-| `https://app.com/` | Landing (public) |
-| `https://app.com/simulator/abc123` | Simulator with scenario (anons + comptes) |
-| `https://app.com/properties` | Properties list (auth check + redirect unauthenticated) |
-| `https://app.com/reset-password?oobCode=...` | Reset form (public, traite code Firebase) |
-
-GoRouter gère navigation native ↔ PWA seamlessly.
-
----
-
-## Router Provider (Riverpod)
-
 ```dart
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = _RouterRefreshNotifier();
-  ref.listen<SessionState>(sessionStateProvider, (previous, next) {
-    if (previous != next) refreshNotifier.refresh();
+  ref.listen<SessionState>(sessionStateProvider, (prev, next) {
+    if (prev != next) refreshNotifier.refresh();
   });
+  
   return GoRouter(
-    initialLocation: '/',
-    refreshListenable: refreshNotifier,
-    redirect: (context, state) { ... },
-    routes: [ ... ],
+    redirect: (context, state) {
+      final sessionState = ref.read(sessionStateProvider);
+      final location = state.matchedLocation;
+      
+      const publicRoutes = {'/login', '/signup', '/forgot-password', '/reset-password', '/privacy', '/terms'};
+      final isAnonAccessible = location == '/simulator' || location.startsWith('/simulator/');
+      
+      switch (sessionState) {
+        case SessionState.unauthenticated:
+          if (location == '/') return null; // landing OK
+          if (publicRoutes.contains(location)) return null;
+          return '/login';
+        
+        case SessionState.anonymous:
+          if (location == '/') return '/simulator';
+          if (publicRoutes.contains(location)) return null;
+          if (isAnonAccessible) return null;
+          return '/'; // toute route métier → landing
+        
+        case SessionState.fullyAuthenticated:
+          if (location == '/') return '/dashboard';
+          if (location == '/login' || location == '/signup') return '/dashboard';
+          return null;
+      }
+    },
   );
 });
 ```
 
-**Fix 2026-07-02** (commit 07f20a3) :
-- Problem : `GoRouterRefreshStream(authStateChanges)` perd race — stream notification avant Riverpod state
-- Solution : `ref.listen(sessionStateProvider)` — refresh APRÈS intégration
-- Test couvrant : `router_auth_refresh_test.dart`
+**Logique** :
+1. **unauthenticated** (pas login) → `/login` (sauf landing + public routes)
+2. **anonymous** (BAILLAN-M1 essai 14j) → `/simulator` seul accès métier (landing redir)
+3. **fullyAuthenticated** (email/password/Google/Apple) → accès shell + toutes routes
+
+**Tuteur de refresh** : `ref.listen(sessionStateProvider)` déclenche redirect re-évaluation immédiate post-auth (fix race condition commit 07f20a3, FEAT-030).
 
 ---
 
-## Parameter Passing
+## Shell Adaptatif (FEAT-026)
 
-| Route | Params | Source | Résolution |
+**Type** : StatefulShellRoute.indexedStack (5 branches)
+
+**Responsive** :
+- **<600px** : NavigationBar bottom (5 destinations, labels + icônes)
+- **≥600px** : NavigationRail left (icônes, compact ou libellés + icônes, railExpandedProvider)
+
+**Persistence** :
+- `railExpandedProvider` (SharedPreferences) : état NavigationRail expanded/collapsed
+- État branche préservé automatique (indexedStack)
+
+**Branding** : Logo Baillan en tête (réplié : icône / déplié : wordmark)
+
+**Ref** : [`docs/UX_NAVIGATION.md`](../UX_NAVIGATION.md)
+
+---
+
+## Deep Linking & External Navigation
+
+**Web URLs standards** :
+- `https://easyrent.app/` → landing
+- `https://easyrent.app/login` → login
+- `https://easyrent.app/dashboard` → dashboard (fullyAuthenticated)
+- `https://easyrent.app/properties/abc123` → fiche bien
+- `https://easyrent.app/leases/xyz789?action=regularize` → fiche bail + auto-ouvre régularisation
+- `https://easyrent.app/simulator` → simulateur (accessible anonymes)
+
+**Email links** : `/reset-password?token=...` (token extraction via state.uri.queryParameters)
+
+**Firebase Dynamic Links** : À implémenter (passthrough → URLs standard)
+
+---
+
+## Transitions personnalisées
+
+**Fichier** : `lib/core/router/transitions.dart`
+
+| Transition | Animation | Durée | Usage |
 |---|---|---|---|
-| `/properties/:id` | `id` | path | state.pathParameters['id']! |
-| `/leases/:id/payments/:pid/edit` | `leaseId, paymentId` | paths | state.pathParameters['id']!, state.pathParameters['pid']! |
-| `/simulator/:id` | `scenarioId` | path (optional) | state.pathParameters['id'] (null-safe) |
-
-GoRouter resolve path params avant pageBuilder → constructors reçoivent valeurs typées.
+| `AppTransition.standard` | Slide (bottom → top, 200ms) | 200ms | Nested routes (shell + métier) |
+| `AppTransition.fade` | Fade (opacity 0→1, 150ms) | 150ms | Auth forms (landing, login, signup) |
 
 ---
 
-## Notable Implementation Details
+## Navigation State Management (Riverpod)
 
-**Landing redesign (FEAT-022)** :
-- Renaming `/` : pivot vers public-first (anon → /simulator direct)
-- AppAppBar absent Landing (standalone page)
-- CTA buttons : créer compte + mode démo
+### railExpandedProvider (FEAT-026)
 
-**Simulator back button** :
-- Masqué anonymes (commit e339e26)
-- Visible comptes (navigation standard)
+**Persistent** : SharedPreferences
 
-**RGPD consent gate** :
-- SignupForm checkboxes + onChanged validation (commit d9ad603)
-- Refuse submission si non-coché
-- Cloud Function CF backup (Identity Platform blocking, si activé)
+**Type** : StateProvider<bool>
 
-**Retries idempotent** :
-- Provider refetch ne re-run CF (cache Firestore 30s)
-- Payment/receipt operations tolèrent duplicate CF trigger
+**Usage** : NavigationRail expanded/collapsed state (≥600px)
+
+**Défaut** : true (expanded)
+
+---
+
+### chartPeriodProvider (FEAT-027)
+
+**Persistent** : SharedPreferences
+
+**Type** : StateProvider<int>
+
+**Usage** : Dashboard chart period (6/12/24 months)
+
+**Défaut** : 12 (months)
+
+---
+
+### themeModeProvider (FEAT-023)
+
+**Persistent** : SharedPreferences
+
+**Type** : StateProvider<ThemeMode>
+
+**Usage** : Thème (System / Light / Dark)
+
+**Défaut** : ThemeMode.system
+
+---
+
+## Erreurs d'Accès (Auth Guard)
+
+| Condition | Redirect | Code |
+|---|---|---|
+| unauthenticated + non-public | `/login` | RED-001 |
+| anonymous + non-accessible | `/` | RED-002 |
+| fullyAuthenticated + `/login` | `/dashboard` | RED-003 |
+
+---
+
+## Checklist Navigation (QA FEAT-030)
+
+✅ Formulaires (`new`, `edit`) → `pop()` au succès (retour fiche, pas liste)
+✅ Tuiles Accueil → `push()` (stack conservée, peut revenir Accueil)
+✅ Bouton Profil → retiré fiche bail (contradictoire avec stack)
+✅ Simulateur → `push()` par-dessus shell (plein écran, pas remplacement)
+✅ Drill-down KPI dashboard → `/leases?filter=late` (préselection)
+✅ `/leases/:id?action=regularize` → auto-ouvre dialog (pas de subroute)
+
+---
+
+## Summary — Routes par Feature
+
+| Feature | Routes | Count | Status |
+|---|---|---|---|
+| **FEAT-001** (Auth) | /login, /signup, /forgot-password, /reset-password | 4 | ✅ |
+| **FEAT-003** (Properties) | /properties, /properties/new, /properties/:id, /properties/:id/edit | 4 | ✅ |
+| **FEAT-004** (Tenants) | /tenants, /tenants/new, /tenants/:id, /tenants/:id/edit | 4 | ✅ |
+| **FEAT-005** (Leases) | /leases, /leases/new, /leases/:id, /leases/:id/edit | 4 | ✅ |
+| **FEAT-006** (Payments) | /leases/:id/payments/new, /leases/:id/payments/:pid/edit | 2 | ✅ |
+| **FEAT-007** (Receipts) | /leases/:id/receipts | 1 | ✅ |
+| **FEAT-018** (Simulator) | /simulator, /simulator/:id | 2 | ✅ |
+| **FEAT-023** (Settings) | /terms, /privacy | 2 | ✅ |
+| **FEAT-025** (Support) | /profile/support | 1 | ✅ |
+| **FEAT-025b** (Profile Hub) | /profile, /profile/details, /profile/password | 3 | ✅ |
+| **FEAT-045** (Suppression compte) | /delete-account, /profile/delete-account | 2 | ✅ |
+| **FEAT-026** (Shell Nav) | Shell wrapper (5 branches) | — | ✅ |
+| **FEAT-027** (Dashboard) | /dashboard | 1 | ✅ |
+| **FEAT-029** (Charges) | — (payment.notes field) | — | ✅ |
+| **FEAT-030** (Navigation Fix) | Tuning redirect + transitions | — | ✅ |
+| **FEAT-041a** (Expenses) | **/properties/:id/expenses, /properties/:id/expenses/new, /properties/:id/expenses/:eid/edit** | **3** | **✅** |
+| **FEAT-041b** (Documents v2) | (intégré createDocument) | — | ✅ |
+
+**Total** : 33+ named routes, ~45+ GoRouter routes avec nested paths.

@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/application/auth_session_provider.dart';
 import '../../features/auth/domain/session_state.dart';
+import '../../features/auth/presentation/delete_account_request_page.dart';
 import '../../features/auth/presentation/forgot_password_page.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/expenses/presentation/expense_form_page.dart';
+import '../../features/expenses/presentation/property_expenses_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/privacy/presentation/terms_page.dart';
@@ -21,9 +24,11 @@ import '../../features/leases/presentation/lease_form_page.dart';
 import '../../features/leases/presentation/leases_list_page.dart';
 import '../../features/payments/presentation/payment_form_page.dart';
 import '../../features/profile/presentation/change_password_page.dart';
+import '../../features/profile/presentation/delete_account_page.dart';
 import '../../features/profile/presentation/profile_details_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/receipts/presentation/lease_receipts_page.dart';
+import '../../features/support/presentation/faq_page.dart';
 import '../../features/support/presentation/support_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
@@ -72,6 +77,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/reset-password',
         '/privacy',
         '/terms',
+        // FEAT-045 : URL de demande de suppression de compte, déclarée sur
+        // la fiche Google Play — doit rester accessible sans login (et aux
+        // anonymes, qui y suppriment leur essai).
+        '/delete-account',
+        // FAQ produit — consultable avant inscription et par les anonymes.
+        '/faq',
       };
 
       // Routes accessibles aux anonymes ET aux comptes complets (le
@@ -176,6 +187,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           transition: AppTransition.fade,
         ),
       ),
+      GoRoute(
+        path: '/delete-account',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const DeleteAccountRequestPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
+      GoRoute(
+        path: '/faq',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const FaqPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
 
       // -----------------------------------------------------------------------
       // Simulateur d'investissement (FEAT-018)
@@ -269,6 +296,46 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           ),
                           transition: AppTransition.standard,
                         ),
+                      ),
+                      // --- Dépenses (FEAT-041a) -------------------------
+                      GoRoute(
+                        path: 'expenses',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: PropertyExpensesPage(
+                            propertyId: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: 'new',
+                            pageBuilder: (context, state) => appPage(
+                              key: state.pageKey,
+                              // extra: {'leaseId': ...} — pré-remplissage
+                              // depuis la fiche bail (point d'entrée
+                              // secondaire, cf. plan § h).
+                              child: ExpenseFormPage(
+                                propertyId: state.pathParameters['id']!,
+                                preselectedLeaseId:
+                                    (state.extra as Map?)?['leaseId']
+                                        as String?,
+                              ),
+                              transition: AppTransition.standard,
+                            ),
+                          ),
+                          GoRoute(
+                            path: ':eid/edit',
+                            pageBuilder: (context, state) => appPage(
+                              key: state.pageKey,
+                              child: ExpenseEditPage(
+                                propertyId: state.pathParameters['id']!,
+                                expenseId: state.pathParameters['eid']!,
+                              ),
+                              transition: AppTransition.standard,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -447,6 +514,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => appPage(
                       key: state.pageKey,
                       child: const SupportPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'delete-account',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const DeleteAccountPage(),
                       transition: AppTransition.standard,
                     ),
                   ),

@@ -11,11 +11,19 @@
  *      Rules autorisent l'écriture si uid == landlordId dans le path).
  *   2. Une fois l'upload réussi, le client appelle `createDocument` avec
  *      le `storagePath` et les métadonnées.
- *   3. Le callable valide lease ownership + calcule `legalHold` + écrit
- *      le doc Firestore.
+ *   3. Le callable valide lease et/ou property ownership + calcule
+ *      `legalHold` + écrit le doc Firestore.
  *
  * Path Storage : `documents/{landlordId}/{documentId}.{ext}` — règles
  * Storage interdisent la lecture/écriture par d'autres landlords.
+ *
+ * v2 (FEAT-041b, docs/plans/FEAT-041-depenses.md §g) : `leaseId` devient
+ * optionnel et `propertyId` apparaît en alternative — une dépense (justificatif
+ * `expense_receipt`) peut n'avoir aucun bail (décompte syndic reçu après un
+ * départ locataire). Au moins un des deux est requis, appartenant à `uid` ;
+ * si les deux sont fournis, `lease.propertyId == propertyId` est exigé.
+ * Rétrocompat stricte : un appel avec `leaseId` seul suit exactement le
+ * chemin de validation d'avant (tous les uploads de bail existants passent).
  */
 
 import * as admin from "firebase-admin";
@@ -25,6 +33,7 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {
   asBag,
   dataOrFail,
+  optionalString,
   requireAuthUid,
   requireInt,
   requireString,
@@ -35,11 +44,17 @@ const ALLOWED_CATEGORIES = new Set([
   "etat_des_lieux",
   "attestation_assurance",
   "quittance_scannee",
+  "expense_receipt",
   "autre",
 ]);
 
-// Catégories sous rétention légale 5 ans (loi 1989).
-const LEGAL_HOLD_CATEGORIES = new Set(["bail_signe", "etat_des_lieux"]);
+// Catégories sous rétention légale 5 ans (loi 1989) / 10 ans (comptable,
+// `expense_receipt` — justificatif de dépense, cf. docs/LEGAL.md).
+const LEGAL_HOLD_CATEGORIES = new Set([
+  "bail_signe",
+  "etat_des_lieux",
+  "expense_receipt",
+]);
 
 const ALLOWED_MIME = new Set([
   "application/pdf",
@@ -60,7 +75,19 @@ export const createDocument = onCall(
     const uid = requireAuthUid(request);
     const data = asBag(request.data);
 
-    const leaseId = requireString(data.leaseId, "leaseId");
+    // v2 (FEAT-041b) : leaseId devient optionnel, propertyId apparaît en
+    // alternative — une dépense peut n'avoir aucun bail (décompte syndic
+    // reçu après un départ locataire). Au moins un des deux est requis.
+    // Rétrocompat stricte : un appel avec leaseId seul suit exactement le
+    // chemin de validation d'avant (ownership + non-deleted du bail).
+    const leaseId = optionalString(data.leaseId, "leaseId");
+    const propertyId = optionalString(data.propertyId, "propertyId");
+    if (leaseId === null && propertyId === null) {
+      throw new HttpsError(
+        "invalid-argument",
+        "at least one of leaseId or propertyId is required",
+      );
+    }
     const category = requireString(data.category, "category");
     if (!ALLOWED_CATEGORIES.has(category)) {
       throw new HttpsError("invalid-argument", `invalid category: ${category}`);
@@ -84,14 +111,36 @@ export const createDocument = onCall(
 
     const db = admin.firestore();
 
-    // Validate lease ownership (cross-entity).
-    const leaseSnap = await db.doc(`leases/${leaseId}`).get();
-    const lease = dataOrFail(leaseSnap, "lease not found");
-    if (lease.landlordId !== uid) {
-      throw new HttpsError("permission-denied", "lease not owned");
+    // Validate lease ownership (cross-entity) — inchangé si leaseId fourni.
+    if (leaseId !== null) {
+      const leaseSnap = await db.doc(`leases/${leaseId}`).get();
+      const lease = dataOrFail(leaseSnap, "lease not found");
+      if (lease.landlordId !== uid) {
+        throw new HttpsError("permission-denied", "lease not owned");
+      }
+      if (lease.deletedAt != null) {
+        throw new HttpsError("failed-precondition", "lease is deleted");
+      }
+      // Si les deux sont fournis, la cohérence lease.propertyId == propertyId
+      // est obligatoire (garde-fou cross-entity, pattern createExpense).
+      if (propertyId !== null && lease.propertyId !== propertyId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "lease_property_mismatch",
+        );
+      }
     }
-    if (lease.deletedAt != null) {
-      throw new HttpsError("failed-precondition", "lease is deleted");
+
+    // Validate property ownership (cross-entity) — nouveau chemin v2.
+    if (propertyId !== null) {
+      const propertySnap = await db.doc(`properties/${propertyId}`).get();
+      const property = dataOrFail(propertySnap, "property not found");
+      if (property.landlordId !== uid) {
+        throw new HttpsError("permission-denied", "property not owned");
+      }
+      if (property.deletedAt != null) {
+        throw new HttpsError("failed-precondition", "property is deleted");
+      }
     }
 
     // Verify file actually uploaded (else client could register a phantom doc).
@@ -113,6 +162,7 @@ export const createDocument = onCall(
         id: docRef.id,
         landlordId: uid,
         leaseId,
+        propertyId,
         category,
         filename,
         storagePath,

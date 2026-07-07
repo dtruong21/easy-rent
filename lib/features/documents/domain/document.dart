@@ -9,17 +9,25 @@ import 'document_category.dart';
 part 'document.freezed.dart';
 part 'document.g.dart';
 
-/// Modèle immutable d'un document attaché à un bail.
+/// Modèle immutable d'un document attaché à un bail et/ou à un bien.
 ///
-/// Mappé directement sur la table `documents` (public + dev).
-/// Seul [category] est UPDATE-able après création (trigger `tr_01b_protect_immutable_documents`).
-/// La suppression se fait uniquement via RPC `soft_delete_document`.
+/// Mappé sur la collection Firestore `documents` (camelCase, ponté
+/// snake_case via `firestoreDocToSnakeJson`).
+/// Seul [category] est UPDATE-able après création.
+/// La suppression se fait uniquement via la Callable `softDeleteEntity`.
+///
+/// v2 (FEAT-041b, `docs/plans/FEAT-041-depenses.md` § g) : [leaseId] devient
+/// **optionnel** et [propertyId] apparaît en alternative — un justificatif
+/// de dépense (`expense_receipt`) peut n'avoir aucun bail (décompte syndic
+/// reçu après un départ locataire). Au moins un des deux est renseigné côté
+/// serveur (`createDocument` valide la règle).
 @freezed
 class Document with _$Document {
   const factory Document({
     required String id,
     @JsonKey(name: 'landlord_id') required String landlordId,
-    @JsonKey(name: 'lease_id') required String leaseId,
+    @JsonKey(name: 'lease_id') String? leaseId,
+    @JsonKey(name: 'property_id') String? propertyId,
     @JsonKey(fromJson: _categoryFromJson, toJson: _categoryToJson)
     required DocumentCategory category,
     required String filename,

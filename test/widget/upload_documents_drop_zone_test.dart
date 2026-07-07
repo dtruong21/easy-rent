@@ -35,7 +35,8 @@ class _FakeRepo implements DocumentsRepository {
 
   @override
   Future<Document> upload({
-    required String leaseId,
+    String? leaseId,
+    String? propertyId,
     required DocumentCategory category,
     required String filename,
     required Uint8List bytes,

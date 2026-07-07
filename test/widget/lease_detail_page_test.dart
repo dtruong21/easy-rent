@@ -1,5 +1,6 @@
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -30,7 +31,7 @@ class _FakeRepo implements LeaseRepository {
   }
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async => [];
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
   Future<Lease> create({
@@ -41,6 +42,7 @@ class _FakeRepo implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
@@ -49,6 +51,7 @@ class _FakeRepo implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async => throw UnimplementedError();
 
   @override
@@ -110,17 +113,22 @@ Lease _makeLease({
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
   LeaseType leaseType = LeaseType.unfurnished,
+  ChargeMode? chargeMode,
+  int chargesAmountCents = 5000,
+  int nonRecoverableChargesCents = 0,
 }) => Lease(
   id: id,
   landlordId: 'owner-1',
   propertyId: 'prop-1',
   tenantId: 'tenant-1',
   rentAmountCents: 85000,
-  chargesAmountCents: 5000,
+  chargesAmountCents: chargesAmountCents,
+  nonRecoverableChargesCents: nonRecoverableChargesCents,
   startDate: DateTime(2024, 1, 1),
   endDate: endDate,
   status: status,
   leaseType: leaseType,
+  chargeMode: chargeMode,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -218,6 +226,97 @@ void main() {
       // 85000 centimes = 850,00 €
       expect(find.textContaining('850'), findsWidgets);
     });
+
+    // -----------------------------------------------------------------------
+    // FEAT-036 — ventilation charges récupérables / non récupérables (AC-4)
+    // -----------------------------------------------------------------------
+    testWidgets('affiche le libellé "Charges récupérables"', (tester) async {
+      final lease = _makeLease();
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Charges récupérables'), findsOneWidget);
+    });
+
+    testWidgets(
+      'affiche "Charges non récupérables" TOUJOURS, même quand la valeur est 0',
+      (tester) async {
+        final lease = _makeLease(nonRecoverableChargesCents: 0);
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Charges non récupérables'), findsOneWidget);
+      },
+    );
+
+    testWidgets('affiche le montant non récupérable formaté quand > 0', (
+      tester,
+    ) async {
+      final lease = _makeLease(nonRecoverableChargesCents: 2000);
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 2000 centimes = 20,00 €
+      expect(find.textContaining('20,00'), findsOneWidget);
+    });
+
+    testWidgets('affiche "Total charges" = récupérable + non récupérable', (
+      tester,
+    ) async {
+      final lease = _makeLease(
+        chargesAmountCents: 5000,
+        nonRecoverableChargesCents: 2000,
+      );
+      await tester.pumpWidget(
+        _buildDetailPage(
+          leaseId: lease.id,
+          repo: _FakeRepo(lease: lease),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Total charges'), findsOneWidget);
+      // 5000 + 2000 = 7000 centimes = 70,00 €
+      expect(find.textContaining('70,00'), findsOneWidget);
+    });
+
+    testWidgets(
+      '"Loyer CC" reste inchangé (loyer + récupérable seul, PAS le total)',
+      (tester) async {
+        final lease = _makeLease(
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 2000,
+        );
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loyer CC'), findsOneWidget);
+        // rent(85000) + récupérable(5000) = 90000 centimes = 900,00 €
+        // (PAS 920,00 € qui inclurait le non-récupérable).
+        expect(find.textContaining('900,00'), findsOneWidget);
+        expect(find.textContaining('920,00'), findsNothing);
+      },
+    );
 
     testWidgets('affiche la date de début au format DD/MM/YYYY', (
       tester,
@@ -532,10 +631,13 @@ void main() {
     });
 
     testWidgets(
-      'openRegularizationOnLoad=true + bail meublé → dialog PAS ouvert '
-      '(gate légal revérifié en défense en profondeur)',
+      'openRegularizationOnLoad=true + bail meublé en FORFAIT → dialog PAS '
+      'ouvert (gate légal revérifié en défense en profondeur, FEAT-042)',
       (tester) async {
-        final lease = _makeLease(leaseType: LeaseType.furnished);
+        final lease = _makeLease(
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.forfait,
+        );
         await tester.pumpWidget(
           _buildDetailPage(
             leaseId: lease.id,
@@ -553,7 +655,32 @@ void main() {
     );
 
     testWidgets(
-      'openRegularizationOnLoad=true + bail mobilité → dialog PAS ouvert',
+      'openRegularizationOnLoad=true + bail meublé en PROVISIONS → dialog '
+      'ouvert (FEAT-042 : le critère est le mode, pas le type)',
+      (tester) async {
+        final lease = _makeLease(
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.provisions,
+        );
+        await tester.pumpWidget(
+          _buildDetailPage(
+            leaseId: lease.id,
+            repo: _FakeRepo(lease: lease),
+            openRegularizationOnLoad: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization_generate')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'openRegularizationOnLoad=true + bail mobilité → dialog PAS ouvert '
+      '(mode forfait dérivé, forcé quel que soit chargeMode)',
       (tester) async {
         final lease = _makeLease(leaseType: LeaseType.mobility);
         await tester.pumpWidget(
@@ -573,9 +700,13 @@ void main() {
     );
 
     testWidgets(
-      'openRegularizationOnLoad=true + bail étudiant → dialog PAS ouvert',
+      'openRegularizationOnLoad=true + bail étudiant en FORFAIT → dialog '
+      'PAS ouvert',
       (tester) async {
-        final lease = _makeLease(leaseType: LeaseType.student);
+        final lease = _makeLease(
+          leaseType: LeaseType.student,
+          chargeMode: ChargeMode.forfait,
+        );
         await tester.pumpWidget(
           _buildDetailPage(
             leaseId: lease.id,

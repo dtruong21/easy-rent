@@ -1,5 +1,6 @@
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
@@ -26,6 +27,7 @@ Lease _makeLease({
   LeaseStatus status = LeaseStatus.active,
   DateTime? endDate,
   LeaseType leaseType = LeaseType.unfurnished,
+  ChargeMode? chargeMode,
 }) => Lease(
   id: id,
   landlordId: 'owner',
@@ -37,6 +39,7 @@ Lease _makeLease({
   endDate: endDate,
   status: status,
   leaseType: leaseType,
+  chargeMode: chargeMode,
   createdAt: DateTime(2024),
   updatedAt: DateTime(2024),
 );
@@ -49,12 +52,14 @@ LeaseListItem _makeItem({
   DateTime? endDate,
   bool isLate = false,
   LeaseType leaseType = LeaseType.unfurnished,
+  ChargeMode? chargeMode,
 }) => LeaseListItem(
   lease: _makeLease(
     id: id,
     status: status,
     endDate: endDate,
     leaseType: leaseType,
+    chargeMode: chargeMode,
   ),
   propertyName: propertyName,
   tenantDisplayName: tenantName,
@@ -232,16 +237,37 @@ void main() {
       expect(find.byKey(const Key('lease_menu_ln')), findsOneWidget);
     });
 
-    testWidgets('bail meublé — menu overflow ABSENT', (tester) async {
-      final item = _makeItem(id: 'lf', leaseType: LeaseType.furnished);
+    testWidgets(
+      'bail meublé en provisions (chargeMode absent → défaut FEAT-042) — '
+      'menu overflow visible',
+      (tester) async {
+        final item = _makeItem(id: 'lf', leaseType: LeaseType.furnished);
+
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('lease_menu_lf')), findsOneWidget);
+      },
+    );
+
+    testWidgets('bail meublé en forfait — menu overflow ABSENT', (
+      tester,
+    ) async {
+      final item = _makeItem(
+        id: 'lf2',
+        leaseType: LeaseType.furnished,
+        chargeMode: ChargeMode.forfait,
+      );
 
       await tester.pumpWidget(_buildCardView([item]));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('lease_menu_lf')), findsNothing);
+      expect(find.byKey(const Key('lease_menu_lf2')), findsNothing);
     });
 
-    testWidgets('bail mobilité — menu overflow ABSENT', (tester) async {
+    testWidgets('bail mobilité — menu overflow ABSENT (forfait forcé)', (
+      tester,
+    ) async {
       final item = _makeItem(id: 'lm', leaseType: LeaseType.mobility);
 
       await tester.pumpWidget(_buildCardView([item]));
@@ -250,13 +276,32 @@ void main() {
       expect(find.byKey(const Key('lease_menu_lm')), findsNothing);
     });
 
-    testWidgets('bail étudiant — menu overflow ABSENT', (tester) async {
-      final item = _makeItem(id: 'ls', leaseType: LeaseType.student);
+    testWidgets(
+      'bail étudiant en provisions (chargeMode absent → défaut FEAT-042) — '
+      'menu overflow visible',
+      (tester) async {
+        final item = _makeItem(id: 'ls', leaseType: LeaseType.student);
+
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('lease_menu_ls')), findsOneWidget);
+      },
+    );
+
+    testWidgets('bail étudiant en forfait — menu overflow ABSENT', (
+      tester,
+    ) async {
+      final item = _makeItem(
+        id: 'ls2',
+        leaseType: LeaseType.student,
+        chargeMode: ChargeMode.forfait,
+      );
 
       await tester.pumpWidget(_buildCardView([item]));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('lease_menu_ls')), findsNothing);
+      expect(find.byKey(const Key('lease_menu_ls2')), findsNothing);
     });
 
     testWidgets(

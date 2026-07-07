@@ -4,6 +4,7 @@
 /// de fonctionner (backward compat via defaults).
 library;
 
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
@@ -46,6 +47,7 @@ Map<String, dynamic> _jsonFull() => {
   'agency_fees_cents': 50000,
   'solidarity_clause': true,
   'entry_inventory_done': true,
+  'non_recoverable_charges_cents': 2000,
   'created_at': '2024-03-01T10:00:00Z',
   'updated_at': '2024-03-01T10:00:00Z',
   'deleted_at': null,
@@ -99,6 +101,13 @@ void main() {
     test('fromJson JSON legacy → entryInventoryDone = false', () {
       final lease = Lease.fromJson(_jsonLegacy());
       expect(lease.entryInventoryDone, isFalse);
+    });
+
+    // FEAT-036 (AC-3) : bail créé avant le champ nonRecoverableChargesCents
+    // ⇒ défaut 0, le récupérable existant reste inchangé.
+    test('fromJson JSON legacy → nonRecoverableChargesCents = 0', () {
+      final lease = Lease.fromJson(_jsonLegacy());
+      expect(lease.nonRecoverableChargesCents, 0);
     });
 
     test('champs legacy préservés (id, rent, status)', () {
@@ -157,6 +166,11 @@ void main() {
       final lease = Lease.fromJson(_jsonFull());
       expect(lease.entryInventoryDone, isTrue);
     });
+
+    test('fromJson JSON complet → nonRecoverableChargesCents = 2000', () {
+      final lease = Lease.fromJson(_jsonFull());
+      expect(lease.nonRecoverableChargesCents, 2000);
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -177,6 +191,10 @@ void main() {
       expect(restored.agencyFeesCents, original.agencyFeesCents);
       expect(restored.solidarityClause, original.solidarityClause);
       expect(restored.entryInventoryDone, original.entryInventoryDone);
+      expect(
+        restored.nonRecoverableChargesCents,
+        original.nonRecoverableChargesCents,
+      );
     });
 
     test('lease_type correctement sérialisé en sqlValue', () {
@@ -248,6 +266,100 @@ void main() {
         updatedAt: DateTime(2024),
       );
       expect(lease.agencyFeesCents, 0);
+    });
+
+    test('nonRecoverableChargesCents default = 0 (FEAT-036)', () {
+      final lease = Lease(
+        id: 'l1',
+        landlordId: 'lld',
+        propertyId: 'p1',
+        tenantId: 't1',
+        rentAmountCents: 1000,
+        chargesAmountCents: 0,
+        startDate: DateTime(2024),
+        status: LeaseStatus.active,
+        createdAt: DateTime(2024),
+        updatedAt: DateTime(2024),
+      );
+      expect(lease.nonRecoverableChargesCents, 0);
+    });
+
+    test('chargeMode default = null (pas de @Default — FEAT-042)', () {
+      final lease = Lease(
+        id: 'l1',
+        landlordId: 'lld',
+        propertyId: 'p1',
+        tenantId: 't1',
+        rentAmountCents: 1000,
+        chargesAmountCents: 0,
+        startDate: DateTime(2024),
+        status: LeaseStatus.active,
+        createdAt: DateTime(2024),
+        updatedAt: DateTime(2024),
+      );
+      expect(lease.chargeMode, isNull);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // FEAT-042 — round-trip JSON charge_mode (présent, null, inconnu tolérant)
+  // ---------------------------------------------------------------------------
+  group('Round-trip JSON — charge_mode (FEAT-042)', () {
+    test('fromJson SANS charge_mode (bail pré-042) → chargeMode null', () {
+      final lease = Lease.fromJson(_jsonLegacy());
+      expect(lease.chargeMode, isNull);
+    });
+
+    test('fromJson AVEC charge_mode "provisions" → ChargeMode.provisions', () {
+      final json = _jsonLegacy()..['charge_mode'] = 'provisions';
+      final lease = Lease.fromJson(json);
+      expect(lease.chargeMode, ChargeMode.provisions);
+    });
+
+    test('fromJson AVEC charge_mode "forfait" → ChargeMode.forfait', () {
+      final json = _jsonLegacy()..['charge_mode'] = 'forfait';
+      final lease = Lease.fromJson(json);
+      expect(lease.chargeMode, ChargeMode.forfait);
+    });
+
+    test('fromJson AVEC charge_mode inconnu → null (tolérance défensive)', () {
+      final json = _jsonLegacy()..['charge_mode'] = 'some_future_mode';
+      final lease = Lease.fromJson(json);
+      expect(lease.chargeMode, isNull);
+    });
+
+    test('fromJson AVEC charge_mode null explicite → null', () {
+      final json = _jsonLegacy()..['charge_mode'] = null;
+      final lease = Lease.fromJson(json);
+      expect(lease.chargeMode, isNull);
+    });
+
+    test(
+      'toJson : chargeMode null → "charge_mode" absent/null dans le JSON',
+      () {
+        final lease = Lease.fromJson(_jsonLegacy());
+        final json = lease.toJson();
+        expect(json['charge_mode'], isNull);
+      },
+    );
+
+    test('toJson : chargeMode provisions → "charge_mode" = "provisions"', () {
+      final json = _jsonLegacy()..['charge_mode'] = 'provisions';
+      final lease = Lease.fromJson(json);
+      expect(lease.toJson()['charge_mode'], 'provisions');
+    });
+
+    test('round-trip toJson → fromJson préserve chargeMode forfait', () {
+      final json = _jsonLegacy()..['charge_mode'] = 'forfait';
+      final original = Lease.fromJson(json);
+      final restored = Lease.fromJson(original.toJson());
+      expect(restored.chargeMode, ChargeMode.forfait);
+    });
+
+    test('round-trip toJson → fromJson préserve chargeMode null', () {
+      final original = Lease.fromJson(_jsonLegacy());
+      final restored = Lease.fromJson(original.toJson());
+      expect(restored.chargeMode, isNull);
     });
   });
 }

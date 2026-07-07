@@ -113,14 +113,14 @@ void main() {
     test('popup-closed-by-user → connexion annulée', () {
       expect(
         AuthErrorMapper.fromException(e('popup-closed-by-user')),
-        'Connexion Google annulée.',
+        'Connexion annulée.',
       );
     });
 
     test('popup-blocked → message popup bloquée', () {
       expect(
         AuthErrorMapper.fromException(e('popup-blocked')),
-        contains('bloqué la fenêtre Google'),
+        contains('bloqué la fenêtre de connexion'),
       );
     });
 
@@ -136,7 +136,7 @@ void main() {
     test('cancelled-popup-request → message fenêtre déjà ouverte', () {
       expect(
         AuthErrorMapper.fromException(e('cancelled-popup-request')),
-        'Une autre fenêtre Google est déjà ouverte.',
+        'Une autre fenêtre de connexion est déjà ouverte.',
       );
     });
 
@@ -176,6 +176,24 @@ void main() {
       expect(
         AuthErrorMapper.fromException(e('baillan/popup-closed')),
         'Connexion Google annulée.',
+      );
+    });
+  });
+
+  group('AuthErrorMapper.fromException (OAuth natif mobile, FEAT-024)', () {
+    FirebaseAuthException e(String code) => FirebaseAuthException(code: code);
+
+    test('web-context-canceled (Android) → connexion annulée', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-context-canceled')),
+        'Connexion annulée.',
+      );
+    });
+
+    test('web-context-cancelled (iOS) → connexion annulée', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-context-cancelled')),
+        'Connexion annulée.',
       );
     });
   });

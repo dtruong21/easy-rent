@@ -4,6 +4,17 @@
 /// Couvre le chargement des paiements par bail actif (chunk whereIn) et son
 /// branchement vers `isLeaseLate()` — la logique de calcul pure elle-même
 /// est testée exhaustivement dans `lease_lateness_test.dart`.
+///
+/// ## Déterminisme (fix bug flaky-par-date)
+///
+/// `listForDisplay()` accepte un paramètre `now` optionnel (défaut
+/// `DateTime.now()` côté prod, jamais fourni par les appelants réels). Tous
+/// les tests ci-dessous ancrent leurs scénarios sur un `now` FIXE
+/// ([_fixedNow]) plutôt que sur `DateTime.now()` réel : les dates de seed
+/// sont construites relativement à ce `now` fixe, ce qui rend les tests
+/// verts quel que soit le jour réel d'exécution (plus de dépendance à la
+/// date du jour — cf. régressions du 2026-07-04 et du 2026-07-06 causées par
+/// des tests ancrés sur `DateTime.now()` réel).
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,6 +32,11 @@ class _UnusedFunctions implements FirebaseFunctions {
     'FirebaseFunctions ne doit pas être appelé par listForDisplay',
   );
 }
+
+/// Horloge fixe (milieu de mois, loin des bornes de fin de mois/année) pour
+/// que tous les scénarios ci-dessous soient déterministes, quel que soit le
+/// jour réel d'exécution du test.
+final _fixedNow = DateTime(2026, 3, 15);
 
 void main() {
   const uid = 'landlord-1';
@@ -84,10 +100,10 @@ void main() {
         'isLate=true', () async {
       // paymentDay=1, démarré il y a longtemps → l'échéance du mois en
       // cours (quel qu'il soit) est nécessairement dépassée de plus de 5
-      // jours par rapport à `DateTime.now()` réel utilisé par le repo.
+      // jours par rapport à `now` fixe utilisé par le repo.
       await seedLease(id: 'l1', startDate: DateTime(2020, 1, 1));
 
-      final items = await repo.listForDisplay();
+      final items = await repo.listForDisplay(now: _fixedNow);
 
       expect(items, hasLength(1));
       expect(items.single.isLate, isTrue);
@@ -97,17 +113,17 @@ void main() {
       // Le « mois dû courant » (avec délai de grâce de 5 jours, cf.
       // lease_lateness.dart) n'est PAS toujours le mois calendaire de
       // `now` : les 5 premiers jours d'un mois, le mois dû courant est
-      // encore le mois PRÉCÉDENT (grâce de juillet pas expirée avant le 6
-      // juillet). Un test qui ne paie QUE `now.month` est donc fragile —
-      // il échoue déterministement les 5 premiers jours de chaque mois
-      // (régression découverte le 2026-07-04, exécution un 4 juillet).
-      // On paie ici les DEUX mois candidats (précédent + courant) pour
-      // rester robuste quel que soit le jour d'exécution du test, sans
-      // dupliquer la logique de grâce dans le test lui-même.
+      // encore le mois PRÉCÉDENT (grâce pas expirée avant le 6 du mois).
+      // On paie ici les DEUX mois candidats (précédent + courant, relatifs
+      // à `_fixedNow`) pour rester robuste sans dupliquer la logique de
+      // grâce dans le test lui-même.
       await seedLease(id: 'l1', startDate: DateTime(2020, 1, 1));
-      final now = DateTime.now();
-      final previousMonthStart = DateTime(now.year, now.month - 1, 1);
-      final currentMonthEnd = DateTime(now.year, now.month + 1, 0);
+      final previousMonthStart = DateTime(
+        _fixedNow.year,
+        _fixedNow.month - 1,
+        1,
+      );
+      final currentMonthEnd = DateTime(_fixedNow.year, _fixedNow.month + 1, 0);
       await seedPayment(
         id: 'pay1',
         leaseId: 'l1',
@@ -115,7 +131,7 @@ void main() {
         periodEnd: currentMonthEnd,
       );
 
-      final items = await repo.listForDisplay();
+      final items = await repo.listForDisplay(now: _fixedNow);
 
       expect(items.single.isLate, isFalse);
     });
@@ -128,7 +144,7 @@ void main() {
         startDate: DateTime(2020, 1, 1),
       );
 
-      final items = await repo.listForDisplay();
+      final items = await repo.listForDisplay(now: _fixedNow);
 
       expect(items.single.isLate, isFalse);
     });
@@ -136,10 +152,13 @@ void main() {
     test(
       'bail créé aujourd\'hui, encore dans le délai de grâce → isLate=false',
       () async {
-        final now = DateTime.now();
-        await seedLease(id: 'l1', startDate: now, paymentDay: now.day);
+        await seedLease(
+          id: 'l1',
+          startDate: _fixedNow,
+          paymentDay: _fixedNow.day,
+        );
 
-        final items = await repo.listForDisplay();
+        final items = await repo.listForDisplay(now: _fixedNow);
 
         expect(items.single.isLate, isFalse);
       },
@@ -154,7 +173,7 @@ void main() {
         await seedLease(id: 'l$i', startDate: DateTime(2020, 1, 1));
       }
 
-      final items = await repo.listForDisplay();
+      final items = await repo.listForDisplay(now: _fixedNow);
 
       expect(items, hasLength(35));
       expect(items.every((item) => item.isLate), isTrue);
@@ -182,27 +201,25 @@ void main() {
         'échéance du mois de démarrage déjà passée à la signature → on '
         'saute au mois suivant, qui n\'est lui-même pas encore atteint '
         '5 jours après le démarrage)', () async {
-      // Le repo utilise DateTime.now() en interne (non injectable) —
-      // on ancre donc le scénario sur `now` réel plutôt que sur une
-      // date calendaire fixe, pour rester déterministe quel que soit
-      // le jour d'exécution du test. `paymentDay = jour démarrage - 1`
-      // garantit que le mois de démarrage est écarté (échéance déjà
-      // passée au jour de signature, cf. règle "pas de proratisation"),
-      // et le mois suivant — seul mois éligible — démarre au moins ~25
-      // jours après `startDate`, donc largement après `now`
-      // (`startDate + 5 jours`) : aucun mois dû, quel que soit le mois
-      // d'exécution.
+      // `now` est fixé à `_fixedNow` (injecté via `listForDisplay(now:)`) —
+      // le scénario est ancré dessus plutôt que sur `DateTime.now()` réel,
+      // pour rester déterministe quel que soit le jour d'exécution du
+      // test. `paymentDay = jour démarrage - 1` garantit que le mois de
+      // démarrage est écarté (échéance déjà passée au jour de signature,
+      // cf. règle "pas de proratisation"), et le mois suivant — seul mois
+      // éligible — démarre au moins ~25 jours après `startDate`, donc
+      // largement après `_fixedNow` (`startDate + 5 jours`) : aucun mois
+      // dû, quel que soit le mois choisi pour `_fixedNow`.
       //
       // IMPORTANT : startDate est construit à MINUIT local explicite
-      // (DateTime(y,m,d), pas `now - 5j` qui garde l'heure de `now`) —
-      // c'est le cas réel de prod (date picker) ET c'est ce qui
-      // garantit de franchir la frontière du jour civil lors de la
+      // (DateTime(y,m,d), pas `_fixedNow - 5j` qui garderait l'heure de
+      // `_fixedNow`) — c'est le cas réel de prod (date picker) ET c'est ce
+      // qui garantit de franchir la frontière du jour civil lors de la
       // conversion UTC en zone UTC+1/+2 (minuit local = 22h/23h UTC la
       // veille), donc de reproduire le symptôme du bug corrigé
-      // (contrairement à une heure de journée quelconque, qui peut
-      // rester dans le même jour UTC selon le moment d'exécution).
-      final today = DateTime.now();
-      final fiveDaysAgo = today.subtract(const Duration(days: 5));
+      // (contrairement à une heure de journée quelconque, qui peut rester
+      // dans le même jour UTC selon le moment considéré).
+      final fiveDaysAgo = _fixedNow.subtract(const Duration(days: 5));
       final startDateLocalMidnight = DateTime(
         fiveDaysAgo.year,
         fiveDaysAgo.month,
@@ -218,7 +235,7 @@ void main() {
         paymentDay: paymentDay,
       );
 
-      final items = await repo.listForDisplay();
+      final items = await repo.listForDisplay(now: _fixedNow);
 
       expect(items.single.isLate, isFalse);
     });

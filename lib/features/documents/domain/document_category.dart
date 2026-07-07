@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
 
-/// Catégorie d'un document attaché à un bail.
+/// Catégorie d'un document attaché à un bail et/ou à un bien.
 ///
-/// Mappé sur l'enum SQL `document_category` (public + dev).
+/// Mappé sur le champ `category` de la collection Firestore `documents`.
 /// Pattern aligné [DocumentType] (FEAT-007).
+///
+/// [expenseReceipt] (FEAT-041b) : justificatif de dépense (facture, décompte
+/// syndic) — sous `legalHold` dès la création (rétention 5-10 ans, voir
+/// `docs/plans/FEAT-041-depenses.md` § g).
 enum DocumentCategory {
   bailSigne,
   etatDesLieux,
   attestationAssurance,
   quittanceScannee,
+  expenseReceipt,
   autre;
 
-  /// Valeur SQL telle qu'attendue par Postgres.
+  /// Valeur attendue par la Cloud Function / stockée sur le document Firestore.
   String get sqlValue => switch (this) {
     DocumentCategory.bailSigne => 'bail_signe',
     DocumentCategory.etatDesLieux => 'etat_des_lieux',
     DocumentCategory.attestationAssurance => 'attestation_assurance',
     DocumentCategory.quittanceScannee => 'quittance_scannee',
+    DocumentCategory.expenseReceipt => 'expense_receipt',
     DocumentCategory.autre => 'autre',
   };
 
@@ -26,6 +32,7 @@ enum DocumentCategory {
     DocumentCategory.etatDesLieux => 'État des lieux',
     DocumentCategory.attestationAssurance => "Attestation d'assurance",
     DocumentCategory.quittanceScannee => 'Quittance scannée',
+    DocumentCategory.expenseReceipt => 'Justificatif de dépense',
     DocumentCategory.autre => 'Autre',
   };
 
@@ -35,18 +42,20 @@ enum DocumentCategory {
     DocumentCategory.etatDesLieux => Icons.home_work_outlined,
     DocumentCategory.attestationAssurance => Icons.shield_outlined,
     DocumentCategory.quittanceScannee => Icons.receipt_outlined,
+    DocumentCategory.expenseReceipt => Icons.receipt_long_outlined,
     DocumentCategory.autre => Icons.folder_outlined,
   };
 
-  /// Vrai si la catégorie entraîne un [legal_hold] automatique (calculé par
-  /// le trigger DB `tr_00b_compute_legal_hold`).
+  /// Vrai si la catégorie entraîne un `legalHold` automatique (calculé côté
+  /// serveur par la Callable `createDocument`, `LEGAL_HOLD_CATEGORIES`).
   ///
   /// Utilisé côté UI pour afficher les avertissements de suppression.
   bool get requiresLegalHold =>
       this == DocumentCategory.bailSigne ||
-      this == DocumentCategory.etatDesLieux;
+      this == DocumentCategory.etatDesLieux ||
+      this == DocumentCategory.expenseReceipt;
 
-  /// Parse la valeur SQL en [DocumentCategory].
+  /// Parse la valeur serveur en [DocumentCategory].
   ///
   /// Lance [ArgumentError] si la valeur est inconnue.
   static DocumentCategory fromSql(String value) => switch (value) {
@@ -54,6 +63,7 @@ enum DocumentCategory {
     'etat_des_lieux' => DocumentCategory.etatDesLieux,
     'attestation_assurance' => DocumentCategory.attestationAssurance,
     'quittance_scannee' => DocumentCategory.quittanceScannee,
+    'expense_receipt' => DocumentCategory.expenseReceipt,
     'autre' => DocumentCategory.autre,
     _ => throw ArgumentError('DocumentCategory inconnue : $value'),
   };

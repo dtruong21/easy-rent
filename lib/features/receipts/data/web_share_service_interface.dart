@@ -1,15 +1,17 @@
-/// Contrat du service de partage de fichiers PDF via Web Share API.
+/// Contrat du service de partage de fichiers PDF.
 ///
-/// Deux implémentations :
-/// - [WebShareServiceImpl] dans `web_share_service.dart` : utilise
+/// Deux implémentations (sélection par le bridge, FEAT-024) :
+/// - [WebShareServiceImpl] dans `web_share_service.dart` : Web Share API
 ///   `navigator.share()` (Web uniquement, `dart:js_interop`).
-/// - [WebShareServiceImpl] dans `web_share_service_stub.dart` : stub no-op
-///   pour les plateformes VM (tests unitaires).
+/// - [WebShareServiceImpl] dans `web_share_service_io.dart` : share sheet
+///   natif Android/iOS via `share_plus` ; no-op sûr sur les autres
+///   plateformes VM (tests unitaires, desktop).
 abstract interface class WebShareService {
-  /// `true` si le navigateur supporte `navigator.share()` avec des fichiers.
+  /// `true` si la plateforme sait partager un fichier nativement.
   ///
-  /// Teste avec un fichier factice (1 byte) via `navigator.canShare()`.
-  /// Sur Firefox et Safari Desktop, retourne `false`.
+  /// Web : teste avec un fichier factice (1 byte) via `navigator.canShare()`
+  /// — Firefox et Safari Desktop retournent `false`. VM : `true` sur
+  /// Android/iOS, `false` ailleurs.
   bool canShareFiles();
 
   /// Partage un PDF via la Web Share API.

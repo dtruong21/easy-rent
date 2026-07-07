@@ -7,6 +7,7 @@ import 'package:logging/logging.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../payments/domain/payment.dart';
 import '../../payments/domain/payment_method.dart';
+import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_lateness.dart';
 import '../domain/lease_list_item.dart';
@@ -22,7 +23,11 @@ abstract interface class LeaseRepository {
   /// Tri : `status ASC` (active d'abord) puis `startDate DESC`. Les denorms
   /// `propertyName` et `tenant{First,Last}Name` sont déjà sur le doc lease,
   /// donc pas de jointure nécessaire (1 seule query).
-  Future<List<LeaseListItem>> listForDisplay();
+  ///
+  /// [now] est injectable pour les tests (calcul `isLate` déterministe,
+  /// cf. `lease_lateness.dart`) — les appelants prod ne le fournissent
+  /// jamais et obtiennent le défaut `DateTime.now()`.
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now});
 
   Future<Lease> getById(String id);
 
@@ -37,6 +42,7 @@ abstract interface class LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay,
     PaymentMethod paymentMethod,
@@ -45,6 +51,7 @@ abstract interface class LeaseRepository {
     int agencyFeesCents,
     bool solidarityClause,
     bool entryInventoryDone,
+    int nonRecoverableChargesCents,
   });
 
   /// Met à jour via la Callable `updateLease` (whitelist champs mutables +
@@ -94,7 +101,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
   );
 
   @override
-  Future<List<LeaseListItem>> listForDisplay() async {
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async {
     _log.info('listForDisplay()');
     // Tri côté serveur : startDate DESC. Le tri status ASC (active d'abord)
     // est appliqué côté client après lecture pour ne pas multiplier les
@@ -121,7 +128,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
         .toList();
     final paymentsByLease = await _fetchPaymentsByLease(activeLeaseIds);
 
-    final now = DateTime.now();
+    final effectiveNow = now ?? DateTime.now();
     final items = qs.docs.map((d) {
       final lease = leases.firstWhere((l) => l.id == d.id);
       final data = d.data();
@@ -135,7 +142,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
       final isLate = isLeaseLate(
         lease: lease,
         payments: paymentsByLease[lease.id] ?? const [],
-        now: now,
+        now: effectiveNow,
       );
       return LeaseListItem(
         lease: lease,
@@ -219,6 +226,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
     required DateTime startDate,
     DateTime? endDate,
     LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
     int? depositAmountCents,
     int paymentDay = 1,
     PaymentMethod paymentMethod = PaymentMethod.virement,
@@ -227,6 +235,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
     int agencyFeesCents = 0,
     bool solidarityClause = false,
     bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
   }) async {
     _log.info('create(propertyId=$propertyId, tenantId=$tenantId)');
     final res = await _callable('createLease').call(<String, dynamic>{
@@ -234,10 +243,14 @@ class FirestoreLeaseRepository implements LeaseRepository {
       'tenantId': tenantId,
       'rentAmountCents': rentAmountCents,
       'chargesAmountCents': chargesAmountCents,
+      'nonRecoverableChargesCents': nonRecoverableChargesCents,
       'startDate': startDate.toUtc().toIso8601String(),
       'endDate': ?endDate?.toUtc().toIso8601String(),
       'status': 'active',
       'leaseType': leaseType.sqlValue,
+      // FEAT-042 : omis si null pour laisser le serveur dériver le défaut
+      // cohérent avec `leaseType` (`resolveChargeMode` dans lease_payment.ts).
+      'chargeMode': ?chargeMode?.sqlValue,
       'depositAmountCents': ?depositAmountCents,
       'paymentDay': paymentDay,
       'paymentMethod': paymentMethod.sqlValue,
@@ -260,8 +273,12 @@ class FirestoreLeaseRepository implements LeaseRepository {
     final patch = <String, dynamic>{
       'rentAmountCents': lease.rentAmountCents,
       'chargesAmountCents': lease.chargesAmountCents,
+      'nonRecoverableChargesCents': lease.nonRecoverableChargesCents,
       'endDate': lease.endDate?.toUtc().toIso8601String(),
       'leaseType': lease.leaseType.sqlValue,
+      // FEAT-042 : `null` reste possible (bail pré-042 non modifié) — le
+      // serveur recoerce la cohérence type↔mode sur l'état final.
+      'chargeMode': lease.chargeMode?.sqlValue,
       'depositAmountCents': lease.depositAmountCents,
       'paymentDay': lease.paymentDay,
       'paymentMethod': lease.paymentMethod.sqlValue,

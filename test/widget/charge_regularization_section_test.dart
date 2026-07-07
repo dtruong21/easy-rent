@@ -1,15 +1,24 @@
-/// Tests widget de [ChargeRegularizationSection] (FEAT-029 V1.2).
+/// Tests widget de [ChargeRegularizationSection] (FEAT-029 V1.2, FEAT-042).
 ///
-/// Couvre le gate légal meublé vs nu (Gherkin FEAT-029) :
-/// - bail nu (`unfurnished`) → bouton d'action visible, message absent
-/// - bail meublé (`furnished`) → bouton absent, message informatif visible
-/// - baux mobilité / étudiant → V1 scope uniquement `unfurnished` (cf.
-///   backlog § « Régime meublé vs nu ») donc même comportement que meublé :
-///   bouton absent, message informatif visible.
+/// Couvre le gate légal — mode de charges effectif, PAS le type de bail
+/// (`Lease.canRegularizeCharges`) :
+/// - bail nu (`unfurnished`, mode dérivé provisions) → bouton visible
+/// - bail meublé/étudiant en provisions (par défaut si `chargeMode` absent)
+///   → bouton visible (changement de comportement FEAT-042 assumé — un
+///   meublé au provisions EST régularisable)
+/// - bail meublé/étudiant en forfait explicite → bouton absent, message
+/// - bail mobilité (mode dérivé forfait, quel que soit `chargeMode` fourni
+///   par construction du test — le gate lit `canRegularizeCharges`) →
+///   bouton absent, message
 library;
 
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_section.dart';
+import 'package:easyrent/features/expenses/data/expenses_repository.dart';
+import 'package:easyrent/features/expenses/domain/expense.dart';
+import 'package:easyrent/features/expenses/domain/expense_category.dart';
+import 'package:easyrent/features/expenses/domain/expense_nature.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
@@ -57,28 +66,73 @@ class _FakePaymentRepo implements PaymentRepository {
 }
 
 // ---------------------------------------------------------------------------
+// Fake ExpensesRepository (requis par ChargeRegularizationDialog en aval,
+// FEAT-041c : le dialog watch recoverableExpensesProvider dès son
+// ouverture — override nécessaire pour éviter une dépendance Firebase non
+// initialisée en test widget).
+// ---------------------------------------------------------------------------
+
+class _FakeExpensesRepo implements ExpensesRepository {
+  @override
+  Stream<List<Expense>> watchForProperty(String propertyId) =>
+      Stream.value(const []);
+
+  @override
+  Future<List<Expense>> listForProperty(String propertyId) async => const [];
+
+  @override
+  Future<Expense> getById(String id) async => throw UnimplementedError();
+
+  @override
+  Future<Expense> create({
+    required String propertyId,
+    String? leaseId,
+    required int amountCents,
+    required DateTime expenseDate,
+    required ExpenseNature nature,
+    ExpenseCategory? category,
+    DateTime? periodStart,
+    DateTime? periodEnd,
+    int? periodYear,
+    String? documentId,
+    String? notes,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Expense> update(Expense expense) async => throw UnimplementedError();
+
+  @override
+  Future<void> archive(String id) async {}
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-Lease _makeLease({String id = 'lease-1', required LeaseType leaseType}) =>
-    Lease(
-      id: id,
-      landlordId: 'owner-1',
-      propertyId: 'prop-1',
-      tenantId: 'tenant-1',
-      rentAmountCents: 85000,
-      chargesAmountCents: 5000,
-      startDate: DateTime(2024, 1, 1),
-      status: LeaseStatus.active,
-      leaseType: leaseType,
-      createdAt: DateTime(2024),
-      updatedAt: DateTime(2024),
-    );
+Lease _makeLease({
+  String id = 'lease-1',
+  required LeaseType leaseType,
+  ChargeMode? chargeMode,
+}) => Lease(
+  id: id,
+  landlordId: 'owner-1',
+  propertyId: 'prop-1',
+  tenantId: 'tenant-1',
+  rentAmountCents: 85000,
+  chargesAmountCents: 5000,
+  startDate: DateTime(2024, 1, 1),
+  status: LeaseStatus.active,
+  leaseType: leaseType,
+  chargeMode: chargeMode,
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+);
 
 Widget _buildSection(Lease lease) {
   return ProviderScope(
     overrides: [
       paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
+      expensesRepositoryProvider.overrideWithValue(_FakeExpensesRepo()),
     ],
     child: MaterialApp(
       // AppTheme.light requis : StatusPill (utilisé dans le résumé du solde
@@ -151,12 +205,55 @@ void main() {
     });
   });
 
-  group('ChargeRegularizationSection — bail meublé (furnished)', () {
+  group('ChargeRegularizationSection — bail meublé (furnished) en PROVISIONS '
+      '(FEAT-042 : défaut si chargeMode absent)', () {
+    testWidgets('bouton "Régularisation annuelle des charges" visible', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildSection(
+          _makeLease(
+            leaseType: LeaseType.furnished,
+            chargeMode: ChargeMode.provisions,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('btn_charge_regularization')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'chargeMode absent (legacy pré-042) → visible aussi (dérivation '
+      'par défaut provisions)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSection(_makeLease(leaseType: LeaseType.furnished)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_charge_regularization')),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
+  group('ChargeRegularizationSection — bail meublé (furnished) en FORFAIT', () {
     testWidgets('bouton "Régularisation annuelle des charges" ABSENT', (
       tester,
     ) async {
       await tester.pumpWidget(
-        _buildSection(_makeLease(leaseType: LeaseType.furnished)),
+        _buildSection(
+          _makeLease(
+            leaseType: LeaseType.furnished,
+            chargeMode: ChargeMode.forfait,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -167,7 +264,12 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _buildSection(_makeLease(leaseType: LeaseType.furnished)),
+        _buildSection(
+          _makeLease(
+            leaseType: LeaseType.furnished,
+            chargeMode: ChargeMode.forfait,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -176,16 +278,16 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.textContaining('ne donne pas lieu à régularisation légale'),
+        find.textContaining('ne donne pas lieu à régularisation'),
         findsOneWidget,
       );
     });
   });
 
   group(
-    'ChargeRegularizationSection — bail mobilité (V1 scope nu uniquement)',
+    'ChargeRegularizationSection — bail mobilité (forfait obligatoire)',
     () {
-      testWidgets('bouton ABSENT (V1 ne couvre que unfurnished)', (
+      testWidgets('bouton ABSENT (mode dérivé forfait, loi ELAN art. 25-18)', (
         tester,
       ) async {
         await tester.pumpWidget(
@@ -206,25 +308,44 @@ void main() {
   );
 
   group(
-    'ChargeRegularizationSection — bail étudiant (V1 scope nu uniquement)',
+    'ChargeRegularizationSection — bail étudiant (student) en PROVISIONS',
     () {
-      testWidgets('bouton ABSENT (V1 ne couvre que unfurnished)', (
-        tester,
-      ) async {
+      testWidgets('bouton visible', (tester) async {
         await tester.pumpWidget(
-          _buildSection(_makeLease(leaseType: LeaseType.student)),
+          _buildSection(
+            _makeLease(
+              leaseType: LeaseType.student,
+              chargeMode: ChargeMode.provisions,
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
         expect(
           find.byKey(const Key('btn_charge_regularization')),
-          findsNothing,
-        );
-        expect(
-          find.byKey(const Key('text_charge_regularization_not_applicable')),
           findsOneWidget,
         );
       });
     },
   );
+
+  group('ChargeRegularizationSection — bail étudiant (student) en FORFAIT', () {
+    testWidgets('bouton ABSENT', (tester) async {
+      await tester.pumpWidget(
+        _buildSection(
+          _makeLease(
+            leaseType: LeaseType.student,
+            chargeMode: ChargeMode.forfait,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_charge_regularization')), findsNothing);
+      expect(
+        find.byKey(const Key('text_charge_regularization_not_applicable')),
+        findsOneWidget,
+      );
+    });
+  });
 }

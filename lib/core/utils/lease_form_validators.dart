@@ -1,6 +1,7 @@
 import '../../features/properties/domain/property.dart';
 import '../../features/tenants/domain/tenant.dart';
 import 'date_bounds.dart';
+import 'money_format.dart';
 import 'money_validators.dart';
 
 /// Validateurs du formulaire bail — logique pure, sans dépendance Flutter.
@@ -120,6 +121,28 @@ class LeaseFormValidators {
     if (value < 0) return 'Les honoraires ne peuvent pas être négatifs';
     if (value > 1000000000) {
       return 'Montant trop élevé';
+    }
+    return null;
+  }
+
+  /// Valide les charges non récupérables (saisi en euros, string ;
+  /// FEAT-036, optionnel — 0/vide accepté).
+  ///
+  /// ⚠️ Prend la String brute (pas un `int?` déjà converti) : une saisie
+  /// négative comme `"-20"` fait échouer `MoneyFormat.eurosToCents` (qui
+  /// retourne `null` pour tout montant négatif), donc valider un `int?`
+  /// déjà converti ne peut JAMAIS détecter le cas négatif. Même piège évité
+  /// par [MoneyValidators.validateChargesAmount] sur le champ récupérable
+  /// voisin — on applique ici la même stratégie de conversion interne, avec
+  /// un libellé dédié pour ne pas confondre les deux champs.
+  static String? validateNonRecoverableCharges(String? value) {
+    if (value == null || value.trim().isEmpty) return null; // optionnel
+    final cents = MoneyFormat.eurosToCents(value);
+    if (cents == null) {
+      return 'Les charges non récupérables ne peuvent pas être négatives';
+    }
+    if (cents > MoneyValidators.kMaxAmountCents) {
+      return 'Montant trop élevé (maximum 1 000 000,00 €)';
     }
     return null;
   }

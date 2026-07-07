@@ -1,8 +1,10 @@
 /// Tests unitaires du modèle [Lease] : round-trip JSON, dates, extension getters.
 library;
 
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
+import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Lease _buildLease({
@@ -12,10 +14,13 @@ Lease _buildLease({
   String tenantId = 'tenant-1',
   int rentAmountCents = 85000,
   int chargesAmountCents = 5000,
+  int nonRecoverableChargesCents = 0,
   DateTime? startDate,
   DateTime? endDate,
   LeaseStatus status = LeaseStatus.active,
   DateTime? deletedAt,
+  LeaseType leaseType = LeaseType.unfurnished,
+  ChargeMode? chargeMode,
 }) {
   return Lease(
     id: id,
@@ -24,9 +29,12 @@ Lease _buildLease({
     tenantId: tenantId,
     rentAmountCents: rentAmountCents,
     chargesAmountCents: chargesAmountCents,
+    nonRecoverableChargesCents: nonRecoverableChargesCents,
     startDate: startDate ?? DateTime(2024, 1, 1),
     endDate: endDate,
     status: status,
+    leaseType: leaseType,
+    chargeMode: chargeMode,
     createdAt: DateTime(2024, 1, 1, 10),
     updatedAt: DateTime(2024, 1, 1, 10),
     deletedAt: deletedAt,
@@ -124,6 +132,53 @@ void main() {
       final lease = _buildLease();
       expect(lease.deletedAt, isNull);
     });
+
+    // -------------------------------------------------------------------
+    // FEAT-036 — nonRecoverableChargesCents
+    // -------------------------------------------------------------------
+    test(
+      'fromJson SANS non_recoverable_charges_cents (bail pré-036) → 0 (AC-3)',
+      () {
+        final json = {
+          'id': 'lease-legacy',
+          'landlord_id': 'lld-1',
+          'property_id': 'prop-1',
+          'tenant_id': 'ten-1',
+          'rent_amount_cents': 90000,
+          'charges_amount_cents': 10000,
+          'start_date': '2024-01-01',
+          'end_date': null,
+          'status': 'active',
+          'created_at': '2024-01-01T10:00:00Z',
+          'updated_at': '2024-01-01T10:00:00Z',
+          'deleted_at': null,
+        };
+        final lease = Lease.fromJson(json);
+        expect(lease.nonRecoverableChargesCents, 0);
+        // Le montant existant reste conservé et interprété comme récupérable.
+        expect(lease.chargesAmountCents, 10000);
+      },
+    );
+
+    test('fromJson AVEC non_recoverable_charges_cents → valeur lue', () {
+      final json = {
+        'id': 'lease-036',
+        'landlord_id': 'lld-1',
+        'property_id': 'prop-1',
+        'tenant_id': 'ten-1',
+        'rent_amount_cents': 90000,
+        'charges_amount_cents': 10000,
+        'non_recoverable_charges_cents': 2000,
+        'start_date': '2024-01-01',
+        'end_date': null,
+        'status': 'active',
+        'created_at': '2024-01-01T10:00:00Z',
+        'updated_at': '2024-01-01T10:00:00Z',
+        'deleted_at': null,
+      };
+      final lease = Lease.fromJson(json);
+      expect(lease.nonRecoverableChargesCents, 2000);
+    });
   });
 
   group('LeaseExtension — getters calculés', () {
@@ -134,6 +189,51 @@ void main() {
       );
       expect(lease.totalAmountCents, 90000);
     });
+
+    // -------------------------------------------------------------------
+    // FEAT-036 — ventilation récupérable / non récupérable
+    // -------------------------------------------------------------------
+    test('recoverableChargesCents == chargesAmountCents (alias)', () {
+      final lease = _buildLease(chargesAmountCents: 5000);
+      expect(lease.recoverableChargesCents, lease.chargesAmountCents);
+      expect(lease.recoverableChargesCents, 5000);
+    });
+
+    test(
+      'totalChargesCents == chargesAmountCents + nonRecoverableChargesCents',
+      () {
+        final lease = _buildLease(
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 2000,
+        );
+        expect(lease.totalChargesCents, 7000);
+      },
+    );
+
+    test(
+      'totalChargesCents == chargesAmountCents quand non-récupérable = 0',
+      () {
+        final lease = _buildLease(
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 0,
+        );
+        expect(lease.totalChargesCents, 5000);
+      },
+    );
+
+    test(
+      'totalAmountCents INCHANGÉ par FEAT-036 — n\'inclut PAS le non-récupérable',
+      () {
+        final lease = _buildLease(
+          rentAmountCents: 85000,
+          chargesAmountCents: 5000,
+          nonRecoverableChargesCents: 2000,
+        );
+        // Loyer CC = loyer + récupérable SEUL (90000), pas 92000.
+        expect(lease.totalAmountCents, 90000);
+        expect(lease.totalAmountCents, isNot(lease.totalChargesCents + 85000));
+      },
+    );
 
     test('isActive true quand status=active et deletedAt=null', () {
       final lease = _buildLease(status: LeaseStatus.active);
@@ -158,6 +258,104 @@ void main() {
     test('isClosed false quand status=active', () {
       final lease = _buildLease(status: LeaseStatus.active);
       expect(lease.isClosed, isFalse);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // FEAT-042 — effectiveChargeMode (dérivation par type, legacy null)
+  // ---------------------------------------------------------------------
+  group('LeaseExtension.effectiveChargeMode', () {
+    test('chargeMode explicite provisions — priorité sur la dérivation', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.mobility,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+
+    test('chargeMode explicite forfait — priorité sur la dérivation', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.unfurnished,
+        chargeMode: ChargeMode.forfait,
+      );
+      expect(lease.effectiveChargeMode, ChargeMode.forfait);
+    });
+
+    test('null + unfurnished → provisions (dérivé)', () {
+      final lease = _buildLease(leaseType: LeaseType.unfurnished);
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+
+    test('null + mobility → forfait (dérivé, loi ELAN art. 25-18)', () {
+      final lease = _buildLease(leaseType: LeaseType.mobility);
+      expect(lease.effectiveChargeMode, ChargeMode.forfait);
+    });
+
+    test('null + furnished → provisions (dérivé, défaut sûr legacy)', () {
+      final lease = _buildLease(leaseType: LeaseType.furnished);
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+
+    test('null + student → provisions (dérivé, défaut sûr legacy)', () {
+      final lease = _buildLease(leaseType: LeaseType.student);
+      expect(lease.effectiveChargeMode, ChargeMode.provisions);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // FEAT-042 — canRegularizeCharges (prédicat unique d'éligibilité)
+  // ---------------------------------------------------------------------
+  group('LeaseExtension.canRegularizeCharges', () {
+    test('unfurnished (chargeMode null → provisions dérivé) → true', () {
+      final lease = _buildLease(leaseType: LeaseType.unfurnished);
+      expect(lease.canRegularizeCharges, isTrue);
+    });
+
+    test('furnished + chargeMode provisions → true', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.furnished,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.canRegularizeCharges, isTrue);
+    });
+
+    test('furnished + chargeMode forfait → false', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.furnished,
+        chargeMode: ChargeMode.forfait,
+      );
+      expect(lease.canRegularizeCharges, isFalse);
+    });
+
+    test('student + chargeMode provisions → true', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.student,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.canRegularizeCharges, isTrue);
+    });
+
+    test('student + chargeMode forfait → false', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.student,
+        chargeMode: ChargeMode.forfait,
+      );
+      expect(lease.canRegularizeCharges, isFalse);
+    });
+
+    test('mobility (chargeMode null → forfait dérivé) → false', () {
+      final lease = _buildLease(leaseType: LeaseType.mobility);
+      expect(lease.canRegularizeCharges, isFalse);
+    });
+
+    test('mobility + chargeMode provisions explicite → true (le prédicat lit '
+        'effectiveChargeMode, qui priorise une valeur explicite même '
+        'incohérente côté client — la cohérence est imposée serveur)', () {
+      final lease = _buildLease(
+        leaseType: LeaseType.mobility,
+        chargeMode: ChargeMode.provisions,
+      );
+      expect(lease.canRegularizeCharges, isTrue);
     });
   });
 }

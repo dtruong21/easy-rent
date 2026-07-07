@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "60344304540",
+    "project_id": "easy-rent-54cd4",
+    "storage_bucket": "easy-rent-54cd4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:60344304540:android:4511f9183c3a39d02d7e59",
+        "android_client_info": {
+          "package_name": "com.daki.baillan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "60344304540-bu268nctcl5t9qi75ln82g461uv0s3oh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXEIPuWu2Z0J7U4tDpqC_t45Y-f_T7mEk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "60344304540-bu268nctcl5t9qi75ln82g461uv0s3oh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -25,7 +25,6 @@ import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_status.dart';
-import '../domain/lease_type.dart';
 import 'widgets/close_lease_dialog.dart';
 
 final _log = Logger('LeaseDetailPage');
@@ -34,7 +33,8 @@ final _log = Logger('LeaseDetailPage');
 ///
 /// Route : `/leases/:id` — accepte le query param optionnel
 /// `?action=regularize` (raccourci FEAT-030 depuis la liste Baux, action
-/// visible uniquement pour les baux nus). Quand présent, la fiche ouvre
+/// visible uniquement pour les baux en mode provisions, cf.
+/// `Lease.canRegularizeCharges` — FEAT-042). Quand présent, la fiche ouvre
 /// automatiquement le dialog de régularisation des charges une fois ses
 /// données chargées (cf. [_LeaseDetailContent]).
 ///
@@ -153,14 +153,14 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Raccourci FEAT-030 (`?action=regularize` depuis la liste Baux) :
     // ouvrir le dialog de régularisation une fois cette frame posée, une
     // seule fois par montage (garde `_regularizationDialogOpened`). Le gate
-    // légal (bail nu uniquement) est revérifié ici en plus du gate déjà
-    // appliqué à la construction du raccourci dans la liste — défense en
-    // profondeur si l'URL est partagée/tapée manuellement sur un bail non
-    // nu. `addPostFrameCallback` : on ne doit pas appeler `showDialog`
-    // pendant `build()`.
+    // légal (mode provisions uniquement, FEAT-042) est revérifié ici en plus
+    // du gate déjà appliqué à la construction du raccourci dans la liste —
+    // défense en profondeur si l'URL est partagée/tapée manuellement sur un
+    // bail non éligible. `addPostFrameCallback` : on ne doit pas appeler
+    // `showDialog` pendant `build()`.
     if (widget.openRegularizationOnLoad &&
         !_regularizationDialogOpened &&
-        lease.leaseType == LeaseType.unfurnished) {
+        lease.canRegularizeCharges) {
       _regularizationDialogOpened = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
@@ -168,6 +168,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           context: context,
           builder: (_) => ChargeRegularizationDialog(
             leaseId: lease.id,
+            propertyId: lease.propertyId,
             landlordFullName: landlordFullName,
             landlordAddress: landlordAddress,
             tenantFullName: tenantFullName,
@@ -432,10 +433,31 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.add_circle_outline,
-              label: 'Charges',
-              value: MoneyFormat.formatEurosFromCents(lease.chargesAmountCents),
+              label: 'Charges récupérables',
+              value: MoneyFormat.formatEurosFromCents(
+                lease.recoverableChargesCents,
+              ),
             ),
             const Divider(height: 24),
+            // FEAT-036 : toujours affichée (même à 0) pour lever
+            // l'ambiguïté — un 0 masqué pourrait être lu comme une donnée
+            // manquante plutôt qu'une absence réelle de charge bailleur.
+            _InfoRow(
+              icon: Icons.remove_circle_outline,
+              label: 'Charges non récupérables',
+              value: MoneyFormat.formatEurosFromCents(
+                lease.nonRecoverableChargesCents,
+              ),
+            ),
+            const Divider(height: 24),
+            _InfoRow(
+              icon: Icons.calculate_outlined,
+              label: 'Total charges',
+              value: MoneyFormat.formatEurosFromCents(lease.totalChargesCents),
+            ),
+            const Divider(height: 24),
+            // Loyer réellement dû par le locataire (rent + récupérable) —
+            // INCHANGÉ par FEAT-036, ne doit PAS inclure le non-récupérable.
             _InfoRow(
               icon: Icons.euro,
               label: 'Loyer CC',

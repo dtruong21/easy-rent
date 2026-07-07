@@ -208,7 +208,7 @@ void main() {
       final repo = FirebaseAuthRepository(
         auth,
         FakeFirebaseFirestore(),
-        linkWithPopup: (user, provider) async {
+        linkWithProvider: (user, provider) async {
           popupCalled = true;
           return _FakeLinkedCredential(user);
         },
@@ -227,7 +227,7 @@ void main() {
       expect(popupCalled, isFalse);
     });
 
-    test('succès : linkWithPopup + finalize callable appelés', () async {
+    test('succès : linkWithProvider + finalize callable appelés', () async {
       final anonUser = MockUser(isAnonymous: true, uid: 'anon-google-uid');
       final auth = MockFirebaseAuth(mockUser: anonUser, signedIn: true);
       AuthProvider? capturedProvider;
@@ -236,7 +236,7 @@ void main() {
       final repo = FirebaseAuthRepository(
         auth,
         FakeFirebaseFirestore(),
-        linkWithPopup: (user, provider) async {
+        linkWithProvider: (user, provider) async {
           capturedProvider = provider;
           final upgraded = MockUser(isAnonymous: false, uid: user.uid);
           return _FakeLinkedCredential(upgraded);
@@ -274,7 +274,7 @@ void main() {
       final repo = FirebaseAuthRepository(
         auth,
         FakeFirebaseFirestore(),
-        linkWithPopup: (user, provider) async {
+        linkWithProvider: (user, provider) async {
           popupCalled = true;
           return _FakeLinkedCredential(user);
         },
@@ -287,7 +287,7 @@ void main() {
       expect(popupCalled, isFalse);
     });
 
-    test('succès : linkWithPopup (apple.com) + finalize callable', () async {
+    test('succès : linkWithProvider (apple.com) + finalize callable', () async {
       final anonUser = MockUser(isAnonymous: true, uid: 'anon-apple-uid');
       final auth = MockFirebaseAuth(mockUser: anonUser, signedIn: true);
       AuthProvider? capturedProvider;
@@ -296,7 +296,7 @@ void main() {
       final repo = FirebaseAuthRepository(
         auth,
         FakeFirebaseFirestore(),
-        linkWithPopup: (user, provider) async {
+        linkWithProvider: (user, provider) async {
           capturedProvider = provider;
           final upgraded = MockUser(isAnonymous: false, uid: user.uid);
           return _FakeLinkedCredential(upgraded);

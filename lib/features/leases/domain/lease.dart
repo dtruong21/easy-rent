@@ -3,6 +3,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../payments/domain/payment_method.dart';
+import 'charge_mode.dart';
 import 'lease_status.dart';
 import 'lease_type.dart';
 
@@ -31,7 +32,17 @@ class Lease with _$Lease {
     @JsonKey(name: 'property_id') required String propertyId,
     @JsonKey(name: 'tenant_id') required String tenantId,
     @JsonKey(name: 'rent_amount_cents') required int rentAmountCents,
+    // Réinterprété FEAT-036 : part RÉCUPÉRABLE des charges (provision
+    // mensuelle facturable au locataire, décret n°87-713). Nom inchangé pour
+    // la rétrocompat — voir [LeaseExtension.recoverableChargesCents] pour
+    // l'alias explicite et `docs/plans/FEAT-036-charges-recuperables.md`.
     @JsonKey(name: 'charges_amount_cents') required int chargesAmountCents,
+    // FEAT-036 : part NON récupérable des charges — à la charge du bailleur,
+    // jamais facturée au locataire. Absent sur les baux créés avant FEAT-036
+    // ⇒ `@Default(0)` (migration lazy, aucun backfill nécessaire).
+    @JsonKey(name: 'non_recoverable_charges_cents')
+    @Default(0)
+    int nonRecoverableChargesCents,
     @JsonKey(name: 'start_date', fromJson: _dateFromJson, toJson: _dateToJson)
     required DateTime startDate,
     @JsonKey(
@@ -66,6 +77,16 @@ class Lease with _$Lease {
     @JsonKey(name: 'entry_inventory_done')
     @Default(false)
     bool entryInventoryDone,
+    // FEAT-042 : mode de charges (provisions vs forfait). Nullable et SANS
+    // `@Default` — `null` est signifiant (bail pré-042, migration lazy sans
+    // backfill) : voir [LeaseExtension.effectiveChargeMode] pour la
+    // dérivation. Ne jamais remplacer par une valeur concrète ici.
+    @JsonKey(
+      name: 'charge_mode',
+      fromJson: _chargeModeFromJson,
+      toJson: _chargeModeToJson,
+    )
+    ChargeMode? chargeMode,
     // --- Timestamps ---
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
@@ -116,6 +137,15 @@ LeaseType _leaseTypeFromJson(dynamic value) =>
 String _leaseTypeToJson(LeaseType v) => v.sqlValue;
 
 // ---------------------------------------------------------------------------
+// Helpers JSON privés — ChargeMode (FEAT-042)
+// ---------------------------------------------------------------------------
+
+ChargeMode? _chargeModeFromJson(dynamic value) =>
+    ChargeMode.fromSqlOrNull(value as String?);
+
+String? _chargeModeToJson(ChargeMode? v) => v?.sqlValue;
+
+// ---------------------------------------------------------------------------
 // Helpers JSON privés — PaymentMethod
 // ---------------------------------------------------------------------------
 
@@ -133,11 +163,52 @@ String _methodToJson(PaymentMethod v) => v.sqlValue;
 /// Getters utilitaires sur un bail.
 extension LeaseExtension on Lease {
   /// Loyer toutes charges comprises en centimes.
+  ///
+  /// ⚠️ FEAT-036 : reste volontairement `rent + récupérable` (INCHANGÉ). Le
+  /// non-récupérable n'est jamais facturé au locataire (décret n°87-713) —
+  /// l'inclure ici fausserait le montant réellement dû (cards, bandeau
+  /// paiement, quittance). Pour le total des charges (informatif), voir
+  /// [totalChargesCents].
   int get totalAmountCents => rentAmountCents + chargesAmountCents;
+
+  /// Alias lisible de [chargesAmountCents] — la part RÉCUPÉRABLE des
+  /// charges (facturable au locataire). Le champ sous-jacent n'est pas
+  /// renommé pour préserver la rétrocompat des ~15 points de lecture
+  /// existants (quittance, paiements, dashboard) ; cet alias clarifie
+  /// seulement l'intention dans le nouveau code FEAT-036.
+  int get recoverableChargesCents => chargesAmountCents;
+
+  /// Total des charges (récupérable + non récupérable) en centimes.
+  ///
+  /// Purement informatif (fiche bail) — jamais utilisé comme montant dû par
+  /// le locataire, voir [totalAmountCents].
+  int get totalChargesCents => chargesAmountCents + nonRecoverableChargesCents;
 
   /// Vrai si le bail est actif et non archivé.
   bool get isActive => status == LeaseStatus.active && deletedAt == null;
 
   /// Vrai si le bail est clôturé (terminé).
   bool get isClosed => status == LeaseStatus.terminated;
+
+  // ---------------------------------------------------------------------
+  // FEAT-042 — mode de charges effectif + éligibilité régularisation
+  // ---------------------------------------------------------------------
+
+  /// Mode de charges effectif. Les baux créés avant FEAT-042 n'ont pas de
+  /// [chargeMode] persisté (`null`) → on le dérive du type de bail :
+  /// mobilité = forfait (obligatoire, loi ELAN art. 25-18), tout le reste
+  /// (nu, meublé, étudiant) = provisions (défaut sûr — nu est forcé
+  /// provisions côté serveur et le meublé pré-042 était traité comme
+  /// provisions par l'ancien gate).
+  ChargeMode get effectiveChargeMode =>
+      chargeMode ??
+      (leaseType == LeaseType.mobility
+          ? ChargeMode.forfait
+          : ChargeMode.provisions);
+
+  /// Prédicat unique d'éligibilité à la régularisation annuelle des charges
+  /// (art. 23 loi du 6 juillet 1989) — SOURCE DE VÉRITÉ. Remplace l'ancien
+  /// critère erroné `leaseType == LeaseType.unfurnished` : le vrai critère
+  /// juridique est le mode de charges, pas le type de bail.
+  bool get canRegularizeCharges => effectiveChargeMode == ChargeMode.provisions;
 }
