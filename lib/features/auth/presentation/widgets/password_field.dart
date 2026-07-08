@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Champ mot de passe réutilisable avec toggle show/hide.
 class PasswordField extends StatefulWidget {
   const PasswordField({
@@ -28,6 +30,7 @@ class _PasswordFieldState extends State<PasswordField> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return TextField(
       controller: widget.controller,
       obscureText: _obscure,
@@ -40,7 +43,9 @@ class _PasswordFieldState extends State<PasswordField> {
         border: const OutlineInputBorder(),
         suffixIcon: IconButton(
           icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-          tooltip: _obscure ? 'Afficher' : 'Masquer',
+          tooltip: _obscure
+              ? l10n.authPasswordShowTooltip
+              : l10n.authPasswordHideTooltip,
           onPressed: () => setState(() => _obscure = !_obscure),
         ),
       ),

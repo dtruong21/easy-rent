@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Logo "G" officiel Google (multi-couleur) pour le bouton "Continuer avec
 /// Google".
 ///
@@ -34,7 +36,7 @@ class GoogleLogo extends StatelessWidget {
       _svg,
       width: size,
       height: size,
-      semanticsLabel: 'Google',
+      semanticsLabel: context.l10n.authGoogleBrandName,
     );
   }
 }

@@ -3,6 +3,8 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/reset_password_state.dart';
 import 'package:easyrent/features/auth/presentation/reset_password_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -141,7 +143,12 @@ Widget _buildPage({
                 ..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 

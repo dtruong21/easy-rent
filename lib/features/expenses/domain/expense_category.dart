@@ -21,6 +21,13 @@ enum ExpenseCategory {
   };
 
   /// Libellé FR pour l'affichage dans l'UI.
+  ///
+  /// FEAT-043 (i18n) : conservé en dur pour ne pas casser
+  /// `test/widget/expense_form_test.dart` (référence directe à ce getter,
+  /// hors périmètre de ce ticket) — même approche que `DocumentCategory.label`
+  /// (`lib/features/documents/domain/document_category.dart`). Le nouveau
+  /// code présentation doit utiliser `ExpenseCategoryL10n.localizedLabel`
+  /// (`lib/features/expenses/presentation/expense_category_l10n.dart`).
   String get label => switch (this) {
     ExpenseCategory.recoverable => 'Récupérable',
     ExpenseCategory.nonRecoverable => 'Non récupérable',

@@ -1,5 +1,6 @@
 import '../../features/properties/domain/property.dart';
 import '../../features/tenants/domain/tenant.dart';
+import '../validation/validation_error.dart';
 import 'date_bounds.dart';
 import 'money_format.dart';
 import 'money_validators.dart';
@@ -8,36 +9,39 @@ import 'money_validators.dart';
 ///
 /// Testables unitairement sans mock. Délègue à [MoneyValidators] et
 /// [DateBounds] pour les règles partagées avec FEAT-006 (paiements).
+///
+/// FEAT-043 (i18n) : retourne un [ValidationError] (pur, sans `BuildContext`)
+/// au lieu d'un message FR en dur — voir `lib/l10n/l10n_convention.dart`.
 class LeaseFormValidators {
   const LeaseFormValidators._();
 
   /// Valide que [property] est bien sélectionné.
-  static String? validateProperty(Property? property) {
-    if (property == null) return 'Veuillez sélectionner un bien';
+  static ValidationError? validateProperty(Property? property) {
+    if (property == null) return ValidationError.propertyRequired;
     return null;
   }
 
   /// Valide que [tenant] est bien sélectionné.
-  static String? validateTenant(Tenant? tenant) {
-    if (tenant == null) return 'Veuillez sélectionner un locataire';
+  static ValidationError? validateTenant(Tenant? tenant) {
+    if (tenant == null) return ValidationError.tenantRequired;
     return null;
   }
 
   /// Valide le montant du loyer hors charges (saisi en euros, string).
-  static String? validateRentAmount(String? value) =>
+  static ValidationError? validateRentAmount(String? value) =>
       MoneyValidators.validateRentAmount(value);
 
   /// Valide le montant des charges (saisi en euros, string).
-  static String? validateChargesAmount(String? value) =>
+  static ValidationError? validateChargesAmount(String? value) =>
       MoneyValidators.validateChargesAmount(value);
 
   /// Valide la date de début.
   ///
   /// Règle : champ requis, dans la plage [DateBounds.min, DateBounds.max].
-  static String? validateStartDate(DateTime? value) {
-    if (value == null) return 'La date de début est obligatoire';
+  static ValidationError? validateStartDate(DateTime? value) {
+    if (value == null) return ValidationError.startDateRequired;
     if (!DateBounds.contains(value)) {
-      return 'Date invalide (année hors limites)';
+      return ValidationError.dateOutOfRange;
     }
     return null;
   }
@@ -46,14 +50,17 @@ class LeaseFormValidators {
   ///
   /// Si renseignée, doit être strictement postérieure à [startDate] et dans
   /// la plage [DateBounds.min, DateBounds.max].
-  static String? validateEndDate(DateTime? endDate, DateTime? startDate) {
+  static ValidationError? validateEndDate(
+    DateTime? endDate,
+    DateTime? startDate,
+  ) {
     if (endDate == null) return null; // optionnelle — CDI si absente
     if (!DateBounds.contains(endDate)) {
-      return 'Date invalide (année hors limites)';
+      return ValidationError.dateOutOfRange;
     }
     if (startDate == null) return null; // si start absente, pas de cross-check
     if (!endDate.isAfter(startDate)) {
-      return 'La date de fin doit être postérieure à la date de début';
+      return ValidationError.endDateBeforeStartDate;
     }
     return null;
   }
@@ -65,11 +72,11 @@ class LeaseFormValidators {
   /// Valide le dépôt de garantie en centimes (optionnel).
   ///
   /// Si renseigné : doit être entre 0 et 10 milliards de centimes (100 M €).
-  static String? validateDepositCents(int? value) {
+  static ValidationError? validateDepositCents(int? value) {
     if (value == null) return null; // optionnel
-    if (value < 0) return 'Le dépôt de garantie ne peut pas être négatif';
+    if (value < 0) return ValidationError.depositNegative;
     if (value > 1000000000) {
-      return 'Montant trop élevé';
+      return ValidationError.amountTooLarge;
     }
     return null;
   }
@@ -77,14 +84,14 @@ class LeaseFormValidators {
   /// Valide le jour d'échéance (1..28).
   ///
   /// Accepte null ou vide → retourne erreur car le champ est requis lorsqu'il est affiché.
-  static String? validatePaymentDay(String? value) {
+  static ValidationError? validatePaymentDay(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le jour d\'échéance est obligatoire';
+      return ValidationError.paymentDayRequired;
     }
     final day = int.tryParse(value.trim());
-    if (day == null) return 'Valeur invalide';
+    if (day == null) return ValidationError.paymentDayInvalid;
     if (day < 1 || day > 28) {
-      return 'Le jour doit être compris entre 1 et 28';
+      return ValidationError.paymentDayOutOfRange;
     }
     return null;
   }
@@ -92,23 +99,23 @@ class LeaseFormValidators {
   /// Valide la valeur IRL (optionnelle, décimal).
   ///
   /// Si renseignée : doit être un double > 0 et < 10 000.
-  static String? validateIrlValue(String? value) {
+  static ValidationError? validateIrlValue(String? value) {
     if (value == null || value.trim().isEmpty) return null; // optionnel
     final v = double.tryParse(value.trim().replaceAll(',', '.'));
-    if (v == null) return 'Valeur invalide (ex : 142.43)';
-    if (v <= 0) return 'La valeur IRL doit être positive';
-    if (v >= 10000) return 'La valeur IRL doit être inférieure à 10 000';
+    if (v == null) return ValidationError.irlValueInvalid;
+    if (v <= 0) return ValidationError.irlValueNotPositive;
+    if (v >= 10000) return ValidationError.irlValueTooHigh;
     return null;
   }
 
   /// Valide le trimestre IRL de référence (optionnel).
   ///
   /// Si renseigné : doit correspondre au format `T[1-4]-YYYY` (ex : `T1-2026`).
-  static String? validateIrlQuarter(String? value) {
+  static ValidationError? validateIrlQuarter(String? value) {
     if (value == null || value.trim().isEmpty) return null; // optionnel
     final regex = RegExp(r'^T[1-4]-\d{4}$');
     if (!regex.hasMatch(value.trim())) {
-      return 'Format attendu : T1-2026, T2-2026, etc.';
+      return ValidationError.irlQuarterInvalidFormat;
     }
     return null;
   }
@@ -116,11 +123,11 @@ class LeaseFormValidators {
   /// Valide les honoraires d'agence en centimes.
   ///
   /// Doit être entre 0 et 10 milliards de centimes (100 M €).
-  static String? validateAgencyFees(int? value) {
+  static ValidationError? validateAgencyFees(int? value) {
     if (value == null) return null; // 0 par défaut
-    if (value < 0) return 'Les honoraires ne peuvent pas être négatifs';
+    if (value < 0) return ValidationError.agencyFeesNegative;
     if (value > 1000000000) {
-      return 'Montant trop élevé';
+      return ValidationError.amountTooLarge;
     }
     return null;
   }
@@ -134,15 +141,15 @@ class LeaseFormValidators {
   /// déjà converti ne peut JAMAIS détecter le cas négatif. Même piège évité
   /// par [MoneyValidators.validateChargesAmount] sur le champ récupérable
   /// voisin — on applique ici la même stratégie de conversion interne, avec
-  /// un libellé dédié pour ne pas confondre les deux champs.
-  static String? validateNonRecoverableCharges(String? value) {
+  /// un cas d'erreur dédié pour ne pas confondre les deux champs.
+  static ValidationError? validateNonRecoverableCharges(String? value) {
     if (value == null || value.trim().isEmpty) return null; // optionnel
     final cents = MoneyFormat.eurosToCents(value);
     if (cents == null) {
-      return 'Les charges non récupérables ne peuvent pas être négatives';
+      return ValidationError.nonRecoverableChargesNegative;
     }
     if (cents > MoneyValidators.kMaxAmountCents) {
-      return 'Montant trop élevé (maximum 1 000 000,00 €)';
+      return ValidationError.amountTooLargeWithCap;
     }
     return null;
   }

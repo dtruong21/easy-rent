@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/password_validator.dart';
 import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
+import '../domain/auth_error.dart';
 import '../domain/reset_password_state.dart';
 
 final _log = Logger('ResetPasswordController');
@@ -27,19 +28,19 @@ class ResetPasswordController extends StateNotifier<ResetPasswordState> {
     required String confirmPassword,
   }) async {
     if (oobCode.isEmpty) {
-      state = const ResetPasswordState.error(
-        message: 'Code de réinitialisation manquant.',
+      state = ResetPasswordState.error(
+        message: AuthError.missingResetCode.name,
       );
       return;
     }
     final passwordError = PasswordValidator.validate(newPassword);
     if (passwordError != null) {
-      state = ResetPasswordState.error(message: passwordError);
+      state = ResetPasswordState.error(message: passwordError.name);
       return;
     }
     if (newPassword != confirmPassword) {
-      state = const ResetPasswordState.error(
-        message: 'Les mots de passe ne correspondent pas',
+      state = ResetPasswordState.error(
+        message: AuthError.passwordsMismatch.name,
       );
       return;
     }
@@ -59,13 +60,11 @@ class ResetPasswordController extends StateNotifier<ResetPasswordState> {
         st,
       );
       state = ResetPasswordState.error(
-        message: AuthErrorMapper.fromException(e),
+        message: AuthErrorMapper.fromException(e).name,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue resetPassword', e, st);
-      state = const ResetPasswordState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = ResetPasswordState.error(message: AuthError.unknown.name);
     }
   }
 }

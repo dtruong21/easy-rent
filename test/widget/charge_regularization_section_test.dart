@@ -12,6 +12,7 @@
 ///   bouton absent, message
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_section.dart';
 import 'package:easyrent/features/expenses/data/expenses_repository.dart';
@@ -25,6 +26,7 @@ import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/payments/data/payment_repository.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -139,6 +141,9 @@ Widget _buildSection(Lease lease) {
       // du dialog ouvert par cette section) lit l'extension AppColors —
       // absente du ThemeData par défaut de MaterialApp.
       theme: AppTheme.light,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
       home: Scaffold(
         body: ChargeRegularizationSection(
           lease: lease,

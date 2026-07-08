@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
@@ -35,6 +36,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final asyncFiltered = ref.watch(filteredReceiptsProvider(leaseId));
 
     // Vue : Timeline (table) par défaut. Sur mobile, force Timeline.
@@ -61,7 +63,10 @@ class LeaseReceiptsPage extends ConsumerWidget {
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Quittances', fallbackRoute: '/leases/$leaseId'),
+      appBar: AppAppBar(
+        title: l10n.receiptsListPageTitle,
+        fallbackRoute: '/leases/$leaseId',
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -86,17 +91,14 @@ class LeaseReceiptsPage extends ConsumerWidget {
                 if (receipts.isEmpty) {
                   return CardEmptyState(
                     icon: Icons.receipt_long_outlined,
-                    title: 'Aucune quittance générée',
-                    message:
-                        "Les quittances apparaissent ici dès qu'un paiement est "
-                        'enregistré et qu\'une quittance est générée depuis la page '
-                        'Paiements.',
+                    title: l10n.receiptsEmptyStateTitle,
+                    message: l10n.receiptsEmptyStateMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_go_payments_empty'),
                       onPressed: () =>
                           context.push('/leases/$leaseId/payments/new'),
                       icon: const Icon(Icons.add),
-                      label: const Text('Voir les paiements'),
+                      label: Text(l10n.receiptsEmptyStateGoPaymentsButton),
                     ),
                   );
                 }
@@ -141,6 +143,7 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -150,7 +153,7 @@ class _ErrorView extends StatelessWidget {
             Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              'Impossible de charger les quittances.',
+              l10n.receiptsListErrorTitle,
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -158,7 +161,7 @@ class _ErrorView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text(l10n.commonRetry),
             ),
           ],
         ),

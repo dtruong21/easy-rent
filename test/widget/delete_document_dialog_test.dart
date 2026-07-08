@@ -3,9 +3,11 @@
 /// Couvre : variante normale vs variante legal_hold (textes différents).
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
 import 'package:easyrent/features/documents/presentation/widgets/delete_document_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,6 +32,9 @@ Document _makeDoc({bool legalHold = false}) => Document(
 
 Widget _buildDialog({required Document document, VoidCallback? onConfirm}) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => TextButton(

@@ -13,6 +13,7 @@
 /// - À propos et Se déconnecter inchangés
 library;
 
+import 'package:easyrent/core/i18n/locale_provider.dart';
 import 'package:easyrent/core/theme/theme_mode_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
@@ -22,6 +23,8 @@ import 'package:easyrent/features/profile/presentation/profile_details_page.dart
 import 'package:easyrent/features/profile/presentation/profile_page.dart';
 import 'package:easyrent/features/support/data/support_repository.dart';
 import 'package:easyrent/features/support/presentation/support_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
@@ -284,7 +287,21 @@ Widget _buildPage({
         supportRepo ?? _FakeSupportRepository(),
       ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    // Consumer (et non `locale: const Locale('fr')` fixe) : ce hub porte le
+    // sélecteur de langue lui-même (FEAT-043) — il doit suivre
+    // [localeProvider] en direct, comme `BaillanApp` (main.dart), sinon la
+    // bascule ne se reflète jamais dans l'arbre de widgets sous test.
+    child: Consumer(
+      builder: (context, ref, _) {
+        final locale = ref.watch(localeProvider) ?? const Locale('fr');
+        return MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale: locale,
+          supportedLocales: supportedLocales,
+        );
+      },
+    ),
   );
 }
 
@@ -467,6 +484,46 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('theme_mode'), 'dark');
+    });
+
+    testWidgets('Langue (FEAT-043) — sélecteur présent avec 3 options', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Langue'), findsOneWidget);
+      expect(find.byKey(const Key('segments_locale')), findsOneWidget);
+      // « Système » est aussi l'option du sélecteur de thème (Apparence) —
+      // les deux sections l'utilisent, d'où 2 occurrences attendues.
+      expect(find.text('Système'), findsNWidgets(2));
+      expect(find.text('Français'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+    });
+
+    testWidgets('choisir « English » applique et persiste la langue', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('segments_locale')));
+      await tester.tap(find.text('English'));
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ProfilePage)),
+      );
+      expect(container.read(localeProvider), const Locale('en'));
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('app_locale'), 'en');
+
+      // Effet observable immédiat : le titre de section lui-même est traduit
+      // (preuve bout-en-bout, pas seulement l'état du provider).
+      expect(find.text('Language'), findsOneWidget);
     });
 
     testWidgets('groupe Aide — tuile Nous contacter présente et navigable', (

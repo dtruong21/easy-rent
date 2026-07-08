@@ -6,6 +6,7 @@
 /// submit réussi snackbar, PaymentEditPage pré-remplissage + update.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/utils/money_format.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
@@ -22,6 +23,7 @@ import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/payments/presentation/payment_form_page.dart';
 import 'package:easyrent/features/payments/presentation/widgets/payment_amount_warning.dart';
 import 'package:easyrent/features/payments/presentation/widgets/payment_form.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +49,9 @@ Widget _buildPaymentForm({
   final gk = GlobalKey<FormState>();
   final wk = formKey ?? GlobalKey<PaymentFormWidgetState>();
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: SingleChildScrollView(
         child: PaymentForm(
@@ -321,6 +326,9 @@ void main() {
     testWidgets('type below affiche message inférieur', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale: Locale('fr'),
+          supportedLocales: supportedLocales,
           home: Scaffold(
             body: PaymentAmountWarning(type: PaymentAmountWarningType.below),
           ),
@@ -332,6 +340,9 @@ void main() {
     testWidgets('type above affiche message supérieur', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale: Locale('fr'),
+          supportedLocales: supportedLocales,
           home: Scaffold(
             body: PaymentAmountWarning(type: PaymentAmountWarningType.above),
           ),
@@ -515,7 +526,12 @@ Widget _buildFormPage({
       // _submit qui accède à Supabase.instance).
       paymentFormControllerProvider.overrideWith(PaymentFormController.new),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -545,7 +561,12 @@ Widget _buildCreatePage({required Lease lease}) {
       paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
       paymentFormControllerProvider.overrideWith(PaymentFormController.new),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -576,7 +597,12 @@ Widget _buildEditPage({
       paymentDetailProvider.overrideWith((ref, id) async => payment),
       paymentFormControllerProvider.overrideWith(PaymentFormController.new),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -843,7 +869,12 @@ void _createPrefillTests() {
               PaymentFormController.new,
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();

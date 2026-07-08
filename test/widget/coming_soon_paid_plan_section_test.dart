@@ -7,9 +7,11 @@
 /// - Erreur repo → bouton reste actif (retenter possible)
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/paid_plan/application/paid_plan_interest_controller.dart';
 import 'package:easyrent/features/paid_plan/data/paid_plan_interest_repository.dart';
 import 'package:easyrent/features/simulator/presentation/widgets/coming_soon_paid_plan_section.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,8 +34,11 @@ class _FakePaidPlanInterestRepo implements PaidPlanInterestRepository {
 
 Widget _buildSection(_FakePaidPlanInterestRepo repo) => ProviderScope(
   overrides: [paidPlanInterestRepositoryProvider.overrideWithValue(repo)],
-  child: const MaterialApp(
-    home: Scaffold(
+  child: MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
+    home: const Scaffold(
       body: SingleChildScrollView(child: ComingSoonPaidPlanSection()),
     ),
   ),

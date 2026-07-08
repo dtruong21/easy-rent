@@ -1,5 +1,7 @@
 import 'package:easyrent/features/auth/application/signup_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_cta_label.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/signup_page_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
@@ -241,7 +243,7 @@ void main() {
           rgpdConsent: true,
         );
         expect(repo.signUpCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Nom complet requis');
+        expect(_errorMsg(ctrl.state), AuthError.fullNameRequired.name);
       });
 
       test('email invalide → error sans appel repo', () async {
@@ -255,7 +257,7 @@ void main() {
           rgpdConsent: true,
         );
         expect(repo.signUpCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Adresse email invalide');
+        expect(_errorMsg(ctrl.state), AuthError.invalidEmailFormat.name);
       });
 
       test('mot de passe trop court → error sans appel repo', () async {
@@ -269,7 +271,7 @@ void main() {
           rgpdConsent: true,
         );
         expect(repo.signUpCalled, isFalse);
-        expect(_errorMsg(ctrl.state), '8 caractères minimum');
+        expect(_errorMsg(ctrl.state), AuthError.passwordTooShort.name);
       });
 
       test('mots de passe non identiques → error', () async {
@@ -283,7 +285,7 @@ void main() {
           rgpdConsent: true,
         );
         expect(repo.signUpCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Les mots de passe ne correspondent pas');
+        expect(_errorMsg(ctrl.state), AuthError.passwordsMismatch.name);
       });
 
       test('RGPD non coché → error sans appel repo', () async {
@@ -297,16 +299,12 @@ void main() {
           rgpdConsent: false,
         );
         expect(repo.signUpCalled, isFalse);
-        expect(
-          _errorMsg(ctrl.state),
-          "Vous devez accepter les conditions générales d'utilisation "
-          'et la politique de confidentialité',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.consentRequired.name);
       });
     });
 
     group('signUp — erreurs Firebase', () {
-      test('email-already-in-use → message français', () async {
+      test('email-already-in-use → AuthError.emailAlreadyInUse', () async {
         final repo = _FakeAuthRepository()
           ..signUpError = FirebaseAuthException(
             code: 'email-already-in-use',
@@ -321,10 +319,10 @@ void main() {
           rgpdConsent: true,
         );
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), contains('Un compte existe déjà'));
+        expect(_errorMsg(ctrl.state), AuthError.emailAlreadyInUse.name);
       });
 
-      test('exception inconnue → message générique', () async {
+      test('exception inconnue → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..signUpError = Exception('network error');
         final ctrl = _makeController(repo);
@@ -335,10 +333,7 @@ void main() {
           confirmPassword: _validSignup.confirmPassword,
           rgpdConsent: true,
         );
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
 
@@ -351,11 +346,7 @@ void main() {
           await ctrl.signUpWithGoogle(rgpdConsent: false);
           expect(repo.signUpWithGoogleCalled, isFalse);
           expect(_isError(ctrl.state), isTrue);
-          expect(
-            _errorMsg(ctrl.state),
-            "Vous devez accepter les conditions générales d'utilisation "
-            'et la politique de confidentialité',
-          );
+          expect(_errorMsg(ctrl.state), AuthError.consentRequired.name);
         },
       );
 
@@ -406,8 +397,11 @@ void main() {
             orElse: () => (null, null),
           );
           expect(cta.$1, '/login');
-          expect(cta.$2, 'Se connecter');
-          expect(_errorMsg(ctrl.state), contains('Un compte existe déjà'));
+          expect(cta.$2, AuthCtaLabel.signIn.name);
+          expect(
+            _errorMsg(ctrl.state),
+            AuthError.accountExistsWithDifferentCredential.name,
+          );
         },
       );
 
@@ -432,15 +426,12 @@ void main() {
         },
       );
 
-      test('exception générique → message fallback français', () async {
+      test('exception générique → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..signUpWithGoogleError = Exception('boom');
         final ctrl = _makeController(repo);
         await ctrl.signUpWithGoogle(rgpdConsent: true);
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
 
@@ -453,11 +444,7 @@ void main() {
           await ctrl.signUpWithApple(rgpdConsent: false);
           expect(repo.signUpWithAppleCalled, isFalse);
           expect(_isError(ctrl.state), isTrue);
-          expect(
-            _errorMsg(ctrl.state),
-            "Vous devez accepter les conditions générales d'utilisation "
-            'et la politique de confidentialité',
-          );
+          expect(_errorMsg(ctrl.state), AuthError.consentRequired.name);
         },
       );
 
@@ -508,8 +495,11 @@ void main() {
             orElse: () => (null, null),
           );
           expect(cta.$1, '/login');
-          expect(cta.$2, 'Se connecter');
-          expect(_errorMsg(ctrl.state), contains('Un compte existe déjà'));
+          expect(cta.$2, AuthCtaLabel.signIn.name);
+          expect(
+            _errorMsg(ctrl.state),
+            AuthError.accountExistsWithDifferentCredential.name,
+          );
         },
       );
 
@@ -534,15 +524,12 @@ void main() {
         },
       );
 
-      test('exception générique → message fallback français', () async {
+      test('exception générique → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..signUpWithAppleError = Exception('boom');
         final ctrl = _makeController(repo);
         await ctrl.signUpWithApple(rgpdConsent: true);
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
   });

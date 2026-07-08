@@ -1,17 +1,22 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/card_empty_state.dart';
 import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_radii.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../application/chart_format_provider.dart';
 import '../../application/chart_period_provider.dart';
 import '../../application/dashboard_provider.dart';
 import '../../domain/chart_format.dart';
 import '../../domain/chart_period.dart';
 import '../../domain/monthly_amount.dart';
+import '../chart_format_l10n.dart';
+import '../chart_period_l10n.dart';
 
 /// Graphique "Loyers" (période sélectionnable), format switchable.
 ///
@@ -99,8 +104,12 @@ class _ChartHeader extends ConsumerWidget {
     final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
     final period = ref.watch(chartPeriodProvider);
     final format = ref.watch(chartFormatProvider);
+    final l10n = context.l10n;
 
-    final title = Text('Loyers', style: theme.textTheme.titleSmall);
+    final title = Text(
+      l10n.dashboardMonthlyChartTitle,
+      style: theme.textTheme.titleSmall,
+    );
 
     if (!hasData) {
       return Row(children: [title]);
@@ -110,7 +119,7 @@ class _ChartHeader extends ConsumerWidget {
       key: const Key('segments_chart_period'),
       segments: [
         for (final p in ChartPeriod.values)
-          ButtonSegment(value: p, label: Text(p.labelFr)),
+          ButtonSegment(value: p, label: Text(p.label(context))),
       ],
       selected: {period},
       showSelectedIcon: false,
@@ -132,7 +141,7 @@ class _ChartHeader extends ConsumerWidget {
           ButtonSegment(
             value: f,
             icon: Icon(_iconForFormat(f), size: 16),
-            tooltip: f.labelFr,
+            tooltip: f.label(context),
           ),
       ],
       selected: {format},
@@ -203,7 +212,7 @@ class _ChartError extends StatelessWidget {
       height: 160,
       child: Center(
         child: Text(
-          'Impossible de charger les loyers pour cette période.',
+          context.l10n.dashboardMonthlyChartErrorMessage,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -234,14 +243,17 @@ class _ChartBody extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColors>()!;
     final isEmpty = _isAllZero(months);
+    final l10n = context.l10n;
 
     if (isEmpty) {
-      return const CardEmptyState(
+      return CardEmptyState(
         icon: Icons.bar_chart_outlined,
-        title: "Pas encore d'historique",
-        message: 'Les loyers apparaîtront ici dès le 1er paiement.',
+        title: l10n.dashboardMonthlyChartEmptyTitle,
+        message: l10n.dashboardMonthlyChartEmptyMessage,
       );
     }
+
+    final localeName = Localizations.localeOf(context).toString();
 
     return Consumer(
       builder: (context, ref, _) {
@@ -250,6 +262,8 @@ class _ChartBody extends StatelessWidget {
           months: months,
           touchedGroupIndex: touchedGroupIndex,
           onGroupTouched: onGroupTouched,
+          l10n: l10n,
+          localeName: localeName,
         );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,6 +289,8 @@ class _ChartBody extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _Legend(
+              encaissedLabel: l10n.dashboardMonthlyChartEncaisseLabel,
+              dueLabel: l10n.dashboardMonthlyChartDueLabel,
               encaissedColor: colors.success.solid,
               // Un trait gris pâle serait invisible : les courbes utilisent
               // le gris soutenu, la légende suit le format affiché.
@@ -299,11 +315,23 @@ class _ChartBuilder {
     required this.months,
     required this.touchedGroupIndex,
     required this.onGroupTouched,
+    required this.l10n,
+    required this.localeName,
   });
 
   final List<MonthlyAmount> months;
   final int? touchedGroupIndex;
   final ValueChanged<int?> onGroupTouched;
+
+  /// Localisations résolues, capturées dans le widget parent (a un
+  /// [BuildContext]) — [_ChartBuilder] ne construit pas de widgets, il
+  /// produit des données `fl_chart` consommées par des callbacks sans
+  /// contexte (`getTooltipItem`, `getTitlesWidget`).
+  final AppLocalizations l10n;
+
+  /// Nom de la locale active (ex. `fr`, `en`), utilisé par [DateFormat] pour
+  /// l'abréviation du mois sur l'axe des abscisses.
+  final String localeName;
 
   BarChartData buildBarChart(ThemeData theme, AppColors colors) {
     final encaissedColor = colors.success.solid;
@@ -345,7 +373,9 @@ class _ChartBuilder {
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
           getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            final label = rodIndex == 0 ? 'Encaissé' : 'Dû';
+            final label = rodIndex == 0
+                ? l10n.dashboardMonthlyChartEncaisseLabel
+                : l10n.dashboardMonthlyChartDueLabel;
             final euros = _formatCompactEuros((rod.toY * 100).round());
             return BarTooltipItem(
               '$label\n$euros',
@@ -405,7 +435,7 @@ class _ChartBuilder {
           getTooltipItems: (spots) => [
             for (final s in spots)
               LineTooltipItem(
-                '${s.barIndex == 0 ? 'Encaissé' : 'Dû'}\n'
+                '${s.barIndex == 0 ? l10n.dashboardMonthlyChartEncaisseLabel : l10n.dashboardMonthlyChartDueLabel}\n'
                 '${_formatCompactEuros((s.y * 100).round())}',
                 TextStyle(color: theme.colorScheme.onSurface, fontSize: 11),
               ),
@@ -471,7 +501,7 @@ class _ChartBuilder {
               return const SizedBox.shrink();
             }
             final m = months[i];
-            final label = _shortMonthFr(m.month);
+            final label = _shortMonth(m.month, localeName);
             return Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
@@ -536,28 +566,14 @@ IconData _iconForFormat(ChartFormat format) => switch (format) {
   ChartFormat.area => Icons.area_chart_outlined,
 };
 
-/// Retourne l'abréviation FR du mois (1=jan. ... 12=déc.).
+/// Retourne l'abréviation du mois dans la locale active (1=jan. ... 12=déc.).
 ///
-/// Utilisation locale manuelle pour éviter la dépendance sur
-/// les données de locale intl qui nécessitent une initialisation explicite.
-String _shortMonthFr(int month) {
-  const shorts = [
-    '',
-    'jan.',
-    'fév.',
-    'mars',
-    'avr.',
-    'mai',
-    'juin',
-    'juil.',
-    'août',
-    'sep.',
-    'oct.',
-    'nov.',
-    'déc.',
-  ];
+/// FEAT-043 : délègue à `DateFormat.MMM(localeName)` de `package:intl`
+/// (remplace l'ancien tableau FR en dur) — l'année importe peu ici, seul le
+/// mois est extrait de l'objet [DateTime] factice.
+String _shortMonth(int month, String localeName) {
   if (month < 1 || month > 12) return '';
-  return shorts[month];
+  return DateFormat.MMM(localeName).format(DateTime(2024, month));
 }
 
 String _formatCompactEuros(int cents) {
@@ -571,7 +587,14 @@ String _formatCompactEuros(int cents) {
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend({required this.encaissedColor, required this.dueColor});
+  const _Legend({
+    required this.encaissedLabel,
+    required this.dueLabel,
+    required this.encaissedColor,
+    required this.dueColor,
+  });
+  final String encaissedLabel;
+  final String dueLabel;
   final Color encaissedColor;
   final Color dueColor;
 
@@ -580,9 +603,9 @@ class _Legend extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _LegendChip(color: encaissedColor, label: 'Encaissé'),
+        _LegendChip(color: encaissedColor, label: encaissedLabel),
         const SizedBox(width: 16),
-        _LegendChip(color: dueColor, label: 'Dû'),
+        _LegendChip(color: dueColor, label: dueLabel),
       ],
     );
   }

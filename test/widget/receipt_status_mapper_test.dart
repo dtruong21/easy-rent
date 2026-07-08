@@ -1,12 +1,20 @@
 /// Tests unitaires de [receiptStatusPill] et helpers associés.
 ///
 /// Couvre les 5 statuts effectifs + [receiptSecondaryLine].
+///
+/// [receiptStatusPill] et [receiptSecondaryLine] exigent désormais un
+/// [BuildContext] pour résoudre les libellés via `AppLocalizations`
+/// (FEAT-043) — on capture leur résultat depuis un harnais [MaterialApp]
+/// localisé en français, comme `test/widget/lease_status_mapper_test.dart`.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/cards/status_pill_tone.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/receipt_status_mapper.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -43,54 +51,84 @@ Receipt _makeReceipt({
   sentToEmail: sentToEmail,
 );
 
+ReceiptStatusPillData? _capturedPill;
+String? _capturedLine;
+
+/// Harnais localisé (FR) capturant le résultat de [receiptStatusPill] et
+/// [receiptSecondaryLine] pour la [receipt] donnée.
+Widget _harness(Receipt receipt) => MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  locale: const Locale('fr'),
+  supportedLocales: supportedLocales,
+  home: Builder(
+    builder: (context) {
+      _capturedPill = receiptStatusPill(context, receipt);
+      _capturedLine = receiptSecondaryLine(context, receipt);
+      return const SizedBox.shrink();
+    },
+  ),
+);
+
 // ---------------------------------------------------------------------------
 // Tests receiptStatusPill
 // ---------------------------------------------------------------------------
 
 void main() {
   group('receiptStatusPill', () {
-    test('isVoided → danger "Annulée"', () {
-      final r = _makeReceipt(isVoided: true);
-      final pill = receiptStatusPill(r);
+    testWidgets('isVoided → danger "Annulée"', (tester) async {
+      await tester.pumpWidget(_harness(_makeReceipt(isVoided: true)));
+      final pill = _capturedPill!;
       expect(pill.tone, StatusPillTone.danger);
       expect(pill.label, 'Annulée');
     });
 
-    test('isStale (non voided) → warning "Périmée"', () {
-      final r = _makeReceipt(isStale: true);
-      final pill = receiptStatusPill(r);
+    testWidgets('isStale (non voided) → warning "Périmée"', (tester) async {
+      await tester.pumpWidget(_harness(_makeReceipt(isStale: true)));
+      final pill = _capturedPill!;
       expect(pill.tone, StatusPillTone.warning);
       expect(pill.label, 'Périmée');
     });
 
-    test('hasBeenShared (non voided, non stale) → success "Envoyée"', () {
-      final r = _makeReceipt(
-        paymentIds: ['pay-1'],
-        sentAt: DateTime(2026, 3, 5),
-        sentToEmail: 'test@example.com',
+    testWidgets('hasBeenShared (non voided, non stale) → success "Envoyée"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(
+          _makeReceipt(
+            paymentIds: ['pay-1'],
+            sentAt: DateTime(2026, 3, 5),
+            sentToEmail: 'test@example.com',
+          ),
+        ),
       );
-      final pill = receiptStatusPill(r);
+      final pill = _capturedPill!;
       expect(pill.tone, StatusPillTone.success);
       expect(pill.label, 'Envoyée');
     });
 
-    test('paymentIds non vide, non partagée → info "Payée"', () {
-      final r = _makeReceipt(paymentIds: ['pay-1']);
-      final pill = receiptStatusPill(r);
+    testWidgets('paymentIds non vide, non partagée → info "Payée"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_harness(_makeReceipt(paymentIds: ['pay-1'])));
+      final pill = _capturedPill!;
       expect(pill.tone, StatusPillTone.info);
       expect(pill.label, 'Payée');
     });
 
-    test('aucun paiement, non partagée → info "Émise"', () {
-      final r = _makeReceipt();
-      final pill = receiptStatusPill(r);
+    testWidgets('aucun paiement, non partagée → info "Émise"', (tester) async {
+      await tester.pumpWidget(_harness(_makeReceipt()));
+      final pill = _capturedPill!;
       expect(pill.tone, StatusPillTone.info);
       expect(pill.label, 'Émise');
     });
 
-    test('isVoided prioritaire sur isStale → danger "Annulée"', () {
-      final r = _makeReceipt(isVoided: true, isStale: true);
-      final pill = receiptStatusPill(r);
+    testWidgets('isVoided prioritaire sur isStale → danger "Annulée"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _harness(_makeReceipt(isVoided: true, isStale: true)),
+      );
+      final pill = _capturedPill!;
       expect(pill.tone, StatusPillTone.danger);
       expect(pill.label, 'Annulée');
     });
@@ -101,43 +139,51 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('receiptSecondaryLine', () {
-    test('voided → "Annulée le DD/MM"', () {
-      final r = _makeReceipt(isVoided: true, voidedAt: DateTime(2026, 3, 6));
-      final line = receiptSecondaryLine(r);
+    testWidgets('voided → "Annulée le DD/MM"', (tester) async {
+      await tester.pumpWidget(
+        _harness(_makeReceipt(isVoided: true, voidedAt: DateTime(2026, 3, 6))),
+      );
+      final line = _capturedLine!;
       expect(line, contains('Annulée le 06/03'));
     });
 
-    test('voided sans voidedAt → utilise generatedAt', () {
-      final r = _makeReceipt(isVoided: true);
-      final line = receiptSecondaryLine(r);
+    testWidgets('voided sans voidedAt → utilise generatedAt', (tester) async {
+      await tester.pumpWidget(_harness(_makeReceipt(isVoided: true)));
+      final line = _capturedLine!;
       expect(line, startsWith('Annulée le'));
     });
 
-    test(
+    testWidgets(
       'paid + sent → "Payée le DD/MM · Partagée le DD/MM à email masqué"',
-      () {
-        final r = _makeReceipt(
-          paymentIds: ['pay-1'],
-          sentAt: DateTime(2026, 3, 5),
-          sentToEmail: 'marie@example.com',
+      (tester) async {
+        await tester.pumpWidget(
+          _harness(
+            _makeReceipt(
+              paymentIds: ['pay-1'],
+              sentAt: DateTime(2026, 3, 5),
+              sentToEmail: 'marie@example.com',
+            ),
+          ),
         );
-        final line = receiptSecondaryLine(r);
+        final line = _capturedLine!;
         expect(line, contains('Payée le'));
         expect(line, contains('Partagée le 05/03'));
         expect(line, contains('m***@example.com'));
       },
     );
 
-    test('paid non partagée → "Payée le DD/MM"', () {
-      final r = _makeReceipt(paymentIds: ['pay-1']);
-      final line = receiptSecondaryLine(r);
+    testWidgets('paid non partagée → "Payée le DD/MM"', (tester) async {
+      await tester.pumpWidget(_harness(_makeReceipt(paymentIds: ['pay-1'])));
+      final line = _capturedLine!;
       expect(line, startsWith('Payée le'));
       expect(line, isNot(contains('Partagée')));
     });
 
-    test('émise (aucun paiement, non partagée) → "Émise le DD/MM"', () {
-      final r = _makeReceipt();
-      final line = receiptSecondaryLine(r);
+    testWidgets('émise (aucun paiement, non partagée) → "Émise le DD/MM"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_harness(_makeReceipt()));
+      final line = _capturedLine!;
       expect(line, startsWith('Émise le'));
     });
   });

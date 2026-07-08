@@ -15,14 +15,17 @@ library;
 import 'dart:typed_data';
 import 'dart:async';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/receipts/application/share_receipt_controller.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/data/web_share_service_bridge.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
+import 'package:easyrent/features/receipts/domain/receipt_action_error.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
 import 'package:easyrent/features/receipts/domain/share_receipt_state.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/share_receipt_button.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -176,7 +179,12 @@ Widget _buildWidget({
       if (repo != null) receiptsRepositoryProvider.overrideWithValue(repo),
       if (webShare != null) webShareServiceProvider.overrideWithValue(webShare),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -383,7 +391,12 @@ void main() {
               (ref) => _ErrorController(ref),
             ),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pump();
@@ -392,12 +405,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.textContaining('erreur simulée'), findsOneWidget);
+      // FEAT-043 (i18n) : le contrôleur ne stocke plus un message FR libre
+      // mais le nom (stable) du ReceiptActionError ; la présentation le
+      // reconvertit via ReceiptActionErrorL10n. Un code non reconnu retombe
+      // sur le message générique `unknown`.
+      expect(find.textContaining('Une erreur est survenue'), findsOneWidget);
     });
   });
 }
 
-/// Controller de test qui génère une erreur simulée.
+/// Controller de test qui génère une erreur simulée (générique, non
+/// reconnue — retombe sur [ReceiptActionError.unknown] côté présentation).
 class _ErrorController extends ShareReceiptController {
   _ErrorController(super.ref);
 
@@ -410,6 +428,6 @@ class _ErrorController extends ShareReceiptController {
     required String propertyAddress,
     required String landlordFullName,
   }) async {
-    state = const ShareReceiptState.error(message: 'erreur simulée');
+    state = ShareReceiptState.error(message: ReceiptActionError.unknown.name);
   }
 }

@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/email_validator.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../application/signup_controller.dart';
+import '../../domain/auth_cta_label.dart';
+import '../../domain/auth_error.dart';
+import '../auth_cta_label_l10n.dart';
+import '../auth_error_l10n.dart';
 import 'apple_sign_in_button.dart';
 import 'google_sign_in_button.dart';
 import 'or_divider.dart';
@@ -139,16 +144,24 @@ class _SignupFormState extends ConsumerState<SignupForm> {
       submitting: () => true,
       orElse: () => false,
     );
-    final errorMessage = formState.maybeWhen(
+    final errorCode = formState.maybeWhen(
       error: (msg, ctaRoute, ctaLabel) => msg,
       orElse: () => null,
     );
+    final errorMessage = errorCode != null
+        ? AuthError.fromCode(errorCode).message(context)
+        : null;
     final errorCta = formState.maybeWhen(
-      error: (msg, ctaRoute, ctaLabel) =>
-          (ctaRoute != null && ctaLabel != null) ? (ctaRoute, ctaLabel) : null,
+      error: (msg, ctaRoute, ctaLabel) {
+        final label = AuthCtaLabel.fromCode(ctaLabel);
+        return (ctaRoute != null && label != null)
+            ? (ctaRoute, label.label(context))
+            : null;
+      },
       orElse: () => null,
     );
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AutofillGroup(
       child: Column(
@@ -162,10 +175,10 @@ class _SignupFormState extends ConsumerState<SignupForm> {
             autocorrect: false,
             autofillHints: const [AutofillHints.name],
             enabled: !isSubmitting,
-            decoration: const InputDecoration(
-              labelText: 'Nom complet',
-              hintText: 'Jean Dupont',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.authFullNameLabel,
+              hintText: l10n.authFullNameHint,
+              border: const OutlineInputBorder(),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -179,23 +192,23 @@ class _SignupFormState extends ConsumerState<SignupForm> {
               AutofillHints.newUsername,
             ],
             enabled: !isSubmitting,
-            decoration: const InputDecoration(
-              labelText: 'Adresse email',
-              hintText: 'vous@exemple.fr',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.authEmailLabel,
+              hintText: l10n.authEmailHint,
+              border: const OutlineInputBorder(),
             ),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 16),
           PasswordField(
             controller: _passwordController,
-            labelText: 'Mot de passe',
+            labelText: l10n.authPasswordLabel,
             autofillHints: const [AutofillHints.newPassword],
             enabled: !isSubmitting,
           ),
           const SizedBox(height: 4),
           Text(
-            '8 caractères min, 1 lettre, 1 chiffre',
+            l10n.authPasswordRequirementsHelper,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -203,7 +216,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
           const SizedBox(height: 16),
           PasswordField(
             controller: _confirmPasswordController,
-            labelText: 'Confirmer le mot de passe',
+            labelText: l10n.authConfirmPasswordLabel,
             autofillHints: const [AutofillHints.newPassword],
             enabled: !isSubmitting,
             onSubmitted: _canSubmit ? _submit : null,
@@ -247,7 +260,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
                       color: theme.colorScheme.onPrimary,
                     ),
                   )
-                : const Text('Créer mon compte'),
+                : Text(l10n.authCreateAccountButton),
           ),
           const OrDivider(),
           GoogleSignInButton(
@@ -262,7 +275,7 @@ class _SignupFormState extends ConsumerState<SignupForm> {
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => context.go('/login'),
-            child: const Text("J'ai déjà un compte"),
+            child: Text(l10n.authAlreadyHaveAccountLink),
           ),
         ],
       ),
@@ -311,6 +324,7 @@ class _ConsentCheckboxState extends State<_ConsentCheckbox> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = context.l10n;
     // push (pas go) : le formulaire reste dans la pile, le retour depuis la
     // page légale conserve la saisie en cours.
     _termsRecognizer.onTap = () => context.push('/terms');
@@ -343,25 +357,25 @@ class _ConsentCheckboxState extends State<_ConsentCheckbox> {
                     text: TextSpan(
                       style: theme.textTheme.bodyMedium,
                       children: [
-                        const TextSpan(text: "J'accepte les "),
+                        TextSpan(text: l10n.authConsentPrefix),
                         TextSpan(
-                          text: "conditions générales d'utilisation",
+                          text: l10n.authTermsOfServiceLink,
                           style: TextStyle(
                             color: colorScheme.primary,
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: _termsRecognizer,
                         ),
-                        const TextSpan(text: ' et la '),
+                        TextSpan(text: l10n.authConsentMiddle),
                         TextSpan(
-                          text: 'politique de confidentialité',
+                          text: l10n.authConsentPrivacyPolicyLink,
                           style: TextStyle(
                             color: colorScheme.primary,
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: _privacyRecognizer,
                         ),
-                        const TextSpan(text: '.'),
+                        TextSpan(text: l10n.authConsentSuffix),
                       ],
                     ),
                   ),
@@ -374,8 +388,7 @@ class _ConsentCheckboxState extends State<_ConsentCheckbox> {
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 12),
             child: Text(
-              "Vous devez accepter les conditions générales d'utilisation "
-              'et la politique de confidentialité.',
+              l10n.authConsentRequiredError,
               key: const Key('rgpd_consent_error'),
               style: TextStyle(color: colorScheme.error, fontSize: 13),
             ),

@@ -4,8 +4,11 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/app_info/app_info_provider.dart';
 import '../../../../core/config/env.dart';
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../application/support_controller.dart';
 import '../../domain/support_request_state.dart';
+import '../../domain/support_submit_error.dart';
+import '../support_submit_error_l10n.dart';
 
 /// Formulaire inline « Nous contacter » (sujet + message).
 ///
@@ -69,12 +72,13 @@ class _ProfileSupportFormState extends ConsumerState<ProfileSupportForm> {
   @override
   Widget build(BuildContext context) {
     final formState = ref.watch(supportControllerProvider);
+    final l10n = context.l10n;
     final isSubmitting = formState.maybeWhen(
       submitting: () => true,
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (code) => SupportSubmitError.fromCode(code).message(context),
       orElse: () => null,
     );
     final theme = Theme.of(context);
@@ -87,9 +91,7 @@ class _ProfileSupportFormState extends ConsumerState<ProfileSupportForm> {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text(
-                'Message envoyé. Nous reviendrons vers vous par email.',
-              ),
+              content: Text(l10n.supportFormSuccessSnackbar),
               backgroundColor: theme.colorScheme.primaryContainer,
             ),
           );
@@ -106,10 +108,10 @@ class _ProfileSupportFormState extends ConsumerState<ProfileSupportForm> {
           key: const Key('field_support_subject'),
           controller: _subjectController,
           enabled: !isSubmitting,
-          maxLength: 120,
-          decoration: const InputDecoration(
-            labelText: 'Sujet',
-            border: OutlineInputBorder(),
+          maxLength: kSupportSubjectMaxLength,
+          decoration: InputDecoration(
+            labelText: l10n.supportFormSubjectLabel,
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 8),
@@ -118,10 +120,10 @@ class _ProfileSupportFormState extends ConsumerState<ProfileSupportForm> {
           controller: _messageController,
           enabled: !isSubmitting,
           maxLines: 5,
-          maxLength: 2000,
-          decoration: const InputDecoration(
-            labelText: 'Message',
-            border: OutlineInputBorder(),
+          maxLength: kSupportMessageMaxLength,
+          decoration: InputDecoration(
+            labelText: l10n.supportFormMessageLabel,
+            border: const OutlineInputBorder(),
             alignLabelWithHint: true,
           ),
         ),
@@ -145,7 +147,7 @@ class _ProfileSupportFormState extends ConsumerState<ProfileSupportForm> {
                     color: theme.colorScheme.onPrimary,
                   ),
                 )
-              : const Text('Envoyer'),
+              : Text(l10n.supportFormSubmitButton),
         ),
       ],
     );

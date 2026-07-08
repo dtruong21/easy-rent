@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../auth/domain/subscription_tier.dart';
 import '../../../paid_plan/application/paid_plan_interest_controller.dart';
 
@@ -43,23 +44,24 @@ class _ScenarioLimitReachedDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isAnonymous = tier == SubscriptionTier.anonymous;
+    final l10n = context.l10n;
 
     return AlertDialog(
       key: const Key('scenario_limit_reached_modal'),
       title: Text(
-        isAnonymous ? 'Limite du mode démo atteinte' : 'Limite atteinte',
+        isAnonymous
+            ? l10n.simulatorLimitReachedTitleAnonymous
+            : l10n.simulatorLimitReachedTitleFree,
       ),
       content: Text(
         isAnonymous
-            ? 'Le mode démo permet de sauvegarder un seul scénario. '
-                  'Créez un compte pour en garder jusqu\'à 3.'
-            : 'Votre compte gratuit permet de sauvegarder jusqu\'à 3 '
-                  'scénarios. Passez au Plan Pro pour des scénarios illimités.',
+            ? l10n.simulatorLimitReachedContentAnonymous
+            : l10n.simulatorLimitReachedContentFree,
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Plus tard'),
+          child: Text(l10n.simulatorLimitReachedLaterButton),
         ),
         if (isAnonymous)
           FilledButton(
@@ -68,7 +70,7 @@ class _ScenarioLimitReachedDialog extends ConsumerWidget {
               Navigator.of(context).pop();
               context.go('/signup');
             },
-            child: const Text('Créer un compte'),
+            child: Text(l10n.simulatorLimitReachedSignupButton),
           )
         else
           _NotifyMeButton(onSubmitted: () => Navigator.of(context).pop()),
@@ -101,17 +103,19 @@ class _NotifyMeButtonState extends ConsumerState<_NotifyMeButton> {
     if (ref.read(paidPlanInterestControllerProvider).hasError) {
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Impossible d\'enregistrer votre intérêt pour le moment. Réessayez.',
-          ),
+        SnackBar(
+          content: Text(context.l10n.simulatorInterestSaveErrorSnackbar),
         ),
       );
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nous vous préviendrons du lancement.')),
+      SnackBar(
+        content: Text(
+          context.l10n.simulatorLimitReachedNotifyMeSuccessSnackbar,
+        ),
+      ),
     );
     widget.onSubmitted();
   }
@@ -127,7 +131,7 @@ class _NotifyMeButtonState extends ConsumerState<_NotifyMeButton> {
               width: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Text('M\'avertir du lancement'),
+          : Text(context.l10n.simulatorNotifyMeButton),
     );
   }
 }

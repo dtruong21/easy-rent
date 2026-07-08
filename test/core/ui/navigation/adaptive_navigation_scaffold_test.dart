@@ -8,6 +8,8 @@
 library;
 
 import 'package:easyrent/core/ui/navigation/adaptive_navigation_scaffold.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,7 +93,14 @@ GoRouter _buildTestRouter() {
 
 Future<void> _pumpApp(WidgetTester tester, GoRouter router) {
   return tester.pumpWidget(
-    ProviderScope(child: MaterialApp.router(routerConfig: router)),
+    ProviderScope(
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
+      ),
+    ),
   );
 }
 

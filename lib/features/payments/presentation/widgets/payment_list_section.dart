@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../leases/application/lease_detail_provider.dart';
 import '../../../leases/domain/lease.dart';
@@ -72,19 +73,22 @@ class _PaymentListContent extends ConsumerWidget {
             // En-tête avec titre et bouton ajouter
             Row(
               children: [
-                Text('Paiements', style: theme.textTheme.titleMedium),
+                Text(
+                  context.l10n.paymentsSectionTitle,
+                  style: theme.textTheme.titleMedium,
+                ),
                 const Spacer(),
                 Tooltip(
                   message: isClosed
-                      ? 'Ce bail est clôturé.'
-                      : 'Ajouter un paiement',
+                      ? context.l10n.paymentsAddDisabledTooltip
+                      : context.l10n.paymentsAddTooltip,
                   child: FilledButton.icon(
                     key: const Key('btn_add_payment'),
                     onPressed: isClosed
                         ? null
                         : () => context.push('/leases/$leaseId/payments/new'),
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Ajouter'),
+                    label: Text(context.l10n.paymentsAddButton),
                   ),
                 ),
               ],
@@ -97,7 +101,7 @@ class _PaymentListContent extends ConsumerWidget {
               error: (e, _) {
                 _log.warning('Erreur chargement paiements', e);
                 return Text(
-                  'Erreur lors du chargement des paiements.',
+                  context.l10n.paymentsListErrorLoading,
                   style: TextStyle(color: theme.colorScheme.error),
                 );
               },
@@ -154,7 +158,7 @@ class _PaymentListContent extends ConsumerWidget {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Paiement archivé'),
+          content: Text(context.l10n.paymentsArchiveSuccessSnackbar),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         ),
       );
@@ -181,7 +185,7 @@ class _TotalRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Total encaissé',
+            context.l10n.paymentsTotalCollectedLabel,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -212,8 +216,8 @@ class _EmptyPaymentsHint extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         isClosed
-            ? 'Aucun paiement enregistré pour ce bail clôturé.'
-            : 'Aucun paiement enregistré. Cliquez sur "Ajouter" pour saisir le premier paiement.',
+            ? context.l10n.paymentsEmptyClosedMessage
+            : context.l10n.paymentsEmptyMessage,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           fontStyle: FontStyle.italic,

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/utils/money_format.dart';
 import '../application/expenses_provider.dart';
 import '../domain/expense_category.dart';
 import '../domain/expense_filter.dart';
 import '../domain/expense_nature.dart';
+import 'expense_category_l10n.dart';
+import 'expense_nature_l10n.dart';
 
 /// Barre de filtres de l'historique des dépenses d'un bien.
 ///
@@ -61,7 +64,7 @@ class ExpenseFilterBar extends StatelessWidget {
                     key: const Key('btn_reset_expense_filter'),
                     onPressed: () => onFilterChanged(ExpenseFilter.empty),
                     icon: const Icon(Icons.clear, size: 18),
-                    label: const Text('Réinitialiser'),
+                    label: Text(context.l10n.expensesFilterResetButton),
                   ),
               ],
             ),
@@ -72,13 +75,13 @@ class ExpenseFilterBar extends StatelessWidget {
               children: [
                 _TotalColumn(
                   key: const Key('total_recoverable'),
-                  label: 'Total récupérable',
+                  label: context.l10n.expensesFilterTotalRecoverableLabel,
                   amountCents: totals.recoverableCents,
                   color: Colors.teal.shade700,
                 ),
                 _TotalColumn(
                   key: const Key('total_non_recoverable'),
-                  label: 'Total non récupérable',
+                  label: context.l10n.expensesFilterTotalNonRecoverableLabel,
                   amountCents: totals.nonRecoverableCents,
                   color: theme.colorScheme.error,
                 ),
@@ -107,9 +110,12 @@ class _YearDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButton<int?>(
       value: value,
-      hint: const Text('Exercice'),
+      hint: Text(context.l10n.expensesFilterYearHint),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('Tous')),
+        DropdownMenuItem<int?>(
+          value: null,
+          child: Text(context.l10n.expensesFilterYearAllOption),
+        ),
         ...availableYears.map(
           (y) => DropdownMenuItem<int?>(value: y, child: Text('$y')),
         ),
@@ -133,16 +139,16 @@ class _CategoryDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButton<ExpenseCategory?>(
       value: value,
-      hint: const Text('Catégorie'),
+      hint: Text(context.l10n.expensesFilterCategoryHint),
       items: [
-        const DropdownMenuItem<ExpenseCategory?>(
+        DropdownMenuItem<ExpenseCategory?>(
           value: null,
-          child: Text('Toutes'),
+          child: Text(context.l10n.expensesFilterCategoryAllOption),
         ),
         ...ExpenseCategory.values.map(
           (c) => DropdownMenuItem<ExpenseCategory?>(
             value: c,
-            child: Text(c.label),
+            child: Text(c.localizedLabel(context)),
           ),
         ),
       ],
@@ -165,15 +171,17 @@ class _NatureDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButton<ExpenseNature?>(
       value: value,
-      hint: const Text('Nature'),
+      hint: Text(context.l10n.expensesFilterNatureHint),
       items: [
-        const DropdownMenuItem<ExpenseNature?>(
+        DropdownMenuItem<ExpenseNature?>(
           value: null,
-          child: Text('Toutes'),
+          child: Text(context.l10n.expensesFilterNatureAllOption),
         ),
         ...ExpenseNature.values.map(
-          (n) =>
-              DropdownMenuItem<ExpenseNature?>(value: n, child: Text(n.label)),
+          (n) => DropdownMenuItem<ExpenseNature?>(
+            value: n,
+            child: Text(n.localizedLabel(context)),
+          ),
         ),
       ],
       onChanged: onChanged,

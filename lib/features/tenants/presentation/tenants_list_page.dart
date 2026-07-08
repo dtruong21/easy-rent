@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
@@ -28,18 +29,19 @@ class TenantsListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final asyncTenants = ref.watch(filteredTenantsProvider);
     final viewMode = context.isMobile
         ? ViewMode.card
         : ref.watch(viewModeProvider('tenants'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes locataires', showBackButton: false),
+      appBar: AppAppBar(title: l10n.tenantsListTitle, showBackButton: false),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_tenant'),
         onPressed: () => context.push('/tenants/new'),
         icon: const Icon(Icons.add),
-        label: const Text('Ajouter un locataire'),
+        label: Text(l10n.tenantsAddButton),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -52,8 +54,8 @@ class TenantsListPage extends ConsumerWidget {
                   : TenantsCardView.loading(),
               error: (e, _) => _ErrorView(
                 message: e is FirebaseException
-                    ? 'Erreur Firestore : ${e.message ?? e.code}'
-                    : 'Erreur de chargement',
+                    ? l10n.tenantsErrorFirestore(e.message ?? e.code)
+                    : l10n.tenantsErrorLoading,
                 // Invalider la RACINE : le dérivé filtré relirait l'AsyncError
                 // caché par le notifier sans jamais refetcher.
                 onRetry: () => ref.invalidate(tenantsListItemsProvider),
@@ -62,15 +64,13 @@ class TenantsListPage extends ConsumerWidget {
                 if (tenants.isEmpty) {
                   return CardEmptyState(
                     icon: Icons.people_outline,
-                    title: 'Aucun locataire enregistré',
-                    message:
-                        'Ajoutez votre premier locataire pour démarrer.\n'
-                        "Vous pourrez ensuite l'associer à un bien via un bail.",
+                    title: l10n.tenantsEmptyTitle,
+                    message: l10n.tenantsEmptyMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_add_tenant_empty'),
                       onPressed: () => context.push('/tenants/new'),
                       icon: const Icon(Icons.add),
-                      label: const Text('Ajouter un locataire'),
+                      label: Text(l10n.tenantsAddButton),
                     ),
                   );
                 }
@@ -118,7 +118,7 @@ class _WithLimitBanner extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Text(
-            'Limite de 200 locataires atteinte. Contactez le support pour augmenter cette limite.',
+            context.l10n.tenantsLimitReachedBanner,
             textAlign: TextAlign.center,
             style: Theme.of(
               context,
@@ -156,7 +156,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Impossible de charger vos locataires.',
+              context.l10n.tenantsErrorLoadFailedTitle,
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -170,7 +170,7 @@ class _ErrorView extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text(context.l10n.commonRetry),
             ),
           ],
         ),

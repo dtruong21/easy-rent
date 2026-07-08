@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/charge_regularization_balance.dart';
+import 'charge_regularization_balance_direction_l10n.dart';
 
 /// Résumé en direct du solde calculé — provisions, dépenses réelles, solde
 /// signé avec libellé explicite.
@@ -37,13 +39,13 @@ class ChargeRegularizationBalanceSummary extends StatelessWidget {
         children: [
           _row(
             theme,
-            'Provisions encaissées',
+            context.l10n.chargeRegularizationBalanceProvisionsLabel,
             MoneyFormat.formatEurosFromCents(balance.provisionsCollectedCents),
           ),
           const SizedBox(height: 4),
           _row(
             theme,
-            'Dépenses réelles',
+            context.l10n.chargeRegularizationBalanceActualExpensesLabel,
             MoneyFormat.formatEurosFromCents(balance.actualExpensesCents),
           ),
           const Divider(height: 20),
@@ -51,7 +53,7 @@ class ChargeRegularizationBalanceSummary extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Solde',
+                context.l10n.chargeRegularizationBalanceSoldeLabel,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -68,7 +70,7 @@ class ChargeRegularizationBalanceSummary extends StatelessWidget {
           const SizedBox(height: 8),
           StatusPill(
             key: const Key('charge_regularization_balance_label'),
-            label: balance.labelFr,
+            label: balance.direction.localizedLabel(context),
             tone: tone,
           ),
         ],

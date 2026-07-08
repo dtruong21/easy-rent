@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../data/receipts_repository.dart';
+import '../domain/receipt_action_error.dart';
 import '../domain/receipt_generation_state.dart';
 import 'lease_receipts_provider.dart';
 import '../../dashboard/application/dashboard_provider.dart';
@@ -73,23 +74,23 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
         e,
         st,
       );
-      final msg = switch (e.code) {
-        'permission-denied' || 'unauthenticated' => 'Action non autorisée.',
-        'failed-precondition' =>
-          'Aucun paiement trouvé pour cette période ou bail invalide.',
-        'not-found' => 'Bail ou paiements introuvables.',
-        _ => 'Erreur lors de la génération du PDF. Veuillez réessayer.',
+      final code = switch (e.code) {
+        'permission-denied' ||
+        'unauthenticated' => ReceiptActionError.permissionDenied,
+        'failed-precondition' => ReceiptActionError.noPaymentForPeriod,
+        'not-found' => ReceiptActionError.leaseOrPaymentsNotFound,
+        _ => ReceiptActionError.generationFailed,
       };
-      state = ReceiptGenerationState.error(message: msg);
+      state = ReceiptGenerationState.error(message: code.name);
     } on ReceiptGenerationException catch (e, st) {
       _log.warning('ReceiptGenerationException', e, st);
-      state = const ReceiptGenerationState.error(
-        message: 'Erreur lors de la génération du PDF. Veuillez réessayer.',
+      state = ReceiptGenerationState.error(
+        message: ReceiptActionError.generationFailed.name,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de la génération', e, st);
-      state = const ReceiptGenerationState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
+      state = ReceiptGenerationState.error(
+        message: ReceiptActionError.unknown.name,
       );
     }
   }

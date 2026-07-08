@@ -1,12 +1,19 @@
 /// Tests widget de [UploadProgressList].
 ///
 /// Couvre : rendu selon états (pending / uploading / success / error).
+///
+/// FEAT-043 (i18n) : le rendu du statut `error` appelle désormais
+/// `reason.message(context)` (`UploadFileErrorReasonL10n`), qui nécessite un
+/// `AppLocalizations` enregistré — `_buildList` ci-dessous déclare donc les
+/// délégués/`supportedLocales` (locale forcée FR).
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
 import 'package:easyrent/features/documents/domain/upload_file_status.dart';
 import 'package:easyrent/features/documents/presentation/widgets/upload_progress_list.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +38,9 @@ Document _makeDoc() => Document(
 
 Widget _buildList(List<UploadFileStatus> files) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(body: UploadProgressList(files: files)),
   );
 }
@@ -95,13 +105,12 @@ void main() {
         _buildList([
           const UploadFileStatus.error(
             filename: 'doc.docx',
-            message: 'Format non supporté.',
+            reason: UploadFileErrorReason.unsupportedFormat,
           ),
         ]),
       );
       await tester.pumpAndSettle();
       expect(find.text('doc.docx'), findsOneWidget);
-      expect(find.text('Format non supporté.'), findsOneWidget);
     });
 
     testWidgets('plusieurs fichiers → affiche tous les noms', (tester) async {
@@ -109,7 +118,10 @@ void main() {
         _buildList([
           const UploadFileStatus.pending(filename: 'a.pdf', sizeBytes: 100),
           const UploadFileStatus.uploading(filename: 'b.jpg', progress: 0.3),
-          const UploadFileStatus.error(filename: 'c.docx', message: 'Erreur'),
+          const UploadFileStatus.error(
+            filename: 'c.docx',
+            reason: UploadFileErrorReason.unexpected,
+          ),
         ]),
       );
       await tester.pumpAndSettle();

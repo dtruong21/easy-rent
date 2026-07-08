@@ -10,6 +10,7 @@ import '../data/lease_repository.dart';
 import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
+import '../domain/lease_submit_error.dart';
 import '../domain/lease_type.dart';
 import 'lease_detail_provider.dart';
 import 'leases_list_provider.dart';
@@ -120,17 +121,13 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
       state = LeaseFormState.success(lease: result);
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseException lors de submit', e, st);
-      state = LeaseFormState.error(message: _mapFirebaseError(e));
+      state = LeaseFormState.error(message: _mapFirebaseError(e).name);
     } on LeaseNotFoundException catch (notFound, st) {
       _log.warning('LeaseNotFoundException lors de submit', notFound, st);
-      state = const LeaseFormState.error(
-        message: 'Bail introuvable. Il a peut-être été archivé.',
-      );
+      state = LeaseFormState.error(message: LeaseSubmitError.notFound.name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de submit', e, st);
-      state = const LeaseFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = LeaseFormState.error(message: LeaseSubmitError.unknown.name);
     }
   }
 
@@ -159,42 +156,42 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
         alreadyClosed,
         st,
       );
-      state = const LeaseFormState.error(message: 'Ce bail est déjà clôturé.');
+      state = LeaseFormState.error(
+        message: LeaseSubmitError.alreadyClosed.name,
+      );
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseException lors de close', e, st);
-      state = LeaseFormState.error(message: _mapFirebaseError(e));
+      state = LeaseFormState.error(message: _mapFirebaseError(e).name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de close', e, st);
-      state = const LeaseFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = LeaseFormState.error(message: LeaseSubmitError.unknown.name);
     }
   }
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const LeaseFormState.idle();
 
-  String _mapFirebaseError(FirebaseFunctionsException e) {
+  LeaseSubmitError _mapFirebaseError(FirebaseFunctionsException e) {
     final code = e.code;
     final msg = e.message ?? '';
     if (msg.contains('property not owned') ||
         msg.contains('tenant not owned')) {
-      return 'Le bien ou le locataire ne vous appartient pas.';
+      return LeaseSubmitError.propertyOrTenantNotOwned;
     }
     if (msg.contains('property is deleted') ||
         msg.contains('tenant is deleted')) {
-      return 'Le bien ou le locataire a été archivé.';
+      return LeaseSubmitError.propertyOrTenantArchived;
     }
     if (code == 'permission-denied' || code == 'unauthenticated') {
-      return 'Action non autorisée.';
+      return LeaseSubmitError.permissionDenied;
     }
     if (code == 'failed-precondition') {
-      return 'Opération impossible — vérifiez l\'état du bail.';
+      return LeaseSubmitError.invalidState;
     }
     if (code == 'unavailable' || code == 'deadline-exceeded') {
-      return 'Service temporairement indisponible. Réessayez.';
+      return LeaseSubmitError.serviceUnavailable;
     }
-    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+    return LeaseSubmitError.saveFailed;
   }
 }
 

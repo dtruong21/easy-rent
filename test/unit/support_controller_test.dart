@@ -1,6 +1,7 @@
 import 'package:easyrent/features/support/application/support_controller.dart';
 import 'package:easyrent/features/support/data/support_repository.dart';
 import 'package:easyrent/features/support/domain/support_request_state.dart';
+import 'package:easyrent/features/support/domain/support_submit_error.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -122,7 +123,7 @@ void main() {
         );
         expect(repo.submitCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), 'Sujet requis');
+        expect(_errorMsg(ctrl.state), SupportSubmitError.subjectRequired.name);
       });
 
       test('sujet uniquement des espaces → traité comme vide', () async {
@@ -135,7 +136,7 @@ void main() {
           appEnv: 'dev',
         );
         expect(repo.submitCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Sujet requis');
+        expect(_errorMsg(ctrl.state), SupportSubmitError.subjectRequired.name);
       });
 
       test('sujet > 120 caractères → error sans appel repo', () async {
@@ -148,10 +149,7 @@ void main() {
           appEnv: 'dev',
         );
         expect(repo.submitCalled, isFalse);
-        expect(
-          _errorMsg(ctrl.state),
-          'Le sujet doit faire 120 caractères max.',
-        );
+        expect(_errorMsg(ctrl.state), SupportSubmitError.subjectTooLong.name);
       });
 
       test('sujet exactement 120 caractères → accepté', () async {
@@ -177,7 +175,7 @@ void main() {
           appEnv: 'dev',
         );
         expect(repo.submitCalled, isFalse);
-        expect(_errorMsg(ctrl.state), 'Message requis');
+        expect(_errorMsg(ctrl.state), SupportSubmitError.messageRequired.name);
       });
 
       test('message > 2000 caractères → error sans appel repo', () async {
@@ -190,10 +188,7 @@ void main() {
           appEnv: 'dev',
         );
         expect(repo.submitCalled, isFalse);
-        expect(
-          _errorMsg(ctrl.state),
-          'Le message doit faire 2000 caractères max.',
-        );
+        expect(_errorMsg(ctrl.state), SupportSubmitError.messageTooLong.name);
       });
 
       test('message exactement 2000 caractères → accepté', () async {
@@ -222,10 +217,7 @@ void main() {
           appEnv: 'dev',
         );
         expect(_isError(ctrl.state), isTrue);
-        expect(
-          _errorMsg(ctrl.state),
-          'Envoi impossible. Réessayez dans quelques instants.',
-        );
+        expect(_errorMsg(ctrl.state), SupportSubmitError.sendFailed.name);
       });
     });
 

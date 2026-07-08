@@ -1,11 +1,13 @@
 /// Tests widget pour [ViewModeToggle].
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/ui/cards/view_mode.dart';
 import 'package:easyrent/core/ui/cards/view_mode_provider.dart';
 import 'package:easyrent/core/ui/cards/view_mode_storage.dart';
 import 'package:easyrent/core/ui/cards/view_mode_toggle.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +18,9 @@ Widget _wrap({required double screenWidth}) {
     overrides: [viewModeStorageProvider.overrideWithValue(ViewModeStorage())],
     child: MaterialApp(
       theme: AppTheme.light,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: Scaffold(
         body: MediaQuery(
           data: MediaQueryData(size: Size(screenWidth, 800)),
@@ -84,6 +89,9 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.light,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             home: Scaffold(
               body: MediaQuery(
                 data: const MediaQueryData(size: Size(1024, 800)),

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../application/share_receipt_controller.dart';
 import '../../domain/receipt.dart';
+import '../../domain/receipt_action_error.dart';
 import '../../domain/share_receipt_state.dart';
 import 'confirm_resend_dialog.dart';
+import 'receipt_action_error_l10n.dart';
 
 /// Bouton de partage d'une quittance (Web Share API + fallback mailto:).
 ///
@@ -72,11 +75,13 @@ class ShareReceiptButton extends ConsumerWidget {
       );
     }
 
+    final l10n = context.l10n;
+
     if (isInvalid) {
       return IconButton(
         key: Key('btn_share_receipt_disabled_${receipt.id}'),
         icon: Icon(Icons.share_outlined, color: theme.colorScheme.outline),
-        tooltip: 'Quittance invalide — partage impossible',
+        tooltip: l10n.receiptsShareTooltipInvalid,
         onPressed: null,
       );
     }
@@ -85,7 +90,7 @@ class ShareReceiptButton extends ConsumerWidget {
       return IconButton(
         key: Key('btn_share_receipt_no_email_${receipt.id}'),
         icon: Icon(Icons.share_outlined, color: theme.colorScheme.outline),
-        tooltip: 'Locataire sans email — partage impossible',
+        tooltip: l10n.receiptsShareTooltipNoEmail,
         onPressed: null,
       );
     }
@@ -95,8 +100,8 @@ class ShareReceiptButton extends ConsumerWidget {
         : const Icon(Icons.share_outlined);
 
     final tooltip = receipt.hasBeenShared
-        ? 'Repartager (déjà partagée le ${receipt.sharedAtLabel})'
-        : 'Partager par email';
+        ? l10n.receiptsShareTooltipResend(receipt.sharedAtLabel ?? '')
+        : l10n.receiptsShareTooltipShare;
 
     return IconButton(
       key: Key('btn_share_receipt_${receipt.id}'),
@@ -131,8 +136,8 @@ class ShareReceiptButton extends ConsumerWidget {
 
       case ShareReceiptShared(:final usedNativeShare):
         final message = usedNativeShare
-            ? 'Quittance partagée. Adresse du locataire copiée dans le presse-papier.'
-            : 'PDF téléchargé. Pensez à l\'attacher manuellement à votre email.';
+            ? context.l10n.receiptsShareSuccessNative
+            : context.l10n.receiptsShareSuccessFallback;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -149,7 +154,9 @@ class ShareReceiptButton extends ConsumerWidget {
       case ShareReceiptError():
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(state.message),
+            content: Text(
+              ReceiptActionError.fromCode(state.message).message(context),
+            ),
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );

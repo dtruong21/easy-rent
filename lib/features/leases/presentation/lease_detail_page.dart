@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/status_pill.dart';
 import '../../../core/ui/cards/status_pill_tone.dart';
@@ -25,6 +26,9 @@ import '../data/lease_repository.dart';
 import '../domain/lease.dart';
 import '../domain/lease_form_state.dart';
 import '../domain/lease_status.dart';
+import '../domain/lease_submit_error.dart';
+import 'lease_submit_error_l10n.dart';
+import 'lease_type_l10n.dart';
 import 'widgets/close_lease_dialog.dart';
 
 final _log = Logger('LeaseDetailPage');
@@ -105,7 +109,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Bail clôturé'),
+              content: Text(context.l10n.leasesCloseSuccessSnackbar),
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
             ),
           );
@@ -114,7 +118,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg),
+              content: Text(LeaseSubmitError.fromCode(msg).message(context)),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
@@ -182,13 +186,13 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: 'Bail',
+        title: context.l10n.leasesDetailTitle,
         fallbackRoute: '/leases',
         actions: [
           IconButton(
             key: const Key('btn_edit_lease'),
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Modifier',
+            tooltip: context.l10n.commonEdit,
             onPressed: () => context.push('/leases/${lease.id}/edit'),
           ),
         ],
@@ -242,7 +246,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
                     ),
                   ),
                   icon: const Icon(Icons.do_not_disturb_outlined),
-                  label: const Text('Clôturer ce bail'),
+                  label: Text(context.l10n.leasesCloseButton),
                   onPressed: () => _showCloseDialog(context, ref),
                 ),
               ),
@@ -255,7 +259,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
                 side: BorderSide(color: Theme.of(context).colorScheme.error),
               ),
               icon: const Icon(Icons.archive_outlined),
-              label: const Text('Archiver ce bail'),
+              label: Text(context.l10n.leasesArchiveButton),
               onPressed: () => _confirmArchive(context, ref),
             ),
           ],
@@ -276,17 +280,14 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
   }
 
   Future<void> _confirmArchive(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     await showDialog<void>(
       context: context,
       builder: (_) => ArchiveConfirmDialog(
-        title: 'Archiver ce bail ?',
-        entityLabel: 'Ce bail',
-        standardMessage:
-            'Voulez-vous archiver ce bail ? '
-            "Il n'apparaîtra plus dans votre liste.",
-        activeLeaseMessage:
-            'Ce bail est encore actif. Êtes-vous sûr de vouloir l\'archiver ? '
-            "Il n'apparaîtra plus dans votre liste.",
+        title: l10n.leasesArchiveDialogTitle,
+        entityLabel: l10n.leasesArchiveDialogEntityLabel,
+        standardMessage: l10n.leasesArchiveDialogStandardMessage,
+        activeLeaseMessage: l10n.leasesArchiveDialogActiveLeaseMessage,
         hasActiveLease: lease.isActive,
         onConfirm: () => _archive(context, ref),
       ),
@@ -294,6 +295,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
   }
 
   Future<void> _archive(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     try {
       await ref.read(leaseRepositoryProvider).archive(lease.id);
       ref.invalidate(leasesListProvider);
@@ -302,7 +304,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Bail archivé'),
+          content: Text(l10n.leasesArchiveSuccessSnackbar),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         ),
       );
@@ -312,9 +314,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            "Impossible d'archiver ce bail. Veuillez réessayer.",
-          ),
+          content: Text(l10n.leasesArchiveErrorSnackbar),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -336,18 +336,33 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final (label, tone) = switch (lease.status) {
-      LeaseStatus.active when isLate => ('En retard', StatusPillTone.danger),
-      LeaseStatus.active => ('Actif', StatusPillTone.success),
-      LeaseStatus.terminated => ('Terminé', StatusPillTone.neutral),
-      LeaseStatus.archived => ('Archivé', StatusPillTone.neutral),
+      // Réutilise `leasesFilterLate` (valeur FR identique "En retard") — pas
+      // de duplication de clé, cf. `lease_status_mapper.dart`.
+      LeaseStatus.active when isLate => (
+        l10n.leasesFilterLate,
+        StatusPillTone.danger,
+      ),
+      LeaseStatus.active => (l10n.leasesStatusActive, StatusPillTone.success),
+      LeaseStatus.terminated => (
+        l10n.leasesStatusTerminated,
+        StatusPillTone.neutral,
+      ),
+      LeaseStatus.archived => (
+        l10n.leasesStatusArchived,
+        StatusPillTone.neutral,
+      ),
     };
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Text('Statut', style: theme.textTheme.titleMedium),
+            Text(
+              l10n.leasesDetailStatusLabel,
+              style: theme.textTheme.titleMedium,
+            ),
             const Spacer(),
             StatusPill(label: label, tone: tone),
           ],
@@ -366,6 +381,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -375,7 +391,7 @@ class _InfoCard extends StatelessWidget {
             // Bien lié — lien cliquable
             _LinkRow(
               icon: Icons.home_outlined,
-              label: 'Bien',
+              label: l10n.leasesDetailPropertyLabel,
               onTap: () => context.go('/properties/${lease.propertyId}'),
             ),
             const Divider(height: 24),
@@ -383,14 +399,14 @@ class _InfoCard extends StatelessWidget {
             // Locataire lié — lien cliquable
             _LinkRow(
               icon: Icons.person_outline,
-              label: 'Locataire',
+              label: l10n.leasesDetailTenantLabel,
               onTap: () => context.go('/tenants/${lease.tenantId}'),
             ),
 
             // --- Type et durée ---
             const Divider(height: 24),
             Text(
-              'Type et durée',
+              l10n.leasesDetailTypeAndDurationSection,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -398,28 +414,28 @@ class _InfoCard extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               icon: Icons.description_outlined,
-              label: 'Type de bail',
-              value: lease.leaseType.labelFr,
+              label: l10n.leasesDetailLeaseTypeLabel,
+              value: lease.leaseType.label(context),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today_outlined,
-              label: 'Début',
+              label: l10n.leasesDetailStartDateLabel,
               value: FrenchDate.format(lease.startDate),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.event_outlined,
-              label: 'Fin',
+              label: l10n.leasesDetailEndDateLabel,
               value: lease.endDate != null
                   ? FrenchDate.format(lease.endDate!)
-                  : '(CDI)',
+                  : l10n.leasesOpenEndedAbbreviation,
             ),
 
             // --- Loyer et charges ---
             const Divider(height: 24),
             Text(
-              'Loyer et charges',
+              l10n.leasesDetailRentAndChargesSection,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -427,13 +443,13 @@ class _InfoCard extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               icon: Icons.euro_outlined,
-              label: 'Loyer HC',
+              label: l10n.leasesDetailRentExclChargesLabel,
               value: MoneyFormat.formatEurosFromCents(lease.rentAmountCents),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.add_circle_outline,
-              label: 'Charges récupérables',
+              label: l10n.leasesDetailRecoverableChargesLabel,
               value: MoneyFormat.formatEurosFromCents(
                 lease.recoverableChargesCents,
               ),
@@ -444,7 +460,7 @@ class _InfoCard extends StatelessWidget {
             // manquante plutôt qu'une absence réelle de charge bailleur.
             _InfoRow(
               icon: Icons.remove_circle_outline,
-              label: 'Charges non récupérables',
+              label: l10n.leasesDetailNonRecoverableChargesLabel,
               value: MoneyFormat.formatEurosFromCents(
                 lease.nonRecoverableChargesCents,
               ),
@@ -452,7 +468,7 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calculate_outlined,
-              label: 'Total charges',
+              label: l10n.leasesDetailTotalChargesLabel,
               value: MoneyFormat.formatEurosFromCents(lease.totalChargesCents),
             ),
             const Divider(height: 24),
@@ -460,14 +476,14 @@ class _InfoCard extends StatelessWidget {
             // INCHANGÉ par FEAT-036, ne doit PAS inclure le non-récupérable.
             _InfoRow(
               icon: Icons.euro,
-              label: 'Loyer CC',
+              label: l10n.leasesDetailRentInclChargesLabel,
               value: MoneyFormat.formatEurosFromCents(lease.totalAmountCents),
             ),
             if (lease.depositAmountCents != null) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.lock_outline,
-                label: 'Dépôt de garantie',
+                label: l10n.leasesDetailDepositLabel,
                 value: MoneyFormat.formatEurosFromCents(
                   lease.depositAmountCents!,
                 ),
@@ -477,7 +493,7 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.real_estate_agent_outlined,
-                label: 'Frais d\'agence',
+                label: l10n.leasesDetailAgencyFeesLabel,
                 value: MoneyFormat.formatEurosFromCents(lease.agencyFeesCents),
               ),
             ],
@@ -485,7 +501,7 @@ class _InfoCard extends StatelessWidget {
             // --- Modalités de paiement ---
             const Divider(height: 24),
             Text(
-              'Modalités de paiement',
+              l10n.leasesDetailPaymentTermsSection,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -493,13 +509,13 @@ class _InfoCard extends StatelessWidget {
             const SizedBox(height: 8),
             _InfoRow(
               icon: Icons.event_repeat_outlined,
-              label: 'Jour d\'échéance',
-              value: 'le ${lease.paymentDay} du mois',
+              label: l10n.leasesDetailPaymentDayLabel,
+              value: l10n.leasesDetailPaymentDayValue(lease.paymentDay),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.payment_outlined,
-              label: 'Mode de paiement',
+              label: l10n.leasesDetailPaymentMethodLabel,
               value: lease.paymentMethod.label,
             ),
 
@@ -510,7 +526,7 @@ class _InfoCard extends StatelessWidget {
                 lease.entryInventoryDone) ...[
               const Divider(height: 24),
               Text(
-                'IRL et clauses',
+                l10n.leasesDetailIrlAndClausesSection,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -519,7 +535,7 @@ class _InfoCard extends StatelessWidget {
               if (lease.irlIndexValue != null) ...[
                 _InfoRow(
                   icon: Icons.trending_up_outlined,
-                  label: 'Indice IRL',
+                  label: l10n.leasesDetailIrlIndexLabel,
                   value: '${lease.irlIndexValue}',
                 ),
               ],
@@ -528,7 +544,7 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.date_range_outlined,
-                  label: 'Trimestre IRL',
+                  label: l10n.leasesDetailIrlQuarterLabel,
                   value: lease.irlQuarterRef!,
                 ),
               ],
@@ -536,9 +552,9 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _BadgeRow(
                   icon: Icons.handshake_outlined,
-                  label: 'Clause solidarité',
+                  label: l10n.leasesDetailSolidarityClauseLabel,
                   badge: StatusPill(
-                    label: 'Solidarité',
+                    label: l10n.leasesDetailSolidarityBadge,
                     tone: StatusPillTone.info,
                   ),
                 ),
@@ -547,9 +563,9 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _BadgeRow(
                   icon: Icons.checklist_outlined,
-                  label: 'État des lieux',
+                  label: l10n.leasesDetailEntryInventoryLabel,
                   badge: StatusPill(
-                    label: 'État des lieux fait',
+                    label: l10n.leasesDetailEntryInventoryBadge,
                     tone: StatusPillTone.success,
                   ),
                 ),
@@ -627,7 +643,7 @@ class _LinkRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Voir la fiche',
+                  context.l10n.leasesDetailViewSheetLink,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.primary,
                     decoration: TextDecoration.underline,
@@ -688,8 +704,12 @@ class _NotFoundPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppAppBar(title: 'Fiche bail', fallbackRoute: '/leases'),
+      appBar: AppAppBar(
+        title: l10n.leasesDetailNotFoundAppBarTitle,
+        fallbackRoute: '/leases',
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -703,13 +723,13 @@ class _NotFoundPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Bail introuvable',
+                l10n.leasesDetailNotFoundTitle,
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Ce bail a peut-être été archivé ou ne vous appartient pas.',
+                l10n.leasesDetailNotFoundMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -719,7 +739,7 @@ class _NotFoundPage extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => context.go('/leases'),
                 icon: const Icon(Icons.arrow_back),
-                label: const Text('Retour à la liste'),
+                label: Text(l10n.leasesDetailBackToListButton),
               ),
             ],
           ),

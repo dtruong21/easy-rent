@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/breakpoints.dart';
 import '../../application/share_receipt_controller.dart';
 import '../../application/void_receipt_controller.dart';
 import '../../data/receipts_repository.dart';
 import '../../domain/receipt.dart';
+import '../../domain/receipt_action_error.dart';
+import 'receipt_action_error_l10n.dart';
 import 'share_receipt_button.dart';
 import 'void_receipt_dialog.dart';
 
@@ -101,6 +104,7 @@ class _DesktopActionsRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final voidState = ref.watch(voidReceiptControllerProvider);
     final isVoiding = voidState is VoidReceiptSubmitting;
 
@@ -112,7 +116,7 @@ class _DesktopActionsRow extends ConsumerWidget {
         IconButton(
           key: Key('btn_pdf_${receipt.id}'),
           icon: const Icon(Icons.picture_as_pdf_outlined),
-          tooltip: 'Ouvrir le PDF',
+          tooltip: l10n.receiptsOpenPdfLabel,
           onPressed: () => _openPdf(context, ref),
         ),
         if (canShare)
@@ -128,7 +132,7 @@ class _DesktopActionsRow extends ConsumerWidget {
           IconButton(
             key: Key('btn_void_${receipt.id}'),
             icon: const Icon(Icons.cancel_outlined),
-            tooltip: 'Annuler la quittance',
+            tooltip: l10n.receiptsVoidTooltip,
             color: theme.colorScheme.error,
             onPressed: isVoiding ? null : () => _showVoidDialog(context, ref),
           ),
@@ -142,7 +146,7 @@ class _DesktopActionsRow extends ConsumerWidget {
       if (next is VoidReceiptSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Quittance annulée'),
+            content: Text(context.l10n.receiptsVoidSuccessSnackbar),
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
@@ -150,7 +154,9 @@ class _DesktopActionsRow extends ConsumerWidget {
       } else if (next is VoidReceiptError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.message),
+            content: Text(
+              ReceiptActionError.fromCode(next.message).message(context),
+            ),
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );
@@ -167,11 +173,7 @@ class _DesktopActionsRow extends ConsumerWidget {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Impossible d'ouvrir le PDF. Vérifiez votre navigateur.",
-              ),
-            ),
+            SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
           );
         }
       }
@@ -180,9 +182,7 @@ class _DesktopActionsRow extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Impossible de générer le lien de téléchargement.',
-            ),
+            content: Text(context.l10n.receiptsErrorGeneratePdfLink),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
           ),
         );
@@ -242,13 +242,14 @@ class _MobileActionsMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     ref.listen<VoidReceiptState>(voidReceiptControllerProvider, (_, next) {
       if (!context.mounted) return;
       if (next is VoidReceiptSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Quittance annulée'),
+            content: Text(context.l10n.receiptsVoidSuccessSnackbar),
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
@@ -256,7 +257,9 @@ class _MobileActionsMenu extends ConsumerWidget {
       } else if (next is VoidReceiptError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.message),
+            content: Text(
+              ReceiptActionError.fromCode(next.message).message(context),
+            ),
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );
@@ -267,23 +270,23 @@ class _MobileActionsMenu extends ConsumerWidget {
     return PopupMenuButton<_ReceiptActionKind>(
       key: Key('popup_menu_${receipt.id}'),
       icon: const Icon(Icons.more_vert),
-      tooltip: 'Actions',
+      tooltip: l10n.receiptsActionsMenuTooltip,
       onSelected: (action) => _onAction(context, ref, action, theme),
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: _ReceiptActionKind.openPdf,
           child: ListTile(
-            leading: Icon(Icons.picture_as_pdf_outlined),
-            title: Text('Ouvrir PDF'),
+            leading: const Icon(Icons.picture_as_pdf_outlined),
+            title: Text(l10n.receiptsOpenPdfMenuItem),
             contentPadding: EdgeInsets.zero,
           ),
         ),
         if (canShare)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: _ReceiptActionKind.share,
             child: ListTile(
-              leading: Icon(Icons.share_outlined),
-              title: Text('Partager'),
+              leading: const Icon(Icons.share_outlined),
+              title: Text(l10n.receiptsShareMenuItem),
               contentPadding: EdgeInsets.zero,
             ),
           ),
@@ -296,7 +299,7 @@ class _MobileActionsMenu extends ConsumerWidget {
                 color: theme.colorScheme.error,
               ),
               title: Text(
-                'Annuler',
+                l10n.receiptsVoidMenuItem,
                 style: TextStyle(color: theme.colorScheme.error),
               ),
               contentPadding: EdgeInsets.zero,
@@ -343,11 +346,7 @@ class _MobileActionsMenu extends ConsumerWidget {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Impossible d'ouvrir le PDF. Vérifiez votre navigateur.",
-              ),
-            ),
+            SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
           );
         }
       }
@@ -356,9 +355,7 @@ class _MobileActionsMenu extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Impossible de générer le lien de téléchargement.',
-            ),
+            content: Text(context.l10n.receiptsErrorGeneratePdfLink),
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );

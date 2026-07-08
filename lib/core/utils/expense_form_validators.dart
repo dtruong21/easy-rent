@@ -1,3 +1,4 @@
+import '../validation/validation_error.dart';
 import 'date_bounds.dart';
 import 'money_validators.dart';
 
@@ -7,22 +8,35 @@ import 'money_validators.dart';
 /// FEAT-005/FEAT-006. Reste responsable des règles spécifiques à la dépense
 /// (montant strictement positif, date de facture, période de rattachement
 /// obligatoire si récupérable — décret n°87-713).
+///
+/// FEAT-043 (i18n) : retourne un [ValidationError] (pur, sans `BuildContext`)
+/// au lieu d'un message FR en dur — voir `lib/l10n/l10n_convention.dart`.
 class ExpenseFormValidators {
   const ExpenseFormValidators._();
 
   /// Valide le montant TTC de la dépense (saisi en euros, string).
   ///
   /// Règle : champ requis, montant strictement positif (`>= 1` centime).
-  static String? validateAmount(String? value) =>
-      MoneyValidators.validateRentAmount(
-        value,
-      )?.replaceFirst('Le loyer', 'Le montant');
+  ///
+  /// Délègue à [MoneyValidators.validateRentAmount] (mêmes bornes) en
+  /// remappant les cas « loyer » vers les cas « montant » génériques — le
+  /// champ dépense ne représente pas un loyer (équivalent du
+  /// `.replaceFirst('Le loyer', 'Le montant')` de l'ancienne version FR).
+  static ValidationError? validateAmount(String? value) {
+    final rentError = MoneyValidators.validateRentAmount(value);
+    return switch (rentError) {
+      null => null,
+      ValidationError.rentRequired => ValidationError.amountRequired,
+      ValidationError.rentNotPositive => ValidationError.amountNotPositive,
+      _ => rentError,
+    };
+  }
 
   /// Valide la date de la dépense (facture/décompte).
-  static String? validateExpenseDate(DateTime? value) {
-    if (value == null) return 'La date de la dépense est obligatoire';
+  static ValidationError? validateExpenseDate(DateTime? value) {
+    if (value == null) return ValidationError.expenseDateRequired;
     if (!DateBounds.contains(value)) {
-      return 'Date invalide (année hors limites)';
+      return ValidationError.dateOutOfRange;
     }
     return null;
   }
@@ -31,18 +45,17 @@ class ExpenseFormValidators {
   ///
   /// Obligatoire uniquement si [isRecoverable] (décret n°87-713 : seules les
   /// dépenses récupérables sont agrégées en régularisation).
-  static String? validatePeriodStart(
+  static ValidationError? validatePeriodStart(
     DateTime? value, {
     required bool isRecoverable,
   }) {
     if (value == null) {
       return isRecoverable
-          ? 'La période de rattachement est obligatoire pour une dépense '
-                'récupérable'
+          ? ValidationError.periodRequiredForRecoverable
           : null;
     }
     if (!DateBounds.contains(value)) {
-      return 'Date invalide (année hors limites)';
+      return ValidationError.dateOutOfRange;
     }
     return null;
   }
@@ -50,31 +63,30 @@ class ExpenseFormValidators {
   /// Valide la fin de période de rattachement.
   ///
   /// Doit être strictement postérieure au début si les deux sont fournis.
-  static String? validatePeriodEnd(
+  static ValidationError? validatePeriodEnd(
     DateTime? value,
     DateTime? start, {
     required bool isRecoverable,
   }) {
     if (value == null) {
       return isRecoverable
-          ? 'La période de rattachement est obligatoire pour une dépense '
-                'récupérable'
+          ? ValidationError.periodRequiredForRecoverable
           : null;
     }
     if (!DateBounds.contains(value)) {
-      return 'Date invalide (année hors limites)';
+      return ValidationError.dateOutOfRange;
     }
     if (start != null && !value.isAfter(start)) {
-      return 'La fin de période doit être postérieure au début';
+      return ValidationError.periodEndBeforeStart;
     }
     return null;
   }
 
   /// Valide les notes (optionnelles, max 2000 caractères — cf. plan § a).
-  static String? validateNotes(String? value) {
+  static ValidationError? validateNotes(String? value) {
     if (value == null || value.isEmpty) return null;
     if (value.length > 2000) {
-      return 'Les notes ne peuvent pas dépasser 2000 caractères';
+      return ValidationError.expenseNotesTooLong;
     }
     return null;
   }

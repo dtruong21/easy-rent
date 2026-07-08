@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../../core/ui/theme/app_spacing.dart';
@@ -86,7 +87,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage> {
         .firstOrNull;
 
     return Scaffold(
-      appBar: const AppAppBar(title: 'Accueil', showBackButton: false),
+      appBar: AppAppBar(title: context.l10n.navHome, showBackButton: false),
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
         child: Builder(
@@ -167,7 +168,7 @@ class _ErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Impossible de charger le tableau de bord.',
+              context.l10n.dashboardLoadErrorMessage,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),
@@ -176,7 +177,7 @@ class _ErrorView extends StatelessWidget {
               key: const Key('btn_retry'),
               onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text(context.l10n.commonRetry),
             ),
           ],
         ),
@@ -199,7 +200,7 @@ class _DataView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: "Vue d'ensemble"),
+        SectionHeader(title: context.l10n.dashboardOverviewSectionTitle),
         SizedBox(height: spacing.md),
         KpiGrid(snapshot: snapshot),
         SizedBox(height: spacing.xl),

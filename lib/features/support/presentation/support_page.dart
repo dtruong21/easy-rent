@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/app_info/app_info_provider.dart';
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import 'widgets/profile_support_form.dart';
 
@@ -26,8 +27,12 @@ class SupportPage extends ConsumerWidget {
     ref.watch(appInfoProvider);
 
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppAppBar(title: 'Nous contacter', fallbackRoute: '/profile'),
+      appBar: AppAppBar(
+        title: l10n.supportPageTitle,
+        fallbackRoute: '/profile',
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -37,7 +42,7 @@ class SupportPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Une question, un souci ? Écrivez-nous.',
+                  l10n.supportPageIntro,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

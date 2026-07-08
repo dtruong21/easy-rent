@@ -13,6 +13,7 @@ library;
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/utils/money_format.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
@@ -24,6 +25,7 @@ import 'package:easyrent/features/payments/data/payment_repository.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/receipts/data/web_share_service_bridge.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,6 +212,9 @@ Widget _buildDialog({
       // AppTheme.light requis : StatusPill (résumé du solde dans le dialog)
       // lit l'extension AppColors — absente du ThemeData par défaut.
       theme: AppTheme.light,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(

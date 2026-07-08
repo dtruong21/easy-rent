@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Dialog affiché quand l'Edge Function retourne 422 `profile_incomplete`.
 ///
 /// Informe le bailleur que son profil doit être complété avant de pouvoir
@@ -19,6 +21,7 @@ class ProfileIncompleteDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AlertDialog(
       key: const Key('dialog_profile_incomplete'),
@@ -26,22 +29,18 @@ class ProfileIncompleteDialog extends StatelessWidget {
         children: [
           Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
           const SizedBox(width: 8),
-          const Text('Profil incomplet'),
+          Text(l10n.receiptsProfileIncompleteTitle),
         ],
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pour générer une quittance, vous devez d\'abord compléter '
-            'votre profil bailleur (nom et adresse sont obligatoires '
-            'conformément à la loi du 6 juillet 1989).',
-          ),
+          Text(l10n.receiptsProfileIncompleteMessage),
           if (missing.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              'Champs manquants :',
+              l10n.receiptsProfileIncompleteFieldsHeader,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -51,7 +50,7 @@ class ProfileIncompleteDialog extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 8, top: 2),
                 child: Text(
-                  '• ${_fieldLabel(field)}',
+                  '• ${_fieldLabel(context, field)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
                   ),
@@ -64,7 +63,7 @@ class ProfileIncompleteDialog extends StatelessWidget {
         TextButton(
           key: const Key('btn_profile_incomplete_later'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Plus tard'),
+          child: Text(l10n.receiptsProfileIncompleteLaterButton),
         ),
         FilledButton(
           key: const Key('btn_profile_incomplete_go'),
@@ -72,17 +71,21 @@ class ProfileIncompleteDialog extends StatelessWidget {
             Navigator.of(context).pop();
             context.push('/profile');
           },
-          child: const Text('Compléter mon profil'),
+          child: Text(l10n.receiptsProfileIncompleteGoButton),
         ),
       ],
     );
   }
 
-  /// Libellé français pour un nom de champ technique.
-  String _fieldLabel(String field) => switch (field) {
-    'full_name' => 'Nom complet',
-    'address' => 'Adresse postale',
-    'phone' => 'Téléphone',
-    _ => field,
-  };
+  /// Libellé localisé pour un nom de champ technique retourné par l'Edge
+  /// Function (FEAT-043).
+  String _fieldLabel(BuildContext context, String field) {
+    final l10n = context.l10n;
+    return switch (field) {
+      'full_name' => l10n.receiptsProfileIncompleteFieldFullName,
+      'address' => l10n.receiptsProfileIncompleteFieldAddress,
+      'phone' => l10n.receiptsProfileIncompleteFieldPhone,
+      _ => field,
+    };
+  }
 }

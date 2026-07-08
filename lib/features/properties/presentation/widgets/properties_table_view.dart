@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../domain/property_list_item.dart';
 import 'property_status_mapper.dart';
+import 'property_type_l10n.dart';
 
 /// Colonnes triables du tableau biens.
 enum _PropertyTableSort { name, type, surface, tenant, amount }
@@ -38,9 +40,10 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
     list.sort((a, b) {
       final cmp = switch (_sortColumn) {
         _PropertyTableSort.name => a.property.name.compareTo(b.property.name),
-        _PropertyTableSort.type => a.property.type.labelFr.compareTo(
-          b.property.type.labelFr,
-        ),
+        _PropertyTableSort.type =>
+          a.property.type
+              .label(context)
+              .compareTo(b.property.type.label(context)),
         _PropertyTableSort.surface => (a.property.surfaceM2 ?? 0).compareTo(
           b.property.surfaceM2 ?? 0,
         ),
@@ -68,6 +71,7 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = context.l10n;
     final items = _sorted;
 
     return Padding(
@@ -86,21 +90,30 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
             sortColumnIndex: _PropertyTableSort.values.indexOf(_sortColumn),
             sortAscending: _sortAscending,
             columns: [
-              DataColumn(label: const Text('Bien'), onSort: _onSort),
-              DataColumn(label: const Text('Type'), onSort: _onSort),
               DataColumn(
-                label: const Text('Surface'),
+                label: Text(l10n.propertiesTableColumnProperty),
+                onSort: _onSort,
+              ),
+              DataColumn(
+                label: Text(l10n.propertiesTableColumnType),
+                onSort: _onSort,
+              ),
+              DataColumn(
+                label: Text(l10n.propertiesTableColumnSurface),
                 numeric: true,
                 onSort: _onSort,
               ),
-              const DataColumn(label: Text('Statut')),
-              DataColumn(label: const Text('Locataire'), onSort: _onSort),
+              DataColumn(label: Text(l10n.propertiesTableColumnStatus)),
               DataColumn(
-                label: const Text('Loyer CC'),
+                label: Text(l10n.propertiesTableColumnTenant),
+                onSort: _onSort,
+              ),
+              DataColumn(
+                label: Text(l10n.propertiesTableColumnRent),
                 numeric: true,
                 onSort: _onSort,
               ),
-              const DataColumn(label: Text('Actions')),
+              DataColumn(label: Text(l10n.propertiesTableColumnActions)),
             ],
             rows: items.map((item) => _buildRow(context, item)).toList(),
           ),
@@ -111,10 +124,15 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
 
   DataRow _buildRow(BuildContext context, PropertyListItem item) {
     final property = item.property;
-    final pillData = propertyOccupancyPill(item);
+    final l10n = context.l10n;
+    final pillData = propertyOccupancyPill(item, context);
 
     final surfaceText = property.surfaceM2 != null
-        ? '${property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2)} m²'
+        ? l10n.propertiesSurfaceValue(
+            property.surfaceM2!.toStringAsFixed(
+              property.surfaceM2! % 1 == 0 ? 0 : 2,
+            ),
+          )
         : '—';
 
     return DataRow(
@@ -149,7 +167,7 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
           SizedBox(
             width: 110,
             child: Text(
-              property.type.labelFr,
+              property.type.label(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -168,7 +186,7 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 120, maxWidth: 160),
             child: Text(
-              item.currentTenantName ?? 'Aucun locataire',
+              item.currentTenantName ?? l10n.propertiesNoTenant,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -184,7 +202,7 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
                 onPressed: () =>
                     context.push('/properties/${property.id}/edit'),
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                tooltip: 'Modifier',
+                tooltip: l10n.commonEdit,
                 visualDensity: VisualDensity.compact,
               ),
               if (item.activeLeaseId != null)
@@ -193,7 +211,7 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
                   onPressed: () =>
                       context.push('/leases/${item.activeLeaseId}'),
                   icon: const Icon(Icons.description_outlined, size: 18),
-                  tooltip: 'Voir le bail',
+                  tooltip: l10n.propertiesViewLease,
                   visualDensity: VisualDensity.compact,
                 )
               else
@@ -202,7 +220,7 @@ class _PropertiesTableViewState extends State<PropertiesTableView> {
                   onPressed: () =>
                       context.push('/leases/new?propertyId=${property.id}'),
                   icon: const Icon(Icons.add, size: 18),
-                  tooltip: 'Créer un bail',
+                  tooltip: l10n.propertiesCreateLease,
                   visualDensity: VisualDensity.compact,
                 ),
             ],

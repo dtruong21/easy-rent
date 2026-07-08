@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../../../core/utils/money_format.dart';
@@ -66,6 +67,7 @@ class _TenantsTableViewState extends State<TenantsTableView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = context.l10n;
     final items = _sorted;
 
     return Padding(
@@ -84,17 +86,26 @@ class _TenantsTableViewState extends State<TenantsTableView> {
             sortColumnIndex: _TenantTableSort.values.indexOf(_sortColumn),
             sortAscending: _sortAscending,
             columns: [
-              DataColumn(label: const Text('Nom'), onSort: _onSort),
-              DataColumn(label: const Text('Email'), onSort: _onSort),
-              const DataColumn(label: Text('Téléphone')),
-              const DataColumn(label: Text('Statut')),
-              DataColumn(label: const Text('Bien occupé'), onSort: _onSort),
               DataColumn(
-                label: const Text('Loyer CC'),
+                label: Text(l10n.tenantsTableColumnName),
+                onSort: _onSort,
+              ),
+              DataColumn(
+                label: Text(l10n.tenantsTableColumnEmail),
+                onSort: _onSort,
+              ),
+              DataColumn(label: Text(l10n.tenantsTableColumnPhone)),
+              DataColumn(label: Text(l10n.tenantsTableColumnStatus)),
+              DataColumn(
+                label: Text(l10n.tenantsTableColumnProperty),
+                onSort: _onSort,
+              ),
+              DataColumn(
+                label: Text(l10n.tenantsTableColumnRent),
                 numeric: true,
                 onSort: _onSort,
               ),
-              const DataColumn(label: Text('Actions')),
+              DataColumn(label: Text(l10n.tenantsTableColumnActions)),
             ],
             rows: items.map((item) => _buildRow(context, item)).toList(),
           ),
@@ -104,8 +115,9 @@ class _TenantsTableViewState extends State<TenantsTableView> {
   }
 
   DataRow _buildRow(BuildContext context, TenantListItem item) {
+    final l10n = context.l10n;
     final tenant = item.tenant;
-    final pillData = tenantOccupancyPill(item);
+    final pillData = tenantOccupancyPill(context, item);
 
     final rentLabel = item.activeLeaseRentCents != null
         ? MoneyFormat.formatEurosFromCents(item.activeLeaseRentCents!)
@@ -163,7 +175,7 @@ class _TenantsTableViewState extends State<TenantsTableView> {
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 160, maxWidth: 220),
             child: Text(
-              item.currentPropertyName ?? 'Aucun bien occupé',
+              item.currentPropertyName ?? l10n.tenantsNoPropertyOccupied,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -178,7 +190,7 @@ class _TenantsTableViewState extends State<TenantsTableView> {
                 key: Key('table_edit_${tenant.id}'),
                 onPressed: () => context.push('/tenants/${tenant.id}/edit'),
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                tooltip: 'Modifier',
+                tooltip: l10n.commonEdit,
                 visualDensity: VisualDensity.compact,
               ),
               if (item.activeLeaseId != null)
@@ -187,7 +199,7 @@ class _TenantsTableViewState extends State<TenantsTableView> {
                   onPressed: () =>
                       context.push('/leases/${item.activeLeaseId}'),
                   icon: const Icon(Icons.description_outlined, size: 18),
-                  tooltip: 'Voir le bail',
+                  tooltip: l10n.tenantsViewLeaseButton,
                   visualDensity: VisualDensity.compact,
                 )
               else
@@ -196,7 +208,7 @@ class _TenantsTableViewState extends State<TenantsTableView> {
                   onPressed: () =>
                       context.push('/leases/new?tenantId=${tenant.id}'),
                   icon: const Icon(Icons.add, size: 18),
-                  tooltip: 'Créer un bail',
+                  tooltip: l10n.tenantsCreateLeaseButton,
                   visualDensity: VisualDensity.compact,
                 ),
             ],

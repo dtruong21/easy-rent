@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/surface_validator.dart';
 import '../application/property_detail_provider.dart';
@@ -10,7 +11,9 @@ import '../application/property_form_controller.dart';
 import '../domain/heating_type.dart';
 import '../domain/property.dart';
 import '../domain/property_form_state.dart';
+import '../domain/property_submit_error.dart';
 import '../domain/property_type.dart';
+import 'property_submit_error_l10n.dart';
 import 'widgets/property_form.dart';
 
 final _log = Logger('PropertyFormPage');
@@ -253,11 +256,14 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
   @override
   Widget build(BuildContext context) {
     final isCreating = widget.initial == null;
+    final l10n = context.l10n;
 
     ref.listen<PropertyFormState>(propertyFormControllerProvider, (_, next) {
       next.whenOrNull(
         success: (property) {
-          final msg = isCreating ? 'Bien créé' : 'Modifications enregistrées';
+          final msg = isCreating
+              ? l10n.propertiesCreateSuccessSnackbar
+              : l10n.propertiesUpdateSuccessSnackbar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -288,13 +294,15 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg) => PropertySubmitError.fromCode(msg).message(context),
       orElse: () => null,
     );
 
     return Scaffold(
       appBar: AppAppBar(
-        title: isCreating ? 'Nouveau bien' : 'Modifier le bien',
+        title: isCreating
+            ? l10n.propertiesFormTitleCreate
+            : l10n.propertiesFormTitleEdit,
         fallbackRoute: '/properties',
       ),
       body: SingleChildScrollView(
@@ -365,7 +373,11 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isCreating ? 'Créer le bien' : 'Enregistrer'),
+                  : Text(
+                      isCreating
+                          ? l10n.propertiesFormSubmitCreate
+                          : l10n.commonSave,
+                    ),
             ),
           ],
         ),
@@ -391,12 +403,12 @@ class PropertyEditPage extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppAppBar(
-          title: 'Modifier le bien',
+          title: context.l10n.propertiesFormTitleEdit,
           fallbackRoute: '/properties',
         ),
         body: Center(
           child: Text(
-            'Bien introuvable.',
+            context.l10n.propertiesNotFoundShort,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),

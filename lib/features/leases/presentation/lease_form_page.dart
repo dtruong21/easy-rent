@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/lease_form_validators.dart';
 import '../../../core/utils/money_format.dart';
@@ -17,7 +18,9 @@ import '../domain/charge_mode.dart';
 import '../domain/lease.dart';
 import '../domain/lease_filter.dart';
 import '../domain/lease_form_state.dart';
+import '../domain/lease_submit_error.dart';
 import '../domain/lease_type.dart';
+import 'lease_submit_error_l10n.dart';
 import 'widgets/active_lease_warning_dialog.dart';
 import 'widgets/lease_form.dart';
 
@@ -292,7 +295,9 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
     ref.listen<LeaseFormState>(leaseFormControllerProvider, (_, next) {
       next.whenOrNull(
         success: (lease) {
-          final msg = isCreating ? 'Bail créé' : 'Modifications enregistrées';
+          final msg = isCreating
+              ? context.l10n.leasesFormCreatedSnackbar
+              : context.l10n.leasesFormUpdatedSnackbar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -323,7 +328,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
           _log.warning('LeaseFormPage error state');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg),
+              content: Text(LeaseSubmitError.fromCode(msg).message(context)),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
@@ -337,7 +342,7 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg) => LeaseSubmitError.fromCode(msg).message(context),
       orElse: () => null,
     );
 
@@ -351,7 +356,9 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
         (asyncTenants.isLoading && !asyncTenants.hasValue)) {
       return Scaffold(
         appBar: AppAppBar(
-          title: isCreating ? 'Nouveau bail' : 'Modifier le bail',
+          title: isCreating
+              ? context.l10n.leasesFormNewTitle
+              : context.l10n.leasesFormEditTitle,
           fallbackRoute: '/leases',
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -363,7 +370,9 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: isCreating ? 'Nouveau bail' : 'Modifier le bail',
+        title: isCreating
+            ? context.l10n.leasesFormNewTitle
+            : context.l10n.leasesFormEditTitle,
         fallbackRoute: '/leases',
       ),
       body: SingleChildScrollView(
@@ -420,7 +429,11 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isCreating ? 'Créer le bail' : 'Enregistrer'),
+                  : Text(
+                      isCreating
+                          ? context.l10n.leasesFormCreateSubmitButton
+                          : context.l10n.commonSave,
+                    ),
             ),
           ],
         ),
@@ -445,10 +458,13 @@ class LeaseEditPage extends ConsumerWidget {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppAppBar(title: 'Modifier le bail', fallbackRoute: '/leases'),
+        appBar: AppAppBar(
+          title: context.l10n.leasesFormEditTitle,
+          fallbackRoute: '/leases',
+        ),
         body: Center(
           child: Text(
-            'Bail introuvable.',
+            context.l10n.leasesFormNotFoundMessage,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),

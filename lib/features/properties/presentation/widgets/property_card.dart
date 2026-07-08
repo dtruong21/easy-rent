@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
@@ -8,6 +9,7 @@ import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../domain/property_list_item.dart';
 import '../../domain/property_type.dart';
 import 'property_status_mapper.dart';
+import 'property_type_l10n.dart';
 
 /// Card v2 représentant un bien immobilier dans la liste.
 ///
@@ -26,16 +28,20 @@ class PropertyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final property = item.property;
-    final pillData = propertyOccupancyPill(item);
+    final pillData = propertyOccupancyPill(item, context);
 
     final surfaceSuffix = property.surfaceM2 != null
-        ? ' · ${property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2)} m²'
+        ? ' · ${l10n.propertiesSurfaceValue(property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2))}'
         : '';
 
     return EntityCard(
       onTap: onTap,
-      semanticLabel: '${property.name} — ${pillData.label}',
+      semanticLabel: l10n.propertiesCardSemanticLabel(
+        property.name,
+        pillData.label,
+      ),
       header: EntityCardHeader(
         title: Text(
           property.name,
@@ -65,12 +71,12 @@ class PropertyCard extends StatelessWidget {
         children: [
           _PropertyCardRow(
             icon: _iconForType(property.type),
-            text: '${property.type.labelFr}$surfaceSuffix',
+            text: '${property.type.label(context)}$surfaceSuffix',
           ),
           const SizedBox(height: 4),
           _PropertyCardRow(
             icon: Icons.person_outline,
-            text: item.currentTenantName ?? 'Aucun locataire',
+            text: item.currentTenantName ?? l10n.propertiesNoTenant,
           ),
           const SizedBox(height: 4),
           _PropertyCardRow(
@@ -132,6 +138,7 @@ class _PropertyCardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final propertyId = item.property.id;
     final activeLeaseId = item.activeLeaseId;
 
@@ -144,7 +151,7 @@ class _PropertyCardFooter extends StatelessWidget {
             key: Key('card_view_lease_$propertyId'),
             onPressed: () => context.push('/leases/$activeLeaseId'),
             icon: const Icon(Icons.description_outlined, size: 16),
-            label: const Text('Voir le bail'),
+            label: Text(l10n.propertiesViewLease),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
@@ -157,7 +164,7 @@ class _PropertyCardFooter extends StatelessWidget {
             key: Key('card_create_lease_$propertyId'),
             onPressed: () => context.push('/leases/new?propertyId=$propertyId'),
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('Créer un bail'),
+            label: Text(l10n.propertiesCreateLease),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
@@ -169,7 +176,7 @@ class _PropertyCardFooter extends StatelessWidget {
           key: Key('card_edit_property_$propertyId'),
           onPressed: () => context.push('/properties/$propertyId/edit'),
           icon: const Icon(Icons.edit_outlined, size: 16),
-          label: const Text('Modifier'),
+          label: Text(l10n.commonEdit),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             minimumSize: Size.zero,

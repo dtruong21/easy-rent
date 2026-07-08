@@ -3,6 +3,10 @@
 ///
 /// Choisi via le toggle de [MonthlyBarchart], persisté par
 /// `chartFormatProvider` (localStorage sur le web).
+///
+/// FEAT-043 : cet enum ne porte plus de libellé FR en dur — la présentation
+/// mappe chaque valeur vers `context.l10n.<clé>` via l'extension
+/// `ChartFormatL10n` (`lib/features/dashboard/presentation/chart_format_l10n.dart`).
 enum ChartFormat {
   /// Barres groupées (défaut historique).
   bars,
@@ -12,13 +16,6 @@ enum ChartFormat {
 
   /// Courbes avec aires remplies (volume).
   area;
-
-  /// Libellé affiché dans l'UI française (tooltips du toggle).
-  String get labelFr => switch (this) {
-    ChartFormat.bars => 'Barres',
-    ChartFormat.line => 'Courbes',
-    ChartFormat.area => 'Aires',
-  };
 
   /// Parse la valeur persistée. Retourne `null` si inconnue.
   static ChartFormat? fromName(String? raw) {

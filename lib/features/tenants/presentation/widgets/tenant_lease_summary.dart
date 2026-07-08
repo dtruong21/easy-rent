@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../leases/domain/lease_status.dart';
 
 /// Affiche les baux liés à un locataire sous forme de liste de cards.
@@ -27,7 +29,7 @@ class TenantLeaseSummary extends StatelessWidget {
 
     if (leases.isEmpty) {
       return Text(
-        'Aucun bail enregistré pour ce locataire.',
+        context.l10n.tenantsNoLeaseForTenant,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           fontStyle: FontStyle.italic,
@@ -49,6 +51,7 @@ class _LeaseItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final leaseId = lease['id'] as String? ?? '';
     final status = lease['status'] as String? ?? '';
     final startDate = lease['start_date'] as String? ?? '';
@@ -67,19 +70,21 @@ class _LeaseItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _leaseStatusPill(status),
+              _leaseStatusPill(context, status),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _formatPeriod(startDate, endDate),
+                      _formatPeriod(l10n, startDate, endDate),
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${MoneyFormat.formatEurosFromCents(rentCents)}/mois HC',
+                      l10n.tenantsLeaseRentPerMonth(
+                        MoneyFormat.formatEurosFromCents(rentCents),
+                      ),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -87,7 +92,7 @@ class _LeaseItem extends StatelessWidget {
                     const SizedBox(height: 2),
                     if (leaseId.isNotEmpty)
                       Text(
-                        'Voir le bail',
+                        l10n.tenantsViewLeaseButton,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.primary,
                           decoration: TextDecoration.underline,
@@ -109,22 +114,39 @@ class _LeaseItem extends StatelessWidget {
     );
   }
 
-  String _formatPeriod(String startDate, String? endDate) {
+  String _formatPeriod(
+    AppLocalizations l10n,
+    String startDate,
+    String? endDate,
+  ) {
     final start = FrenchDate.formatIsoString(startDate);
     if (endDate == null || endDate.isEmpty) {
-      return 'Du $start (CDI)';
+      return l10n.tenantsLeasePeriodOpenEnded(start);
     }
-    return 'Du $start au ${FrenchDate.formatIsoString(endDate)}';
+    return l10n.tenantsLeasePeriodFixed(
+      start,
+      FrenchDate.formatIsoString(endDate),
+    );
   }
 }
 
 /// Construit un [StatusPill] depuis la valeur SQL brute du statut de bail.
-StatusPill _leaseStatusPill(String sqlStatus) {
+StatusPill _leaseStatusPill(BuildContext context, String sqlStatus) {
+  final l10n = context.l10n;
   final status = LeaseStatus.fromSql(sqlStatus);
   final (label, tone) = switch (status) {
-    LeaseStatus.active => ('Actif', StatusPillTone.success),
-    LeaseStatus.terminated => ('Terminé', StatusPillTone.neutral),
-    LeaseStatus.archived => ('Archivé', StatusPillTone.neutral),
+    LeaseStatus.active => (
+      l10n.tenantsLeaseStatusActive,
+      StatusPillTone.success,
+    ),
+    LeaseStatus.terminated => (
+      l10n.tenantsLeaseStatusTerminated,
+      StatusPillTone.neutral,
+    ),
+    LeaseStatus.archived => (
+      l10n.tenantsLeaseStatusArchived,
+      StatusPillTone.neutral,
+    ),
   };
   return StatusPill(label: label, tone: tone);
 }

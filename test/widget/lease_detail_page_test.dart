@@ -1,3 +1,4 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
@@ -9,6 +10,7 @@ import 'package:easyrent/features/leases/presentation/lease_detail_page.dart';
 import 'package:easyrent/features/payments/data/payment_repository.dart';
 import 'package:easyrent/features/payments/domain/payment.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -187,7 +189,13 @@ Widget _buildDetailPage({
         paymentRepo ?? _FakePaymentRepo(),
       ),
     ],
-    child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    child: MaterialApp.router(
+      theme: AppTheme.light,
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 

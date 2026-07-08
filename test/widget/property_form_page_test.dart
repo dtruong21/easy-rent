@@ -1,11 +1,14 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/properties/application/property_form_controller.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_form_state.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
+import 'package:easyrent/features/properties/domain/property_submit_error.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/property_form_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -140,7 +143,12 @@ Widget _buildForm({
           (ref) => PropertyFormController(ref)..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -318,16 +326,19 @@ void main() {
     // État erreur — message affiché inline
     // -----------------------------------------------------------------------
     testWidgets('état erreur — message affiché inline', (tester) async {
+      // FEAT-043 : PropertyFormState.error.message porte désormais le `name`
+      // technique d'un PropertySubmitError (pas un texte FR en dur) — la
+      // présentation le retraduit via PropertySubmitErrorL10n.
       await tester.pumpWidget(
         _buildForm(
-          initialState: const PropertyFormState.error(
-            message: 'Données invalides. Vérifiez les champs et réessayez.',
+          initialState: PropertyFormState.error(
+            message: PropertySubmitError.saveFailed.name,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Données invalides'), findsOneWidget);
+      expect(find.textContaining('sauvegarde'), findsOneWidget);
     });
   });
 
@@ -395,7 +406,12 @@ void main() {
       );
       return UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale: const Locale('fr'),
+          supportedLocales: supportedLocales,
+        ),
       );
     }
 
@@ -456,7 +472,12 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: MaterialApp.router(routerConfig: router),
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              locale: const Locale('fr'),
+              supportedLocales: supportedLocales,
+            ),
           ),
         );
         await tester.pumpAndSettle();

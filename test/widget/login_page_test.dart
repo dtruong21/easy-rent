@@ -1,7 +1,10 @@
 import 'package:easyrent/features/auth/application/login_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/login_page_state.dart';
 import 'package:easyrent/features/auth/presentation/login_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -142,7 +145,12 @@ Widget _buildLoginPage({
                 ..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -220,11 +228,14 @@ void main() {
     });
 
     testWidgets("affiche le message d'erreur en état error", (tester) async {
+      // FEAT-043 : LoginPageState.error.message porte désormais le `name`
+      // technique d'un AuthError (pas un texte FR en dur) — la présentation
+      // le retraduit via AuthErrorL10n.
       await tester.pumpWidget(
         _buildLoginPage(
           repo: _FakeAuthRepository(),
-          initialState: const LoginPageState.error(
-            message: 'Email ou mot de passe incorrect.',
+          initialState: LoginPageState.error(
+            message: AuthError.invalidCredentials.name,
           ),
         ),
       );

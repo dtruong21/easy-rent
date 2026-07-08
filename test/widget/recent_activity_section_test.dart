@@ -6,10 +6,12 @@
 /// - Tap « Voir tout » → tous visibles + « Réduire », re-tap → repli
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/recent_activity_section.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -44,6 +46,9 @@ Widget _buildSection(List<ActivityItem> items) {
       colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
       extensions: const [AppColors.light, AppRadii()],
     ),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: supportedLocales,
+    locale: const Locale('fr'),
   );
 }
 

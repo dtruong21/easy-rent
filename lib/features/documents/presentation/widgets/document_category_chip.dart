@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/document_category.dart';
+import '../document_category_l10n.dart';
 
-/// Chip affichant la catégorie d'un document avec son icône et son libellé FR.
+/// Chip affichant la catégorie d'un document avec son icône et son libellé
+/// localisé.
 class DocumentCategoryChip extends StatelessWidget {
   const DocumentCategoryChip({super.key, required this.category});
 
@@ -18,7 +20,7 @@ class DocumentCategoryChip extends StatelessWidget {
         color: theme.colorScheme.onSurfaceVariant,
       ),
       label: Text(
-        category.label,
+        category.localizedLabel(context),
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),

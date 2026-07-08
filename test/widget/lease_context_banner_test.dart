@@ -5,6 +5,7 @@
 library;
 
 import 'dart:typed_data';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
@@ -25,6 +26,7 @@ import 'package:easyrent/features/receipts/domain/receipt.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/lease_context_banner.dart';
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:flutter/material.dart';
@@ -314,7 +316,13 @@ Widget _buildBanner({
         _FakeReceiptsRepo(receipts: receipts),
       ),
     ],
-    child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+    child: MaterialApp.router(
+      routerConfig: router,
+      theme: _appTheme(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -362,8 +370,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('0 quittances'), findsOneWidget);
-      expect(find.textContaining('0 envoyées'), findsOneWidget);
+      // FEAT-043 (i18n) : le pluriel ICU/CLDR français traite 0 comme "one"
+      // (règle _fr_rule du package intl : i == 0 || i == 1 → ONE), donc 0
+      // suit l'accord singulier — "0 quittance générée" / "0 envoyée" —
+      // grammaticalement correct en français (contrairement à un pluriel
+      // naïf basé sur `count != 1`).
+      expect(find.textContaining('0 quittance'), findsOneWidget);
+      expect(find.textContaining('0 envoyée'), findsOneWidget);
     });
 
     testWidgets('adresse du bien affichée avec nom', (tester) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../properties/application/property_detail_provider.dart';
 import '../application/expenses_provider.dart';
@@ -35,7 +36,9 @@ class _PropertyExpensesPageState extends ConsumerState<PropertyExpensesPage> {
       propertyExpensesProvider(widget.propertyId),
     );
 
-    final title = asyncProperty.valueOrNull?.name ?? 'Historique des dépenses';
+    final title =
+        asyncProperty.valueOrNull?.name ??
+        context.l10n.expensesHistoryPageTitle;
 
     return Scaffold(
       appBar: AppAppBar(
@@ -45,7 +48,7 @@ class _PropertyExpensesPageState extends ConsumerState<PropertyExpensesPage> {
           IconButton(
             key: const Key('btn_add_expense_from_history'),
             icon: const Icon(Icons.add),
-            tooltip: 'Ajouter une dépense',
+            tooltip: context.l10n.expensesAddButton,
             onPressed: () =>
                 context.push('/properties/${widget.propertyId}/expenses/new'),
           ),
@@ -53,9 +56,8 @@ class _PropertyExpensesPageState extends ConsumerState<PropertyExpensesPage> {
       ),
       body: asyncExpenses.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(
-          child: Text('Impossible de charger les dépenses. Réessayez.'),
-        ),
+        error: (e, _) =>
+            Center(child: Text(context.l10n.expensesListErrorMessage)),
         data: (expenses) => _Content(
           propertyId: widget.propertyId,
           expenses: expenses,
@@ -143,7 +145,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Aucune dépense enregistrée pour ce filtre',
+            context.l10n.expensesEmptyFilterMessage,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

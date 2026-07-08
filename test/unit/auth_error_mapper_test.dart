@@ -1,4 +1,5 @@
 import 'package:easyrent/features/auth/data/auth_error_mapper.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,101 +8,101 @@ void main() {
     FirebaseAuthException e(String code, [String message = '']) =>
         FirebaseAuthException(code: code, message: message);
 
-    test('invalid-credential → email/mdp incorrect', () {
+    test('invalid-credential → invalidCredentials', () {
       expect(
         AuthErrorMapper.fromException(e('invalid-credential')),
-        'Email ou mot de passe incorrect.',
+        AuthError.invalidCredentials,
       );
     });
 
-    test('wrong-password → email/mdp incorrect', () {
+    test('wrong-password → invalidCredentials', () {
       expect(
         AuthErrorMapper.fromException(e('wrong-password')),
-        'Email ou mot de passe incorrect.',
+        AuthError.invalidCredentials,
       );
     });
 
-    test('user-not-found → email/mdp incorrect (anti-énumération)', () {
+    test('user-not-found → invalidCredentials (anti-énumération)', () {
       expect(
         AuthErrorMapper.fromException(e('user-not-found')),
-        'Email ou mot de passe incorrect.',
+        AuthError.invalidCredentials,
       );
     });
 
-    test('invalid-email → email/mdp incorrect', () {
+    test('invalid-email → invalidCredentials', () {
       expect(
         AuthErrorMapper.fromException(e('invalid-email')),
-        'Email ou mot de passe incorrect.',
+        AuthError.invalidCredentials,
       );
     });
 
-    test('user-disabled → compte désactivé', () {
+    test('user-disabled → userDisabled', () {
       expect(
         AuthErrorMapper.fromException(e('user-disabled')),
-        contains('désactivé'),
+        AuthError.userDisabled,
       );
     });
 
-    test('email-already-in-use → compte déjà existant', () {
+    test('email-already-in-use → emailAlreadyInUse', () {
       expect(
         AuthErrorMapper.fromException(e('email-already-in-use')),
-        contains('Un compte existe déjà'),
+        AuthError.emailAlreadyInUse,
       );
     });
 
-    test('weak-password → mot de passe faible', () {
+    test('weak-password → weakPassword', () {
       expect(
         AuthErrorMapper.fromException(e('weak-password')),
-        contains('Mot de passe trop faible'),
+        AuthError.weakPassword,
       );
     });
 
-    test('too-many-requests → trop de demandes', () {
+    test('too-many-requests → tooManyRequests', () {
       expect(
         AuthErrorMapper.fromException(e('too-many-requests')),
-        contains('Trop de demandes'),
+        AuthError.tooManyRequests,
       );
     });
 
-    test('requires-recent-login → invite à se reconnecter (FEAT-025)', () {
+    test('requires-recent-login → requiresRecentLogin (FEAT-025)', () {
       expect(
         AuthErrorMapper.fromException(e('requires-recent-login')),
-        'Pour des raisons de sécurité, reconnectez-vous puis réessayez.',
+        AuthError.requiresRecentLogin,
       );
     });
 
-    test('expired-action-code → lien expiré', () {
+    test('expired-action-code → expiredActionCode', () {
       expect(
         AuthErrorMapper.fromException(e('expired-action-code')),
-        contains('expiré'),
+        AuthError.expiredActionCode,
       );
     });
 
-    test('invalid-action-code → lien expiré', () {
+    test('invalid-action-code → expiredActionCode', () {
       expect(
         AuthErrorMapper.fromException(e('invalid-action-code')),
-        contains('expiré'),
+        AuthError.expiredActionCode,
       );
     });
 
-    test('network-request-failed → connexion impossible', () {
+    test('network-request-failed → networkRequestFailed', () {
       expect(
         AuthErrorMapper.fromException(e('network-request-failed')),
-        contains('Connexion impossible'),
+        AuthError.networkRequestFailed,
       );
     });
 
-    test('operation-not-allowed → méthode non activée', () {
+    test('operation-not-allowed → operationNotAllowed', () {
       expect(
         AuthErrorMapper.fromException(e('operation-not-allowed')),
-        contains('non activée'),
+        AuthError.operationNotAllowed,
       );
     });
 
-    test('code inconnu → message générique', () {
+    test('code inconnu → unknown', () {
       expect(
         AuthErrorMapper.fromException(e('unknown_code_xyz')),
-        'Une erreur est survenue. Veuillez réessayer.',
+        AuthError.unknown,
       );
     });
   });
@@ -110,72 +111,111 @@ void main() {
     FirebaseAuthException e(String code, [String message = '']) =>
         FirebaseAuthException(code: code, message: message);
 
-    test('popup-closed-by-user → connexion annulée', () {
+    test('popup-closed-by-user → googlePopupClosed', () {
       expect(
         AuthErrorMapper.fromException(e('popup-closed-by-user')),
-        'Connexion annulée.',
+        AuthError.googlePopupClosed,
       );
     });
 
-    test('popup-blocked → message popup bloquée', () {
+    test('popup-blocked → googlePopupBlocked', () {
       expect(
         AuthErrorMapper.fromException(e('popup-blocked')),
-        contains('bloqué la fenêtre de connexion'),
-      );
-    });
-
-    test('account-exists-with-different-credential → message FR', () {
-      expect(
-        AuthErrorMapper.fromException(
-          e('account-exists-with-different-credential'),
-        ),
-        contains('Un compte existe déjà avec cet email mais via une autre'),
-      );
-    });
-
-    test('cancelled-popup-request → message fenêtre déjà ouverte', () {
-      expect(
-        AuthErrorMapper.fromException(e('cancelled-popup-request')),
-        'Une autre fenêtre de connexion est déjà ouverte.',
-      );
-    });
-
-    test('web-storage-unsupported → message cookies tiers', () {
-      expect(
-        AuthErrorMapper.fromException(e('web-storage-unsupported')),
-        contains('cookies tiers'),
-      );
-    });
-
-    test('baillan/google-new-user-on-login → invitation à signup', () {
-      expect(
-        AuthErrorMapper.fromException(e('baillan/google-new-user-on-login')),
-        contains('Aucun compte Baillan associé'),
+        AuthError.googlePopupBlocked,
       );
     });
 
     test(
-      'baillan/rgpd-consent-declined → message consentement obligatoire',
+      'account-exists-with-different-credential → accountExistsWithDifferentCredential',
       () {
         expect(
-          AuthErrorMapper.fromException(e('baillan/rgpd-consent-declined')),
-          "Vous devez accepter les conditions générales d'utilisation "
-          'et la politique de confidentialité.',
+          AuthErrorMapper.fromException(
+            e('account-exists-with-different-credential'),
+          ),
+          AuthError.accountExistsWithDifferentCredential,
         );
       },
     );
 
-    test('baillan/popup-blocked → message popup bloquée', () {
+    test('cancelled-popup-request → googlePopupCancelledRequest', () {
       expect(
-        AuthErrorMapper.fromException(e('baillan/popup-blocked')),
-        contains('bloqué la fenêtre Google'),
+        AuthErrorMapper.fromException(e('cancelled-popup-request')),
+        AuthError.googlePopupCancelledRequest,
       );
     });
 
-    test('baillan/popup-closed → connexion annulée', () {
+    test('web-storage-unsupported → webStorageUnsupported', () {
+      expect(
+        AuthErrorMapper.fromException(e('web-storage-unsupported')),
+        AuthError.webStorageUnsupported,
+      );
+    });
+
+    test('baillan/google-new-user-on-login → googleNewUserOnLogin', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/google-new-user-on-login')),
+        AuthError.googleNewUserOnLogin,
+      );
+    });
+
+    test('baillan/rgpd-consent-declined → consentRequired', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/rgpd-consent-declined')),
+        AuthError.consentRequired,
+      );
+    });
+
+    test('baillan/popup-blocked → googlePopupBlocked', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/popup-blocked')),
+        AuthError.googlePopupBlocked,
+      );
+    });
+
+    test('baillan/popup-closed → googlePopupClosed', () {
       expect(
         AuthErrorMapper.fromException(e('baillan/popup-closed')),
-        'Connexion Google annulée.',
+        AuthError.googlePopupClosed,
+      );
+    });
+  });
+
+  group('AuthErrorMapper.fromException (Apple sign-in codes)', () {
+    FirebaseAuthException e(String code, [String message = '']) =>
+        FirebaseAuthException(code: code, message: message);
+
+    test('user-cancelled → applePopupClosed', () {
+      expect(
+        AuthErrorMapper.fromException(e('user-cancelled')),
+        AuthError.applePopupClosed,
+      );
+    });
+
+    test('baillan/apple-new-user-on-login → appleNewUserOnLogin', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/apple-new-user-on-login')),
+        AuthError.appleNewUserOnLogin,
+      );
+    });
+
+    test('baillan/apple-rgpd-consent-declined → consentRequired', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/apple-rgpd-consent-declined')),
+        AuthError.consentRequired,
+      );
+    });
+
+    test('baillan/apple-popup-blocked → applePopupBlocked', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/apple-popup-blocked')),
+        AuthError.applePopupBlocked,
+      );
+    });
+
+    test('baillan/apple-popup-closed → applePopupClosed', () {
+      expect(
+        AuthErrorMapper.fromException(e('baillan/apple-popup-closed')),
+        AuthError.applePopupClosed,
       );
     });
   });
@@ -183,17 +223,17 @@ void main() {
   group('AuthErrorMapper.fromException (OAuth natif mobile, FEAT-024)', () {
     FirebaseAuthException e(String code) => FirebaseAuthException(code: code);
 
-    test('web-context-canceled (Android) → connexion annulée', () {
+    test('web-context-canceled (Android) → googlePopupClosed', () {
       expect(
         AuthErrorMapper.fromException(e('web-context-canceled')),
-        'Connexion annulée.',
+        AuthError.googlePopupClosed,
       );
     });
 
-    test('web-context-cancelled (iOS) → connexion annulée', () {
+    test('web-context-cancelled (iOS) → googlePopupClosed', () {
       expect(
         AuthErrorMapper.fromException(e('web-context-cancelled')),
-        'Connexion annulée.',
+        AuthError.googlePopupClosed,
       );
     });
   });

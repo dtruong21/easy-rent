@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../application/tenant_detail_provider.dart';
 import '../application/tenant_form_controller.dart';
 import '../domain/tenant.dart';
 import '../domain/tenant_form_state.dart';
+import '../domain/tenant_submit_error.dart';
+import 'tenant_submit_error_l10n.dart';
 import 'widgets/tenant_form.dart';
 
 final _log = Logger('TenantFormPage');
@@ -161,14 +164,15 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
   @override
   Widget build(BuildContext context) {
     final isCreating = widget.initial == null;
+    final l10n = context.l10n;
 
     // Écouter les changements d'état pour les toasts et la navigation.
     ref.listen<TenantFormState>(tenantFormControllerProvider, (_, next) {
       next.whenOrNull(
         success: (tenant) {
           final msg = isCreating
-              ? 'Locataire créé'
-              : 'Modifications enregistrées';
+              ? l10n.tenantsCreateSuccessSnackBar
+              : l10n.tenantsUpdateSuccessSnackBar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -202,13 +206,15 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (code) => TenantSubmitError.fromCode(code).message(context),
       orElse: () => null,
     );
 
     return Scaffold(
       appBar: AppAppBar(
-        title: isCreating ? 'Nouveau locataire' : 'Modifier le locataire',
+        title: isCreating
+            ? l10n.tenantsFormTitleCreate
+            : l10n.tenantsFormTitleEdit,
         fallbackRoute: '/tenants',
       ),
       body: SingleChildScrollView(
@@ -254,7 +260,11 @@ class _TenantFormPageState extends ConsumerState<TenantFormPage> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isCreating ? 'Créer le locataire' : 'Enregistrer'),
+                  : Text(
+                      isCreating
+                          ? l10n.tenantsFormSubmitCreate
+                          : l10n.commonSave,
+                    ),
             ),
           ],
         ),
@@ -280,12 +290,12 @@ class TenantEditPage extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppAppBar(
-          title: 'Modifier le locataire',
+          title: context.l10n.tenantsFormTitleEdit,
           fallbackRoute: '/tenants',
         ),
         body: Center(
           child: Text(
-            'Locataire introuvable.',
+            context.l10n.tenantsEditNotFound,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),

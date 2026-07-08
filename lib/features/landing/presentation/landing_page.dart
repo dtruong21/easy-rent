@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/widgets/anon_demo_banner.dart';
@@ -107,7 +108,9 @@ class _LandingPageState extends ConsumerState<LandingPage>
       _log.warning('signInAnonymously failed (code=${e.code})', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Connexion impossible, réessayez.')),
+          SnackBar(
+            content: Text(context.l10n.landingAnonymousSignInErrorSnackbar),
+          ),
         );
       }
     } finally {
@@ -181,7 +184,7 @@ class _LandingPageState extends ConsumerState<LandingPage>
                                         // bureau, s'adapte à l'ambiance.
                                         Center(
                                           child: Text(
-                                            'Registre · Page de garde',
+                                            context.l10n.landingFolioCaption,
                                             style: TextStyle(
                                               fontFamily: 'EB Garamond',
                                               fontFamilyFallback: serifFallback,

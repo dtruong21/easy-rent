@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../domain/document.dart';
 import 'document_list_tile.dart';
 
@@ -47,7 +48,7 @@ class _EmptyDocumentsState extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Vos documents apparaîtront ici',
+            context.l10n.documentsEmptyTitle,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w500,
@@ -56,7 +57,7 @@ class _EmptyDocumentsState extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Cliquez pour sélectionner vos fichiers',
+            context.l10n.documentsUploadPromptText,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

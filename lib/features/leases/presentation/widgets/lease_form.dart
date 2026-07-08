@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/lease_form_validators.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../../../features/payments/domain/payment_method.dart';
 import '../../../../features/properties/domain/property.dart';
 import '../../../../features/tenants/domain/tenant.dart';
 import '../../domain/charge_mode.dart';
 import '../../domain/lease_type.dart';
+import '../lease_type_l10n.dart';
 
 /// Formulaire bail — 5 sections.
 ///
@@ -200,7 +203,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: 'Date de début du bail',
+      helpText: context.l10n.leasesFormStartDatePickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -217,7 +220,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialDate: _endDate ?? (_startDate ?? DateTime.now()),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: 'Date de fin du bail',
+      helpText: context.l10n.leasesFormEndDatePickerHelp,
     );
     if (picked != null && mounted) {
       setState(() => _endDate = picked);
@@ -227,6 +230,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Form(
       key: widget.formKey,
       child: Column(
@@ -235,7 +239,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           // ----------------------------------------------------------------
           // Section 1 — Parties et bien
           // ----------------------------------------------------------------
-          _SectionHeader(title: 'Parties et bien'),
+          _SectionHeader(title: l10n.leasesFormSectionParties),
           const SizedBox(height: 12),
           _buildPropertyField(),
           const SizedBox(height: 16),
@@ -246,7 +250,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           // ----------------------------------------------------------------
           // Section 2 — Loyer et charges
           // ----------------------------------------------------------------
-          _SectionHeader(title: 'Loyer et charges'),
+          _SectionHeader(title: l10n.leasesFormSectionRentAndCharges),
           const SizedBox(height: 12),
           _buildRentField(),
           const SizedBox(height: 16),
@@ -263,7 +267,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           // ----------------------------------------------------------------
           // Section 3 — Type de bail et durée
           // ----------------------------------------------------------------
-          _SectionHeader(title: 'Type de bail et durée'),
+          _SectionHeader(title: l10n.leasesFormSectionTypeAndDuration),
           const SizedBox(height: 12),
           _buildLeaseTypeField(),
           const SizedBox(height: 16),
@@ -326,9 +330,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   Widget _buildPropertyField() {
     if (widget.properties.isEmpty) {
       return _NoItemsHint(
-        message: 'Vous devez d\'abord créer un bien immobilier.',
+        message: context.l10n.leasesFormNoPropertiesMessage,
         route: '/properties/new',
-        buttonLabel: 'Créer un bien',
+        buttonLabel: context.l10n.leasesFormCreatePropertyButton,
       );
     }
     return FormField<Property>(
@@ -336,12 +340,14 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialValue: _selectedProperty,
       validator: (_) {
         if (!_propertyTouched) return null;
-        return LeaseFormValidators.validateProperty(_selectedProperty);
+        return LeaseFormValidators.validateProperty(
+          _selectedProperty,
+        )?.message(context);
       },
       builder: (state) => DropdownButtonFormField<Property>(
         initialValue: _selectedProperty,
         decoration: InputDecoration(
-          labelText: 'Bien immobilier *',
+          labelText: context.l10n.leasesFormPropertyFieldLabel,
           border: const OutlineInputBorder(),
           errorText: state.errorText,
         ),
@@ -376,9 +382,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _NoItemsHint(
-            message: 'Vous devez d\'abord créer un locataire.',
+            message: context.l10n.leasesFormNoTenantsMessage,
             route: '/tenants/new',
-            buttonLabel: 'Créer un locataire',
+            buttonLabel: context.l10n.leasesFormCreateTenantButton,
           ),
           if (widget.onCreateTenant != null) _createTenantButton(),
         ],
@@ -400,7 +406,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     key: const Key('btn_create_tenant_inline'),
     onPressed: widget.enabled ? widget.onCreateTenant : null,
     icon: const Icon(Icons.person_add_outlined, size: 18),
-    label: const Text('Nouveau locataire'),
+    label: Text(context.l10n.leasesFormNewTenantInlineButton),
   );
 
   Widget _buildTenantDropdown() {
@@ -409,12 +415,14 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialValue: _selectedTenant,
       validator: (_) {
         if (!_tenantTouched) return null;
-        return LeaseFormValidators.validateTenant(_selectedTenant);
+        return LeaseFormValidators.validateTenant(
+          _selectedTenant,
+        )?.message(context);
       },
       builder: (state) => DropdownButtonFormField<Tenant>(
         initialValue: _selectedTenant,
         decoration: InputDecoration(
-          labelText: 'Locataire *',
+          labelText: context.l10n.leasesFormTenantFieldLabel,
           border: const OutlineInputBorder(),
           errorText: state.errorText,
         ),
@@ -450,11 +458,11 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     key: const Key('field_rent'),
     controller: widget.rentController,
     enabled: widget.enabled,
-    decoration: const InputDecoration(
-      labelText: 'Loyer hors charges (€) *',
-      hintText: 'Ex. : 850,00',
+    decoration: InputDecoration(
+      labelText: context.l10n.leasesFormRentLabel,
+      hintText: context.l10n.leasesFormRentHint,
       suffixText: '€',
-      border: OutlineInputBorder(),
+      border: const OutlineInputBorder(),
     ),
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     onChanged: (_) {
@@ -466,33 +474,36 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     },
     validator: (v) {
       if (!_rentTouched) return null;
-      return LeaseFormValidators.validateRentAmount(v);
+      return LeaseFormValidators.validateRentAmount(v)?.message(context);
     },
   );
 
   /// Libellé + texte d'aide du champ charges — dynamique selon le mode de
   /// charges (FEAT-042) : provisions récupérables (régularisables) vs
   /// forfait libératoire (montant unique, non ventilable).
-  (String, String) get _chargesFieldLabels => switch (_chargeMode) {
-    ChargeMode.provisions => (
-      'Charges récupérables (€) *',
-      'Provisions mensuelles refacturables au locataire (décret n°87-713)',
-    ),
-    ChargeMode.forfait => (
-      'Forfait de charges (€) *',
-      'Forfait mensuel libératoire — non régularisable.',
-    ),
-  };
+  (String, String) _chargesFieldLabels(BuildContext context) {
+    final l10n = context.l10n;
+    return switch (_chargeMode) {
+      ChargeMode.provisions => (
+        l10n.leasesFormRecoverableChargesLabel,
+        l10n.leasesFormRecoverableChargesHelper,
+      ),
+      ChargeMode.forfait => (
+        l10n.leasesFormFlatChargesLabel,
+        l10n.leasesFormFlatChargesHelper,
+      ),
+    };
+  }
 
   Widget _buildChargesField() {
-    final (label, helper) = _chargesFieldLabels;
+    final (label, helper) = _chargesFieldLabels(context);
     return TextFormField(
       key: const Key('field_charges'),
       controller: widget.chargesController,
       enabled: widget.enabled,
       decoration: InputDecoration(
         labelText: label,
-        hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
+        hintText: context.l10n.leasesFormChargesHint,
         helperText: helper,
         suffixText: '€',
         border: const OutlineInputBorder(),
@@ -507,7 +518,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       },
       validator: (v) {
         if (!_chargesTouched) return null;
-        return LeaseFormValidators.validateChargesAmount(v);
+        return LeaseFormValidators.validateChargesAmount(v)?.message(context);
       },
     );
   }
@@ -522,14 +533,12 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       key: const Key('field_non_recoverable_charges'),
       controller: widget.nonRecoverableChargesController,
       enabled: widget.enabled,
-      decoration: const InputDecoration(
-        labelText: 'Charges non récupérables (€)',
-        hintText: 'Ex. : 20,00 (saisir 0 si aucune)',
-        helperText:
-            'À la charge du bailleur — non refacturable au locataire. '
-            'Saisir 0 si aucune.',
+      decoration: InputDecoration(
+        labelText: context.l10n.leasesFormNonRecoverableChargesLabel,
+        hintText: context.l10n.leasesFormNonRecoverableChargesHint,
+        helperText: context.l10n.leasesFormNonRecoverableChargesHelper,
         suffixText: '€',
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (_) {
@@ -541,7 +550,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       },
       validator: (v) {
         if (!_nonRecoverableChargesTouched) return null;
-        return LeaseFormValidators.validateNonRecoverableCharges(v);
+        return LeaseFormValidators.validateNonRecoverableCharges(
+          v,
+        )?.message(context);
       },
     );
   }
@@ -550,12 +561,12 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     key: const Key('field_deposit'),
     controller: widget.depositController,
     enabled: widget.enabled,
-    decoration: const InputDecoration(
-      labelText: 'Dépôt de garantie (€)',
-      hintText: 'Ex. : 850,00',
-      helperText: 'Optionnel',
+    decoration: InputDecoration(
+      labelText: context.l10n.leasesFormDepositLabel,
+      hintText: context.l10n.leasesFormDepositHint,
+      helperText: context.l10n.leasesFormOptionalHelper,
       suffixText: '€',
-      border: OutlineInputBorder(),
+      border: const OutlineInputBorder(),
     ),
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     onChanged: (_) {
@@ -569,7 +580,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       if (!_depositTouched) return null;
       if (v == null || v.trim().isEmpty) return null;
       final cents = MoneyFormat.eurosToCents(v);
-      return LeaseFormValidators.validateDepositCents(cents);
+      return LeaseFormValidators.validateDepositCents(cents)?.message(context);
     },
   );
 
@@ -577,12 +588,12 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     key: const Key('field_agency_fees'),
     controller: widget.agencyFeesController,
     enabled: widget.enabled,
-    decoration: const InputDecoration(
-      labelText: 'Honoraires d\'agence (€)',
-      hintText: 'Ex. : 500,00 (0 si aucun)',
-      helperText: 'Optionnel — saisir 0 si pas d\'agence',
+    decoration: InputDecoration(
+      labelText: context.l10n.leasesFormAgencyFeesLabel,
+      hintText: context.l10n.leasesFormAgencyFeesHint,
+      helperText: context.l10n.leasesFormAgencyFeesHelper,
       suffixText: '€',
-      border: OutlineInputBorder(),
+      border: const OutlineInputBorder(),
     ),
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     onChanged: (_) {
@@ -596,7 +607,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       if (!_agencyFeesTouched) return null;
       if (v == null || v.trim().isEmpty) return null;
       final cents = MoneyFormat.eurosToCents(v);
-      return LeaseFormValidators.validateAgencyFees(cents);
+      return LeaseFormValidators.validateAgencyFees(cents)?.message(context);
     },
   );
 
@@ -608,12 +619,12 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     key: const Key('field_lease_type'),
     initialValue: _leaseType,
     decoration: InputDecoration(
-      labelText: 'Type de bail *',
-      helperText: _leaseType.formHelperText,
+      labelText: context.l10n.leasesFormLeaseTypeLabel,
+      helperText: LeaseTypeL10n(_leaseType).formHelperText(context),
       border: const OutlineInputBorder(),
     ),
     items: LeaseType.values
-        .map((t) => DropdownMenuItem(value: t, child: Text(t.labelFr)))
+        .map((t) => DropdownMenuItem(value: t, child: Text(t.label(context))))
         .toList(),
     onChanged: widget.enabled
         ? (t) => setState(() {
@@ -634,17 +645,13 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   /// - Mobilité : forfait verrouillé + note légale.
   Widget _buildChargeModeField() {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final locked = _chargeModeLocked;
     final helperText = switch (_leaseType) {
-      LeaseType.unfurnished =>
-        'Bail vide : provisions + régularisation annuelle obligatoire '
-            '(art. 23).',
-      LeaseType.mobility =>
-        'Bail mobilité : forfait obligatoire, non régularisable '
-            '(loi ELAN art. 25-18).',
-      LeaseType.furnished || LeaseType.student =>
-        'Meublé : provisions (régularisables) ou forfait (libératoire, '
-            'art. 25-10).',
+      LeaseType.unfurnished => l10n.leasesFormChargeModeHelperUnfurnished,
+      LeaseType.mobility => l10n.leasesFormChargeModeHelperMobility,
+      LeaseType.furnished ||
+      LeaseType.student => l10n.leasesFormChargeModeHelperFurnishedOrStudent,
     };
 
     return FormField<ChargeMode>(
@@ -653,16 +660,22 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       builder: (state) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Mode de charges', style: theme.textTheme.labelLarge),
+          Text(
+            l10n.leasesFormChargeModeSectionLabel,
+            style: theme.textTheme.labelLarge,
+          ),
           const SizedBox(height: 8),
           SegmentedButton<ChargeMode>(
             key: const Key('segmented_charge_mode'),
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: ChargeMode.provisions,
-                label: Text('Provisions'),
+                label: Text(l10n.leasesFormChargeModeProvisionsSegment),
               ),
-              ButtonSegment(value: ChargeMode.forfait, label: Text('Forfait')),
+              ButtonSegment(
+                value: ChargeMode.forfait,
+                label: Text(l10n.leasesFormChargeModeFlatSegment),
+              ),
             ],
             selected: {_chargeMode},
             onSelectionChanged: (widget.enabled && !locked)
@@ -688,13 +701,15 @@ class LeaseFormWidgetState extends State<LeaseForm> {
       initialValue: _startDate,
       validator: (_) {
         if (!_startDateTouched) return null;
-        return LeaseFormValidators.validateStartDate(_startDate);
+        return LeaseFormValidators.validateStartDate(
+          _startDate,
+        )?.message(context);
       },
       builder: (state) => InkWell(
         onTap: widget.enabled ? _pickStartDate : null,
         child: InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Date de début *',
+            labelText: context.l10n.leasesFormStartDateLabel,
             border: const OutlineInputBorder(),
             suffixIcon: const Icon(Icons.calendar_today_outlined),
             errorText: state.errorText,
@@ -702,7 +717,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
           child: Text(
             _startDate != null
                 ? FrenchDate.format(_startDate!)
-                : 'Sélectionner une date',
+                : context.l10n.leasesFormSelectDatePlaceholder,
             style: _startDate == null
                 ? theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -716,7 +731,7 @@ class LeaseFormWidgetState extends State<LeaseForm> {
 
   Widget _buildOpenEndedToggle() => CheckboxListTile(
     key: const Key('checkbox_open_ended'),
-    title: const Text('Bail à durée indéterminée (CDI)'),
+    title: Text(context.l10n.leasesFormOpenEndedToggleLabel),
     value: _isOpenEnded,
     contentPadding: EdgeInsets.zero,
     controlAffinity: ListTileControlAffinity.leading,
@@ -738,19 +753,23 @@ class LeaseFormWidgetState extends State<LeaseForm> {
     return FormField<DateTime>(
       key: const Key('field_end_date'),
       initialValue: _endDate,
-      validator: (_) =>
-          LeaseFormValidators.validateEndDate(_endDate, _startDate),
+      validator: (_) => LeaseFormValidators.validateEndDate(
+        _endDate,
+        _startDate,
+      )?.message(context),
       builder: (state) => InkWell(
         onTap: widget.enabled ? _pickEndDate : null,
         child: InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Date de fin',
+            labelText: context.l10n.leasesFormEndDateLabel,
             border: const OutlineInputBorder(),
             suffixIcon: const Icon(Icons.calendar_today_outlined),
             errorText: state.errorText,
           ),
           child: Text(
-            _endDate != null ? FrenchDate.format(_endDate!) : 'Optionnelle',
+            _endDate != null
+                ? FrenchDate.format(_endDate!)
+                : context.l10n.leasesFormOptionalPlaceholder,
             style: _endDate == null
                 ? theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -841,11 +860,12 @@ class _PaymentSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_payment_terms'),
-        title: const Text('Modalités paiement (optionnel)'),
+        title: Text(l10n.leasesFormPaymentSectionTitle),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -855,11 +875,11 @@ class _PaymentSection extends StatelessWidget {
             key: const Key('field_payment_day'),
             controller: paymentDayController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Jour d\'échéance',
+            decoration: InputDecoration(
+              labelText: l10n.leasesFormPaymentDayLabel,
               hintText: '1',
-              helperText: 'Jour du mois où le loyer est dû (1 à 28)',
-              border: OutlineInputBorder(),
+              helperText: l10n.leasesFormPaymentDayHelper,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -870,7 +890,9 @@ class _PaymentSection extends StatelessWidget {
             validator: (v) {
               if (!paymentDayTouched) return null;
               if (v == null || v.trim().isEmpty) return null;
-              return LeaseFormValidators.validatePaymentDay(v);
+              return LeaseFormValidators.validatePaymentDay(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -879,9 +901,9 @@ class _PaymentSection extends StatelessWidget {
           DropdownButtonFormField<PaymentMethod>(
             key: const Key('field_payment_method'),
             initialValue: paymentMethod,
-            decoration: const InputDecoration(
-              labelText: 'Mode de paiement',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.leasesFormPaymentMethodLabel,
+              border: const OutlineInputBorder(),
             ),
             items: PaymentMethod.values
                 .map((m) => DropdownMenuItem(value: m, child: Text(m.label)))
@@ -927,11 +949,12 @@ class _IrlClausesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_irl_clauses'),
-        title: const Text('IRL et clauses (optionnel)'),
+        title: Text(l10n.leasesFormIrlClausesSectionTitle),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -941,11 +964,11 @@ class _IrlClausesSection extends StatelessWidget {
             key: const Key('field_irl_value'),
             controller: irlValueController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Valeur IRL initiale',
-              hintText: 'Ex. : 142.43',
-              helperText: 'Indice de référence des loyers (optionnel)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.leasesFormIrlValueLabel,
+              hintText: l10n.leasesFormIrlValueHint,
+              helperText: l10n.leasesFormIrlValueHelper,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onEditingComplete: () {
@@ -954,7 +977,7 @@ class _IrlClausesSection extends StatelessWidget {
             },
             validator: (v) {
               if (!irlValueTouched) return null;
-              return LeaseFormValidators.validateIrlValue(v);
+              return LeaseFormValidators.validateIrlValue(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -964,11 +987,11 @@ class _IrlClausesSection extends StatelessWidget {
             key: const Key('field_irl_quarter'),
             controller: irlQuarterController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Trimestre IRL de référence',
+            decoration: InputDecoration(
+              labelText: l10n.leasesFormIrlQuarterLabel,
               hintText: 'T1-2026',
-              helperText: 'Format : T1-2026, T2-2026, etc.',
-              border: OutlineInputBorder(),
+              helperText: l10n.leasesFormIrlQuarterHelper,
+              border: const OutlineInputBorder(),
             ),
             onEditingComplete: () {
               onIrlQuarterTouched();
@@ -976,7 +999,9 @@ class _IrlClausesSection extends StatelessWidget {
             },
             validator: (v) {
               if (!irlQuarterTouched) return null;
-              return LeaseFormValidators.validateIrlQuarter(v);
+              return LeaseFormValidators.validateIrlQuarter(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 8),
@@ -984,8 +1009,8 @@ class _IrlClausesSection extends StatelessWidget {
           // Clause de solidarité
           SwitchListTile(
             key: const Key('switch_solidarity_clause'),
-            title: const Text('Clause de solidarité'),
-            subtitle: const Text('Solidarité entre colocataires'),
+            title: Text(l10n.leasesFormSolidarityClauseLabel),
+            subtitle: Text(l10n.leasesFormSolidarityClauseSubtitle),
             value: solidarityClause,
             contentPadding: EdgeInsets.zero,
             onChanged: enabled ? onSolidarityChanged : null,
@@ -994,7 +1019,7 @@ class _IrlClausesSection extends StatelessWidget {
           // État des lieux d'entrée
           SwitchListTile(
             key: const Key('switch_entry_inventory'),
-            title: const Text('État des lieux d\'entrée réalisé'),
+            title: Text(l10n.leasesFormEntryInventoryLabel),
             value: entryInventoryDone,
             contentPadding: EdgeInsets.zero,
             onChanged: enabled ? onEntryInventoryChanged : null,

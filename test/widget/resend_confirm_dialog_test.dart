@@ -6,7 +6,9 @@
 /// - bouton Repartager appelle onConfirm et ferme le dialog
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/confirm_resend_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,6 +22,9 @@ Widget _buildDialog({
   String previousMaskedEmail = 'j***@example.com',
 }) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => TextButton(

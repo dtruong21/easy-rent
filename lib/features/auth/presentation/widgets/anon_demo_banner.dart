@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../application/auth_session_provider.dart';
 import '../../data/landlord_tier_repository.dart';
@@ -73,7 +74,7 @@ class AnonDemoBanner extends ConsumerWidget {
       textColor = isDark ? AppTheme.oliveSoft : AppTheme.olive;
     }
 
-    final message = _messageFor(daysLeft);
+    final message = _messageFor(context, daysLeft);
 
     return Material(
       key: const Key('anon_demo_banner'),
@@ -97,7 +98,7 @@ class AnonDemoBanner extends ConsumerWidget {
               key: const Key('anon_demo_banner_cta'),
               onPressed: () => context.go('/signup'),
               child: Text(
-                'Créer un compte pour tout débloquer',
+                context.l10n.authAnonBannerUnlockCta,
                 style: TextStyle(color: textColor),
               ),
             );
@@ -119,17 +120,18 @@ class AnonDemoBanner extends ConsumerWidget {
     );
   }
 
-  String _messageFor(double? daysLeft) {
-    if (daysLeft == null) return 'Mode démo · 1 scénario';
+  String _messageFor(BuildContext context, double? daysLeft) {
+    final l10n = context.l10n;
+    if (daysLeft == null) return l10n.authAnonBannerDemoMode;
     // Pas d'affichage "0 jours" (bug review) — au 0.x on est dans la
     // fenêtre "moins de 24h", et on affiche le message court.
     if (daysLeft <= 1) {
-      return 'Mode démo — votre session expire dans moins de 24h';
+      return l10n.authAnonBannerExpiresUnder24h;
     }
     final rounded = daysLeft.ceil().clamp(2, 14);
     if (rounded <= 3) {
-      return 'Mode démo — votre session expire dans $rounded jours';
+      return l10n.authAnonBannerExpiresInDays(rounded);
     }
-    return 'Mode démo · 1 scénario';
+    return l10n.authAnonBannerDemoMode;
   }
 }

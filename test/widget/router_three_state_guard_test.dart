@@ -9,6 +9,8 @@ import 'package:easyrent/core/router/app_router.dart';
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/session_state.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -122,7 +124,12 @@ Future<String> _resolvedLocation(
           WidgetsBinding.instance.addPostFrameCallback((_) {
             router.go(location);
           });
-          return MaterialApp.router(routerConfig: router);
+          return MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          );
         },
       ),
     ),

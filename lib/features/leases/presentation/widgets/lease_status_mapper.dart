@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../domain/lease.dart';
@@ -29,18 +30,26 @@ typedef LeaseStatusPillData = ({
 ///
 /// Le paramètre [now] est injectable pour les tests (évite la dépendance
 /// à `DateTime.now()` dans les tests unitaires).
+///
+/// [context] est requis pour la localisation des libellés (FEAT-043) — les
+/// appelants sont tous des widgets avec un `BuildContext` disponible.
 LeaseStatusPillData leaseStatusPill(
+  BuildContext context,
   Lease lease, {
   DateTime? now,
   bool isLate = false,
 }) {
+  final l10n = context.l10n;
   final today = now ?? DateTime.now();
 
   if (lease.status == LeaseStatus.active) {
     if (isLate) {
       return (
         tone: StatusPillTone.danger,
-        label: 'En retard',
+        // Réutilise `leasesFilterLate` (valeur FR identique "En retard") —
+        // pas de duplication de clé pour un même libellé, cf. convention
+        // ARB (`lib/l10n/l10n_convention.dart`, règle 2).
+        label: l10n.leasesFilterLate,
         icon: Icons.warning_amber_outlined,
       );
     }
@@ -51,14 +60,16 @@ LeaseStatusPillData leaseStatusPill(
       if (daysUntilEnd < 60) {
         return (
           tone: StatusPillTone.warning,
-          label: 'À renouveler',
+          // Réutilise `leasesFilterRenewable` (valeur FR identique
+          // "À renouveler") — idem, pas de duplication de clé.
+          label: l10n.leasesFilterRenewable,
           icon: Icons.event_repeat_outlined,
         );
       }
     }
     return (
       tone: StatusPillTone.success,
-      label: 'Actif',
+      label: l10n.leasesStatusActive,
       icon: Icons.check_circle_outline,
     );
   }
@@ -66,7 +77,7 @@ LeaseStatusPillData leaseStatusPill(
   if (lease.status == LeaseStatus.terminated) {
     return (
       tone: StatusPillTone.neutral,
-      label: 'Terminé',
+      label: l10n.leasesStatusTerminated,
       icon: Icons.lock_outline,
     );
   }
@@ -74,7 +85,7 @@ LeaseStatusPillData leaseStatusPill(
   // archived (valeur par défaut défensive)
   return (
     tone: StatusPillTone.neutral,
-    label: 'Archivé',
+    label: l10n.leasesStatusArchived,
     icon: Icons.archive_outlined,
   );
 }

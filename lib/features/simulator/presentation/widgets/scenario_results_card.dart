@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../domain/scenario_results.dart';
@@ -25,7 +26,7 @@ class ScenarioResultsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Résultats estimés',
+              context.l10n.simulatorResultsTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -35,9 +36,7 @@ class ScenarioResultsCard extends StatelessWidget {
             SizedBox(height: spacing.sm),
             _DisclaimerTile(
               icon: Icons.info_outline,
-              text:
-                  'Cash-flow affiché avant impôt — ne tient pas compte du '
-                  'régime fiscal ni des prélèvements sociaux (17,2 %).',
+              text: context.l10n.simulatorResultsTaxDisclaimer,
             ),
           ],
         ),
@@ -65,62 +64,62 @@ class _KpiGrid extends StatelessWidget {
           childAspectRatio: crossCount == 2 ? 2.4 : 4.0,
           children: [
             _KpiTile(
-              label: 'Mensualité totale',
+              label: context.l10n.simulatorKpiMonthlyPaymentLabel,
               value: MoneyFormat.formatEurosFromCents(
                 results.loanMonthlyPaymentCents,
               ),
-              subtitle: '/mois',
+              subtitle: context.l10n.simulatorKpiPerMonthSuffix,
             ),
             _KpiTile(
-              label: 'Loyer net annuel',
+              label: context.l10n.simulatorKpiAnnualRentNetLabel,
               value: MoneyFormat.formatEurosFromCents(
                 results.annualRentNetCents,
               ),
-              subtitle: 'vacance 5 % déduite',
+              subtitle: context.l10n.simulatorKpiVacancyDeductedSubtitle,
             ),
             _KpiTile(
-              label: 'Cash-flow mensuel',
+              label: context.l10n.simulatorKpiMonthlyCashflowLabel,
               value: MoneyFormat.formatEurosFromCents(
                 results.monthlyCashflowBeforeTaxCents,
               ),
-              subtitle: 'avant impôt',
+              subtitle: context.l10n.simulatorKpiBeforeTaxSubtitle,
               highlight: _cashflowColor(
                 context,
                 results.monthlyCashflowBeforeTaxCents,
               ),
             ),
             _KpiTile(
-              label: 'Rendement brut',
+              label: context.l10n.simulatorKpiGrossYieldLabel,
               value:
                   '${results.yieldGrossPercent.toStringAsFixed(2).replaceAll('.', ',')} %',
               highlight: _yieldColor(context, results.yieldGrossPercent),
             ),
             _KpiTile(
-              label: 'Rendement net',
+              label: context.l10n.simulatorKpiNetYieldLabel,
               value:
                   '${results.yieldNetPercent.toStringAsFixed(2).replaceAll('.', ',')} %',
-              subtitle: 'avant impôt',
+              subtitle: context.l10n.simulatorKpiBeforeTaxSubtitle,
               highlight: _yieldColor(context, results.yieldNetPercent),
             ),
             _KpiTile(
-              label: 'Total intérêts versés',
+              label: context.l10n.simulatorKpiTotalInterestLabel,
               value: MoneyFormat.formatEurosFromCents(
                 results.totalInterestPaidCents,
               ),
             ),
             _KpiTile(
-              label: 'Coût total crédit',
+              label: context.l10n.simulatorKpiTotalLoanCostLabel,
               value: MoneyFormat.formatEurosFromCents(
                 results.totalLoanCostCents,
               ),
-              subtitle: 'capital + intérêts + assurance',
+              subtitle: context.l10n.simulatorKpiLoanCostBreakdownSubtitle,
             ),
             _KpiTile(
-              label: 'Valeur estimée à terme',
+              label: context.l10n.simulatorKpiEstimatedValueLabel,
               value: MoneyFormat.formatEurosFromCents(
                 results.estimatedValueAtEndCents,
               ),
-              subtitle: '+1,5 %/an sur 20 ans',
+              subtitle: context.l10n.simulatorKpiAppreciationSubtitle,
             ),
           ],
         );

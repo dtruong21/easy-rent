@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import '../../../core/utils/password_validator.dart';
 import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
+import '../domain/auth_error.dart';
 import '../domain/change_password_state.dart';
 
 final _log = Logger('ChangePasswordController');
@@ -34,18 +35,18 @@ class ChangePasswordController extends StateNotifier<ChangePasswordState> {
   }) async {
     final passwordError = PasswordValidator.validate(newPassword);
     if (passwordError != null) {
-      state = ChangePasswordState.error(message: passwordError);
+      state = ChangePasswordState.error(message: passwordError.name);
       return;
     }
     if (newPassword != confirmPassword) {
-      state = const ChangePasswordState.error(
-        message: 'Les mots de passe ne correspondent pas',
+      state = ChangePasswordState.error(
+        message: AuthError.passwordsMismatch.name,
       );
       return;
     }
     if (newPassword == currentPassword) {
-      state = const ChangePasswordState.error(
-        message: 'Le nouveau mot de passe doit être différent de l\'actuel.',
+      state = ChangePasswordState.error(
+        message: AuthError.newPasswordSameAsCurrent.name,
       );
       return;
     }
@@ -62,12 +63,10 @@ class ChangePasswordController extends StateNotifier<ChangePasswordState> {
         e,
         st,
       );
-      state = ChangePasswordState.error(message: _mapError(e));
+      state = ChangePasswordState.error(message: _mapError(e).name);
     } catch (e, st) {
       _log.severe('Erreur inattendue changePassword', e, st);
-      state = const ChangePasswordState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = ChangePasswordState.error(message: AuthError.unknown.name);
     }
   }
 
@@ -81,11 +80,11 @@ class ChangePasswordController extends StateNotifier<ChangePasswordState> {
   /// connecté, il ne saisit qu'un mot de passe). Les autres codes
   /// (`too-many-requests`, `weak-password`, `requires-recent-login`…)
   /// retombent sur le mapper mutualisé.
-  String _mapError(FirebaseAuthException e) {
+  AuthError _mapError(FirebaseAuthException e) {
     switch (e.code) {
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Mot de passe actuel incorrect.';
+        return AuthError.currentPasswordIncorrect;
       default:
         return AuthErrorMapper.fromException(e);
     }

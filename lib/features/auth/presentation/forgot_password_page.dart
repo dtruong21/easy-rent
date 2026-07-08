@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../application/forgot_password_controller.dart';
 import 'widgets/forgot_password_form.dart';
 import 'widgets/password_reset_sent_view.dart';
@@ -16,6 +17,7 @@ class ForgotPasswordPage extends ConsumerWidget {
       emailSent: () => true,
       orElse: () => false,
     );
+    final l10n = context.l10n;
 
     return Scaffold(
       body: SafeArea(
@@ -29,15 +31,14 @@ class ForgotPasswordPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Mot de passe oublié',
+                    l10n.authForgotPasswordTitle,
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   if (!showSent)
                     Text(
-                      'Saisissez votre email pour recevoir un lien '
-                      'de réinitialisation.',
+                      l10n.authForgotPasswordInstructions,
                       style: Theme.of(context).textTheme.bodyLarge,
                       textAlign: TextAlign.center,
                     ),

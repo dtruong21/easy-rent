@@ -1,4 +1,5 @@
 import 'package:easyrent/core/utils/tenant_form_validators.dart';
+import 'package:easyrent/core/validation/validation_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -54,31 +55,50 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // validateEmail
+    // validateEmail — retourne un ValidationError (pur, sans BuildContext ni
+    // message FR en dur), voir lib/l10n/l10n_convention.dart.
     // -----------------------------------------------------------------------
     group('validateEmail', () {
-      test('null → erreur obligatoire', () {
-        expect(TenantFormValidators.validateEmail(null), isNotNull);
+      test('null → ValidationError.required', () {
+        expect(
+          TenantFormValidators.validateEmail(null),
+          ValidationError.required,
+        );
       });
 
-      test('chaîne vide → erreur obligatoire', () {
-        expect(TenantFormValidators.validateEmail(''), isNotNull);
+      test('chaîne vide → ValidationError.required', () {
+        expect(
+          TenantFormValidators.validateEmail(''),
+          ValidationError.required,
+        );
       });
 
-      test('espaces uniquement → erreur obligatoire', () {
-        expect(TenantFormValidators.validateEmail('   '), isNotNull);
+      test('espaces uniquement → ValidationError.required', () {
+        expect(
+          TenantFormValidators.validateEmail('   '),
+          ValidationError.required,
+        );
       });
 
-      test('format invalide — sans @  → erreur format', () {
-        expect(TenantFormValidators.validateEmail('jean.dupont.fr'), isNotNull);
+      test('format invalide — sans @ → ValidationError.invalidEmail', () {
+        expect(
+          TenantFormValidators.validateEmail('jean.dupont.fr'),
+          ValidationError.invalidEmail,
+        );
       });
 
-      test('format invalide — sans domaine → erreur format', () {
-        expect(TenantFormValidators.validateEmail('jean@'), isNotNull);
+      test('format invalide — sans domaine → ValidationError.invalidEmail', () {
+        expect(
+          TenantFormValidators.validateEmail('jean@'),
+          ValidationError.invalidEmail,
+        );
       });
 
-      test('format invalide — sans TLD → erreur format', () {
-        expect(TenantFormValidators.validateEmail('jean@domaine'), isNotNull);
+      test('format invalide — sans TLD → ValidationError.invalidEmail', () {
+        expect(
+          TenantFormValidators.validateEmail('jean@domaine'),
+          ValidationError.invalidEmail,
+        );
       });
 
       test('format valide → null', () {

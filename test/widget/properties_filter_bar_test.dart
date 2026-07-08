@@ -1,3 +1,4 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/properties/application/properties_filter_provider.dart';
@@ -8,6 +9,7 @@ import 'package:easyrent/features/properties/domain/property_filter.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/widgets/properties_filter_bar.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,7 +92,13 @@ Widget _buildDesktop(ProviderContainer container) {
     container: container,
     child: MediaQuery(
       data: const MediaQueryData(size: Size(800, 600)),
-      child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: _appTheme(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
+      ),
     ),
   );
 }
@@ -109,7 +117,13 @@ Widget _buildMobile(ProviderContainer container) {
     container: container,
     child: MediaQuery(
       data: const MediaQueryData(size: Size(375, 667)),
-      child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: _appTheme(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
+      ),
     ),
   );
 }

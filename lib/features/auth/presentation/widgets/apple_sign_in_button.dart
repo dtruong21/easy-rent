@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import 'apple_logo.dart';
 
 /// Bouton "Continuer avec Apple".
@@ -9,21 +10,25 @@ import 'apple_logo.dart';
 /// silhouette du mark reste intacte (voir [AppleLogo]). On n'utilise donc
 /// PAS le bouton noir/blanc officiel Apple, par cohérence visuelle avec le
 /// bouton Google déjà en place.
+///
+/// [label] est nullable : `null` (défaut) résout
+/// `context.l10n.authContinueWithAppleButton` au build.
 class AppleSignInButton extends StatelessWidget {
   const AppleSignInButton({
     super.key,
     required this.onPressed,
     required this.isLoading,
-    this.label = 'Continuer avec Apple',
+    this.label,
   });
 
   final VoidCallback? onPressed;
   final bool isLoading;
-  final String label;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final resolvedLabel = label ?? context.l10n.authContinueWithAppleButton;
     return SizedBox(
       height: 48,
       child: OutlinedButton(
@@ -49,7 +54,7 @@ class AppleSignInButton extends StatelessWidget {
                   AppleLogo(size: 20, color: theme.colorScheme.onSurface),
                   const SizedBox(width: 12),
                   Text(
-                    label,
+                    resolvedLabel,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/utils/money_validators.dart';
+import '../../../../core/validation/validation_error.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../../expenses/domain/expense.dart';
 import '../../../expenses/presentation/expense_list_tile.dart';
 import '../../../payments/domain/payment.dart';
@@ -70,20 +73,16 @@ class ChargeRegularizationForm extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Comparez les provisions encaissées aux dépenses réelles '
-          'justifiées par le syndic pour calculer le solde de '
-          'régularisation.',
-        ),
+        Text(context.l10n.chargeRegularizationFormIntro),
         const SizedBox(height: 16),
         ChargeRegularizationPeriodPicker(
-          label: 'Début de période',
+          label: context.l10n.chargeRegularizationPeriodStartLabel,
           date: periodStart,
           onPick: onPeriodStartChanged,
         ),
         const SizedBox(height: 12),
         ChargeRegularizationPeriodPicker(
-          label: 'Fin de période',
+          label: context.l10n.chargeRegularizationPeriodEndLabel,
           date: periodEnd,
           onPick: onPeriodEndChanged,
           // Empêche de choisir une fin antérieure ou égale au début dès
@@ -94,36 +93,34 @@ class ChargeRegularizationForm extends StatelessWidget {
           // `errorText` ci-dessous couvre aussi ce cas.
           minDate: periodStart.add(const Duration(days: 1)),
           errorText: isPeriodInvalid
-              ? 'La date de fin doit être postérieure à la date de début'
+              ? context.l10n.chargeRegularizationPeriodInvalidError
               : null,
         ),
         const SizedBox(height: 16),
         TextFormField(
           key: const Key('field_actual_expenses'),
           controller: actualExpensesController,
-          decoration: const InputDecoration(
-            labelText: 'Dépenses réelles (€) *',
-            hintText: 'Montant justifié par le décompte syndic',
+          decoration: InputDecoration(
+            labelText: context.l10n.chargeRegularizationActualExpensesLabel,
+            hintText: context.l10n.chargeRegularizationActualExpensesHint,
             suffixText: '€',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: (v) =>
               onActualExpensesChanged(MoneyFormat.eurosToCents(v) ?? 0),
           validator: (v) => MoneyValidators.validateChargesAmount(
             v,
-            requiredMessage:
-                'Le montant des dépenses réelles est obligatoire '
-                '(saisir 0 si aucune)',
-          ),
+            requiredError: ValidationError.actualExpensesRequired,
+          )?.message(context),
         ),
         if (recoverableExpenses.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
             key: const Key('text_charge_regularization_prefill_hint'),
-            'Pré-rempli depuis ${recoverableExpenses.length} '
-            'dépense${recoverableExpenses.length > 1 ? 's' : ''} — '
-            'modifiable.',
+            context.l10n.chargeRegularizationExpensesPrefillHint(
+              recoverableExpenses.length,
+            ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
@@ -161,8 +158,9 @@ class _RecoverableExpensesDetail extends StatelessWidget {
         tilePadding: EdgeInsets.zero,
         childrenPadding: EdgeInsets.zero,
         title: Text(
-          'Voir le détail (${expenses.length} '
-          'dépense${expenses.length > 1 ? 's' : ''})',
+          context.l10n.chargeRegularizationExpensesDetailToggle(
+            expenses.length,
+          ),
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         children: [

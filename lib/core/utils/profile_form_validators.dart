@@ -1,3 +1,5 @@
+import '../validation/validation_error.dart';
+
 /// Validateurs du formulaire profil bailleur — logique pure, sans dépendance
 /// Flutter.
 ///
@@ -5,25 +7,29 @@
 /// [TenantFormValidators] et [PaymentFormValidators].
 ///
 /// Conformité légale :
-/// - [fullName] et [address] sont obligatoires pour générer des quittances
-///   conformes à la loi 1989 art. 21.
-/// - [phone] est facultatif — format libre (FR ou international acceptés).
+/// - [validateFullName] et [validateAddress] sont obligatoires pour générer
+///   des quittances conformes à la loi 1989 art. 21.
+/// - [validatePhone] est facultatif — format libre (FR ou international
+///   acceptés).
+///
+/// FEAT-043 (i18n) : retourne un [ValidationError] (pur, sans `BuildContext`)
+/// au lieu d'un message FR en dur — voir `lib/l10n/l10n_convention.dart`.
 class ProfileFormValidators {
   const ProfileFormValidators._();
 
   /// Valide le nom complet du bailleur.
   ///
   /// Obligatoire, longueur 2..200.
-  /// Retourne [null] si valide, un message d'erreur FR sinon.
-  static String? validateFullName(String? value) {
+  /// Retourne [null] si valide, une erreur sinon.
+  static ValidationError? validateFullName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le nom complet est obligatoire (requis pour les quittances)';
+      return ValidationError.fullNameRequired;
     }
     if (value.trim().length < 2) {
-      return 'Le nom complet doit contenir au moins 2 caractères';
+      return ValidationError.fullNameTooShort;
     }
     if (value.trim().length > 200) {
-      return 'Le nom complet ne peut pas dépasser 200 caractères';
+      return ValidationError.fullNameTooLong;
     }
     return null;
   }
@@ -31,16 +37,16 @@ class ProfileFormValidators {
   /// Valide l'adresse postale du bailleur.
   ///
   /// Obligatoire, longueur 5..500. Format libre (multi-ligne accepté).
-  /// Retourne [null] si valide, un message d'erreur FR sinon.
-  static String? validateAddress(String? value) {
+  /// Retourne [null] si valide, une erreur sinon.
+  static ValidationError? validateAddress(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return "L'adresse est obligatoire (requise pour les quittances)";
+      return ValidationError.profileAddressRequired;
     }
     if (value.trim().length < 5) {
-      return "L'adresse doit contenir au moins 5 caractères";
+      return ValidationError.profileAddressTooShort;
     }
     if (value.trim().length > 500) {
-      return "L'adresse ne peut pas dépasser 500 caractères";
+      return ValidationError.profileAddressTooLong;
     }
     return null;
   }
@@ -51,14 +57,14 @@ class ProfileFormValidators {
   /// `^[+0-9 .]{6,20}$` — accepte FR (`06 12 34 56 78`) et international
   /// (`+33612345678`).
   ///
-  /// Retourne [null] si valide ou vide, un message d'erreur FR sinon.
-  static String? validatePhone(String? value) {
+  /// Retourne [null] si valide ou vide, une erreur sinon.
+  static ValidationError? validatePhone(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final trimmed = value.trim();
     // Regex E.164 souple — pas de validation stricte (FR ou international).
     final regex = RegExp(r'^[+0-9 .]{6,20}$');
     if (!regex.hasMatch(trimmed)) {
-      return 'Numéro de téléphone invalide (ex. : 06 12 34 56 78 ou +33612345678)';
+      return ValidationError.phoneInvalid;
     }
     return null;
   }

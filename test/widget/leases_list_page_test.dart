@@ -13,6 +13,8 @@ import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/leases/presentation/leases_list_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -158,7 +160,13 @@ Widget _buildPage(
     ],
     child: MediaQuery(
       data: MediaQueryData(size: size),
-      child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: _appTheme(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
+      ),
     ),
   );
 }
@@ -278,7 +286,13 @@ void main() {
           ],
           child: MediaQuery(
             data: const MediaQueryData(size: Size(800, 600)),
-            child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+            child: MaterialApp.router(
+              routerConfig: router,
+              theme: _appTheme(),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              locale: const Locale('fr'),
+              supportedLocales: supportedLocales,
+            ),
           ),
         ),
       );
@@ -547,6 +561,9 @@ void main() {
           container: container,
           child: MaterialApp(
             theme: _appTheme(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
             home: const LeasesListPage(initialFilter: LeaseFilter.renewable),
           ),
         ),
@@ -567,7 +584,13 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(theme: _appTheme(), home: const LeasesListPage()),
+          child: MaterialApp(
+            theme: _appTheme(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+            home: const LeasesListPage(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -588,6 +611,9 @@ void main() {
         container: container,
         child: MaterialApp(
           theme: _appTheme(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale: const Locale('fr'),
+          supportedLocales: supportedLocales,
           home: LeasesListPage(initialFilter: filter),
         ),
       );

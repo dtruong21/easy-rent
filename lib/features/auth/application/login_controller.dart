@@ -7,6 +7,8 @@ import '../data/apple_auth_exception.dart';
 import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
 import '../data/google_auth_exception.dart';
+import '../domain/auth_cta_label.dart';
+import '../domain/auth_error.dart';
 import '../domain/login_page_state.dart';
 
 final _log = Logger('LoginController');
@@ -18,11 +20,11 @@ class LoginController extends StateNotifier<LoginPageState> {
 
   Future<void> signIn({required String email, required String password}) async {
     if (!EmailValidator.isValid(email)) {
-      state = const LoginPageState.error(message: 'Adresse email invalide');
+      state = LoginPageState.error(message: AuthError.invalidEmailFormat.name);
       return;
     }
     if (password.isEmpty) {
-      state = const LoginPageState.error(message: 'Mot de passe requis');
+      state = LoginPageState.error(message: AuthError.passwordRequired.name);
       return;
     }
 
@@ -50,11 +52,7 @@ class LoginController extends StateNotifier<LoginPageState> {
           _log.warning('resend verification email failed', e, st);
         }
         await _repository.signOut();
-        state = const LoginPageState.error(
-          message:
-              'Votre email n\'est pas encore vérifié. Nous venons de vous '
-              'renvoyer le lien de confirmation — vérifiez votre boîte mail.',
-        );
+        state = LoginPageState.error(message: AuthError.emailNotVerified.name);
         return;
       }
 
@@ -64,12 +62,12 @@ class LoginController extends StateNotifier<LoginPageState> {
       state = const LoginPageState.idle();
     } on FirebaseAuthException catch (e, st) {
       _log.warning('FirebaseAuthException signIn (code=${e.code})', e, st);
-      state = LoginPageState.error(message: AuthErrorMapper.fromException(e));
+      state = LoginPageState.error(
+        message: AuthErrorMapper.fromException(e).name,
+      );
     } catch (e, st) {
       _log.severe('Erreur inattendue signIn', e, st);
-      state = const LoginPageState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = LoginPageState.error(message: AuthError.unknown.name);
     }
   }
 
@@ -91,15 +89,13 @@ class LoginController extends StateNotifier<LoginPageState> {
       );
       final isNewUserOnLogin = e.code == GoogleAuthErrorCode.newUserOnLogin;
       state = LoginPageState.error(
-        message: AuthErrorMapper.fromException(e),
+        message: AuthErrorMapper.fromException(e).name,
         ctaRoute: isNewUserOnLogin ? '/signup' : null,
-        ctaLabel: isNewUserOnLogin ? 'Créer un compte' : null,
+        ctaLabel: isNewUserOnLogin ? AuthCtaLabel.createAccount.name : null,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue signInWithGoogle', e, st);
-      state = const LoginPageState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = LoginPageState.error(message: AuthError.unknown.name);
     }
   }
 
@@ -121,15 +117,13 @@ class LoginController extends StateNotifier<LoginPageState> {
       );
       final isNewUserOnLogin = e.code == AppleAuthErrorCode.newUserOnLogin;
       state = LoginPageState.error(
-        message: AuthErrorMapper.fromException(e),
+        message: AuthErrorMapper.fromException(e).name,
         ctaRoute: isNewUserOnLogin ? '/signup' : null,
-        ctaLabel: isNewUserOnLogin ? 'Créer un compte' : null,
+        ctaLabel: isNewUserOnLogin ? AuthCtaLabel.createAccount.name : null,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue signInWithApple', e, st);
-      state = const LoginPageState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = LoginPageState.error(message: AuthError.unknown.name);
     }
   }
 

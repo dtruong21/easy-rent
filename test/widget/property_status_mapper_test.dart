@@ -1,7 +1,9 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/widgets/property_status_mapper.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,60 +32,86 @@ PropertyListItem _makeItem({
   currentRentLabel: rentLabel,
 );
 
+/// Capture le résultat de [propertyOccupancyPill] depuis un [BuildContext]
+/// localisé (FEAT-043 — la fonction nécessite désormais un [BuildContext]
+/// pour résoudre les libellés via `AppLocalizations`).
+PropertyOccupancyPillData? _captured;
+
+Widget _harness(PropertyListItem item) => MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  locale: const Locale('fr'),
+  supportedLocales: supportedLocales,
+  home: Builder(
+    builder: (context) {
+      _captured = propertyOccupancyPill(item, context);
+      return const SizedBox.shrink();
+    },
+  ),
+);
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 void main() {
   group('propertyOccupancyPill', () {
-    test('bail actif → success "Loué"', () {
+    testWidgets('bail actif → success "Loué"', (tester) async {
       final item = _makeItem(
         activeLeaseId: 'l1',
         tenantName: 'Jean Dupont',
         rentLabel: '1 200,00 € CC / mois',
       );
 
-      final result = propertyOccupancyPill(item);
+      await tester.pumpWidget(_harness(item));
+      final result = _captured!;
 
       expect(result.label, 'Loué');
       expect(result.tone.name, 'success');
       expect(result.icon, Icons.home_filled);
     });
 
-    test('pas de bail → warning "Vacant"', () {
+    testWidgets('pas de bail → warning "Vacant"', (tester) async {
       final item = _makeItem();
 
-      final result = propertyOccupancyPill(item);
+      await tester.pumpWidget(_harness(item));
+      final result = _captured!;
 
       expect(result.label, 'Vacant');
       expect(result.tone.name, 'warning');
       expect(result.icon, Icons.home_work_outlined);
     });
 
-    test('bail actif sans loyer → success "Loué" (loyer null toléré)', () {
+    testWidgets('bail actif sans loyer → success "Loué" (loyer null toléré)', (
+      tester,
+    ) async {
       final item = _makeItem(
         activeLeaseId: 'l2',
         tenantName: 'Marie Martin',
         // rentLabel null — champ optionnel
       );
 
-      final result = propertyOccupancyPill(item);
+      await tester.pumpWidget(_harness(item));
+      final result = _captured!;
 
       expect(result.label, 'Loué');
       expect(result.tone.name, 'success');
     });
 
-    test('bail actif sans locataire → success "Loué" (tenant null toléré)', () {
-      final item = _makeItem(
-        activeLeaseId: 'l3',
-        // tenantName null — champ optionnel
-        rentLabel: '800,00 € CC / mois',
-      );
+    testWidgets(
+      'bail actif sans locataire → success "Loué" (tenant null toléré)',
+      (tester) async {
+        final item = _makeItem(
+          activeLeaseId: 'l3',
+          // tenantName null — champ optionnel
+          rentLabel: '800,00 € CC / mois',
+        );
 
-      final result = propertyOccupancyPill(item);
+        await tester.pumpWidget(_harness(item));
+        final result = _captured!;
 
-      expect(result.label, 'Loué');
-      expect(result.tone.name, 'success');
-    });
+        expect(result.label, 'Loué');
+        expect(result.tone.name, 'success');
+      },
+    );
   });
 }

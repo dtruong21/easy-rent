@@ -1,9 +1,17 @@
 import '../../../../core/utils/money_format.dart';
+import '../../../../core/validation/validation_error.dart';
 
 /// Validateurs du formulaire simulateur d'investissement (FEAT-018).
 ///
-/// Logique pure, aucune dépendance Flutter.
-/// Miroir des CHECK constraints DB (`investment_scenarios`).
+/// Logique pure, aucune dépendance Flutter/`BuildContext`. Miroir des CHECK
+/// constraints DB (`investment_scenarios`).
+///
+/// **FEAT-043 (i18n)** : suit le pattern « validateur pur → [ValidationError]
+/// → mapping l10n en présentation » établi par les autres `*_validators.dart`
+/// (cf. `lib/l10n/l10n_convention.dart` §5) — retourne un [ValidationError]?
+/// au lieu d'un `String?` FR en dur. La couche présentation (widgets
+/// `simulator_page.dart`/`save_scenario_dialog.dart`, qui ont un
+/// `BuildContext`) traduit via `ValidationErrorL10n.message(context)`.
 class ScenarioFormValidators {
   const ScenarioFormValidators._();
 
@@ -13,59 +21,60 @@ class ScenarioFormValidators {
   static const int _kMaxDurationMonths = 360;
 
   /// Nom du scénario : obligatoire, 1–120 caractères.
-  static String? validateName(String? value) {
+  static ValidationError? validateName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le nom du scénario est obligatoire';
+      return ValidationError.scenarioNameRequired;
     }
     if (value.trim().length > 120) {
-      return 'Le nom ne peut pas dépasser 120 caractères';
+      return ValidationError.scenarioNameTooLong;
     }
     return null;
   }
 
   /// Prix d'achat : obligatoire, strictement positif.
-  static String? validatePurchasePrice(String? value) {
+  static ValidationError? validatePurchasePrice(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le prix d\'achat est obligatoire';
+      return ValidationError.scenarioPurchasePriceRequired;
     }
     final cents = MoneyFormat.eurosToCents(value);
     if (cents == null || cents <= 0) {
-      return 'Le prix d\'achat doit être positif';
+      return ValidationError.scenarioPurchasePriceNotPositive;
     }
     if (cents > _kMaxAmountCents) {
-      return 'Montant trop élevé';
+      return ValidationError.amountTooLarge;
     }
     return null;
   }
 
   /// Montant optionnel >= 0 (frais notaire, travaux, apport, capital, charges).
-  static String? validateOptionalPositiveAmount(
-    String? value, {
-    String label = 'Ce montant',
-  }) {
+  ///
+  /// Message générique (FEAT-043) : ne mentionne plus le nom du champ (l'ex.
+  /// paramètre `label`, FR en dur composé à l'appel — supprimé, cf.
+  /// [ValidationError.amountNegative] pour le détail).
+  static ValidationError? validateOptionalPositiveAmount(String? value) {
     if (value == null || value.trim().isEmpty) return null; // optionnel
     final cents = MoneyFormat.eurosToCents(value);
     if (cents == null) {
-      return '$label ne peut pas être négatif';
+      return ValidationError.amountNegative;
     }
     if (cents > _kMaxAmountCents) {
-      return 'Montant trop élevé';
+      return ValidationError.amountTooLarge;
     }
     return null;
   }
 
   /// Loyer mensuel HC : obligatoire, strictement positif.
-  static String? validateMonthlyRent(String? value) {
+  static ValidationError? validateMonthlyRent(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le loyer mensuel HC est obligatoire';
+      return ValidationError.scenarioMonthlyRentRequired;
     }
     final cents = MoneyFormat.eurosToCents(value);
     if (cents == null || cents <= 0) {
-      return 'Le loyer doit être positif';
+      return ValidationError.scenarioMonthlyRentNotPositive;
     }
     if (cents > 500000000) {
       // 5 000 000 €
-      return 'Montant trop élevé';
+      return ValidationError.amountTooLarge;
     }
     return null;
   }
@@ -73,16 +82,16 @@ class ScenarioFormValidators {
   /// Taux nominal (optionnel) : 0–30 % en bps (0–3000).
   ///
   /// Saisie en % (ex. "3.5" = 3,5 % = 350 bps).
-  static String? validateLoanRate(String? value) {
+  static ValidationError? validateLoanRate(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final cleaned = value.trim().replaceAll(',', '.');
     final parsed = double.tryParse(cleaned);
     if (parsed == null || parsed < 0) {
-      return 'Le taux doit être compris entre 0 et 30 %';
+      return ValidationError.scenarioLoanRateInvalid;
     }
     final bps = (parsed * 100).round();
     if (bps > _kMaxRateBps) {
-      return 'Le taux maximum est 30 %';
+      return ValidationError.scenarioLoanRateTooHigh;
     }
     return null;
   }
@@ -90,23 +99,24 @@ class ScenarioFormValidators {
   /// Durée (optionnel) : 12–360 mois.
   ///
   /// Saisie en mois (entier).
-  static String? validateLoanDuration(String? value) {
+  static ValidationError? validateLoanDuration(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final parsed = int.tryParse(value.trim());
     if (parsed == null || parsed < _kMinDurationMonths) {
-      return 'La durée minimale est 12 mois';
+      return ValidationError.scenarioLoanDurationTooShort;
     }
     if (parsed > _kMaxDurationMonths) {
-      return 'La durée maximale est 360 mois';
+      return ValidationError.scenarioLoanDurationTooLong;
     }
     return null;
   }
 
   /// Notes (optionnel) : max 2000 caractères.
-  static String? validateNotes(String? value) {
+  static ValidationError? validateNotes(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     if (value.trim().length > 2000) {
-      return 'Les notes ne peuvent pas dépasser 2000 caractères';
+      // Texte identique à ExpenseFormValidators — cas partagé.
+      return ValidationError.expenseNotesTooLong;
     }
     return null;
   }

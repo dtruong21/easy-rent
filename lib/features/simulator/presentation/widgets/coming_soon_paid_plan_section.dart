@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../paid_plan/application/paid_plan_interest_controller.dart';
 
-/// Fonctionnalités à venir du Plan Pro — mêmes clés que la modal limite
-/// (`scenario_limit_reached_modal.dart`) pour agréger proprement le signal
-/// de demande dans `paid_plan_interest`.
-const List<(String key, String label)> _paidPlanFeatures = [
-  ('comparateur', 'Comparateur multi-scénarios'),
-  ('sensibilite_taux', 'Analyse de sensibilité aux taux'),
-  ('fiscal_lmnp', 'Simulation fiscale LMNP/LMP'),
-  ('export_pdf', 'Export PDF professionnel'),
+/// IDs internes des fonctionnalités Plan Pro, envoyés à `paid_plan_interest`
+/// (agrégation serveur) — mêmes clés que la modal limite
+/// (`scenario_limit_reached_modal.dart`). Volontairement NON traduits : ce
+/// sont des identifiants techniques stables, jamais affichés à l'utilisateur.
+const List<String> _paidPlanFeatureIds = [
+  'comparateur',
+  'sensibilite_taux',
+  'fiscal_lmnp',
+  'export_pdf',
 ];
+
+/// Libellés localisés affichés à l'utilisateur, dans le même ordre que
+/// [_paidPlanFeatureIds].
+List<String> _paidPlanFeatureLabels(BuildContext context) {
+  final l10n = context.l10n;
+  return [
+    l10n.simulatorPaidPlanFeatureComparator,
+    l10n.simulatorPaidPlanFeatureRateSensitivity,
+    l10n.simulatorPaidPlanFeatureTaxSimulation,
+    l10n.simulatorPaidPlanFeatureExportPdf,
+  ];
+}
 
 /// Section pied de page `/simulator`, visible uniquement pour le tier FREE
 /// (les anonymes voient un CTA « Créer un compte gratuit d'abord » — trop
@@ -40,7 +54,7 @@ class _ComingSoonPaidPlanSectionState
     setState(() => _isSubmitting = true);
     await ref
         .read(paidPlanInterestControllerProvider.notifier)
-        .notifyMe(features: _paidPlanFeatures.map((f) => f.$1).toList());
+        .notifyMe(features: _paidPlanFeatureIds);
     if (!mounted) return;
 
     if (ref.read(paidPlanInterestControllerProvider).hasError) {
@@ -48,10 +62,8 @@ class _ComingSoonPaidPlanSectionState
       // l'utilisateur doit pouvoir retenter. Message d'erreur neutre.
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Impossible d\'enregistrer votre intérêt pour le moment. Réessayez.',
-          ),
+        SnackBar(
+          content: Text(context.l10n.simulatorInterestSaveErrorSnackbar),
         ),
       );
       return;
@@ -62,7 +74,7 @@ class _ComingSoonPaidPlanSectionState
       _hasNotified = true;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vous serez prévenu au lancement.')),
+      SnackBar(content: Text(context.l10n.simulatorNotifyMeSuccessSnackbar)),
     );
   }
 
@@ -77,10 +89,8 @@ class _ComingSoonPaidPlanSectionState
       // Même politique que _notifyMe : pas de faux succès, retenter possible.
       setState(() => _isSubmittingFunding = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Impossible d\'enregistrer votre intérêt pour le moment. Réessayez.',
-          ),
+        SnackBar(
+          content: Text(context.l10n.simulatorInterestSaveErrorSnackbar),
         ),
       );
       return;
@@ -91,8 +101,8 @@ class _ComingSoonPaidPlanSectionState
       _hasFundingInterest = true;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Merci pour votre soutien ! Nous vous recontacterons.'),
+      SnackBar(
+        content: Text(context.l10n.simulatorFundingInterestSuccessSnackbar),
       ),
     );
   }
@@ -100,6 +110,7 @@ class _ComingSoonPaidPlanSectionState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Container(
       key: const Key('coming_soon_paid_plan_section'),
       padding: const EdgeInsets.all(20),
@@ -111,9 +122,12 @@ class _ComingSoonPaidPlanSectionState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Prochainement — Plan Pro', style: theme.textTheme.titleMedium),
+          Text(
+            l10n.simulatorComingSoonTitle,
+            style: theme.textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
-          for (final feature in _paidPlanFeatures)
+          for (final label in _paidPlanFeatureLabels(context))
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
@@ -124,7 +138,7 @@ class _ComingSoonPaidPlanSectionState
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 4),
-                  Text(feature.$2, style: theme.textTheme.bodyMedium),
+                  Text(label, style: theme.textTheme.bodyMedium),
                 ],
               ),
             ),
@@ -140,8 +154,8 @@ class _ComingSoonPaidPlanSectionState
                   )
                 : Text(
                     _hasNotified
-                        ? 'Vous serez prévenu au lancement'
-                        : 'M\'avertir du lancement',
+                        ? l10n.simulatorNotifiedButtonLabel
+                        : l10n.simulatorNotifyMeButton,
                   ),
           ),
 
@@ -151,12 +165,13 @@ class _ComingSoonPaidPlanSectionState
           const SizedBox(height: 20),
           Divider(color: theme.colorScheme.outlineVariant, height: 1),
           const SizedBox(height: 16),
-          Text('Vous aimez Baillan ?', style: theme.textTheme.titleSmall),
+          Text(
+            l10n.simulatorFundingSectionTitle,
+            style: theme.textTheme.titleSmall,
+          ),
           const SizedBox(height: 6),
           Text(
-            'Baillan est développé en indépendant. Si le produit vous est '
-            'utile, dites-nous si participer à son financement vous '
-            'intéresserait — sans engagement. Nous vous recontacterons.',
+            l10n.simulatorFundingSectionBody,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -176,8 +191,8 @@ class _ComingSoonPaidPlanSectionState
                 : const Icon(Icons.volunteer_activism_outlined, size: 18),
             label: Text(
               _hasFundingInterest
-                  ? 'Merci ! Nous vous recontacterons'
-                  : 'Participer au financement m\'intéresse',
+                  ? l10n.simulatorFundingThanksButtonLabel
+                  : l10n.simulatorFundingInterestButton,
             ),
           ),
         ],

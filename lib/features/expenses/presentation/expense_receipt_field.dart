@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../application/expense_receipt_upload_controller.dart';
+import '../domain/expense_receipt_upload_error_reason.dart';
 import '../domain/expense_receipt_upload_state.dart';
+import 'expense_receipt_upload_error_reason_l10n.dart';
 
 final _log = Logger('ExpenseReceiptField');
 
@@ -62,15 +65,14 @@ class ExpenseReceiptField extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Justificatif (recommandé)',
+          context.l10n.expensesReceiptFieldLabel,
           style: theme.textTheme.labelMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Facture ou décompte syndic — conservé 5 à 10 ans (preuve locative '
-          'et comptable). Vous pouvez créer la dépense sans justificatif.',
+          context.l10n.expensesReceiptFieldHelper,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             fontStyle: FontStyle.italic,
@@ -108,7 +110,9 @@ class ExpenseReceiptField extends ConsumerWidget {
           ),
           ReceiptError(:final filename, :final message) => _ErrorRow(
             filename: filename,
-            message: message,
+            message: ExpenseReceiptUploadErrorReason.fromCode(
+              message,
+            ).message(context),
             onRetry: enabled ? () => _pickAndUpload(context, ref) : null,
           ),
         },
@@ -159,7 +163,7 @@ class _PickButton extends StatelessWidget {
       key: const Key('btn_pick_expense_receipt'),
       onPressed: enabled ? onPressed : null,
       icon: const Icon(Icons.attach_file_outlined),
-      label: const Text('Joindre un justificatif'),
+      label: Text(context.l10n.expensesReceiptPickButton),
     );
   }
 }
@@ -186,7 +190,7 @@ class _ExistingDocumentRow extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            'Justificatif déjà attaché',
+            context.l10n.expensesReceiptExistingLabel,
             key: const Key('text_expense_receipt_existing'),
             style: theme.textTheme.bodyMedium,
           ),
@@ -194,13 +198,13 @@ class _ExistingDocumentRow extends StatelessWidget {
         TextButton(
           key: const Key('btn_replace_expense_receipt'),
           onPressed: onReplace,
-          child: const Text('Remplacer'),
+          child: Text(context.l10n.expensesReceiptReplaceButton),
         ),
         IconButton(
           key: const Key('btn_remove_existing_expense_receipt'),
           onPressed: onRemove,
           icon: const Icon(Icons.close),
-          tooltip: 'Retirer le justificatif',
+          tooltip: context.l10n.expensesReceiptRemoveTooltip,
         ),
       ],
     );
@@ -223,7 +227,9 @@ class _UploadingRow extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 2, value: progress),
         ),
         const SizedBox(width: 12),
-        Expanded(child: Text('Envoi de $filename…')),
+        Expanded(
+          child: Text(context.l10n.expensesReceiptUploadingLabel(filename)),
+        ),
       ],
     );
   }
@@ -249,7 +255,7 @@ class _SuccessRow extends StatelessWidget {
           key: const Key('btn_remove_expense_receipt'),
           onPressed: onRemove,
           icon: const Icon(Icons.close),
-          tooltip: 'Retirer le justificatif',
+          tooltip: context.l10n.expensesReceiptRemoveTooltip,
         ),
       ],
     );
@@ -284,7 +290,7 @@ class _ErrorRow extends StatelessWidget {
         TextButton(
           key: const Key('btn_retry_expense_receipt'),
           onPressed: onRetry,
-          child: const Text('Réessayer'),
+          child: Text(context.l10n.commonRetry),
         ),
       ],
     );

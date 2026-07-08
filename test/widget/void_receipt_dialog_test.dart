@@ -4,7 +4,9 @@
 /// bouton confirmer appelle le callback, bouton annuler ferme le dialog.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/void_receipt_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,6 +16,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 Widget _buildDialog({void Function(String)? onConfirm}) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
     home: Scaffold(
       body: Builder(
         builder: (context) => TextButton(

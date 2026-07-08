@@ -5,6 +5,7 @@ import '../../../../core/ui/breakpoints.dart';
 import '../../../../core/ui/cards/view_mode_toggle.dart';
 import '../../application/leases_filter_provider.dart';
 import '../../domain/lease_filter.dart';
+import '../lease_filter_l10n.dart';
 
 /// Barre de filtres + toggle de vue pour la page Leases.
 ///
@@ -66,7 +67,10 @@ class _DesktopFilterSegments extends StatelessWidget {
     return SegmentedButton<LeaseFilter>(
       segments: LeaseFilter.values
           .map(
-            (f) => ButtonSegment<LeaseFilter>(value: f, label: Text(f.labelFr)),
+            (f) => ButtonSegment<LeaseFilter>(
+              value: f,
+              label: Text(f.label(context)),
+            ),
           )
           .toList(),
       selected: {currentFilter},
@@ -103,8 +107,10 @@ class _MobileFilterDropdown extends StatelessWidget {
       style: theme.textTheme.bodyMedium,
       items: LeaseFilter.values
           .map(
-            (f) =>
-                DropdownMenuItem<LeaseFilter>(value: f, child: Text(f.labelFr)),
+            (f) => DropdownMenuItem<LeaseFilter>(
+              value: f,
+              child: Text(f.label(context)),
+            ),
           )
           .toList(),
       onChanged: onChanged,

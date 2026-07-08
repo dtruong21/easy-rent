@@ -6,6 +6,8 @@ import '../../../core/utils/email_validator.dart';
 import '../../../core/utils/password_validator.dart';
 import '../data/auth_error_mapper.dart';
 import '../data/auth_repository.dart';
+import '../domain/auth_cta_label.dart';
+import '../domain/auth_error.dart';
 import '../domain/signup_page_state.dart';
 
 final _log = Logger('SignupController');
@@ -23,30 +25,24 @@ class SignupController extends StateNotifier<SignupPageState> {
     required bool rgpdConsent,
   }) async {
     if (fullName.trim().isEmpty) {
-      state = const SignupPageState.error(message: 'Nom complet requis');
+      state = SignupPageState.error(message: AuthError.fullNameRequired.name);
       return;
     }
     if (!EmailValidator.isValid(email)) {
-      state = const SignupPageState.error(message: 'Adresse email invalide');
+      state = SignupPageState.error(message: AuthError.invalidEmailFormat.name);
       return;
     }
     final passwordError = PasswordValidator.validate(password);
     if (passwordError != null) {
-      state = SignupPageState.error(message: passwordError);
+      state = SignupPageState.error(message: passwordError.name);
       return;
     }
     if (password != confirmPassword) {
-      state = const SignupPageState.error(
-        message: 'Les mots de passe ne correspondent pas',
-      );
+      state = SignupPageState.error(message: AuthError.passwordsMismatch.name);
       return;
     }
     if (!rgpdConsent) {
-      state = const SignupPageState.error(
-        message:
-            "Vous devez accepter les conditions générales d'utilisation "
-            'et la politique de confidentialité',
-      );
+      state = SignupPageState.error(message: AuthError.consentRequired.name);
       return;
     }
 
@@ -78,12 +74,12 @@ class SignupController extends StateNotifier<SignupPageState> {
       _log.info('Signup réussi — email de vérification envoyé');
     } on FirebaseAuthException catch (e, st) {
       _log.warning('FirebaseAuthException signup (code=${e.code})', e, st);
-      state = SignupPageState.error(message: AuthErrorMapper.fromException(e));
+      state = SignupPageState.error(
+        message: AuthErrorMapper.fromException(e).name,
+      );
     } catch (e, st) {
       _log.severe('Erreur inattendue signup', e, st);
-      state = const SignupPageState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = SignupPageState.error(message: AuthError.unknown.name);
     }
   }
 
@@ -95,11 +91,7 @@ class SignupController extends StateNotifier<SignupPageState> {
   /// consentement explicite avant d'ouvrir le popup Google.
   Future<void> signUpWithGoogle({required bool rgpdConsent}) async {
     if (!rgpdConsent) {
-      state = const SignupPageState.error(
-        message:
-            "Vous devez accepter les conditions générales d'utilisation "
-            'et la politique de confidentialité',
-      );
+      state = SignupPageState.error(message: AuthError.consentRequired.name);
       return;
     }
 
@@ -123,15 +115,13 @@ class SignupController extends StateNotifier<SignupPageState> {
       final isAccountConflict =
           e.code == 'account-exists-with-different-credential';
       state = SignupPageState.error(
-        message: AuthErrorMapper.fromException(e),
+        message: AuthErrorMapper.fromException(e).name,
         ctaRoute: isAccountConflict ? '/login' : null,
-        ctaLabel: isAccountConflict ? 'Se connecter' : null,
+        ctaLabel: isAccountConflict ? AuthCtaLabel.signIn.name : null,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue signUpWithGoogle', e, st);
-      state = const SignupPageState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = SignupPageState.error(message: AuthError.unknown.name);
     }
   }
 
@@ -143,11 +133,7 @@ class SignupController extends StateNotifier<SignupPageState> {
   /// consentement explicite avant d'ouvrir le popup Apple.
   Future<void> signUpWithApple({required bool rgpdConsent}) async {
     if (!rgpdConsent) {
-      state = const SignupPageState.error(
-        message:
-            "Vous devez accepter les conditions générales d'utilisation "
-            'et la politique de confidentialité',
-      );
+      state = SignupPageState.error(message: AuthError.consentRequired.name);
       return;
     }
 
@@ -171,15 +157,13 @@ class SignupController extends StateNotifier<SignupPageState> {
       final isAccountConflict =
           e.code == 'account-exists-with-different-credential';
       state = SignupPageState.error(
-        message: AuthErrorMapper.fromException(e),
+        message: AuthErrorMapper.fromException(e).name,
         ctaRoute: isAccountConflict ? '/login' : null,
-        ctaLabel: isAccountConflict ? 'Se connecter' : null,
+        ctaLabel: isAccountConflict ? AuthCtaLabel.signIn.name : null,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue signUpWithApple', e, st);
-      state = const SignupPageState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = SignupPageState.error(message: AuthError.unknown.name);
     }
   }
 }

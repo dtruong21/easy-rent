@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/landlord_tier_repository.dart';
 import '../../../auth/domain/subscription_tier.dart';
@@ -24,7 +25,7 @@ class TierChip extends ConsumerWidget {
     final tier = asyncTier.valueOrNull?.tier ?? SubscriptionTier.anonymous;
     final count = ref.watch(scenarioCountProvider).valueOrNull;
 
-    final label = _labelFor(tier, count);
+    final label = _labelFor(context, tier, count);
 
     // Dark mode fix : les couleurs olive hardcodées disparaissent sur
     // fond ink. On pioche olive vs oliveSoft selon la brightness du thème
@@ -60,15 +61,16 @@ class TierChip extends ConsumerWidget {
     );
   }
 
-  String _labelFor(SubscriptionTier tier, int? count) {
+  String _labelFor(BuildContext context, SubscriptionTier tier, int? count) {
+    final l10n = context.l10n;
     switch (tier) {
       case SubscriptionTier.anonymous:
-        return 'MODE DÉMO · 1 SCÉNARIO';
+        return l10n.simulatorTierChipAnonymous;
       case SubscriptionTier.free:
         final c = count ?? 0;
-        return 'COMPTE GRATUIT · $c/3 SCÉNARIOS';
+        return l10n.simulatorTierChipFree(c);
       case SubscriptionTier.paid:
-        return 'PLAN PRO · ILLIMITÉ';
+        return l10n.simulatorTierChipPaid;
     }
   }
 }

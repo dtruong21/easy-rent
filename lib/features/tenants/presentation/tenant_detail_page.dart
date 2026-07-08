@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
@@ -52,6 +53,7 @@ class _TenantDetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppAppBar(
         title: '${tenant.firstName} ${tenant.lastName}',
@@ -60,7 +62,7 @@ class _TenantDetailContent extends ConsumerWidget {
           IconButton(
             key: const Key('btn_edit_tenant'),
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Modifier',
+            tooltip: l10n.commonEdit,
             onPressed: () => context.push('/tenants/${tenant.id}/edit'),
           ),
         ],
@@ -85,7 +87,7 @@ class _TenantDetailContent extends ConsumerWidget {
                 side: BorderSide(color: Theme.of(context).colorScheme.error),
               ),
               icon: const Icon(Icons.archive_outlined),
-              label: const Text('Archiver ce locataire'),
+              label: Text(l10n.tenantsArchiveButton),
               onPressed: () => _confirmArchive(context, ref, tenant),
             ),
           ],
@@ -112,21 +114,18 @@ class _TenantDetailContent extends ConsumerWidget {
 
     if (!context.mounted) return;
 
+    final l10n = context.l10n;
     final displayName = '${tenant.firstName} ${tenant.lastName}';
 
     await showDialog<void>(
       context: context,
       builder: (_) => ArchiveConfirmDialog(
-        title: 'Archiver ce locataire ?',
+        title: l10n.tenantsArchiveDialogTitle,
         entityLabel: displayName,
-        standardMessage:
-            'Voulez-vous archiver "$displayName" ? '
-            "Le locataire n'apparaîtra plus dans votre liste. "
-            'Les baux liés seront conservés.',
-        activeLeaseMessage:
-            'Ce locataire a un bail actif. Êtes-vous sûr de vouloir archiver '
-            '"$displayName" ? Les baux actifs liés seront conservés '
-            "mais le locataire n'apparaîtra plus dans votre liste.",
+        standardMessage: l10n.tenantsArchiveDialogStandardMessage(displayName),
+        activeLeaseMessage: l10n.tenantsArchiveDialogActiveLeaseMessage(
+          displayName,
+        ),
         hasActiveLease: activeLeaseCount > 0,
         onConfirm: () => _archive(context, ref, tenant),
       ),
@@ -147,7 +146,7 @@ class _TenantDetailContent extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Locataire archivé'),
+          content: Text(context.l10n.tenantsArchiveSuccessSnackBar),
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         ),
       );
@@ -157,9 +156,7 @@ class _TenantDetailContent extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            "Impossible d'archiver ce locataire. Veuillez réessayer.",
-          ),
+          content: Text(context.l10n.tenantsArchiveErrorSnackBar),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -176,6 +173,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -185,26 +183,26 @@ class _InfoCard extends StatelessWidget {
             // --- Identité civile ---
             _InfoRow(
               icon: Icons.badge_outlined,
-              label: 'Prénom',
+              label: l10n.tenantsFieldFirstName,
               value: tenant.firstName,
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.badge_outlined,
-              label: 'Nom',
+              label: l10n.tenantsFieldLastName,
               value: tenant.lastName,
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.email_outlined,
-              label: 'Email',
+              label: l10n.tenantsFieldEmail,
               value: tenant.email,
             ),
             if (tenant.phone != null && tenant.phone!.isNotEmpty) ...[
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.phone_outlined,
-                label: 'Téléphone',
+                label: l10n.tenantsFieldPhone,
                 value: tenant.phone!,
               ),
             ],
@@ -212,7 +210,7 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.cake_outlined,
-                label: 'Date de naissance',
+                label: l10n.tenantsFieldBirthDate,
                 value: FrenchDate.format(tenant.birthDate!),
               ),
             ],
@@ -220,7 +218,7 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.location_city_outlined,
-                label: 'Lieu de naissance',
+                label: l10n.tenantsFieldBirthPlace,
                 value: tenant.birthPlace!,
               ),
             ],
@@ -229,7 +227,7 @@ class _InfoCard extends StatelessWidget {
               const Divider(height: 24),
               _InfoRow(
                 icon: Icons.flag_outlined,
-                label: 'Nationalité',
+                label: l10n.tenantsFieldNationality,
                 value: tenant.nationality!,
               ),
             ],
@@ -241,7 +239,7 @@ class _InfoCard extends StatelessWidget {
                 tenant.previousAddress != null) ...[
               const Divider(height: 24),
               Text(
-                'Situation professionnelle',
+                l10n.tenantsSectionProfessional,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -251,7 +249,7 @@ class _InfoCard extends StatelessWidget {
                   tenant.profession!.isNotEmpty) ...[
                 _InfoRow(
                   icon: Icons.work_outline,
-                  label: 'Profession',
+                  label: l10n.tenantsFieldProfession,
                   value: tenant.profession!,
                 ),
               ],
@@ -259,7 +257,7 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.business_outlined,
-                  label: 'Employeur',
+                  label: l10n.tenantsFieldEmployer,
                   value: tenant.employer!,
                 ),
               ],
@@ -267,9 +265,12 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.euro_outlined,
-                  label: 'Revenus mensuels',
-                  value:
-                      '${MoneyFormat.formatEurosFromCents(tenant.monthlyIncomeCents!)} / mois',
+                  label: l10n.tenantsFieldMonthlyIncome,
+                  value: l10n.tenantsMonthlyIncomeValue(
+                    MoneyFormat.formatEurosFromCents(
+                      tenant.monthlyIncomeCents!,
+                    ),
+                  ),
                 ),
               ],
               if (tenant.previousAddress != null &&
@@ -277,7 +278,7 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.home_outlined,
-                  label: 'Ancienne adresse',
+                  label: l10n.tenantsFieldPreviousAddress,
                   value: tenant.previousAddress!,
                 ),
               ],
@@ -289,7 +290,7 @@ class _InfoCard extends StatelessWidget {
                 tenant.guarantorPhone != null) ...[
               const Divider(height: 24),
               Text(
-                'Garant',
+                l10n.tenantsSectionGuarantor,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -299,7 +300,7 @@ class _InfoCard extends StatelessWidget {
                   tenant.guarantorName!.isNotEmpty) ...[
                 _InfoRow(
                   icon: Icons.person_outline,
-                  label: 'Nom du garant',
+                  label: l10n.tenantsFieldGuarantorName,
                   value: tenant.guarantorName!,
                 ),
               ],
@@ -308,7 +309,7 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.email_outlined,
-                  label: 'Email du garant',
+                  label: l10n.tenantsFieldGuarantorEmail,
                   value: tenant.guarantorEmail!,
                 ),
               ],
@@ -317,7 +318,7 @@ class _InfoCard extends StatelessWidget {
                 const Divider(height: 24),
                 _InfoRow(
                   icon: Icons.phone_outlined,
-                  label: 'Téléphone du garant',
+                  label: l10n.tenantsFieldGuarantorPhone,
                   value: tenant.guarantorPhone!,
                 ),
               ],
@@ -327,13 +328,13 @@ class _InfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today_outlined,
-              label: 'Ajouté le',
+              label: l10n.tenantsFieldCreatedAt,
               value: FrenchDate.format(tenant.createdAt),
             ),
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.update,
-              label: 'Modifié le',
+              label: l10n.tenantsFieldUpdatedAt,
               value: FrenchDate.format(tenant.updatedAt),
             ),
           ],
@@ -418,7 +419,7 @@ class _LeasesSectionState extends ConsumerState<_LeasesSection> {
       _log.warning('listLeasesForTenant failed', e, st);
       if (mounted) {
         setState(() {
-          _error = 'Impossible de charger les baux.';
+          _error = context.l10n.tenantsErrorLoadLeases;
           _loading = false;
         });
       }
@@ -435,7 +436,10 @@ class _LeasesSectionState extends ConsumerState<_LeasesSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Baux liés', style: theme.textTheme.titleMedium),
+            Text(
+              context.l10n.tenantsLeasesSectionTitle,
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             if (_loading)
               const Center(
@@ -469,8 +473,12 @@ class _NotFoundPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppAppBar(title: 'Fiche locataire', fallbackRoute: '/tenants'),
+      appBar: AppAppBar(
+        title: l10n.tenantsDetailFallbackTitle,
+        fallbackRoute: '/tenants',
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -484,13 +492,13 @@ class _NotFoundPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Locataire introuvable',
+                l10n.tenantsNotFoundTitle,
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Ce locataire a peut-être été archivé ou ne vous appartient pas.',
+                l10n.tenantsNotFoundMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -500,7 +508,7 @@ class _NotFoundPage extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => context.go('/tenants'),
                 icon: const Icon(Icons.arrow_back),
-                label: const Text('Retour à la liste'),
+                label: Text(l10n.tenantsBackToListButton),
               ),
             ],
           ),

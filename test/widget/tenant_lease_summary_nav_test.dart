@@ -3,8 +3,10 @@
 /// - Tests ajoutés sans modifier les assertions existantes dans tenant_lease_summary_test.dart.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/tenants/presentation/widgets/tenant_lease_summary.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +31,13 @@ Widget _buildWithRouter(List<Map<String, dynamic>> leases) {
     ],
   );
 
-  return MaterialApp.router(theme: AppTheme.light, routerConfig: router);
+  return MaterialApp.router(
+    theme: AppTheme.light,
+    routerConfig: router,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: supportedLocales,
+    locale: const Locale('fr'),
+  );
 }
 
 // ---------------------------------------------------------------------------

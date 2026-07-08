@@ -4,6 +4,7 @@
 /// dropdown année dynamique, toggle ViewMode.
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/cards/view_mode.dart';
 import 'package:easyrent/core/ui/cards/view_mode_provider.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
@@ -11,6 +12,7 @@ import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/receipts/application/receipts_filter_provider.dart';
 import 'package:easyrent/features/receipts/domain/receipt_status_filter.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/receipts_filter_bar.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,7 +44,13 @@ Widget _buildDesktop(ProviderContainer container) {
     container: container,
     child: MediaQuery(
       data: const MediaQueryData(size: Size(900, 700)),
-      child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: _appTheme(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
+      ),
     ),
   );
 }
@@ -62,7 +70,13 @@ Widget _buildMobile(ProviderContainer container) {
     container: container,
     child: MediaQuery(
       data: const MediaQueryData(size: Size(375, 667)),
-      child: MaterialApp.router(routerConfig: router, theme: _appTheme()),
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: _appTheme(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
+      ),
     ),
   );
 }

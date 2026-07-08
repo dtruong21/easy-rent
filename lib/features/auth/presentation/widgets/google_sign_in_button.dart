@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import 'google_logo_painter.dart';
 
 /// Bouton "Continuer avec Google".
@@ -8,21 +9,25 @@ import 'google_logo_painter.dart';
 /// Material par défaut — l'olive reste réservé au [FilledButton] primaire)
 /// tout en conservant l'identité visuelle Google (logo "G" multicolore,
 /// hauteur 48px conforme aux brand guidelines).
+///
+/// [label] est nullable : `null` (défaut) résout
+/// `context.l10n.authContinueWithGoogleButton` au build.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
     required this.onPressed,
     required this.isLoading,
-    this.label = 'Continuer avec Google',
+    this.label,
   });
 
   final VoidCallback? onPressed;
   final bool isLoading;
-  final String label;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final resolvedLabel = label ?? context.l10n.authContinueWithGoogleButton;
     return SizedBox(
       height: 48,
       child: OutlinedButton(
@@ -48,7 +53,7 @@ class GoogleSignInButton extends StatelessWidget {
                   const GoogleLogo(size: 20),
                   const SizedBox(width: 12),
                   Text(
-                    label,
+                    resolvedLabel,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],

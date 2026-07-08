@@ -5,6 +5,7 @@ import '../../../../core/ui/breakpoints.dart';
 import '../../../../core/ui/cards/view_mode_toggle.dart';
 import '../../application/properties_filter_provider.dart';
 import '../../domain/property_filter.dart';
+import 'property_filter_l10n.dart';
 
 /// Barre de filtres + toggle de vue pour la page Properties.
 ///
@@ -66,8 +67,10 @@ class _DesktopFilterSegments extends StatelessWidget {
     return SegmentedButton<PropertyFilter>(
       segments: PropertyFilter.values
           .map(
-            (f) =>
-                ButtonSegment<PropertyFilter>(value: f, label: Text(f.labelFr)),
+            (f) => ButtonSegment<PropertyFilter>(
+              value: f,
+              label: Text(f.label(context)),
+            ),
           )
           .toList(),
       selected: {currentFilter},
@@ -106,7 +109,7 @@ class _MobileFilterDropdown extends StatelessWidget {
           .map(
             (f) => DropdownMenuItem<PropertyFilter>(
               value: f,
-              child: Text(f.labelFr),
+              child: Text(f.label(context)),
             ),
           )
           .toList(),

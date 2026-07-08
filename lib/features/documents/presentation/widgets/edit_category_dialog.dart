@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../domain/document_category.dart';
+import '../document_category_l10n.dart';
 
 /// Dialog de sélection de catégorie pour un document.
 ///
@@ -35,9 +37,10 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AlertDialog(
       key: const Key('edit_category_dialog'),
-      title: const Text('Modifier la catégorie'),
+      title: Text(l10n.documentsEditCategoryDialogTitle),
       content: DropdownButton<DocumentCategory>(
         key: const Key('category_dropdown'),
         value: _selected,
@@ -50,7 +53,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
                   children: [
                     Icon(cat.icon, size: 18),
                     const SizedBox(width: 8),
-                    Text(cat.label),
+                    Text(cat.localizedLabel(context)),
                   ],
                 ),
               ),
@@ -64,7 +67,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
         TextButton(
           key: const Key('btn_cancel_category'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           key: const Key('btn_confirm_category'),
@@ -72,7 +75,7 @@ class _EditCategoryDialogState extends State<EditCategoryDialog> {
             Navigator.of(context).pop(_selected);
             widget.onSelect?.call(_selected);
           },
-          child: const Text('Valider'),
+          child: Text(l10n.commonConfirm),
         ),
       ],
     );
