@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- sitemap.xml — Baillan. URLs publiques uniquement (cf. docs/state/ROUTES.md).
+     Domaine : URL interim easy-rent-54cd4.web.app — remplacer l'hôte de chaque
+     <loc> au lancement du domaine custom (voir docs/SEO.md).
+     /simulator exclu : en unauthenticated il redirige vers /login (pas de contenu
+     autonome indexable). /login,/signup,/forgot-password,/reset-password exclus
+     (pages minces) ; tout le reste du shell est derrière auth. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://easy-rent-54cd4.web.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://easy-rent-54cd4.web.app/faq</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://easy-rent-54cd4.web.app/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://easy-rent-54cd4.web.app/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://easy-rent-54cd4.web.app/delete-account</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>

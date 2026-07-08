@@ -1,0 +1,25 @@
+# robots.txt — Baillan (PRODUCTION)
+# Domaine : URL interim easy-rent-54cd4.web.app. Au lancement du domaine custom,
+# remplacer l'hôte de la ligne Sitemap (unique occurrence ici). Voir docs/SEO.md.
+#
+# App SPA Flutter (rewrite ** -> /index.html) : toute URL renvoie 200 + le shell
+# index.html ; on interdit explicitement les sections privées (rendu canvas, sans
+# valeur SEO) pour éviter des doublons de la landing.
+
+User-agent: *
+Allow: /
+
+# Namespace réservé Firebase (helpers auth/hosting)
+Disallow: /__/
+
+# Sections applicatives derrière auth
+Disallow: /dashboard
+Disallow: /properties
+Disallow: /tenants
+Disallow: /leases
+Disallow: /profile
+
+# Pages utilitaires auth avec jetons
+Disallow: /reset-password
+
+Sitemap: https://easy-rent-54cd4.web.app/sitemap.xml

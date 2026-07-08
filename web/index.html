@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,7 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Baillan. — Tenir registre. En cas de doute, sortez le registre. Outil pour bailleurs : quittances, loyers, locataires, documents.">
+  <meta name="description" content="Baillan : la gestion locative simple pour bailleurs particuliers. Quittances de loyer conformes (loi 1989), suivi des loyers, charges et régularisation, simulateur d'investissement. Gratuit, données en Europe.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1B1A17">
 
@@ -34,8 +34,83 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFCMUExNyIgcng9IjgiLz48dGV4dCB4PSI1MCIgeT0iNzQiIGZvbnQtZmFtaWx5PSdDb2NoaW4sIFBhbGF0aW5vIExpbm90eXBlLCBQYWxhdGlubywgc2VyaWYnIGZvbnQtc3R5bGU9Iml0YWxpYyIgZm9udC1zaXplPSI4NCIgZmlsbD0iI0Y3RjRFRCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QjwvdGV4dD48cGF0aCBkPSJNIDIyIDg0IFEgNTAgOTggNzggODQiIHN0cm9rZT0iI0I1Qjg5RCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=" />
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Baillan.</title>
+  <title>Baillan — Gestion locative &amp; quittances de loyer pour bailleurs</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- ===================== SEO (FEAT-049) =====================
+       Domaine : URL interim easy-rent-54cd4.web.app. Au lancement du domaine
+       custom, remplacer easy-rent-54cd4.web.app ICI + dans web/robots.txt
+       (ligne Sitemap) + dans chaque <loc> de web/sitemap.xml. Voir docs/SEO.md.
+       Robots : "index, follow" par défaut (prod). L'étape "noindex staging" de
+       deploy.yml bascule en "noindex, nofollow" sur les builds APP_ENV=dev. -->
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://easy-rent-54cd4.web.app/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Baillan">
+  <meta property="og:title" content="Baillan — Gestion locative &amp; quittances de loyer pour bailleurs">
+  <meta property="og:description" content="Quittances conformes (loi du 6 juillet 1989), suivi des loyers et des retards, régularisation des charges et simulateur d'investissement locatif. Simple, gratuit, données en Europe.">
+  <meta property="og:url" content="https://easy-rent-54cd4.web.app/">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:locale:alternate" content="en_US">
+  <!-- Image OG 1200x630 (PNG/JPG, pas webp). Fallback tant que l'asset dédié manque. -->
+  <meta property="og:image" content="https://easy-rent-54cd4.web.app/icons/Icon-512.png">
+  <meta property="og:image:alt" content="Baillan — Tenir registre.">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Baillan — Gestion locative &amp; quittances de loyer">
+  <meta name="twitter:description" content="Quittances conformes, suivi des loyers, régularisation des charges et simulateur d'investissement. Simple, gratuit, données en Europe.">
+  <meta name="twitter:image" content="https://easy-rent-54cd4.web.app/icons/Icon-512.png">
+
+  <!-- Données structurées -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Baillan",
+    "url": "https://easy-rent-54cd4.web.app/",
+    "logo": "https://easy-rent-54cd4.web.app/icons/Icon-512.png",
+    "slogan": "Tenir registre.",
+    "description": "Outil de gestion locative pour bailleurs particuliers : quittances de loyer, suivi des loyers, régularisation des charges et simulateur d'investissement.",
+    "areaServed": "FR"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Baillan",
+    "url": "https://easy-rent-54cd4.web.app/",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Property Management",
+    "operatingSystem": "Web, iOS, Android",
+    "inLanguage": ["fr", "en"],
+    "description": "Gestion locative pour bailleurs particuliers : biens, locataires et baux, suivi des loyers et des retards, quittances de loyer conformes à la loi du 6 juillet 1989, registre des dépenses, régularisation annuelle des charges et simulateur d'investissement locatif.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
+    "featureList": [
+      "Quittances de loyer conformes (loi n° 89-462)",
+      "Suivi des loyers et détection des retards",
+      "Régularisation annuelle des charges",
+      "Registre des dépenses (décret 87-713)",
+      "Simulateur d'investissement locatif (rendement, cash-flow, coût du crédit)"
+    ],
+    "publisher": { "@type": "Organization", "name": "Baillan" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Baillan",
+    "url": "https://easy-rent-54cd4.web.app/",
+    "inLanguage": "fr-FR",
+    "publisher": { "@type": "Organization", "name": "Baillan" }
+  }
+  </script>
+  <!-- =================== fin SEO (FEAT-049) =================== -->
+
   <style>
     /* Fond papier cohérent avec le splash screen Baillan pendant le chargement Flutter */
     body {
@@ -85,6 +160,33 @@
   </script>
 </head>
 <body>
+  <!-- ===================== SEO : contenu statique crawlable (FEAT-049) =====================
+       Copy fidèle à l'UI rendue (clés landing* de app_fr.arb). Flutter monte par-dessus
+       au boot ; le crawler l'a déjà lu. Visually-hidden via clip (JAMAIS display:none —
+       anti-cloaking). Mitigation pour la home ; le vrai levier reste l'Option B (docs/SEO.md). -->
+  <div id="seo-static" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;">
+    <h1>Baillan — Tenir registre. La gestion locative simple pour les bailleurs.</h1>
+    <p>Simulez votre prochain investissement locatif, ou gérez le registre de vos biens : baux, quittances, échéances. En cas de doute, sortez le registre.</p>
+    <h2>Quittances de loyer conformes</h2>
+    <p>Générez des quittances de loyer numérotées et conformes à l'article 21 de la loi n° 89-462 du 6 juillet 1989, prêtes à partager en PDF.</p>
+    <h2>Suivi des loyers et des retards</h2>
+    <p>Enregistrez les paiements, suivez les échéances de chaque bail et repérez les loyers en retard d'un coup d'œil.</p>
+    <h2>Régularisation des charges et registre des dépenses</h2>
+    <p>Tenez le registre des dépenses par bien (copropriété, taxe foncière, assurance PNO, travaux) et régularisez annuellement les charges récupérables.</p>
+    <h2>Simulateur d'investissement locatif</h2>
+    <p>Estimez rendement, cash-flow et coût du crédit avant d'acheter.</p>
+    <nav>
+      <a href="/faq">Questions fréquentes</a>
+      <a href="/privacy">Politique de confidentialité</a>
+      <a href="/terms">Conditions générales</a>
+      <a href="/delete-account">Supprimer mon compte</a>
+    </nav>
+  </div>
+  <noscript>
+    <h1>Baillan — Gestion locative pour bailleurs</h1>
+    <p>Quittances conformes, suivi des loyers et charges, simulateur d'investissement. Activez JavaScript pour utiliser l'application.</p>
+  </noscript>
+  <!-- =================== fin SEO contenu statique (FEAT-049) =================== -->
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
