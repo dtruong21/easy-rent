@@ -57,6 +57,8 @@
 | **FEAT-043** | **Internationalisation FR/EN (i18n)** | Post-M1 | ✅ **done** | PR #71 (2026-07-08) | **gen_l10n + ARB (app_{en,fr}.arb ~800 clés), localeProvider (SharedPreferences), ValidationErrorL10n + AuthErrorL10n, context.l10n extensions, pattern freezed states → l10n présentation** |
 | **FEAT-045** | **Suppression de compte in-app + page publique /delete-account** | Mobile/Stores | ✅ **done** | PR #69 (2026-07-07) | **Bloquant Play « Account deletion » + App Store 5.1.1(v) levé — callable `deleteAccount` (purge Firestore+Storage+Auth, quittances conservées 5 ans), re-auth par provider, révocation token Apple, privacy policy v1.2** |
 | **FEAT-048** | **FAQ produit publique /faq** | UX/Support | ✅ **done** | feature/045-account-deletion (2026-07-07) | **11 Q/R (quittances loi 1989, essai anonyme, RGPD, suppression, charges…), page publique + tuile Profil → Aide ; hub /profile réordonné (suppression dans Compte)** |
+| **FEAT-049** | **SEO du PWA (quick-wins, Option A)** | Growth | ✅ **done** | PR #73 (2026-07-08) | **Enrichissement `web/index.html` (lang/title/description/canonical/OG/Twitter/JSON-LD + bloc statique crawlable), `web/robots.txt` + `robots.staging.txt` + `sitemap.xml`, firebase.json headers + ignore staging, deploy.yml noindex staging (gated APP_ENV=dev)** |
+| **FEAT-050** | **Site marketing statique crawlable (Option B)** | Growth | 📋 **planned** | docs/backlog/050-marketing-site-seo.md | **Topologie confirmée : sous-domaine app.baillan.fr (app Flutter noindex) + baillan.fr (site Astro canonique). À démarrer après lancement MVP** |
 
 ---
 
@@ -413,6 +415,42 @@
 
 ---
 
+### FEAT-049 : SEO du PWA (quick-wins, Option A)
+
+**Status** : ✅ DONE (merged PR #73, 2026-07-08)
+
+**Contenu** :
+- **Fait structurant** : Flutter Web CanvasKit peint le contenu dans un `<canvas>` → crawlers n'indexent QUE le DOM, pas les pixels canvas.
+- **Stratégie A (quick-wins, déployée)** :
+  - **`web/index.html` enrichi** : `<html lang="fr">`, title/description riches (mots-clés tête), `<link rel="canonical">` auto-référent, Open Graph (og:title/description/image/url/type/locale/site_name), Twitter Card
+  - **JSON-LD structuré** : 3 blocs (Organization, SoftwareApplication + applicationCategory/offers, WebSite)
+  - **Bloc HTML statique crawlable** : en tête de `<body>` avant scripts de boot FEAT-019 (H1 + copy landing + liens internes), invisible via CSS (`clip`) → respecte a11y, flutter le remplace au boot
+  - **`web/robots.txt`** (prod) : Allow: / sauf sections privées (/dashboard, /properties, /tenants, /leases, /profile, /reset-password), reference sitemap
+  - **`web/robots.staging.txt`** : Disallow: * (bloquant total, appliqué par `.github/workflows/deploy.yml` sur APP_ENV=dev)
+  - **`web/sitemap.xml`** : URLs publiques (/, /faq, /privacy, /terms, /delete-account, /simulator), domain-paramétrisé placeholder
+  - **`firebase.json` headers** : Cache-Control robots/sitemap (1h), ignore `robots.staging.txt` en deploy
+  - **`.github/workflows/deploy.yml` étape « noindex staging »** : swap robots, retire sitemap, bascule `<meta robots>` en noindex (gated APP_ENV=dev)
+- **Références** : `docs/SEO.md` (stratégie complète + checklist lancement domaine custom), `web/index.html` commentaires §3-4
+- **Impact SEO** : partage social propre, metadata valides, crawl produit guidé, staging protégé contre indexation accidentelle
+
+---
+
+### FEAT-050 : Site marketing statique crawlable (Option B)
+
+**Status** : 📋 PLANNED (cadré, attendre après lancement MVP)
+
+**Contenu** :
+- **Contexte** : Option A (FEAT-049) gère la home. Option B est le SEUL levier pour ranker sur non-brand keywords (« simulateur investissement immobilier », « régularisation charges locatives », etc.) et i18n-SEO réelle (URLs avec `/fr/` `/en/`)
+- **Topologie confirmée** :
+  - **Domaine principal** : `baillan.fr` (site Astro/Hugo statique pré-rendu, landing/blog/outils/guides, contenu crawlable par page)
+  - **Sous-domaine app** : `app.baillan.fr` (app Flutter CanvasKit, noindex, cible domaine canonique)
+  - **Implications** : base-href Flutter `/`, redirects post-login vers app.baillan.fr, OAuth callback dual-domaine, manifest `start_url`, i18n pipeline contenu (ARB → markdown/frontmatter)
+- **Spec détaillée** : `docs/backlog/050-marketing-site-seo.md`
+- **Dépendances** : FEAT-049 complet (staging noindex opérationnel), domaine custom provisioning
+- **Timing** : Post-lancement MVP (après que les stores et mobile soient stables)
+
+---
+
 ## Détails par feature (MVP)
 
 _(Features FEAT-001 à FEAT-022 résumées, tous ✅ DONE — cf. version antérieure FEATURES.md pour détails complets)_
@@ -423,9 +461,11 @@ _(Features FEAT-001 à FEAT-022 résumées, tous ✅ DONE — cf. version antér
 
 | ID | Nom | Phase | Status | Notes |
 |---|---|---|---|---|
-| **FEAT-031** | **Rappels paiement automatiques** | Post-M1 | 📋 **planned** | **Cloud Scheduler + Trigger Email, attente infra email** |
+| **FEAT-049** | **SEO du PWA (quick-wins, Option A)** | Growth | ✅ **done** | **Metadata enrichies, robots/sitemap, noindex staging, JSON-LD, bloc HTML statique crawlable** |
+| **FEAT-050** | **Site marketing statique (Option B)** | Growth | 📋 planned | **Topologie confirmée (baillan.fr statique + app.baillan.fr Flask), attendre post-lancement** |
+| **FEAT-031** | **Rappels paiement automatiques** | Post-M1 | 📋 planned | **Cloud Scheduler + Trigger Email, attente infra email** |
 | **FEAT-032** | **Dashboard — Trésorerie graphique** | Post-M1 | 📋 planned | Encaissé vs dû, détection retards intégré |
-| **FEAT-033** | **Archivage régularisations charges** | Post-M1 | 💡 **idea** | **FEAT-041 V1 a absorbé snapshot figé — reliquat V1.1** |
+| **FEAT-033** | **Archivage régularisations charges** | Post-M1 | 💡 idea | **FEAT-041 V1 a absorbé snapshot figé — reliquat V1.1** |
 | **FEAT-034** | **Import multi-colonnes** | Post-M1 | 📋 planned | Properties/tenants/leases CSV import |
 | **FEAT-035** | **2FA TOTP** | Post-M2 | 📋 planned | Authenticator app integration |
 | P2-001 | Intégration bancaire | — | 💡 idea | Rapprochement virement auto |
@@ -436,17 +476,16 @@ _(Features FEAT-001 à FEAT-022 résumées, tous ✅ DONE — cf. version antér
 ## Statut Commits Récents
 
 ```
-341d58d develop (HEAD) — FEAT-036 + FEAT-041 V1 merged (2026-07-05)
-33b8aea FEAT-036 merged dans feature/041
-a7e1ae2 fix(expenses): FEAT-041 — correctifs revue adversariale (10 findings)
-2f5ac76 feat(expenses): FEAT-041c — alimentation régularisation depuis dépenses récupérables
-5c86ed8 feat(expenses): FEAT-041b frontend — justificatif (upload optionnel)
-9037d3c merge: fix CI (pin Flutter 3.41.2 + ListTile dans Material) depuis develop
-24e7b36 feat(expenses): FEAT-041b backend — createDocument v2
-5c50d63 fix(ci): épingle Flutter 3.41.2 + ListTile dans Material
-9edfcfb feat(expenses): FEAT-041a — CRUD Dépense (collection expenses)
-87ec342 test(leases): FEAT-036 — couverture unitaire validateNonRecoverableCharges
-c31c75e feat(leases): FEAT-036 — charges récupérables / non-récupérables
+650b62f develop (HEAD) — docs: FEAT-049/050 dans roadmap + backlog (section Croissance/SEO) (2026-07-08)
+d340bf6 docs(backlog): FEAT-050 — topologie confirmée (sous-domaine)
+409bfa4 docs(backlog): FEAT-050 — cadrage site marketing statique (SEO Option B)
+bde1862 Merge pull request #73 from dtruong21/feature/049-seo
+72d60fe feat(seo): FEAT-049 — quick-wins SEO (meta/OG/JSON-LD, robots, sitemap, noindex staging)
+a9fee64 chore(seo): FEAT-049 — agent seo-specialist + workflow seo-audit (pipeline Growth)
+9a03fb5 docs(state): rafraîchit le cache après merges FEAT-043/045/048/024
+205188b Merge pull request #71 from dtruong21/feature/043-i18n
+1934c9d fix(i18n): FEAT-043 — delete_account _mapAuthError gère popup OAuth annulée
+604e109 test(i18n): FEAT-043 — délégués l10n dans delete_account_page_test
 ```
 
 ---
@@ -456,4 +495,6 @@ c31c75e feat(leases): FEAT-036 — charges récupérables / non-récupérables
 **MVP** : ✅ COMPLETE (FEAT-001–030, production-ready staging)
 **Post-MVP M1** : ✅ COMPLETE (FEAT-001–042, `expenses` collection + charge modes live, Firestore camelCase stable)
 **Mobile + Stores prep** : ✅ COMPLETE (FEAT-024 iOS/Android setup, FEAT-043 i18n FR/EN, FEAT-045 suppression compte, FEAT-048 FAQ — prêt release mobile)
+**Growth — SEO** : ✅ COMPLETE (FEAT-049 quick-wins live, metadata/robots/sitemap/noindex-staging déployés ; FEAT-050 topologie confirmée, attendre post-lancement)
+**Agents pipeline** : agent `seo-specialist.md` + workflow `seo-audit.js` enregistrés pour phase Growth
 **Prochaines** : FEAT-031 (rappels email, attente infra), FEAT-032 (graph trésorerie), FEAT-034 (import CSV), FEAT-035 (2FA TOTP)

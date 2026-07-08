@@ -4,10 +4,10 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-08T06:00:30Z
-- **Commit ref** : `205188b` (develop, FEAT-043 i18n + FEAT-045 suppression de compte + FEAT-048 FAQ + FEAT-024 mobile merged)
+- **Dernière mise à jour** : 2026-07-08T14:30:00Z
+- **Commit ref** : `650b62f` (develop, FEAT-049 SEO quick-wins + FEAT-050 cadrage site marketing)
 - **Branche** : `develop`
-- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + Mobile + Stores ✅ (FEAT-024 iOS/Android, FEAT-043 i18n FR/EN, FEAT-045 suppression, FEAT-048 FAQ)
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + Mobile + Stores ✅ (FEAT-024 iOS/Android, FEAT-043 i18n FR/EN, FEAT-045 suppression, FEAT-048 FAQ) + Growth/SEO ✅ (FEAT-049 quick-wins, FEAT-050 topologie confirmée)
 
 ## Pointeurs
 
@@ -15,7 +15,7 @@
 |---|---|---|
 | Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase, **chargeMode FEAT-042**, **receipts.accountDeletedAt/retentionUntil FEAT-045** |
 | Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 50+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041), **/faq, /delete-account, /profile/delete-account** (FEAT-045/048) |
-| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–048, MVP ✅ + Post-MVP M1 ✅ + Mobile ✅ (FEAT-024 iOS/Android, FEAT-043 i18n, FEAT-045 deletion, FEAT-048 FAQ merged) |
+| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–050, MVP ✅ + Post-MVP M1 ✅ + Mobile ✅ (FEAT-024 iOS/Android, FEAT-043 i18n, FEAT-045 deletion, FEAT-048 FAQ merged) + Growth ✅ (FEAT-049 SEO quick-wins merged, FEAT-050 topologie confirmée) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
 | Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **28 callables** (+ `deleteAccount` FEAT-045) + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper** |
 | Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
@@ -54,6 +54,28 @@
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
 ## Changements récents (2026-07-03 — 2026-07-08)
+
+### FEAT-049 : SEO du PWA (quick-wins, Option A)
+
+**Status** : ✅ DONE (merged PR #73, 2026-07-08)
+
+- **Contenu enrichi** : `web/index.html` avec `<html lang="fr">`, title/description riches (mots-clés tête), Open Graph + Twitter Card, JSON-LD (Organization/SoftwareApplication/WebSite), bloc HTML statique crawlable en tête de `<body>` (texte visible crawlers + a11y-compatible)
+- **Plomberie SEO** : `web/robots.txt` (prod Allow + reference sitemap), `web/robots.staging.txt` (Disallow *), `web/sitemap.xml` (URLs publiques, domaine-paramétrisé), `firebase.json` headers (Cache-Control 1h robots/sitemap, ignore robots.staging.txt)
+- **Noindex staging** : `.github/workflows/deploy.yml` étape (gated APP_ENV=dev) → swap robots, retire sitemap, bascule meta robots en noindex
+- **Pipeline Growth** : agent `.claude/agents/seo-specialist.md` + workflow `.claude/workflows/seo-audit.js` enregistrés
+- **Documentation** : `docs/SEO.md` stratégie complète (Option A/B/C, fait structurant CanvasKit, audit checklist)
+- **Note** : Fait structurant = Flutter CanvasKit peint canvas (non indexable) → Option A = quick-wins (partage social), Option B (site marketing statique) = seul vrai levier non-brand keywords
+
+### FEAT-050 : Site marketing statique crawlable (Option B)
+
+**Status** : 📋 PLANNED (cadré, attendre post-lancement MVP)
+
+- **Topologie confirmée** : `baillan.fr` (site Astro/Hugo statique, landing/blog/outils/guides, contenu crawlable par page) + `app.baillan.fr` (app Flutter, noindex, cible canonique)
+- **Dépendances** : FEAT-049 complet (noindex staging opérationnel), domaine custom provisionné
+- **Spec détaillée** : `docs/backlog/050-marketing-site-seo.md`
+- **Timing** : Post-lancement MVP (après stores + mobile stabilisés) — cible phase croissance SEO
+
+## Changements précédents (2026-07-03 — 2026-07-08)
 
 ### FEAT-043 : Internationalisation FR/EN (i18n)
 
