@@ -1,6 +1,6 @@
 # Features — registre
 
-> Maintenu par `state-keeper`. **Dernière sync** : 2026-07-08 (FEAT-043 i18n + FEAT-045 account-deletion + FEAT-048 FAQ + FEAT-024 mobile merged).
+> Maintenu par `state-keeper`. **Dernière sync** : 2026-07-09 (FEAT-045 i18n FR/EN merged PR #72 + FEAT-049 SEO merged + FEAT-043/045/048/024 all bilingue/multiplateforme).
 
 ## Légende
 
@@ -90,18 +90,18 @@
 - **Override manuel** : `/profile` → Apparence → Langue (FR/EN) persisté SharedPreferences via `localeProvider` (Riverpod StateProvider)
 - **Errors localisés** : `ValidationError` + `AuthError` enums → `ValidationErrorL10n.message(context)` / `AuthErrorL10n.message(context)` extension (lib/core/i18n/l10n_extensions.dart)
 - **Pattern freezed** : states Riverpod (ex: `ScenarioFormState`) stockent `.name` (string, immuable) ; présentation via `l10n.buildString(errorName)` pour déleguer UI
-- **Coverage** : leases/properties/tenants/payments/receipts/expenses/charge_regularization/simulator/landing/support/pwa/auth/dashboard/profile bilingues
-- **Note** : flux suppression compte (FEAT-045), partage e-mails, formatters dates/€/octets restent FR (suivi post-M1)
+- **Coverage** : leases/properties/tenants/payments/receipts/expenses/charge_regularization/simulator/landing/support/pwa/auth/dashboard/profile/**delete_account** (FEAT-045 i18n PR #72) bilingues
+- **Note** : partage e-mails, formatters dates/€/octets restent FR (suivi post-M1) — **flux suppression compte est maintenant bilingue FR/EN** via FEAT-045 i18n
 
-**Tests** : l10n_extensions_test.dart, délégations dans tests features
+**Tests** : l10n_extensions_test.dart, délégations dans tests features, delete_account_page_test avec l10n
 
 ---
 
-### FEAT-045 : Suppression de compte in-app + page publique /delete-account
+### FEAT-045 : Suppression de compte in-app + page publique /delete-account (i18n FR/EN)
 
-**Status** : ✅ DONE (merged PR #69, 2026-07-07)
+**Status** : ✅ DONE — Core PR #69 (2026-07-07) + i18n PR #72 (2026-07-08, merge e25f637)
 
-**Contenu** :
+**Contenu FEAT-045 v1 (Core)** :
 - **Routes** : `/delete-account` (public, page demande suppression — login/go profil/essai anonyme) + `/profile/delete-account` (suppression compte complet)
 - **CF callable `deleteAccount`** :
   - Fraîcheur token : auth_time < 5 min (non-anonymes), anonymes exemptés
@@ -112,7 +112,15 @@
 - **AuthRepository** : `reauthenticateWithOAuthProvider` (popup web / natif mobile) + `revokeAppleToken` (best-effort App Store 5.1.1(v)) + `deleteAccount` callable + signOut
 - **UI/UX** : DeleteAccountPage (tuile Profil → hub /profile réordonné Compte/Apparence/Aide/À propos/Session) → avertissement loi + rétention quittances + re-auth provider + checkbox + confirmation dialog
 - **Privacy policy** : v1.2 § 5 (suppression) + § 8 (droit à l'effacement in-app) — rgpdConsentVersion inchangé (clarification)
-- **Tests** : 11 vitest CF + 22 tests Flutter (repo, controller, pages, tuile profil)
+
+**Contenu FEAT-045 i18n (PR #72)** :
+- **Localisation complète** : `DeleteAccountError` enum + `DeleteAccountErrorL10n` extension (pattern FEAT-043)
+- **Clés ARB** : `deleteAccount*` + `deleteAccountRequest*` + `profileHubDeleteAccountTile` (app_{en,fr}.arb)
+- **Pages & contrôleur** : DeleteAccountPage, DeleteAccountRequestPage, delete_account_controller bilingues (l10n context)
+- **Widget profil** : ProfileDeleteAccountTile → tuile Hub Profil bilingue
+- **Rétention légale FR** : mentionner « loi n° 89-462 / loi du 6 juillet 1989 » reste systématiquement en FR (appliquer règle l10n_convention.dart §7)
+
+**Tests** : 11 vitest CF + 22 tests Flutter (repo, controller, pages, tuile profil) + test l10n delete_account_page_test.dart
 
 ---
 

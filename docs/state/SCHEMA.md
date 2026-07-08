@@ -1,6 +1,6 @@
 # Schéma Firestore — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-08 (FEAT-045 : champs `receipts.accountDeletedAt/retentionUntil` pour rétention légale 5 ans ; FEAT-043 i18n sans impact schema). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
+> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-09 (FEAT-045 core done + i18n merged ; schema stable, 11 collections, 28+ indexes inchangés). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
 
 ## Collections (11 total)
 

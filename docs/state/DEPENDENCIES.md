@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `functions/package.json` + `firebase.json`. **Dernière sync** : 2026-07-08 (FEAT-043 i18n uses gen_l10n native, no new packages ; FEAT-024 mobile no pubspec changes ; FEAT-045 no new deps). **Pivot** : FEAT-019 (2026-07-02) — Firebase Auth + Firestore + Cloud Functions (Node.js 20).
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `functions/package.json` + `firebase.json`. **Dernière sync** : 2026-07-09 (FEAT-045 i18n + FEAT-049 SEO merged, no new deps ; 23 runtime + 8 dev Flutter, 2 runtime + 7 dev Functions). **Pivot** : FEAT-019 (2026-07-02) — Firebase Auth + Firestore + Cloud Functions (Node.js 20).
 
 ## Flutter (pubspec.yaml)
 
@@ -64,14 +64,6 @@
 | `freezed` | 2.5.7 | 3.x | P2 backlog | Breaking changes, output format |
 
 **Recommandation** : Attendre sprint dédié (MVP complet → versions mineures ensuite).
-
-### Dépendances P2 backlog (version upgrades)
-
-| Package | Current | Latest | Status | Raison |
-|---|---|---|---|---|
-| `flutter_riverpod` | 2.6.0 | 3.x | P2 backlog | Breaking changes, codegen refactor |
-| `go_router` | 14.6.0 | 17.x | P2 backlog | Breaking changes, API reshaping |
-| `freezed` | 2.5.7 | 3.x | P2 backlog | Breaking changes, output format |
 
 ### Assets et fonts
 

@@ -1,6 +1,6 @@
 # Routes Flutter & Navigation — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-07-08 (FEAT-045 /delete-account + /profile/delete-account, FEAT-048 /faq merged ; 50+ routes). **Pivot** : FEAT-026 (StatefulShellRoute.indexedStack 5 branches) + FEAT-030 (navigation fixes).
+> Maintenu par `state-keeper`. **Source** : `lib/core/router/app_router.dart`. **Dernière sync** : 2026-07-09 (FEAT-045 i18n + FEAT-048 + FEAT-041 merged ; 50+ routes, 3-state guard stable). **Pivot** : FEAT-026 (StatefulShellRoute.indexedStack 5 branches) + FEAT-030 (navigation fixes).
 
 ## Architecture Navigation
 

@@ -1,6 +1,6 @@
 # Cloud Functions et Triggers — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Dernière sync** : 2026-07-08 (FEAT-045 : callable `deleteAccount` merged ; FEAT-043 no impact ; 28 callables + 8 triggers + 1 scheduled). **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
+> Maintenu par `state-keeper`. **Source** : `functions/src/`. **Dernière sync** : 2026-07-09 (FEAT-045 i18n merged ; 14 callables + 9 triggers + 1 scheduled stable). **Pivot** : FEAT-019 (2026-07-02) — Firebase Cloud Functions (Node.js 20 TypeScript) + Firestore triggers.
 
 ## Architecture 3-couches
 
@@ -94,7 +94,7 @@
 
 ---
 
-## Callable Cloud Functions (28 total)
+## Callable Cloud Functions (14 total)
 
 ### 🔒 Lease Management (FEAT-005, FEAT-036)
 

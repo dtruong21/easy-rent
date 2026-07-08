@@ -4,20 +4,20 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-08T14:30:00Z
-- **Commit ref** : `650b62f` (develop, FEAT-049 SEO quick-wins + FEAT-050 cadrage site marketing)
+- **Dernière mise à jour** : 2026-07-09T10:00:00Z
+- **Commit ref** : `5705b15` (develop, FEAT-045 i18n merged PR #72 + FEAT-049 SEO + FEAT-050 cadrage)
 - **Branche** : `develop`
-- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + Mobile + Stores ✅ (FEAT-024 iOS/Android, FEAT-043 i18n FR/EN, FEAT-045 suppression, FEAT-048 FAQ) + Growth/SEO ✅ (FEAT-049 quick-wins, FEAT-050 topologie confirmée)
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + Mobile + Stores ✅ (FEAT-024 iOS/Android, FEAT-043+045 bilingues FR/EN, FEAT-048 FAQ) + Growth/SEO ✅ (FEAT-049 quick-wins OG/robots/sitemap, FEAT-050 topologie confirmée)
 
 ## Pointeurs
 
 | Aspect du projet | Fichier | Contenu clé |
 |---|---|---|
 | Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase, **chargeMode FEAT-042**, **receipts.accountDeletedAt/retentionUntil FEAT-045** |
-| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 50+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041), **/faq, /delete-account, /profile/delete-account** (FEAT-045/048) |
-| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–050, MVP ✅ + Post-MVP M1 ✅ + Mobile ✅ (FEAT-024 iOS/Android, FEAT-043 i18n, FEAT-045 deletion, FEAT-048 FAQ merged) + Growth ✅ (FEAT-049 SEO quick-wins merged, FEAT-050 topologie confirmée) |
+| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 50+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041), **/faq, /delete-account, /profile/delete-account** (FEAT-045/048, **bilingues FR/EN via FEAT-045 i18n**) |
+| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–050, MVP ✅ + Post-MVP M1 ✅ + Mobile ✅ (FEAT-024 iOS/Android, FEAT-043+045 i18n FR/EN, FEAT-048 FAQ merged) + Growth ✅ (FEAT-049 SEO quick-wins merged, FEAT-050 topologie confirmée) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
-| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **28 callables** (+ `deleteAccount` FEAT-045) + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper** |
+| Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **14 callables** (soft-delete, lease/payment mgmt, receipt/document/expense ops, anonymous-upgrade, account-deletion FEAT-045) + **9 triggers** (setUpdatedAt×8 + recomputeReceiptStale) + **1 scheduled** (cleanupExpiredAnon); **`resolveChargeMode` FEAT-042 helper** |
 | Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
 | Design tokens (sémantique métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) | Couleurs (error, warning, success), spacing (4dp grid) |
 
@@ -115,7 +115,7 @@
 - **Firebase** : apps Android + iOS enregistrées sur `easy-rent-54cd4`, `firebase_options.dart` couvre web/android/ios, SHA debug déclarées
 - **Auth** : OAuth Google/Apple via `signInWithProvider`/`linkWithProvider` sur mobile (popup conservé web) ; liens email fallback `Env.publicAppUrl`
 - **Partage quittances/régularisations** : share sheet natif `share_plus` (`web_share_service_io.dart`, annulation détectée → invariant `sent_at` préservé)
-- **Validé** : analyze clean, 2386 tests, APK debug, parcours anonyme complet sur émulateur Pixel 9, build iOS simulateur
+- **Validé** : analyze clean, ~2466 tests ✅, APK debug, parcours anonyme complet sur émulateur Pixel 9, build iOS simulateur
 - **Conformité stores (2026-07-07)** : audit complet Play/App Store/UE dans [`STORE_COMPLIANCE.md`](../STORE_COMPLIANCE.md) — targetSdk 36 conforme (SDK 37 requis ~08/2027), PrivacyInfo.xcprivacy + ITSAppUsesNonExemptEncryption faits ; **bloquants release** : suppression de compte in-app (FEAT-045), formulaires consoles, DSA trader, mentions LCEN
 - **Reste** : FEAT-045 + signing release, capability Apple Sign-In, icônes natives, QA devices — détail dans [`MOBILE.md`](../MOBILE.md)
 
