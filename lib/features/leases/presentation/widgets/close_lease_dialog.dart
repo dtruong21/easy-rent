@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 
 /// Dialog de clôture d'un bail actif.
@@ -35,7 +36,7 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: 'Date de fin effective',
+      helpText: context.l10n.leasesCloseDialogDatePickerHelp,
     );
     if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
@@ -45,19 +46,20 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AlertDialog(
-      title: const Text('Clôturer ce bail'),
+      title: Text(l10n.leasesCloseDialogTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Cette action passera le statut du bail à "Terminé". '
-            'Elle est irréversible via l\'interface.',
-          ),
+          Text(l10n.leasesCloseDialogContent),
           const SizedBox(height: 16),
-          Text('Date de fin effective', style: theme.textTheme.labelMedium),
+          Text(
+            l10n.leasesCloseDialogEffectiveDateLabel,
+            style: theme.textTheme.labelMedium,
+          ),
           const SizedBox(height: 8),
           InkWell(
             onTap: _pickDate,
@@ -78,7 +80,7 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
         TextButton(
           key: const Key('btn_close_lease_cancel'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           key: const Key('btn_close_lease_confirm'),
@@ -90,7 +92,7 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
             Navigator.of(context).pop();
             widget.onClose(_selectedDate);
           },
-          child: const Text('Clôturer'),
+          child: Text(l10n.leasesCloseDialogConfirmButton),
         ),
       ],
     );

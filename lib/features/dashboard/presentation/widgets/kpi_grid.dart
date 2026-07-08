@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/money_format.dart';
@@ -46,6 +47,7 @@ class KpiGrid extends StatelessWidget {
 
   List<Widget> _buildCards(BuildContext context) {
     final colors = Theme.of(context).extension<AppColors>()!;
+    final l10n = context.l10n;
     final loyers = snapshot.loyers;
     final retards = snapshot.retards;
     final renouvellements = snapshot.renouvellements;
@@ -78,29 +80,31 @@ class KpiGrid extends StatelessWidget {
       KpiCard(
         key: const Key('kpi_loyers'),
         icon: Icons.euro_outlined,
-        label: 'Loyers du mois',
+        label: l10n.dashboardKpiRentLabel,
         value: MoneyFormat.formatEurosFromCents(loyers.encaissedCents),
-        subtitle: 'Dû : ${MoneyFormat.formatEurosFromCents(loyers.dueCents)}',
+        subtitle: l10n.dashboardKpiRentDueSubtitle(
+          MoneyFormat.formatEurosFromCents(loyers.dueCents),
+        ),
         semanticColor: loyersColor,
         onTap: () => context.go('/leases?filter=active'),
       ),
       KpiCard(
         key: const Key('kpi_retards'),
         icon: Icons.warning_amber_outlined,
-        label: 'Retards de paiement',
+        label: l10n.dashboardKpiLateLabel,
         value: retards.count.toString(),
         subtitle: retards.count > 0
-            ? 'locataire(s) en retard'
-            : 'Tout est à jour',
+            ? l10n.dashboardKpiLateSubtitle
+            : l10n.dashboardKpiLateNoneSubtitle,
         semanticColor: retardsColor,
         onTap: () => context.go('/leases?filter=late'),
       ),
       KpiCard(
         key: const Key('kpi_renouvellements'),
         icon: Icons.event_outlined,
-        label: 'Baux à renouveler',
+        label: l10n.dashboardKpiRenewalsLabel,
         value: renouvellements.count.toString(),
-        subtitle: 'dans les 30 prochains jours',
+        subtitle: l10n.dashboardKpiRenewalsSubtitle,
         semanticColor: renouvellementsColor,
         onTap: () => context.go('/leases?filter=renewable'),
       ),
@@ -109,9 +113,9 @@ class KpiGrid extends StatelessWidget {
       KpiCard(
         key: const Key('kpi_docs'),
         icon: Icons.folder_outlined,
-        label: 'Documents en attente',
+        label: l10n.dashboardKpiDocsPendingLabel,
         value: docs.count.toString(),
-        subtitle: 'catégorie "autre"',
+        subtitle: l10n.dashboardKpiDocsPendingSubtitle,
         semanticColor: docsColor,
       ),
     ];

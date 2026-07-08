@@ -1,9 +1,11 @@
 /// Tests widget pour [InstallPromptBanner].
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/pwa/application/install_prompt_controller.dart';
 import 'package:easyrent/features/pwa/data/install_prompt_storage.dart';
 import 'package:easyrent/features/pwa/presentation/install_prompt_banner.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +18,12 @@ Widget _wrap(InstallPromptState initialState) {
         (_) => _FakeController(initialState),
       ),
     ],
-    child: const MaterialApp(home: Scaffold(body: InstallPromptBanner())),
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+      home: const Scaffold(body: InstallPromptBanner()),
+    ),
   );
 }
 
@@ -71,7 +78,12 @@ void main() {
               return ctrl;
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: InstallPromptBanner())),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: supportedLocales,
+            locale: const Locale('fr'),
+            home: const Scaffold(body: InstallPromptBanner()),
+          ),
         ),
       );
       await tester.pump();
@@ -90,7 +102,12 @@ void main() {
               return ctrl;
             }),
           ],
-          child: const MaterialApp(home: Scaffold(body: InstallPromptBanner())),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: supportedLocales,
+            locale: const Locale('fr'),
+            home: const Scaffold(body: InstallPromptBanner()),
+          ),
         ),
       );
       await tester.pump();

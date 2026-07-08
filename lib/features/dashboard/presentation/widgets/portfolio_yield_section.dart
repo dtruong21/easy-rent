@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:logging/logging.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../properties/application/properties_list_provider.dart';
@@ -132,14 +133,14 @@ class PortfolioYieldSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Rentabilité portfolio',
+          context.l10n.dashboardPortfolioYieldSectionTitle,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         SizedBox(height: spacing.md),
         asyncYield.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text(
-            'Impossible de calculer la rentabilité du portfolio.',
+            context.l10n.dashboardPortfolioYieldErrorMessage,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -160,10 +161,11 @@ class _PortfolioYieldData extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing =
         Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+    final l10n = context.l10n;
 
     if (summary.totalCount == 0) {
       return Text(
-        'Aucun bien dans le portfolio.',
+        l10n.dashboardPortfolioYieldEmptyMessage,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
@@ -172,8 +174,7 @@ class _PortfolioYieldData extends StatelessWidget {
 
     if (summary.computedCount == 0) {
       return Text(
-        'Saisir le prix d\'achat et créer un bail sur vos biens '
-        'pour afficher la rentabilité portfolio.',
+        l10n.dashboardPortfolioYieldNoComputableMessage,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
@@ -190,38 +191,40 @@ class _PortfolioYieldData extends StatelessWidget {
             _PortfolioKpiCard(
               key: const Key('kpi_portfolio_gross_yield'),
               icon: Icons.trending_up,
-              label: 'Rdt brut moyen',
+              label: l10n.dashboardPortfolioYieldGrossLabel,
               value: summary.avgYieldGrossPercent != null
                   ? '${summary.avgYieldGrossPercent!.toStringAsFixed(2)} %'
                   : '—',
-              subtitle: 'Pondéré par prix d\'achat',
+              subtitle: l10n.dashboardPortfolioYieldGrossSubtitle,
             ),
             _PortfolioKpiCard(
               key: const Key('kpi_portfolio_net_yield'),
               icon: Icons.account_balance_outlined,
-              label: 'Rdt net moyen',
+              label: l10n.dashboardPortfolioYieldNetLabel,
               value: summary.avgYieldNetPercent != null
                   ? '${summary.avgYieldNetPercent!.toStringAsFixed(2)} %'
                   : '—',
-              subtitle: 'Avant impôt',
+              subtitle: l10n.dashboardPortfolioYieldBeforeTaxSubtitle,
             ),
             _PortfolioKpiCard(
               key: const Key('kpi_portfolio_cashflow'),
               icon: Icons.euro_outlined,
-              label: 'Cash flow mensuel total',
+              label: l10n.dashboardPortfolioYieldCashflowLabel,
               value: summary.totalMonthlyCashflowCents != null
                   ? MoneyFormat.formatEurosFromCents(
                       summary.totalMonthlyCashflowCents!,
                     )
                   : '—',
-              subtitle: 'Avant impôt',
+              subtitle: l10n.dashboardPortfolioYieldBeforeTaxSubtitle,
             ),
           ],
         ),
         SizedBox(height: spacing.sm),
         Text(
-          '${summary.computedCount} bien(s) sur ${summary.totalCount} avec '
-          'prix d\'achat et bail actif. Estimations avant impôt.',
+          l10n.dashboardPortfolioYieldFootnote(
+            summary.computedCount,
+            summary.totalCount,
+          ),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontStyle: FontStyle.italic,

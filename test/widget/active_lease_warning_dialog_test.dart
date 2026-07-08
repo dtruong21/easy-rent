@@ -1,9 +1,14 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/leases/presentation/widgets/active_lease_warning_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _buildWithDialog({VoidCallback? onConfirm}) {
   return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: supportedLocales,
+    locale: const Locale('fr'),
     home: Builder(
       builder: (context) => Scaffold(
         body: ElevatedButton(

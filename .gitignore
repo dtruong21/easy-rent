@@ -97,6 +97,10 @@ skills-lock.json
 **/*.config.dart
 **/*.mocks.dart
 
+# gen_l10n output (FEAT-043) — régénéré via `flutter gen-l10n` / `flutter pub get`
+lib/l10n/app_localizations*.dart
+l10n_untranslated.json
+
 
 # Backups (FEAT-019 migration)
 backups/

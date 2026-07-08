@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/document_type.dart';
 import '../../domain/receipt_generation_result.dart';
+import 'document_type_l10n.dart';
 
 /// Dialog affiché après la génération réussie d'une quittance.
 ///
@@ -21,8 +23,11 @@ class ReceiptPreviewDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final isQuittance = result.documentType == DocumentType.quittance;
-    final title = isQuittance ? 'Quittance générée' : 'Reçu généré';
+    final title = isQuittance
+        ? l10n.receiptsPreviewTitleQuittance
+        : l10n.receiptsPreviewTitleRecu;
     final periodLabel =
         '${FrenchDate.format(result.periodStart)} – ${FrenchDate.format(result.periodEnd)}';
     final totalLabel = MoneyFormat.formatEurosFromCents(result.totalCents);
@@ -40,11 +45,14 @@ class ReceiptPreviewDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _InfoRow(label: 'Type', value: result.documentType.label),
+          _InfoRow(
+            label: l10n.receiptsPreviewTypeLabel,
+            value: result.documentType.localizedLabel(context),
+          ),
           const SizedBox(height: 8),
-          _InfoRow(label: 'Période', value: periodLabel),
+          _InfoRow(label: l10n.receiptsPreviewPeriodLabel, value: periodLabel),
           const SizedBox(height: 8),
-          _InfoRow(label: 'Total', value: totalLabel),
+          _InfoRow(label: l10n.receiptsPreviewTotalLabel, value: totalLabel),
           if (!isQuittance) ...[
             const SizedBox(height: 12),
             Container(
@@ -63,8 +71,7 @@ class ReceiptPreviewDialog extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Ce reçu ne libère pas le locataire du solde dû '
-                      'pour la période concernée.',
+                      l10n.receiptsPreviewRecuDisclaimer,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onTertiaryContainer,
                       ),
@@ -80,13 +87,13 @@ class ReceiptPreviewDialog extends StatelessWidget {
         TextButton(
           key: const Key('btn_receipt_preview_close'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Fermer'),
+          child: Text(l10n.commonClose),
         ),
         FilledButton.icon(
           key: const Key('btn_receipt_preview_open'),
           onPressed: () => _openPdf(context),
           icon: const Icon(Icons.open_in_new, size: 18),
-          label: const Text('Ouvrir le PDF'),
+          label: Text(l10n.receiptsOpenPdfLabel),
         ),
       ],
     );
@@ -97,11 +104,7 @@ class ReceiptPreviewDialog extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Impossible d\'ouvrir le PDF. Vérifiez votre navigateur.',
-            ),
-          ),
+          SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
         );
       }
     }
@@ -123,7 +126,10 @@ class _InfoRow extends StatelessWidget {
         SizedBox(
           width: 60,
           child: Text(
-            '$label :',
+            // FEAT-043 : [label] porte déjà le séparateur deux-points localisé
+            // (« Type : » en FR, « Type: » en EN — convention typographique
+            // différente selon la locale), plus besoin de le concaténer ici.
+            label,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

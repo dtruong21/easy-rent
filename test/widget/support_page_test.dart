@@ -10,8 +10,10 @@ library;
 
 import 'dart:async';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/support/data/support_repository.dart';
 import 'package:easyrent/features/support/presentation/support_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,7 +73,12 @@ Widget _buildPage({_FakeSupportRepository? supportRepo}) {
         supportRepo ?? _FakeSupportRepository(),
       ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 

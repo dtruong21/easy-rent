@@ -1,7 +1,10 @@
 import 'package:easyrent/features/auth/application/forgot_password_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/forgot_password_state.dart';
 import 'package:easyrent/features/auth/presentation/forgot_password_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,7 +132,12 @@ Widget _buildPage({
                 ..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+    ),
   );
 }
 
@@ -195,11 +203,14 @@ void main() {
     });
 
     testWidgets("affiche le message d'erreur en état error", (tester) async {
+      // FEAT-043 : ForgotPasswordState.error.message porte désormais le
+      // `name` technique d'un AuthError (pas un texte FR en dur) — la
+      // présentation le retraduit via AuthErrorL10n.
       await tester.pumpWidget(
         _buildPage(
           repo: _FakeAuthRepository(),
-          initialState: const ForgotPasswordState.error(
-            message: 'Trop de demandes. Réessayez dans quelques minutes.',
+          initialState: ForgotPasswordState.error(
+            message: AuthError.tooManyRequests.name,
           ),
         ),
       );

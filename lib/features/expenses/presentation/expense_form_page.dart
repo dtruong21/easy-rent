@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/money_format.dart';
 import '../../properties/application/property_detail_provider.dart';
@@ -13,7 +14,9 @@ import '../application/property_leases_provider.dart';
 import '../domain/expense.dart';
 import '../domain/expense_form_state.dart';
 import '../domain/expense_receipt_upload_state.dart';
+import '../domain/expense_submit_error.dart';
 import 'expense_form.dart';
+import 'expense_submit_error_l10n.dart';
 
 final _log = Logger('ExpenseFormPage');
 
@@ -90,7 +93,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Vérifiez le montant saisi.'),
+          content: Text(context.l10n.expensesFormInvalidAmountSnackbar),
           backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
       );
@@ -105,8 +108,8 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
     if (receiptState is ReceiptUploading) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'Envoi du justificatif en cours — patientez quelques secondes.',
+          content: Text(
+            context.l10n.expensesFormReceiptUploadInProgressSnackbar,
           ),
           backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
         ),
@@ -149,15 +152,17 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
   @override
   Widget build(BuildContext context) {
     final isCreating = widget.initial == null;
-    final title = isCreating ? 'Nouvelle dépense' : 'Modifier la dépense';
+    final title = isCreating
+        ? context.l10n.expensesFormNewTitle
+        : context.l10n.expensesFormEditTitle;
     final fallbackRoute = '/properties/${widget.propertyId}';
 
     ref.listen<ExpenseFormState>(expenseFormControllerProvider, (_, next) {
       next.whenOrNull(
         success: (expense) {
           final msg = isCreating
-              ? 'Dépense enregistrée'
-              : 'Modifications enregistrées';
+              ? context.l10n.expensesFormCreatedSnackbar
+              : context.l10n.expensesFormUpdatedSnackbar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -171,10 +176,11 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
           }
         },
         error: (msg) {
-          _log.warning('ExpenseFormPage error state: $msg');
+          final reason = ExpenseSubmitError.fromCode(msg);
+          _log.warning('ExpenseFormPage error state: ${reason.name}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg),
+              content: Text(reason.message(context)),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
@@ -188,7 +194,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
       orElse: () => false,
     );
     final errorMessage = formState.maybeWhen(
-      error: (msg) => msg,
+      error: (msg) => ExpenseSubmitError.fromCode(msg).message(context),
       orElse: () => null,
     );
 
@@ -205,7 +211,9 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
     if (asyncProperty.hasError) {
       return Scaffold(
         appBar: AppAppBar(title: title, fallbackRoute: fallbackRoute),
-        body: const Center(child: Text('Bien introuvable.')),
+        body: Center(
+          child: Text(context.l10n.expensesFormPropertyNotFoundMessage),
+        ),
       );
     }
 
@@ -258,7 +266,11 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isCreating ? 'Enregistrer la dépense' : 'Enregistrer'),
+                  : Text(
+                      isCreating
+                          ? context.l10n.expensesFormCreateSubmitButton
+                          : context.l10n.commonSave,
+                    ),
             ),
           ],
         ),
@@ -289,12 +301,12 @@ class ExpenseEditPage extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppAppBar(
-          title: 'Modifier la dépense',
+          title: context.l10n.expensesFormEditTitle,
           fallbackRoute: '/properties/$propertyId',
         ),
         body: Center(
           child: Text(
-            'Dépense introuvable.',
+            context.l10n.expensesEditNotFoundMessage,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),

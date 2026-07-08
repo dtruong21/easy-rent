@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
@@ -25,8 +26,9 @@ class TenantCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final tenant = item.tenant;
-    final pillData = tenantOccupancyPill(item);
+    final pillData = tenantOccupancyPill(context, item);
 
     return EntityCard(
       onTap: onTap,
@@ -63,7 +65,7 @@ class TenantCard extends StatelessWidget {
           const SizedBox(height: 4),
           _TenantCardRow(
             icon: Icons.home_outlined,
-            text: item.currentPropertyName ?? 'Aucun bien occupé',
+            text: item.currentPropertyName ?? l10n.tenantsNoPropertyOccupied,
           ),
           const SizedBox(height: 4),
           _TenantCardRow(
@@ -118,6 +120,7 @@ class _TenantCardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final tenantId = item.tenant.id;
     final activeLeaseId = item.activeLeaseId;
 
@@ -130,7 +133,7 @@ class _TenantCardFooter extends StatelessWidget {
             key: Key('card_view_lease_$tenantId'),
             onPressed: () => context.push('/leases/$activeLeaseId'),
             icon: const Icon(Icons.description_outlined, size: 16),
-            label: const Text('Voir le bail'),
+            label: Text(l10n.tenantsViewLeaseButton),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
@@ -143,7 +146,7 @@ class _TenantCardFooter extends StatelessWidget {
             key: Key('card_create_lease_$tenantId'),
             onPressed: () => context.push('/leases/new?tenantId=$tenantId'),
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('Créer un bail'),
+            label: Text(l10n.tenantsCreateLeaseButton),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
@@ -155,7 +158,7 @@ class _TenantCardFooter extends StatelessWidget {
           key: Key('card_edit_tenant_$tenantId'),
           onPressed: () => context.push('/tenants/$tenantId/edit'),
           icon: const Icon(Icons.edit_outlined, size: 16),
-          label: const Text('Modifier'),
+          label: Text(l10n.commonEdit),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             minimumSize: Size.zero,

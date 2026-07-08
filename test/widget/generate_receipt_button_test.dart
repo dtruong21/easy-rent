@@ -7,11 +7,13 @@ library;
 import 'dart:typed_data';
 import 'dart:async';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/generate_receipt_button.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,7 +98,12 @@ Widget _buildWidget({required ReceiptsRepository repo}) {
 
   return ProviderScope(
     overrides: [receiptsRepositoryProvider.overrideWithValue(repo)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 

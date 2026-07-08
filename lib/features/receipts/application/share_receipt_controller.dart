@@ -6,6 +6,7 @@ import '../data/receipts_repository.dart';
 import '../data/share_payload_builder.dart';
 import '../data/web_share_service_bridge.dart';
 import '../domain/receipt.dart';
+import '../domain/receipt_action_error.dart';
 import '../domain/share_receipt_state.dart';
 import 'lease_receipts_provider.dart';
 
@@ -183,12 +184,16 @@ class ShareReceiptController extends StateNotifier<ShareReceiptState> {
       state = const ShareReceiptState.idle();
     } on ShareReceiptException catch (e, st) {
       _log.warning('ShareReceiptException lors du partage', e, st);
-      state = ShareReceiptState.error(message: e.message);
+      // FEAT-043 : le message technique de [e] (parfois un DOMException brut,
+      // non traduit / non FR) n'est plus affiché tel quel — seul le code
+      // stable [ReceiptActionError.shareFailed] est stocké ; le détail reste
+      // consultable dans les logs ci-dessus.
+      state = ShareReceiptState.error(
+        message: ReceiptActionError.shareFailed.name,
+      );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors du partage', e, st);
-      state = const ShareReceiptState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = ShareReceiptState.error(message: ReceiptActionError.unknown.name);
     }
   }
 }

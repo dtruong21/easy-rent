@@ -2,8 +2,11 @@ import 'package:easyrent/features/tenants/application/tenant_form_controller.dar
 import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_form_state.dart';
+import 'package:easyrent/features/tenants/domain/tenant_submit_error.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/tenant_form_page.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,7 +123,12 @@ Widget _buildForm({
           (ref) => TenantFormController(ref)..state = initialState,
         ),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
   );
 }
 
@@ -220,10 +228,10 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_submit_form')));
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining("L'adresse email est obligatoire"),
-        findsOneWidget,
-      );
+      // FEAT-043 : le champ email route désormais via ValidationError
+      // (pattern pilote i18n) → message générique ARB (`validationRequired`)
+      // au lieu du message spécifique "L'adresse email est obligatoire".
+      expect(find.textContaining('obligatoire'), findsOneWidget);
     });
 
     testWidgets('validation — erreur email si format invalide', (tester) async {
@@ -310,16 +318,19 @@ void main() {
     // État erreur — message affiché inline
     // -----------------------------------------------------------------------
     testWidgets('état erreur — message affiché inline', (tester) async {
+      // FEAT-043 : TenantFormState.error.message porte désormais le `name`
+      // technique d'un TenantSubmitError (pas un texte FR en dur) — la
+      // présentation le retraduit via TenantSubmitErrorL10n.
       await tester.pumpWidget(
         _buildForm(
-          initialState: const TenantFormState.error(
-            message: 'Données invalides. Vérifiez les champs et réessayez.',
+          initialState: TenantFormState.error(
+            message: TenantSubmitError.saveFailed.name,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Données invalides'), findsOneWidget);
+      expect(find.textContaining('Erreur de sauvegarde'), findsOneWidget);
     });
   });
   group('TenantFormPage — mode picker (popOnSuccess)', () {
@@ -359,7 +370,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -400,7 +416,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -453,7 +474,12 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [tenantRepositoryProvider.overrideWithValue(repo)],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+          ),
         ),
       );
       await tester.pumpAndSettle();

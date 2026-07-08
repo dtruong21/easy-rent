@@ -3,11 +3,9 @@ import 'package:logging/logging.dart';
 
 import '../data/support_repository.dart';
 import '../domain/support_request_state.dart';
+import '../domain/support_submit_error.dart';
 
 final _log = Logger('SupportController');
-
-const int _kSubjectMaxLength = 120;
-const int _kMessageMaxLength = 2000;
 
 /// Contrôle le formulaire « Nous contacter » (`ProfileSupportSection`,
 /// FEAT-025).
@@ -34,22 +32,26 @@ class SupportController extends StateNotifier<SupportRequestState> {
     final trimmedMessage = message.trim();
 
     if (trimmedSubject.isEmpty) {
-      state = const SupportRequestState.error(message: 'Sujet requis');
+      state = SupportRequestState.error(
+        message: SupportSubmitError.subjectRequired.name,
+      );
       return;
     }
-    if (trimmedSubject.length > _kSubjectMaxLength) {
+    if (trimmedSubject.length > kSupportSubjectMaxLength) {
       state = SupportRequestState.error(
-        message: 'Le sujet doit faire $_kSubjectMaxLength caractères max.',
+        message: SupportSubmitError.subjectTooLong.name,
       );
       return;
     }
     if (trimmedMessage.isEmpty) {
-      state = const SupportRequestState.error(message: 'Message requis');
+      state = SupportRequestState.error(
+        message: SupportSubmitError.messageRequired.name,
+      );
       return;
     }
-    if (trimmedMessage.length > _kMessageMaxLength) {
+    if (trimmedMessage.length > kSupportMessageMaxLength) {
       state = SupportRequestState.error(
-        message: 'Le message doit faire $_kMessageMaxLength caractères max.',
+        message: SupportSubmitError.messageTooLong.name,
       );
       return;
     }
@@ -66,8 +68,8 @@ class SupportController extends StateNotifier<SupportRequestState> {
       _log.info('Demande de support envoyée');
     } catch (e, st) {
       _log.warning('Erreur envoi demande de support', e, st);
-      state = const SupportRequestState.error(
-        message: 'Envoi impossible. Réessayez dans quelques instants.',
+      state = SupportRequestState.error(
+        message: SupportSubmitError.sendFailed.name,
       );
     }
   }

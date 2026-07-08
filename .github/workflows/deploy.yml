@@ -90,6 +90,22 @@ jobs:
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
             --build-number=${{ github.run_number }}
 
+      # SEO (FEAT-049) — noindex sur STAGING uniquement. firebase.json est
+      # partagé entre le channel live (prod) et les channels de preview, donc un
+      # header X-Robots-Tag par-canal est impossible : on patche l'artefact
+      # build/web juste avant le deploy sur les builds dev. robots.txt devient
+      # tout-bloquant, le sitemap est retiré, et la <meta robots> passe en
+      # noindex. La PROD (main → app_env=prod) saute cette étape et conserve
+      # "index, follow" + le sitemap — asymétrie de risque volontaire (sûr même
+      # si l'étape est un jour oubliée).
+      - name: Staging — noindex (robots + sitemap + meta)
+        if: needs.determine-env.outputs.app_env == 'dev'
+        run: |
+          cp web/robots.staging.txt build/web/robots.txt
+          rm -f build/web/sitemap.xml
+          sed -i 's/content="index, follow"/content="noindex, nofollow"/' build/web/index.html
+          echo "Staging noindex appliqué : robots.txt=Disallow, sitemap retiré, meta robots=noindex."
+
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
       #
       # Pourquoi PAS l'action FirebaseExtended/action-hosting-deploy@v0 :

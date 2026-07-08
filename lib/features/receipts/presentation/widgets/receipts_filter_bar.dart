@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/breakpoints.dart';
 import '../../../../core/ui/cards/view_mode.dart';
 import '../../../../core/ui/cards/view_mode_provider.dart';
 import '../../application/receipts_filter_provider.dart';
 import '../../domain/receipt_status_filter.dart';
+import 'receipt_status_filter_l10n.dart';
 
 /// Barre de filtres + toggle de vue pour la page Quittances.
 ///
@@ -98,7 +100,7 @@ class _DesktopFilterBar extends ConsumerWidget {
                 .map(
                   (f) => ButtonSegment<ReceiptStatusFilter>(
                     value: f,
-                    label: Text(f.labelFr),
+                    label: Text(f.label(context)),
                   ),
                 )
                 .toList(),
@@ -158,7 +160,7 @@ class _MobileFilterBar extends StatelessWidget {
           .map(
             (f) => DropdownMenuItem<ReceiptStatusFilter>(
               value: f,
-              child: Text(f.labelFr),
+              child: Text(f.label(context)),
             ),
           )
           .toList(),
@@ -192,9 +194,12 @@ class _YearDropdown extends StatelessWidget {
       underline: const SizedBox.shrink(),
       borderRadius: BorderRadius.circular(8),
       style: theme.textTheme.bodyMedium,
-      hint: const Text('Toutes années'),
+      hint: Text(context.l10n.receiptsFilterAllYears),
       items: [
-        const DropdownMenuItem<int?>(value: null, child: Text('Toutes années')),
+        DropdownMenuItem<int?>(
+          value: null,
+          child: Text(context.l10n.receiptsFilterAllYears),
+        ),
         ...availableYears.map(
           (y) => DropdownMenuItem<int?>(value: y, child: Text('$y')),
         ),
@@ -232,16 +237,16 @@ class _ReceiptsViewModeToggle extends StatelessWidget {
       builder: (context, ref, _) {
         return SegmentedButton<ViewMode>(
           key: const Key('receipt_view_mode_toggle'),
-          segments: const [
+          segments: [
             ButtonSegment(
               value: ViewMode.table,
-              icon: Icon(Icons.view_timeline_outlined),
-              label: Text('Timeline'),
+              icon: const Icon(Icons.view_timeline_outlined),
+              label: Text(context.l10n.receiptsViewModeTimeline),
             ),
             ButtonSegment(
               value: ViewMode.card,
-              icon: Icon(Icons.grid_view_outlined),
-              label: Text('Cards'),
+              icon: const Icon(Icons.grid_view_outlined),
+              label: Text(context.l10n.receiptsViewModeCards),
             ),
           ],
           selected: {currentMode},

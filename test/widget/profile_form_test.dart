@@ -8,7 +8,9 @@
 /// - phone invalide → message d'erreur inline
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/profile/presentation/widgets/profile_form.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,6 +56,9 @@ class _TestHarnessState extends State<_TestHarness> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
       home: Scaffold(
         body: SingleChildScrollView(
           child: Column(

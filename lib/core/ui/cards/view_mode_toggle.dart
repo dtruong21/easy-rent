@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../i18n/l10n_extensions.dart';
 import '../breakpoints.dart';
 import 'view_mode.dart';
 import 'view_mode_provider.dart';
@@ -27,18 +28,19 @@ class ViewModeToggle extends ConsumerWidget {
     }
 
     final currentMode = ref.watch(viewModeProvider(pageKey));
+    final l10n = context.l10n;
 
     return SegmentedButton<ViewMode>(
-      segments: const [
+      segments: [
         ButtonSegment(
           value: ViewMode.card,
-          icon: Icon(Icons.grid_view_outlined),
-          label: Text('Cartes'),
+          icon: const Icon(Icons.grid_view_outlined),
+          label: Text(l10n.commonViewModeCards),
         ),
         ButtonSegment(
           value: ViewMode.table,
-          icon: Icon(Icons.view_list_outlined),
-          label: Text('Tableau'),
+          icon: const Icon(Icons.view_list_outlined),
+          label: Text(l10n.commonViewModeTable),
         ),
       ],
       selected: {currentMode},

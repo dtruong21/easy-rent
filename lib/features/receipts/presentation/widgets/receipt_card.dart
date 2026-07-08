@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
@@ -10,6 +11,8 @@ import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../application/void_receipt_controller.dart';
 import '../../data/receipts_repository.dart';
 import '../../domain/receipt.dart';
+import '../../domain/receipt_action_error.dart';
+import 'receipt_action_error_l10n.dart';
 import 'receipt_status_mapper.dart';
 import 'share_receipt_button.dart';
 import 'void_receipt_dialog.dart';
@@ -45,16 +48,20 @@ class ReceiptCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final pillData = receiptStatusPill(receipt);
+    final l10n = context.l10n;
+    final pillData = receiptStatusPill(context, receipt);
     final periodLabel = receiptPeriodMonthYear(receipt);
-    final secondary = receiptSecondaryLine(receipt);
+    final secondary = receiptSecondaryLine(context, receipt);
 
     _listenVoidState(context, ref, theme);
 
     return EntityCard(
       key: Key('receipt_card_${receipt.id}'),
       onTap: () => _openPdf(context, ref),
-      semanticLabel: 'Quittance $periodLabel — ${receipt.totalEuros}',
+      semanticLabel: l10n.receiptsCardSemanticLabel(
+        periodLabel,
+        receipt.totalEuros,
+      ),
       header: EntityCardHeader(
         title: Text(
           periodLabel,
@@ -99,7 +106,7 @@ class ReceiptCard extends ConsumerWidget {
       if (next is VoidReceiptSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Quittance annulée'),
+            content: Text(context.l10n.receiptsVoidSuccessSnackbar),
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
@@ -107,7 +114,9 @@ class ReceiptCard extends ConsumerWidget {
       } else if (next is VoidReceiptError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.message),
+            content: Text(
+              ReceiptActionError.fromCode(next.message).message(context),
+            ),
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );
@@ -124,11 +133,7 @@ class ReceiptCard extends ConsumerWidget {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Impossible d'ouvrir le PDF. Vérifiez votre navigateur.",
-              ),
-            ),
+            SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
           );
         }
       }
@@ -137,9 +142,7 @@ class ReceiptCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              'Impossible de générer le lien de téléchargement.',
-            ),
+            content: Text(context.l10n.receiptsErrorGeneratePdfLink),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
           ),
         );
@@ -185,20 +188,21 @@ class _ReceiptCardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ReceiptCardRow(
           icon: Icons.euro_outlined,
-          text: '${receipt.totalEuros} CC',
+          text: l10n.receiptsCardAmountCc(receipt.totalEuros),
           color: theme.colorScheme.onSurfaceVariant,
         ),
         if (receipt.isStale && !receipt.isVoided) ...[
           const SizedBox(height: 4),
           _ReceiptCardRow(
             icon: Icons.warning_amber_outlined,
-            text: 'Quittance périmée',
+            text: l10n.receiptsCardStaleWarning,
             color: theme.colorScheme.error,
           ),
         ],
@@ -275,6 +279,7 @@ class _ReceiptCardFooter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final voidState = ref.watch(voidReceiptControllerProvider);
     final isVoiding = voidState is VoidReceiptSubmitting;
 
@@ -286,7 +291,7 @@ class _ReceiptCardFooter extends ConsumerWidget {
           key: Key('btn_pdf_card_${receipt.id}'),
           onPressed: onOpenPdf,
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-          label: const Text('PDF'),
+          label: Text(l10n.receiptsOpenPdfButtonShort),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             minimumSize: Size.zero,
@@ -310,7 +315,7 @@ class _ReceiptCardFooter extends ConsumerWidget {
               color: theme.colorScheme.error,
               size: 20,
             ),
-            tooltip: 'Annuler la quittance',
+            tooltip: l10n.receiptsVoidTooltip,
             onPressed: isVoiding ? null : onVoid,
             style: IconButton.styleFrom(
               minimumSize: const Size(32, 32),

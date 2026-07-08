@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../application/delete_document_controller.dart';
 import '../../application/update_document_category_controller.dart';
 import '../../data/documents_repository.dart';
 import '../../domain/document.dart';
 import '../../domain/document_category.dart';
+import '../delete_document_error_reason_l10n.dart';
+import '../update_category_error_reason_l10n.dart';
 import 'delete_document_dialog.dart';
 import 'document_category_chip.dart';
 import 'edit_category_dialog.dart';
@@ -34,6 +37,7 @@ class DocumentListTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     // Écouter le state de suppression
     ref.listen<DeleteDocumentState>(
@@ -42,9 +46,8 @@ class DocumentListTile extends ConsumerWidget {
         if (!context.mounted) return;
         if (next is DeleteSuccess) {
           final msg = next.hardDeleted
-              ? 'Document supprimé.'
-              : 'Document supprimé de la liste. '
-                    'Le fichier est conservé pour obligation légale.';
+              ? l10n.documentsDeleteSuccessSnackbar
+              : l10n.documentsDeleteSuccessLegalHoldSnackbar;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(msg),
@@ -57,7 +60,7 @@ class DocumentListTile extends ConsumerWidget {
         } else if (next is DeleteError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(next.message),
+              content: Text(next.reason.message(context)),
               backgroundColor: theme.colorScheme.errorContainer,
             ),
           );
@@ -76,7 +79,7 @@ class DocumentListTile extends ConsumerWidget {
         if (next is UpdateCategorySuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Catégorie mise à jour.'),
+              content: Text(l10n.documentsCategoryUpdateSuccessSnackbar),
               backgroundColor: theme.colorScheme.primaryContainer,
             ),
           );
@@ -88,7 +91,7 @@ class DocumentListTile extends ConsumerWidget {
         } else if (next is UpdateCategoryError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(next.message),
+              content: Text(next.reason.message(context)),
               backgroundColor: theme.colorScheme.errorContainer,
             ),
           );
@@ -201,7 +204,7 @@ class _LegalHoldBadge extends StatelessWidget {
           ),
           const SizedBox(width: 2),
           Text(
-            'Obligation légale',
+            context.l10n.documentsLegalHoldBadge,
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.tertiary,
               fontSize: 10,
@@ -226,17 +229,21 @@ class _ActionsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return PopupMenuButton<_Action>(
       key: Key('doc_menu_${document.id}'),
       icon: const Icon(Icons.more_vert),
       onSelected: (action) => _handleAction(context, action),
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: _Action.download, child: Text('Télécharger')),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: _Action.download,
+          child: Text(l10n.documentsActionDownload),
+        ),
         PopupMenuItem(
           value: _Action.editCategory,
-          child: Text('Modifier la catégorie'),
+          child: Text(l10n.documentsActionEditCategory),
         ),
-        PopupMenuItem(value: _Action.delete, child: Text('Supprimer')),
+        PopupMenuItem(value: _Action.delete, child: Text(l10n.commonDelete)),
       ],
     );
   }
@@ -263,12 +270,12 @@ class _ActionsMenu extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         if (!context.mounted) return;
-        _showError(context, 'Impossible d\'ouvrir le document.');
+        _showError(context, context.l10n.documentsDownloadErrorCantOpen);
       }
     } catch (e, st) {
       _log.severe('download failed doc=${document.id}', e, st);
       if (!context.mounted) return;
-      _showError(context, 'Erreur lors du téléchargement. Réessayez.');
+      _showError(context, context.l10n.documentsDownloadErrorGeneric);
     }
   }
 

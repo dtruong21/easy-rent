@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/utils/payment_form_validators.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 import '../../domain/payment_method.dart';
+import '../payment_method_l10n.dart';
 import 'payment_amount_warning.dart';
 
 /// Champs partagés du formulaire paiement.
@@ -104,7 +107,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
       initialDate: _periodStart ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Début de période',
+      helpText: context.l10n.paymentsFormPeriodStartPickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -121,7 +124,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
       initialDate: _periodEnd ?? (_periodStart ?? DateTime.now()),
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Fin de période',
+      helpText: context.l10n.paymentsFormPeriodEndPickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -138,7 +141,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
       initialDate: _paidAt ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Date de paiement',
+      helpText: context.l10n.paymentsFormPaidAtPickerHelp,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -182,9 +185,10 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             controller: widget.rentController,
             enabled: widget.enabled,
             decoration: InputDecoration(
-              labelText: 'Loyer hors charges (€) *',
-              hintText:
-                  'Ex. : ${MoneyFormat.centsToInput(widget.leaseRentCents)}',
+              labelText: context.l10n.paymentsFormRentLabel,
+              hintText: context.l10n.paymentsFormRentHint(
+                MoneyFormat.centsToInput(widget.leaseRentCents),
+              ),
               suffixText: '€',
               border: const OutlineInputBorder(),
             ),
@@ -198,7 +202,9 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             },
             validator: (v) {
               if (!_rentTouched) return null;
-              return PaymentFormValidators.validateRentAmount(v);
+              return PaymentFormValidators.validateRentAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -208,11 +214,11 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             key: const Key('field_charges'),
             controller: widget.chargesController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Charges (€) *',
-              hintText: 'Ex. : 50,00 (saisir 0 si aucune charge)',
+            decoration: InputDecoration(
+              labelText: context.l10n.paymentsFormChargesLabel,
+              hintText: context.l10n.paymentsFormChargesHint,
               suffixText: '€',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) {
@@ -224,7 +230,9 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             },
             validator: (v) {
               if (!_chargesTouched) return null;
-              return PaymentFormValidators.validateChargesAmount(v);
+              return PaymentFormValidators.validateChargesAmount(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 8),
@@ -241,7 +249,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
               if (!_paymentMethodTouched) return null;
               return PaymentFormValidators.validatePaymentMethod(
                 _paymentMethod,
-              );
+              )?.message(context);
             },
             builder: (state) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,13 +257,16 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 DropdownButtonFormField<PaymentMethod>(
                   initialValue: _paymentMethod,
                   decoration: InputDecoration(
-                    labelText: 'Mode de paiement *',
+                    labelText: context.l10n.paymentsFormPaymentMethodLabel,
                     border: const OutlineInputBorder(),
                     errorText: state.errorText,
                   ),
                   items: PaymentMethod.values
                       .map(
-                        (m) => DropdownMenuItem(value: m, child: Text(m.label)),
+                        (m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(PaymentMethodL10n(m).label(context)),
+                        ),
                       )
                       .toList(),
                   onChanged: widget.enabled
@@ -278,20 +289,20 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             key: const Key('field_reference'),
             controller: _referenceController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Référence (n° virement / chèque, optionnel)',
-              hintText: 'Ex. : VIR-2024-001',
-              helperText: 'Pour rapprochement comptable',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.paymentsFormReferenceLabel,
+              hintText: context.l10n.paymentsFormReferenceHint,
+              helperText: context.l10n.paymentsFormReferenceHelper,
+              border: const OutlineInputBorder(),
             ),
             maxLength: 100,
             validator: (v) {
               if (v == null || v.isEmpty) return null;
               if (v.trim().isEmpty) {
-                return 'La référence ne peut pas être uniquement des espaces.';
+                return context.l10n.paymentsFormReferenceWhitespaceError;
               }
               if (v.length > 100) {
-                return 'La référence ne peut pas dépasser 100 caractères.';
+                return context.l10n.paymentsFormReferenceTooLongError;
               }
               return null;
             },
@@ -304,13 +315,15 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             initialValue: _periodStart,
             validator: (_) {
               if (!_periodStartTouched) return null;
-              return PaymentFormValidators.validatePeriodStart(_periodStart);
+              return PaymentFormValidators.validatePeriodStart(
+                _periodStart,
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickPeriodStart : null,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Début de période *',
+                  labelText: context.l10n.paymentsFormPeriodStartLabel,
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.calendar_today_outlined),
                   errorText: state.errorText,
@@ -318,7 +331,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 child: Text(
                   _periodStart != null
                       ? FrenchDate.format(_periodStart!)
-                      : 'Sélectionner une date',
+                      : context.l10n.paymentsFormSelectDatePlaceholder,
                   style: _periodStart == null
                       ? theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -339,13 +352,13 @@ class PaymentFormWidgetState extends State<PaymentForm> {
               return PaymentFormValidators.validatePeriodEnd(
                 _periodEnd,
                 _periodStart,
-              );
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickPeriodEnd : null,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Fin de période *',
+                  labelText: context.l10n.paymentsFormPeriodEndLabel,
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.calendar_today_outlined),
                   errorText: state.errorText,
@@ -353,7 +366,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 child: Text(
                   _periodEnd != null
                       ? FrenchDate.format(_periodEnd!)
-                      : 'Sélectionner une date',
+                      : context.l10n.paymentsFormSelectDatePlaceholder,
                   style: _periodEnd == null
                       ? theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -371,13 +384,15 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             initialValue: _paidAt,
             validator: (_) {
               if (!_paidAtTouched) return null;
-              return PaymentFormValidators.validatePaidAt(_paidAt);
+              return PaymentFormValidators.validatePaidAt(
+                _paidAt,
+              )?.message(context);
             },
             builder: (state) => InkWell(
               onTap: widget.enabled ? _pickPaidAt : null,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Date de paiement *',
+                  labelText: context.l10n.paymentsFormPaidAtLabel,
                   border: const OutlineInputBorder(),
                   suffixIcon: const Icon(Icons.calendar_today_outlined),
                   errorText: state.errorText,
@@ -385,7 +400,7 @@ class PaymentFormWidgetState extends State<PaymentForm> {
                 child: Text(
                   _paidAt != null
                       ? FrenchDate.format(_paidAt!)
-                      : 'Sélectionner une date',
+                      : context.l10n.paymentsFormSelectDatePlaceholder,
                   style: _paidAt == null
                       ? theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -402,18 +417,16 @@ class PaymentFormWidgetState extends State<PaymentForm> {
             key: const Key('field_notes'),
             controller: _notesController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Motif / notes (optionnel)',
-              hintText:
-                  'Ex. : régularisation charges 2025, charge exceptionnelle',
-              helperText:
-                  'Ce motif apparaît sur le reçu ou la quittance générés '
-                  'pour ce paiement.',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.l10n.paymentsFormNotesLabel,
+              hintText: context.l10n.paymentsFormNotesHint,
+              helperText: context.l10n.paymentsFormNotesHelper,
+              border: const OutlineInputBorder(),
             ),
             maxLines: 3,
             maxLength: 500,
-            validator: (v) => PaymentFormValidators.validateNotes(v),
+            validator: (v) =>
+                PaymentFormValidators.validateNotes(v)?.message(context),
           ),
         ],
       ),

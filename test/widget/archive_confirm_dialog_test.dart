@@ -1,4 +1,6 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/widgets/archive_confirm_dialog.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,6 +13,9 @@ Widget _buildPropertyDialog({
   VoidCallback? onConfirm,
 }) {
   return MaterialApp(
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
     home: Scaffold(
       body: Builder(
         builder: (context) => ArchiveConfirmDialog(
@@ -37,6 +42,9 @@ Widget _buildTenantDialog({
   VoidCallback? onConfirm,
 }) {
   return MaterialApp(
+    locale: const Locale('fr'),
+    supportedLocales: supportedLocales,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
     home: Scaffold(
       body: Builder(
         builder: (context) => ArchiveConfirmDialog(

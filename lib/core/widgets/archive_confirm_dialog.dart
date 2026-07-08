@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/l10n_extensions.dart';
+
 /// Dialog de confirmation d'archivage — mutualisé pour toutes les entités.
 ///
 /// Paramétré via [title], [entityLabel], [standardMessage] et
@@ -42,13 +44,14 @@ class ArchiveConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AlertDialog(
       title: Text(title),
       content: Text(hasActiveLease ? activeLeaseMessage : standardMessage),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(
@@ -59,7 +62,7 @@ class ArchiveConfirmDialog extends StatelessWidget {
             Navigator.of(context).pop();
             onConfirm();
           },
-          child: const Text('Archiver'),
+          child: Text(l10n.commonArchive),
         ),
       ],
     );

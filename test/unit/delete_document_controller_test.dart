@@ -134,7 +134,10 @@ void main() {
 
       final state = container.read(deleteDocumentControllerProvider('doc-1'));
       expect(state, isA<DeleteError>());
-      expect((state as DeleteError).message, isNotEmpty);
+      expect(
+        (state as DeleteError).reason,
+        DeleteDocumentErrorReason.unexpected,
+      );
     });
   });
 

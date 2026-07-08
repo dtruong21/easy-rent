@@ -12,6 +12,22 @@ final _log = Logger('DeleteDocumentController');
 // État sealed
 // ---------------------------------------------------------------------------
 
+/// Motif d'échec de la suppression d'un document — indépendant de la locale
+/// d'affichage (FEAT-043).
+///
+/// [DeleteDocumentController] (sans `BuildContext`) reste une fonction pure :
+/// il détermine le motif mais ne compose aucun message traduit. La couche
+/// présentation ([DocumentListTile]) mappe cet enum vers `context.l10n.<clé>`
+/// via l'extension `DeleteDocumentErrorReasonL10n` (voir
+/// `lib/features/documents/presentation/delete_document_error_reason_l10n.dart`).
+enum DeleteDocumentErrorReason {
+  /// Erreur réseau/backend (`FirebaseException`) lors du soft-delete.
+  connectionError,
+
+  /// Erreur inattendue non catégorisée.
+  unexpected,
+}
+
 /// État du flow de suppression d'un document.
 sealed class DeleteDocumentState {
   const DeleteDocumentState();
@@ -38,8 +54,8 @@ final class DeleteSuccess extends DeleteDocumentState {
 
 /// Erreur lors de la suppression.
 final class DeleteError extends DeleteDocumentState {
-  const DeleteError({required this.message});
-  final String message;
+  const DeleteError({required this.reason});
+  final DeleteDocumentErrorReason reason;
 }
 
 // ---------------------------------------------------------------------------
@@ -73,12 +89,12 @@ class DeleteDocumentController extends StateNotifier<DeleteDocumentState> {
       state = DeleteSuccess(hardDeleted: result.hardDeleted);
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException lors du soft-delete', e, st);
-      state = DeleteError(
-        message: "Erreur. Vérifiez votre connexion et réessayez.",
+      state = const DeleteError(
+        reason: DeleteDocumentErrorReason.connectionError,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors du soft-delete', e, st);
-      state = const DeleteError(message: 'Suppression impossible. Réessayez.');
+      state = const DeleteError(reason: DeleteDocumentErrorReason.unexpected);
     }
   }
 

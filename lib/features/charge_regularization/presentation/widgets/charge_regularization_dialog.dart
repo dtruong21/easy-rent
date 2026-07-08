@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../expenses/application/expenses_provider.dart';
 import '../../../payments/application/lease_payments_provider.dart';
@@ -9,8 +10,10 @@ import '../../application/charge_provisions_calculator.dart';
 import '../../application/charge_regularization_share_controller.dart';
 import '../../application/recoverable_expenses_calculator.dart';
 import '../../domain/charge_regularization_balance.dart';
+import '../../domain/charge_regularization_share_error_reason.dart';
 import '../../domain/charge_regularization_share_state.dart';
 import 'charge_regularization_form.dart';
+import 'charge_regularization_share_error_reason_l10n.dart';
 
 /// Dialog de régularisation annuelle des charges (FEAT-029 V1.2).
 ///
@@ -194,14 +197,14 @@ class _ChargeRegularizationDialogState
         !isPreparing && asyncPayments.hasValue && !_isPeriodInvalid;
 
     return AlertDialog(
-      title: const Text('Régularisation annuelle des charges'),
+      title: Text(context.l10n.chargeRegularizationDialogTitle),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
           child: asyncPayments.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Text(
-              'Erreur lors du chargement des paiements.',
+              context.l10n.chargeRegularizationPaymentsLoadError,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             data: (payments) => ChargeRegularizationForm(
@@ -225,7 +228,7 @@ class _ChargeRegularizationDialogState
         TextButton(
           key: const Key('btn_charge_regularization_cancel'),
           onPressed: isPreparing ? null : () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(context.l10n.commonCancel),
         ),
         FilledButton.icon(
           key: const Key('btn_charge_regularization_generate'),
@@ -239,7 +242,7 @@ class _ChargeRegularizationDialogState
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.picture_as_pdf_outlined, size: 18),
-          label: const Text('Générer et partager'),
+          label: Text(context.l10n.chargeRegularizationGenerateButton),
         ),
       ],
     );
@@ -283,8 +286,8 @@ class _ChargeRegularizationDialogState
       case ChargeRegularizationShareShared(:final usedNativeShare):
         if (context.mounted) Navigator.of(context).pop();
         final message = usedNativeShare
-            ? 'Avis de régularisation partagé.'
-            : 'PDF téléchargé. Pensez à l\'attacher manuellement à votre email.';
+            ? context.l10n.chargeRegularizationShareSuccessNative
+            : context.l10n.chargeRegularizationShareSuccessFallback;
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -296,9 +299,12 @@ class _ChargeRegularizationDialogState
         notifier.reset();
       case ChargeRegularizationShareError():
         if (context.mounted) {
+          final reason = ChargeRegularizationShareErrorReason.fromCode(
+            state.message,
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(reason.message(context)),
               backgroundColor: theme.colorScheme.errorContainer,
             ),
           );

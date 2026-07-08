@@ -1,4 +1,5 @@
 import 'package:easyrent/core/utils/surface_validator.dart';
+import 'package:easyrent/core/validation/validation_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -56,78 +57,102 @@ void main() {
     // -------------------------------------------------------------------------
     // Zéro — invalide (surface doit être > 0)
     // -------------------------------------------------------------------------
-    test('zéro lève SurfaceValidationException "positive"', () {
-      expect(
-        () => SurfaceValidator.parse('0'),
-        throwsA(
-          isA<SurfaceValidationException>().having(
-            (e) => e.message,
-            'message',
-            contains('positive'),
+    test(
+      'zéro lève SurfaceValidationException(ValidationError.surfaceNotPositive)',
+      () {
+        expect(
+          () => SurfaceValidator.parse('0'),
+          throwsA(
+            isA<SurfaceValidationException>().having(
+              (e) => e.error,
+              'error',
+              ValidationError.surfaceNotPositive,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     // -------------------------------------------------------------------------
     // Négatif
     // -------------------------------------------------------------------------
-    test('valeur négative lève SurfaceValidationException "positive"', () {
-      expect(
-        () => SurfaceValidator.parse('-5'),
-        throwsA(
-          isA<SurfaceValidationException>().having(
-            (e) => e.message,
-            'message',
-            contains('positive'),
+    test(
+      'valeur négative lève SurfaceValidationException(ValidationError.surfaceNotPositive)',
+      () {
+        expect(
+          () => SurfaceValidator.parse('-5'),
+          throwsA(
+            isA<SurfaceValidationException>().having(
+              (e) => e.error,
+              'error',
+              ValidationError.surfaceNotPositive,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     // -------------------------------------------------------------------------
     // Trop grand
     // -------------------------------------------------------------------------
-    test('valeur > 9999,99 lève SurfaceValidationException "maximale"', () {
-      expect(
-        () => SurfaceValidator.parse('10000'),
-        throwsA(
-          isA<SurfaceValidationException>().having(
-            (e) => e.message,
-            'message',
-            contains('maximale'),
+    test(
+      'valeur > 9999,99 lève SurfaceValidationException(ValidationError.surfaceTooLarge)',
+      () {
+        expect(
+          () => SurfaceValidator.parse('10000'),
+          throwsA(
+            isA<SurfaceValidationException>().having(
+              (e) => e.error,
+              'error',
+              ValidationError.surfaceTooLarge,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
-    test('"9999,999" est > 9999.99 → lève exception maximale', () {
+    test('"9999,999" est > 9999.99 → lève exception surfaceTooLarge', () {
       expect(
         () => SurfaceValidator.parse('9999,999'),
-        throwsA(isA<SurfaceValidationException>()),
+        throwsA(
+          isA<SurfaceValidationException>().having(
+            (e) => e.error,
+            'error',
+            ValidationError.surfaceTooLarge,
+          ),
+        ),
       );
     });
 
     // -------------------------------------------------------------------------
     // Texte non numérique
     // -------------------------------------------------------------------------
-    test('texte non numérique lève SurfaceValidationException "invalide"', () {
-      expect(
-        () => SurfaceValidator.parse('abc'),
-        throwsA(
-          isA<SurfaceValidationException>().having(
-            (e) => e.message,
-            'message',
-            contains('invalide'),
+    test(
+      'texte non numérique lève SurfaceValidationException(ValidationError.surfaceInvalid)',
+      () {
+        expect(
+          () => SurfaceValidator.parse('abc'),
+          throwsA(
+            isA<SurfaceValidationException>().having(
+              (e) => e.error,
+              'error',
+              ValidationError.surfaceInvalid,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
-    test('texte mixte "45m²" lève exception invalide', () {
+    test('texte mixte "45m²" lève exception surfaceInvalid', () {
       expect(
         () => SurfaceValidator.parse('45m²'),
-        throwsA(isA<SurfaceValidationException>()),
+        throwsA(
+          isA<SurfaceValidationException>().having(
+            (e) => e.error,
+            'error',
+            ValidationError.surfaceInvalid,
+          ),
+        ),
       );
     });
   });
@@ -145,12 +170,18 @@ void main() {
       expect(SurfaceValidator.validate('50'), isNull);
     });
 
-    test('valeur négative retourne message d\'erreur', () {
-      expect(SurfaceValidator.validate('-1'), isNotNull);
+    test('valeur négative retourne ValidationError.surfaceNotPositive', () {
+      expect(
+        SurfaceValidator.validate('-1'),
+        ValidationError.surfaceNotPositive,
+      );
     });
 
-    test('trop grand retourne message d\'erreur', () {
-      expect(SurfaceValidator.validate('99999'), isNotNull);
+    test('trop grand retourne ValidationError.surfaceTooLarge', () {
+      expect(
+        SurfaceValidator.validate('99999'),
+        ValidationError.surfaceTooLarge,
+      );
     });
 
     test('virgule FR retourne null (valide)', () {

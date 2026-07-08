@@ -1,5 +1,7 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/tenants/presentation/widgets/tenant_lease_summary.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,6 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 Widget _buildWidget(List<Map<String, dynamic>> leases) {
   return MaterialApp(
     theme: AppTheme.light,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: supportedLocales,
+    locale: const Locale('fr'),
     home: Scaffold(body: TenantLeaseSummary(leases: leases)),
   );
 }

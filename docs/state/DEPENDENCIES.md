@@ -1,6 +1,6 @@
 # Dépendances — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `functions/package.json` + `firebase.json`. **Dernière sync** : 2026-07-05 (FEAT-023 package_info_plus +9.0.1, functions build = tsc -p tsconfig.build.json). **Pivot** : FEAT-019 (2026-07-02) — Firebase Auth + Firestore + Cloud Functions (Node.js 20).
+> Maintenu par `state-keeper`. **Source** : `pubspec.yaml` + `functions/package.json` + `firebase.json`. **Dernière sync** : 2026-07-08 (FEAT-043 i18n uses gen_l10n native, no new packages ; FEAT-024 mobile no pubspec changes ; FEAT-045 no new deps). **Pivot** : FEAT-019 (2026-07-02) — Firebase Auth + Firestore + Cloud Functions (Node.js 20).
 
 ## Flutter (pubspec.yaml)
 

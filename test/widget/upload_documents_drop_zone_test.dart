@@ -5,11 +5,13 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
 import 'package:easyrent/features/documents/domain/documents_quota.dart';
 import 'package:easyrent/features/documents/presentation/widgets/upload_documents_drop_zone.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -74,6 +76,9 @@ Widget _buildDropZone({int quotaBytes = 0}) {
       ),
     ],
     child: const MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: Locale('fr'),
+      supportedLocales: supportedLocales,
       home: Scaffold(
         body: SingleChildScrollView(
           child: UploadDocumentsDropZone(leaseId: 'lease-1'),

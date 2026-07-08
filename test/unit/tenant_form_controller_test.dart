@@ -5,6 +5,7 @@ import 'package:easyrent/features/tenants/data/tenant_repository.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_form_state.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
+import 'package:easyrent/features/tenants/domain/tenant_submit_error.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -247,7 +248,7 @@ void main() {
     // Erreur FirebaseFunctionsException
     // -----------------------------------------------------------------------
     test(
-      'FirebaseFunctionsException → état error avec message traduit FR',
+      'FirebaseFunctionsException → état error avec code technique stable',
       () async {
         final repo = _FakeRepo()
           ..createError = FirebaseFunctionsException(
@@ -295,7 +296,7 @@ void main() {
     // -----------------------------------------------------------------------
     // TenantNotFoundException lors d'un update
     // -----------------------------------------------------------------------
-    test('TenantNotFoundException → état error avec message localisé', () async {
+    test('TenantNotFoundException → état error avec code notFound', () async {
       final repo = _FakeRepo()
         ..createError = const TenantNotFoundException('missing-id');
       final container = _makeContainer(repo);
@@ -311,9 +312,10 @@ void main() {
 
       final state = container.read(tenantFormControllerProvider);
       expect(_isError(state), isTrue);
-      // Le message doit mentionner "archivé" ou "introuvable" (vérification FR).
-      final msg = _errorMessage(state)!.toLowerCase();
-      expect(msg.contains('introuvable') || msg.contains('archiv'), isTrue);
+      // FEAT-043 (i18n) : le champ `message` porte désormais une clé
+      // technique stable (`TenantSubmitError.name`), traduite en
+      // présentation — voir tenant_submit_error.dart.
+      expect(_errorMessage(state), TenantSubmitError.notFound.name);
     });
 
     // -----------------------------------------------------------------------

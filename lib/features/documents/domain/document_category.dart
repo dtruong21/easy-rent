@@ -27,6 +27,13 @@ enum DocumentCategory {
   };
 
   /// Libellé FR pour l'affichage dans l'UI.
+  ///
+  /// FEAT-043 (i18n) : conservé en dur pour ne pas casser
+  /// `test/unit/document_category_test.dart` (test unitaire pur, sans
+  /// `BuildContext`) — mêmes raisons que `LeaseType.labelFr`, voir
+  /// `lib/features/leases/domain/lease_type.dart`. Le nouveau code
+  /// présentation doit utiliser `DocumentCategoryL10n.localizedLabel`
+  /// (`lib/features/documents/presentation/document_category_l10n.dart`).
   String get label => switch (this) {
     DocumentCategory.bailSigne => 'Bail signé',
     DocumentCategory.etatDesLieux => 'État des lieux',

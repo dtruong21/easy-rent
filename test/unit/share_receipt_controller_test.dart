@@ -17,6 +17,7 @@ import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/data/web_share_service_bridge.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
+import 'package:easyrent/features/receipts/domain/receipt_action_error.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
 import 'package:easyrent/features/receipts/domain/share_receipt_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -333,7 +334,12 @@ void main() {
       final state = container.read(shareReceiptControllerProvider);
       expect(state, isA<ShareReceiptError>());
       if (state case ShareReceiptError(:final message)) {
-        expect(message, contains('DOM error'));
+        // FEAT-043 (i18n) : le controller ne stocke plus le message brut de
+        // l'exception (parfois une chaîne technique non traduite issue du
+        // navigateur) mais le nom (code stable) du ReceiptActionError
+        // correspondant ; le détail original ('DOM error') n'est plus que
+        // loggé (Logger.warning), jamais affiché ni stocké dans l'état.
+        expect(message, ReceiptActionError.shareFailed.name);
       }
     });
   });

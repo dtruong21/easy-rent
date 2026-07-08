@@ -324,7 +324,10 @@ class FirestoreDashboardRepository implements DashboardRepository {
             : DateTime.now();
         final periodStart = data['periodStart'];
         final periodEnd = data['periodEnd'];
-        String periodLabel = 'Période inconnue';
+        // Sentinel FR — pas de BuildContext ici (couche data/). Détecté et
+        // relocalisé côté présentation par RecentActivitySection (FEAT-043,
+        // même pattern que LeaseListItemDisplayL10n).
+        String periodLabel = kUnknownPeriodLabelSentinel;
         if (periodStart is Timestamp && periodEnd is Timestamp) {
           final s = periodStart.toDate().toIso8601String().substring(0, 10);
           final e = periodEnd.toDate().toIso8601String().substring(0, 10);

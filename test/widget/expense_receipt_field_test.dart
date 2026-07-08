@@ -12,9 +12,11 @@ import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
 import 'package:easyrent/features/documents/domain/documents_quota.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/expenses/application/expense_receipt_upload_controller.dart';
 import 'package:easyrent/features/expenses/domain/expense_receipt_upload_state.dart';
 import 'package:easyrent/features/expenses/presentation/expense_receipt_field.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +77,9 @@ Widget _buildField({
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
       home: Scaffold(
         body: SingleChildScrollView(
           child: ExpenseReceiptField(

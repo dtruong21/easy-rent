@@ -1,0 +1,13 @@
+# Config gen_l10n (FEAT-043 — i18n foundation).
+#
+# Template = app_en.arb : gen_l10n exige que toutes les clés existent dans le
+# template ; les autres langues (app_fr.arb) peuvent être partielles (fallback
+# sur le template). On documente ici quand même TOUTES les clés dans les deux
+# fichiers (convention interne, cf. lib/l10n/app_en.arb en-tête) pour garder
+# la parité stricte pendant l'extraction module par module (FEAT-043 phase 1+).
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+untranslated-messages-file: l10n_untranslated.json

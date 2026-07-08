@@ -4,6 +4,7 @@
 library;
 
 import 'package:easyrent/core/utils/profile_form_validators.dart';
+import 'package:easyrent/core/validation/validation_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -43,9 +44,11 @@ void main() {
       expect(ProfileFormValidators.validateFullName('A' * 201), isNotNull);
     });
 
-    test('message contient "obligatoire" si vide', () {
-      final msg = ProfileFormValidators.validateFullName('');
-      expect(msg, contains('obligatoire'));
+    test('vide retourne ValidationError.fullNameRequired', () {
+      expect(
+        ProfileFormValidators.validateFullName(''),
+        ValidationError.fullNameRequired,
+      );
     });
   });
 
@@ -88,9 +91,11 @@ void main() {
       expect(ProfileFormValidators.validateAddress('A' * 501), isNotNull);
     });
 
-    test('message contient "obligatoire" si vide', () {
-      final msg = ProfileFormValidators.validateAddress('');
-      expect(msg, contains('obligatoire'));
+    test('vide retourne ValidationError.profileAddressRequired', () {
+      expect(
+        ProfileFormValidators.validateAddress(''),
+        ValidationError.profileAddressRequired,
+      );
     });
   });
 

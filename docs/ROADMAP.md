@@ -44,6 +44,21 @@
       semaine du 6 juillet 2026. Prérequis FEAT-026 (nav shell adaptative) ✅ livré.
       Préparation : [`docs/MOBILE.md`](MOBILE.md)
 
+## Croissance — SEO & acquisition
+
+- [x] **FEAT-049 — SEO du PWA (quick-wins, Option A)** — ✅ livré staging 2026-07-08
+      (PR #73). `<html lang="fr">`, title/description riches en mots-clés, canonical,
+      Open Graph + Twitter Card, JSON-LD (Organization / SoftwareApplication / WebSite),
+      bloc HTML statique crawlable, `robots.txt` + `sitemap.xml`, **noindex staging**
+      automatique. Agent `seo-specialist` + workflow `seo-audit` ajoutés au pipeline
+      (phase *Growth*). Stratégie complète : [`docs/SEO.md`](SEO.md).
+- [ ] **FEAT-050 — Site marketing statique crawlable (SEO Option B)** — 📋 cadré
+      2026-07-08. Le rendu CanvasKit n'est pas indexable → seul un site statique séparé
+      débloque le contenu crawlable par page. Topologie confirmée : sous-domaine
+      `app.baillan.fr` (app Flutter inchangée, noindex) + `baillan.fr` (site **Astro**
+      canonique). Démarre **après** le lancement (jamais de migration au go-live).
+      Spec : [`docs/backlog/050-marketing-site-seo.md`](backlog/050-marketing-site-seo.md).
+
 ## Post-MVP P1 — backlog à prioriser
 
 > Priorisation par le Product Owner → détail ordonné dans [`docs/BACKLOG.md`](BACKLOG.md).

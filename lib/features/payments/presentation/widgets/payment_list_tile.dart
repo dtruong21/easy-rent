@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../core/widgets/archive_confirm_dialog.dart';
 import '../../../receipts/presentation/widgets/generate_receipt_button.dart';
 import '../../domain/payment.dart';
+import '../payment_method_l10n.dart';
 
 /// Tile d'un paiement dans la liste de la fiche bail.
 ///
@@ -36,9 +38,9 @@ class PaymentListTile extends StatelessWidget {
     );
 
     final subtitleParts = [
-      payment.paymentMethod.label,
+      PaymentMethodL10n(payment.paymentMethod).label(context),
       if (payment.reference != null && payment.reference!.isNotEmpty)
-        'Réf : ${payment.reference!}',
+        context.l10n.paymentsListReferencePrefix(payment.reference!),
       amountLabel,
     ];
 
@@ -58,13 +60,13 @@ class PaymentListTile extends StatelessWidget {
           IconButton(
             key: Key('btn_edit_payment_${payment.id}'),
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Modifier',
+            tooltip: context.l10n.commonEdit,
             onPressed: onEdit,
           ),
           IconButton(
             key: Key('btn_archive_payment_${payment.id}'),
             icon: const Icon(Icons.archive_outlined),
-            tooltip: 'Archiver',
+            tooltip: context.l10n.paymentsArchiveTooltip,
             color: theme.colorScheme.error,
             onPressed: () => _confirmArchive(context),
           ),
@@ -74,17 +76,16 @@ class PaymentListTile extends StatelessWidget {
   }
 
   Future<void> _confirmArchive(BuildContext context) async {
+    final l10n = context.l10n;
     await showDialog<void>(
       context: context,
       builder: (_) => ArchiveConfirmDialog(
-        title: 'Archiver ce paiement ?',
-        entityLabel: 'Ce paiement',
-        standardMessage:
-            'Voulez-vous archiver ce paiement ? '
-            "Il n'apparaîtra plus dans la liste.",
-        activeLeaseMessage:
-            'Voulez-vous archiver ce paiement ? '
-            "Il n'apparaîtra plus dans la liste.",
+        title: l10n.paymentsArchiveDialogTitle,
+        entityLabel: l10n.paymentsArchiveDialogEntityLabel,
+        // Un paiement n'a pas de distinction "bail actif" (hasActiveLease
+        // toujours false ci-dessous) — même message pour les deux variantes.
+        standardMessage: l10n.paymentsArchiveDialogMessage,
+        activeLeaseMessage: l10n.paymentsArchiveDialogMessage,
         hasActiveLease: false,
         onConfirm: onArchive,
       ),

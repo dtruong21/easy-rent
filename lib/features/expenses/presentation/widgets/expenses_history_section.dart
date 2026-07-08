@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../application/expenses_provider.dart';
 import '../../domain/expense.dart';
+import '../../domain/expense_category.dart';
+import '../expense_category_l10n.dart';
 
 /// Carte résumé des dépenses affichée sur [PropertyDetailPage].
 ///
@@ -31,7 +34,7 @@ class ExpensesHistorySection extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Dépenses',
+                    context.l10n.expensesHistorySectionTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -39,7 +42,7 @@ class ExpensesHistorySection extends ConsumerWidget {
                   key: const Key('btn_view_expenses_history'),
                   onPressed: () =>
                       context.push('/properties/$propertyId/expenses'),
-                  child: const Text("Voir l'historique"),
+                  child: Text(context.l10n.expensesHistoryViewAllButton),
                 ),
               ],
             ),
@@ -47,7 +50,7 @@ class ExpensesHistorySection extends ConsumerWidget {
             asyncExpenses.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Text(
-                'Impossible de charger les dépenses.',
+                context.l10n.expensesHistoryLoadErrorMessage,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               data: (expenses) => _Summary(expenses: expenses),
@@ -56,7 +59,7 @@ class ExpensesHistorySection extends ConsumerWidget {
             OutlinedButton.icon(
               key: const Key('btn_add_expense_from_history_section'),
               icon: const Icon(Icons.add),
-              label: const Text('Ajouter une dépense'),
+              label: Text(context.l10n.expensesAddButton),
               onPressed: () =>
                   context.push('/properties/$propertyId/expenses/new'),
             ),
@@ -81,7 +84,7 @@ class _Summary extends StatelessWidget {
 
     if (expenses.isEmpty) {
       return Text(
-        'Aucune dépense enregistrée pour ce bien',
+        context.l10n.expensesHistoryEmptyMessage,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -92,7 +95,7 @@ class _Summary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Sur les 12 derniers mois',
+          context.l10n.expensesHistoryLast12MonthsLabel,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -104,13 +107,13 @@ class _Summary extends StatelessWidget {
           children: [
             _TotalChip(
               key: const Key('summary_total_recoverable'),
-              label: 'Récupérable',
+              label: ExpenseCategory.recoverable.localizedLabel(context),
               amountCents: totals.recoverableCents,
               color: Colors.teal.shade700,
             ),
             _TotalChip(
               key: const Key('summary_total_non_recoverable'),
-              label: 'Non récupérable',
+              label: ExpenseCategory.nonRecoverable.localizedLabel(context),
               amountCents: totals.nonRecoverableCents,
               color: theme.colorScheme.error,
             ),

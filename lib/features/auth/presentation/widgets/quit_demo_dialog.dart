@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
+
 /// Choix retourné par [showQuitDemoDialog].
 enum QuitDemoChoice {
   /// L'utilisateur préfère convertir sa session en compte (conserve le
@@ -18,24 +20,22 @@ enum QuitDemoChoice {
 /// = annuler). La navigation et le signOut sont à la charge de l'appelant :
 /// le dialog ne fait que recueillir le choix, retourne `null` si annulé.
 Future<QuitDemoChoice?> showQuitDemoDialog(BuildContext context) {
+  final l10n = context.l10n;
   return showDialog<QuitDemoChoice>(
     context: context,
     builder: (context) => AlertDialog(
       key: const Key('quit_demo_dialog'),
-      title: const Text('Quitter le mode démo ?'),
-      content: const Text(
-        'Votre session démo sera clôturée et son scénario définitivement '
-        'perdu. Créez un compte gratuit pour le conserver.',
-      ),
+      title: Text(l10n.authQuitDemoDialogTitle),
+      content: Text(l10n.authQuitDemoDialogContent),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Annuler'),
+          child: Text(l10n.commonCancel),
         ),
         TextButton(
           key: const Key('quit_demo_dialog_signup'),
           onPressed: () => Navigator.of(context).pop(QuitDemoChoice.signup),
-          child: const Text('Créer un compte'),
+          child: Text(l10n.authCreateAccountLink),
         ),
         FilledButton(
           key: const Key('quit_demo_dialog_confirm'),
@@ -46,7 +46,7 @@ Future<QuitDemoChoice?> showQuitDemoDialog(BuildContext context) {
             foregroundColor: Theme.of(context).colorScheme.onError,
           ),
           onPressed: () => Navigator.of(context).pop(QuitDemoChoice.quit),
-          child: const Text('Quitter'),
+          child: Text(l10n.authQuitDemoDialogConfirmButton),
         ),
       ],
     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_radii.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
@@ -53,7 +54,9 @@ class LeaseContextBanner extends ConsumerWidget {
               leaseId: leaseId,
               propertyId: propertyId,
               tenantId: tenantId,
-              propertyName: property?.name ?? 'Bien en cours de chargement...',
+              propertyName:
+                  property?.name ??
+                  context.l10n.receiptsBannerPropertyLoadingPlaceholder,
               propertyAddress: property?.address ?? '',
               tenantName: '${tenant?.firstName ?? ''} ${tenant?.lastName ?? ''}'
                   .trim(),
@@ -131,7 +134,14 @@ class _BannerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final totalAmountCents = rentCents + chargesCents;
+    final periodLabel = endDate != null
+        ? l10n.receiptsBannerPeriod(
+            FrenchDate.format(startDate),
+            FrenchDate.format(endDate!),
+          )
+        : l10n.receiptsBannerPeriodOpenEnded(FrenchDate.format(startDate));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,14 +195,15 @@ class _BannerContent extends StatelessWidget {
                 ),
               ),
             Text(
-              'Bail ${FrenchDate.format(startDate)}'
-              ' → ${endDate != null ? FrenchDate.format(endDate!) : 'CDI'}',
+              periodLabel,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             Text(
-              '${MoneyFormat.formatEurosFromCents(totalAmountCents)} CC/mois',
+              l10n.receiptsBannerRentCcPerMonth(
+                MoneyFormat.formatEurosFromCents(totalAmountCents),
+              ),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -202,8 +213,8 @@ class _BannerContent extends StatelessWidget {
         const SizedBox(height: 4),
         // Ligne 3 : compteurs.
         Text(
-          '$totalReceipts quittance${totalReceipts != 1 ? 's' : ''} générée${totalReceipts != 1 ? 's' : ''}'
-          ' · $sentReceipts envoyée${sentReceipts != 1 ? 's' : ''}',
+          '${l10n.receiptsBannerGeneratedCount(totalReceipts)}'
+          ' · ${l10n.receiptsBannerSentCount(sentReceipts)}',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

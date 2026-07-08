@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 
 /// Checklist d'onboarding "Premiers pas".
@@ -16,6 +17,7 @@ class OnboardingFirstSteps extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
+    final l10n = context.l10n;
     return Card(
       elevation: 2,
       child: Padding(
@@ -29,10 +31,13 @@ class OnboardingFirstSteps extends StatelessWidget {
               color: theme.colorScheme.primary,
             ),
             SizedBox(height: spacing.md),
-            Text('Bienvenue ! Premiers pas', style: theme.textTheme.titleLarge),
+            Text(
+              l10n.dashboardOnboardingTitle,
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 4),
             Text(
-              'Suivez ces 3 étapes pour démarrer.',
+              l10n.dashboardOnboardingSubtitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -40,21 +45,21 @@ class OnboardingFirstSteps extends StatelessWidget {
             SizedBox(height: spacing.xl),
             _StepTile(
               stepNumber: 1,
-              label: 'Ajouter un bien',
+              label: l10n.dashboardOnboardingStepAddPropertyLabel,
               icon: Icons.home_outlined,
               route: '/properties/new',
             ),
             const Divider(height: 1),
             _StepTile(
               stepNumber: 2,
-              label: 'Ajouter un locataire',
+              label: l10n.dashboardOnboardingStepAddTenantLabel,
               icon: Icons.person_outline,
               route: '/tenants/new',
             ),
             const Divider(height: 1),
             _StepTile(
               stepNumber: 3,
-              label: 'Créer un bail',
+              label: l10n.dashboardOnboardingStepCreateLeaseLabel,
               icon: Icons.description_outlined,
               route: '/leases/new',
             ),

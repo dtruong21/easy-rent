@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/finance/profitability_snapshot.dart';
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../application/active_lease_provider.dart';
 import '../../application/property_detail_provider.dart';
@@ -53,7 +54,10 @@ class _LoadingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Rentabilité', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              context.l10n.propertiesProfitabilityTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 16),
             const Center(child: CircularProgressIndicator()),
           ],
@@ -87,7 +91,10 @@ class _ProfitabilityContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Rentabilité', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              context.l10n.propertiesProfitabilityTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             if (monthlyRentHcCents == null)
               _VacantState(propertyId: propertyId)
@@ -127,7 +134,7 @@ class _VacantState extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Rentabilité non calculable — aucun bail actif',
+                context.l10n.propertiesProfitabilityVacantMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -139,7 +146,7 @@ class _VacantState extends StatelessWidget {
         OutlinedButton.icon(
           key: const Key('btn_create_lease_from_profitability'),
           icon: const Icon(Icons.add),
-          label: const Text('Créer un bail'),
+          label: Text(context.l10n.propertiesCreateLease),
           onPressed: () =>
               context.push('/leases/new', extra: {'propertyId': propertyId}),
         ),
@@ -172,7 +179,7 @@ class _MissingDataState extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Saisir le prix d\'achat pour calculer la rentabilité',
+                context.l10n.propertiesProfitabilityMissingDataMessage,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -184,7 +191,7 @@ class _MissingDataState extends StatelessWidget {
         OutlinedButton.icon(
           key: const Key('btn_edit_property_from_profitability'),
           icon: const Icon(Icons.edit_outlined),
-          label: const Text('Modifier le bien'),
+          label: Text(context.l10n.propertiesEditPropertyButton),
           onPressed: () => context.push('/properties/$propertyId/edit'),
         ),
       ],
@@ -204,6 +211,7 @@ class _KpiState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -213,19 +221,19 @@ class _KpiState extends StatelessWidget {
           children: [
             if (snapshot.yieldGrossPercent != null)
               _YieldKpiChip(
-                label: 'Rdt brut',
+                label: l10n.propertiesProfitabilityYieldGross,
                 percent: snapshot.yieldGrossPercent!,
               ),
             if (snapshot.yieldNetPercent != null)
               _YieldKpiChip(
-                label: 'Rdt net',
+                label: l10n.propertiesProfitabilityYieldNet,
                 percent: snapshot.yieldNetPercent!,
               ),
             if (snapshot.monthlyCashflowBeforeTaxCents != null)
               _CashflowChip(cents: snapshot.monthlyCashflowBeforeTaxCents!),
             if (snapshot.loanMonthlyPaymentCents != null)
               _InfoChip(
-                label: 'Mensualité prêt',
+                label: l10n.propertiesProfitabilityLoanPayment,
                 value: MoneyFormat.formatEurosFromCents(
                   snapshot.loanMonthlyPaymentCents!,
                 ),
@@ -236,7 +244,7 @@ class _KpiState extends StatelessWidget {
             snapshot.yieldGrossPercent != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Rendement net non calculable — saisir les charges annuelles',
+            l10n.propertiesProfitabilityNetNotComputable,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
@@ -245,8 +253,7 @@ class _KpiState extends StatelessWidget {
         ],
         const SizedBox(height: 12),
         Text(
-          'Estimation indicative avant impôt — ne tient pas compte du régime '
-          'fiscal ni des prélèvements sociaux (17,2 %)',
+          l10n.propertiesProfitabilityDisclaimer,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
             fontStyle: FontStyle.italic,
@@ -325,7 +332,7 @@ class _CashflowChip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Cash flow / mois',
+            context.l10n.propertiesProfitabilityCashflow,
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: color),

@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/validation/validation_error_l10n.dart';
 import '../../auth/application/anon_expiry_renewer.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/application/login_controller.dart';
@@ -238,7 +240,7 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
       _log.warning('Erreur chargement scénario ${widget.scenarioId}: $e');
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Impossible de charger le scénario.';
+        _errorMessage = context.l10n.simulatorLoadErrorMessage;
       });
     }
   }
@@ -422,9 +424,9 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
       unawaited(ref.read(anonExpiryRenewerProvider.notifier).renewIfNeeded());
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Scénario sauvegardé')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.simulatorScenarioSavedSnackbar)),
+        );
         // Redirige vers /simulator (liste) si on était sur un nouveau scénario.
         if (widget.scenarioId == null) {
           context.go('/simulator');
@@ -434,7 +436,7 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
       _log.warning('Erreur sauvegarde scénario: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+          _errorMessage = context.l10n.simulatorSaveErrorMessage;
         });
       }
     } finally {
@@ -475,7 +477,7 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: "Simulateur d'investissement",
+        title: context.l10n.simulatorPageTitle,
         // Session anonyme : /simulator est le foyer — un retour vers '/'
         // serait re-redirigé ici en boucle par le router (bouton mort).
         // Racine sans stack → aucun bouton (AppAppBar masque quand
@@ -491,7 +493,7 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
             IconButton(
               key: const Key('simulator_quit_demo'),
               icon: const Icon(Icons.logout),
-              tooltip: 'Quitter le mode démo',
+              tooltip: context.l10n.simulatorQuitDemoTooltip,
               onPressed: _onQuitDemoPressed,
             ),
         ],
@@ -586,8 +588,8 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                                   : const Icon(Icons.save_outlined),
                               label: Text(
                                 widget.scenarioId != null
-                                    ? 'Mettre à jour le scénario'
-                                    : 'Sauvegarder ce scénario',
+                                    ? context.l10n.simulatorUpdateScenarioButton
+                                    : context.l10n.simulatorSaveScenarioButton,
                               ),
                             ),
                             SizedBox(height: spacing.xxl),
@@ -630,8 +632,7 @@ class _CreateFreeAccountFirstHint extends StatelessWidget {
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(
-        'Créez un compte gratuit d\'abord pour découvrir toutes les '
-        'fonctionnalités à venir de Baillan.',
+        context.l10n.simulatorCreateFreeAccountFirstHint,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -662,9 +663,7 @@ class _DisclaimerBanner extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Estimation indicative basée sur les données saisies. '
-                'Ne constitue pas un conseil en investissement. '
-                'Consultez un professionnel.',
+                context.l10n.simulatorDisclaimerBanner,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSecondaryContainer,
                 ),
@@ -691,7 +690,7 @@ class _EmptyResultsHint extends StatelessWidget {
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(
-        'Saisissez le prix d\'achat et le loyer mensuel pour voir les résultats.',
+        context.l10n.simulatorEmptyResultsHint,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -805,7 +804,7 @@ class _AcquisitionSection extends StatelessWidget {
     return ExpansionTile(
       key: const Key('section_acquisition'),
       initiallyExpanded: true,
-      title: const Text('Acquisition'),
+      title: Text(context.l10n.simulatorSectionAcquisition),
       leading: const Icon(Icons.home_work_outlined),
       children: [
         Padding(
@@ -815,15 +814,19 @@ class _AcquisitionSection extends StatelessWidget {
               _EuroField(
                 key: const Key('field_purchase_price'),
                 controller: purchasePriceCtrl,
-                label: "Prix d'achat *",
-                validator: ScenarioFormValidators.validatePurchasePrice,
+                label: context.l10n.simulatorFieldPurchasePriceLabel,
+                validator: (v) => ScenarioFormValidators.validatePurchasePrice(
+                  v,
+                )?.message(context),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
                 key: const Key('field_is_new_property'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Bien neuf'),
-                subtitle: const Text('Frais notaire ~2 % (vs 8 % ancien)'),
+                title: Text(context.l10n.simulatorFieldIsNewPropertyLabel),
+                subtitle: Text(
+                  context.l10n.simulatorFieldIsNewPropertySubtitle,
+                ),
                 value: isNewProperty,
                 onChanged: onIsNewPropertyChanged,
               ),
@@ -831,24 +834,22 @@ class _AcquisitionSection extends StatelessWidget {
               _EuroField(
                 key: const Key('field_notary_fees'),
                 controller: notaryFeesCtrl,
-                label: 'Frais de notaire',
-                helperText: 'Pré-rempli : 8 % ancien / 2 % neuf — modifiable',
+                label: context.l10n.simulatorFieldNotaryFeesLabel,
+                helperText: context.l10n.simulatorFieldNotaryFeesHelper,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Les frais de notaire',
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
                 key: const Key('field_works_initial'),
                 controller: worksCtrl,
-                label: 'Travaux initiaux',
+                label: context.l10n.simulatorFieldWorksLabel,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Les travaux',
-                    ),
+                    )?.message(context),
               ),
             ],
           ),
@@ -876,7 +877,7 @@ class _FinancementSection extends StatelessWidget {
     return ExpansionTile(
       key: const Key('section_financement'),
       initiallyExpanded: true,
-      title: const Text('Financement'),
+      title: Text(context.l10n.simulatorSectionFinancement),
       leading: const Icon(Icons.account_balance_outlined),
       children: [
         Padding(
@@ -886,52 +887,52 @@ class _FinancementSection extends StatelessWidget {
               _EuroField(
                 key: const Key('field_down_payment'),
                 controller: downPaymentCtrl,
-                label: 'Apport personnel',
+                label: context.l10n.simulatorFieldDownPaymentLabel,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: "L'apport",
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
                 key: const Key('field_loan_principal'),
                 controller: loanPrincipalCtrl,
-                label: 'Capital emprunté',
-                helperText:
-                    'Pré-rempli : prix + notaire + travaux − apport — '
-                    'modifiable',
+                label: context.l10n.simulatorFieldLoanPrincipalLabel,
+                helperText: context.l10n.simulatorFieldLoanPrincipalHelper,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Le capital emprunté',
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 key: const Key('field_loan_rate'),
                 controller: loanRateCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Taux nominal (%)',
-                  hintText: 'Ex. : 3,50',
+                decoration: InputDecoration(
+                  labelText: context.l10n.simulatorFieldLoanRateLabel,
+                  hintText: context.l10n.simulatorFieldLoanRateHint,
                   suffixText: '%',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: ScenarioFormValidators.validateLoanRate,
+                validator: (v) => ScenarioFormValidators.validateLoanRate(
+                  v,
+                )?.message(context),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 key: const Key('field_loan_duration'),
                 controller: loanDurationCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Durée (mois)',
+                decoration: InputDecoration(
+                  labelText: context.l10n.simulatorFieldLoanDurationLabel,
                   hintText: '240',
                   suffixText: 'mois',
                 ),
                 keyboardType: TextInputType.number,
-                validator: ScenarioFormValidators.validateLoanDuration,
+                validator: (v) => ScenarioFormValidators.validateLoanDuration(
+                  v,
+                )?.message(context),
               ),
             ],
           ),
@@ -951,7 +952,7 @@ class _RevenusSection extends StatelessWidget {
     return ExpansionTile(
       key: const Key('section_revenus'),
       initiallyExpanded: true,
-      title: const Text('Revenus locatifs'),
+      title: Text(context.l10n.simulatorSectionRevenus),
       leading: const Icon(Icons.payments_outlined),
       children: [
         Padding(
@@ -959,9 +960,10 @@ class _RevenusSection extends StatelessWidget {
           child: _EuroField(
             key: const Key('field_monthly_rent'),
             controller: monthlyRentCtrl,
-            label: 'Loyer mensuel HC *',
-            helperText: 'Hors charges récupérables',
-            validator: ScenarioFormValidators.validateMonthlyRent,
+            label: context.l10n.simulatorFieldMonthlyRentLabel,
+            helperText: context.l10n.simulatorFieldMonthlyRentHelper,
+            validator: (v) =>
+                ScenarioFormValidators.validateMonthlyRent(v)?.message(context),
           ),
         ),
       ],
@@ -985,7 +987,7 @@ class _ChargesSection extends StatelessWidget {
     return ExpansionTile(
       key: const Key('section_charges'),
       initiallyExpanded: false,
-      title: const Text('Charges annuelles'),
+      title: Text(context.l10n.simulatorSectionCharges),
       leading: const Icon(Icons.receipt_long_outlined),
       children: [
         Padding(
@@ -995,36 +997,33 @@ class _ChargesSection extends StatelessWidget {
               _EuroField(
                 key: const Key('field_property_tax'),
                 controller: propertyTaxCtrl,
-                label: 'Taxe foncière',
-                helperText: 'Net de TEOM récupérable',
+                label: context.l10n.simulatorFieldPropertyTaxLabel,
+                helperText: context.l10n.simulatorFieldPropertyTaxHelper,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'La taxe foncière',
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
                 key: const Key('field_insurance_pno'),
                 controller: insurancePnoCtrl,
-                label: 'Assurance PNO',
+                label: context.l10n.simulatorFieldInsurancePnoLabel,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: "L'assurance PNO",
-                    ),
+                    )?.message(context),
               ),
               const SizedBox(height: 12),
               _EuroField(
                 key: const Key('field_condo_fees'),
                 controller: condoFeesCtrl,
-                label: 'Charges copropriété non récupérables',
-                helperText: 'Gros travaux, syndic, ALUR',
+                label: context.l10n.simulatorFieldCondoFeesLabel,
+                helperText: context.l10n.simulatorFieldCondoFeesHelper,
                 validator: (v) =>
                     ScenarioFormValidators.validateOptionalPositiveAmount(
                       v,
-                      label: 'Les charges de copropriété',
-                    ),
+                    )?.message(context),
               ),
             ],
           ),
@@ -1044,7 +1043,7 @@ class _NotesSection extends StatelessWidget {
     return ExpansionTile(
       key: const Key('section_notes'),
       initiallyExpanded: false,
-      title: const Text('Notes'),
+      title: Text(context.l10n.simulatorSectionNotes),
       leading: const Icon(Icons.notes_outlined),
       children: [
         Padding(
@@ -1052,14 +1051,15 @@ class _NotesSection extends StatelessWidget {
           child: TextFormField(
             key: const Key('field_notes'),
             controller: notesCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Notes libres',
-              hintText: 'Remarques, hypothèses particulières…',
+            decoration: InputDecoration(
+              labelText: context.l10n.simulatorFieldNotesLabel,
+              hintText: context.l10n.simulatorFieldNotesHint,
             ),
             minLines: 2,
             maxLines: 5,
             maxLength: 2000,
-            validator: ScenarioFormValidators.validateNotes,
+            validator: (v) =>
+                ScenarioFormValidators.validateNotes(v)?.message(context),
           ),
         ),
       ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/tenant_form_validators.dart';
+import '../../../../core/validation/validation_error_l10n.dart';
 
 /// Champs partagés du formulaire locataire.
 ///
@@ -71,6 +73,7 @@ class TenantFormWidgetState extends State<TenantForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Form(
       key: widget.formKey,
       child: Column(
@@ -79,7 +82,7 @@ class TenantFormWidgetState extends State<TenantForm> {
           // ----------------------------------------------------------------
           // Section 1 — Identité
           // ----------------------------------------------------------------
-          _SectionHeader(title: 'Identité'),
+          _SectionHeader(title: l10n.tenantsSectionIdentity),
           const SizedBox(height: 12),
 
           // Prénom
@@ -87,10 +90,10 @@ class TenantFormWidgetState extends State<TenantForm> {
             key: const Key('field_first_name'),
             controller: widget.firstNameController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Prénom *',
-              hintText: 'Ex. : Jean',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormFirstNameLabel,
+              hintText: l10n.tenantsFormFirstNameHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
             onChanged: (_) {
@@ -102,7 +105,9 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_firstNameTouched) return null;
-              return TenantFormValidators.validateFirstName(v);
+              return TenantFormValidators.validateFirstName(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -112,10 +117,10 @@ class TenantFormWidgetState extends State<TenantForm> {
             key: const Key('field_last_name'),
             controller: widget.lastNameController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Nom *',
-              hintText: 'Ex. : Dupont',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormLastNameLabel,
+              hintText: l10n.tenantsFormLastNameHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
             onChanged: (_) {
@@ -127,7 +132,7 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_lastNameTouched) return null;
-              return TenantFormValidators.validateLastName(v);
+              return TenantFormValidators.validateLastName(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -137,10 +142,10 @@ class TenantFormWidgetState extends State<TenantForm> {
             key: const Key('field_email'),
             controller: widget.emailController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Email *',
-              hintText: 'Ex. : jean.dupont@email.com',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormEmailLabel,
+              hintText: l10n.tenantsFormEmailHint,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
@@ -153,7 +158,9 @@ class TenantFormWidgetState extends State<TenantForm> {
             },
             validator: (v) {
               if (!_emailTouched) return null;
-              return TenantFormValidators.validateEmail(v);
+              // FEAT-043 (i18n) : le validateur retourne un ValidationError
+              // (pur, sans BuildContext), traduit ici.
+              return TenantFormValidators.validateEmail(v)?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -163,10 +170,10 @@ class TenantFormWidgetState extends State<TenantForm> {
             key: const Key('field_phone'),
             controller: widget.phoneController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Téléphone (optionnel)',
-              hintText: 'Ex. : 06 12 34 56 78',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormPhoneLabel,
+              hintText: l10n.tenantsFormPhoneHint,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,
           ),
@@ -188,10 +195,10 @@ class TenantFormWidgetState extends State<TenantForm> {
             key: const Key('field_birth_place'),
             controller: widget.birthPlaceController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Lieu de naissance (optionnel)',
-              hintText: 'Ex. : Paris',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormBirthPlaceLabel,
+              hintText: l10n.tenantsFormBirthPlaceHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
           ),
@@ -202,10 +209,10 @@ class TenantFormWidgetState extends State<TenantForm> {
             key: const Key('field_nationality'),
             controller: widget.nationalityController,
             enabled: widget.enabled,
-            decoration: const InputDecoration(
-              labelText: 'Nationalité (optionnel)',
-              hintText: 'Ex. : Française',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormNationalityLabel,
+              hintText: l10n.tenantsFormNationalityHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.sentences,
           ),
@@ -307,6 +314,7 @@ class _BirthDateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     // Calcul des bornes : min = 01/01/1900, max = aujourd'hui - 18 ans.
     final now = DateTime.now();
     final minDate = DateTime(1900);
@@ -316,13 +324,14 @@ class _BirthDateField extends StatelessWidget {
         birthDate ?? DateTime(now.year - 30, now.month, now.day);
 
     final errorText = touched
-        ? TenantFormValidators.validateBirthDate(birthDate)
+        ? TenantFormValidators.validateBirthDate(birthDate)?.message(context)
         : null;
 
     return FormField<DateTime>(
       initialValue: birthDate,
-      validator: (_) =>
-          touched ? TenantFormValidators.validateBirthDate(birthDate) : null,
+      validator: (_) => touched
+          ? TenantFormValidators.validateBirthDate(birthDate)?.message(context)
+          : null,
       builder: (state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,12 +347,15 @@ class _BirthDateField extends StatelessWidget {
                             : maxDate,
                         firstDate: minDate,
                         lastDate: maxDate,
+                        // Locale du picker natif : hors périmètre de cette
+                        // extraction (wiring locale-aware géré par la
+                        // foundation i18n, cf. lib/l10n/l10n_convention.dart).
                         locale: const Locale('fr', 'FR'),
-                        helpText: 'Date de naissance',
-                        fieldLabelText: 'Date de naissance',
-                        fieldHintText: 'JJ/MM/AAAA',
-                        cancelText: 'Annuler',
-                        confirmText: 'Valider',
+                        helpText: l10n.tenantsFormBirthDateLabel,
+                        fieldLabelText: l10n.tenantsFormBirthDateLabel,
+                        fieldHintText: l10n.tenantsFormBirthDateHint,
+                        cancelText: l10n.commonCancel,
+                        confirmText: l10n.commonConfirm,
                       );
                       if (picked != null) {
                         onChanged(picked);
@@ -352,8 +364,8 @@ class _BirthDateField extends StatelessWidget {
                   : null,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Date de naissance (optionnel)',
-                  hintText: 'JJ/MM/AAAA',
+                  labelText: l10n.tenantsFormBirthDateLabel,
+                  hintText: l10n.tenantsFormBirthDateHint,
                   border: const OutlineInputBorder(),
                   errorText: errorText,
                   suffixIcon: Row(
@@ -362,7 +374,7 @@ class _BirthDateField extends StatelessWidget {
                       if (birthDate != null)
                         IconButton(
                           icon: const Icon(Icons.clear, size: 18),
-                          tooltip: 'Effacer',
+                          tooltip: l10n.tenantsFormClearTooltip,
                           onPressed: enabled
                               ? () {
                                   onChanged(null);
@@ -411,11 +423,12 @@ class _SituationProfessionnelleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_situation_pro'),
-        title: const Text('Situation professionnelle (optionnel)'),
+        title: Text(l10n.tenantsSectionProfessionalOptional),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -425,10 +438,10 @@ class _SituationProfessionnelleSection extends StatelessWidget {
             key: const Key('field_profession'),
             controller: professionController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Profession',
-              hintText: 'Ex. : Ingénieur',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormProfessionLabel,
+              hintText: l10n.tenantsFormProfessionHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.sentences,
           ),
@@ -439,10 +452,10 @@ class _SituationProfessionnelleSection extends StatelessWidget {
             key: const Key('field_employer'),
             controller: employerController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Employeur',
-              hintText: 'Ex. : Société XYZ',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormEmployerLabel,
+              hintText: l10n.tenantsFormEmployerHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.sentences,
           ),
@@ -453,12 +466,12 @@ class _SituationProfessionnelleSection extends StatelessWidget {
             key: const Key('field_monthly_income'),
             controller: monthlyIncomeController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Revenus mensuels nets',
-              hintText: 'Ex. : 2500',
-              helperText: 'en €',
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormMonthlyIncomeLabel,
+              hintText: l10n.tenantsFormMonthlyIncomeHint,
+              helperText: l10n.tenantsFormMonthlyIncomeHelper,
               suffixText: '€',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -470,11 +483,11 @@ class _SituationProfessionnelleSection extends StatelessWidget {
               if (!monthlyIncomeTouched) return null;
               if (v == null || v.trim().isEmpty) return null;
               final euros = int.tryParse(v.trim());
-              if (euros == null) return 'Montant invalide';
+              if (euros == null) return l10n.tenantsFormInvalidAmount;
               // Convertir en centimes pour valider la borne.
               return TenantFormValidators.validateMonthlyIncomeCents(
                 euros * 100,
-              );
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -484,10 +497,10 @@ class _SituationProfessionnelleSection extends StatelessWidget {
             key: const Key('field_previous_address'),
             controller: previousAddressController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Adresse précédente',
-              hintText: 'Ex. : 5 rue des Fleurs, 75001 Paris',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormPreviousAddressLabel,
+              hintText: l10n.tenantsFormPreviousAddressHint,
+              border: const OutlineInputBorder(),
             ),
             maxLines: 2,
             textCapitalization: TextCapitalization.sentences,
@@ -521,11 +534,12 @@ class _GuarantorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         key: const Key('section_guarantor'),
-        title: const Text('Garant / Caution (optionnel)'),
+        title: Text(l10n.tenantsSectionGuarantorOptional),
         initiallyExpanded: false,
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: 8),
@@ -535,10 +549,10 @@ class _GuarantorSection extends StatelessWidget {
             key: const Key('field_guarantor_name'),
             controller: guarantorNameController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Nom du garant',
-              hintText: 'Ex. : Pierre Dupont',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormGuarantorNameLabel,
+              hintText: l10n.tenantsFormGuarantorNameHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
           ),
@@ -549,10 +563,10 @@ class _GuarantorSection extends StatelessWidget {
             key: const Key('field_guarantor_email'),
             controller: guarantorEmailController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Email du garant',
-              hintText: 'Ex. : garant@email.com',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormGuarantorEmailLabel,
+              hintText: l10n.tenantsFormGuarantorEmailHint,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
@@ -565,7 +579,9 @@ class _GuarantorSection extends StatelessWidget {
             },
             validator: (v) {
               if (!guarantorEmailTouched) return null;
-              return TenantFormValidators.validateGuarantorEmail(v);
+              return TenantFormValidators.validateGuarantorEmail(
+                v,
+              )?.message(context);
             },
           ),
           const SizedBox(height: 16),
@@ -575,10 +591,10 @@ class _GuarantorSection extends StatelessWidget {
             key: const Key('field_guarantor_phone'),
             controller: guarantorPhoneController,
             enabled: enabled,
-            decoration: const InputDecoration(
-              labelText: 'Téléphone du garant',
-              hintText: 'Ex. : 06 12 34 56 78',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.tenantsFormGuarantorPhoneLabel,
+              hintText: l10n.tenantsFormGuarantorPhoneHint,
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,
           ),

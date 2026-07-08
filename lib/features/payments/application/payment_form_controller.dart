@@ -7,6 +7,7 @@ import '../../dashboard/application/dashboard_provider.dart';
 import '../domain/payment.dart';
 import '../domain/payment_form_state.dart';
 import '../domain/payment_method.dart';
+import '../domain/payment_submit_error.dart';
 import 'lease_payments_provider.dart';
 import 'payment_detail_provider.dart';
 
@@ -91,17 +92,13 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       state = PaymentFormState.success(payment: result);
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseException lors de submit', e, st);
-      state = PaymentFormState.error(message: _mapFirebaseError(e));
+      state = PaymentFormState.error(message: _mapFirebaseError(e).name);
     } on PaymentNotFoundException catch (notFound, st) {
       _log.warning('PaymentNotFoundException lors de submit', notFound, st);
-      state = const PaymentFormState.error(
-        message: 'Paiement introuvable. Il a peut-être été archivé.',
-      );
+      state = PaymentFormState.error(message: PaymentSubmitError.notFound.name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de submit', e, st);
-      state = const PaymentFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = PaymentFormState.error(message: PaymentSubmitError.unknown.name);
     }
   }
 
@@ -128,30 +125,28 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       state = const PaymentFormState.idle();
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseException lors de archive', e, st);
-      state = PaymentFormState.error(message: _mapFirebaseError(e));
+      state = PaymentFormState.error(message: _mapFirebaseError(e).name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de archive', e, st);
-      state = const PaymentFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = PaymentFormState.error(message: PaymentSubmitError.unknown.name);
     }
   }
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const PaymentFormState.idle();
 
-  String _mapFirebaseError(FirebaseFunctionsException e) {
+  PaymentSubmitError _mapFirebaseError(FirebaseFunctionsException e) {
     final code = e.code;
     if (code == 'permission-denied' || code == 'unauthenticated') {
-      return 'Action non autorisée.';
+      return PaymentSubmitError.permissionDenied;
     }
     if (code == 'failed-precondition') {
-      return 'Opération impossible — vérifiez l\'état du paiement.';
+      return PaymentSubmitError.invalidState;
     }
     if (code == 'unavailable' || code == 'deadline-exceeded') {
-      return 'Service temporairement indisponible. Réessayez.';
+      return PaymentSubmitError.serviceUnavailable;
     }
-    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+    return PaymentSubmitError.saveFailed;
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../leases/domain/lease.dart';
 import 'charge_regularization_dialog.dart';
 
@@ -50,7 +51,7 @@ class ChargeRegularizationSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Régularisation des charges',
+              context.l10n.chargeRegularizationSectionTitle,
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -58,15 +59,13 @@ class ChargeRegularizationSection extends StatelessWidget {
               OutlinedButton.icon(
                 key: const Key('btn_charge_regularization'),
                 icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                label: const Text('Régularisation annuelle des charges'),
+                label: Text(context.l10n.chargeRegularizationOpenDialogButton),
                 onPressed: () => _openDialog(context),
               )
             else
               Text(
                 key: const Key('text_charge_regularization_not_applicable'),
-                'Ce bail est au forfait de charges : le forfait est '
-                'libératoire et ne donne pas lieu à régularisation '
-                '(loi du 6 juillet 1989, art. 23 a contrario).',
+                context.l10n.chargeRegularizationForfaitNotApplicable,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,

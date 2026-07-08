@@ -1,7 +1,9 @@
 /// Tests widget pour [OnboardingFirstSteps].
 library;
 
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/onboarding_first_steps.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +30,9 @@ Widget _wrap() {
         ),
       ],
     ),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: supportedLocales,
+    locale: const Locale('fr'),
   );
 }
 

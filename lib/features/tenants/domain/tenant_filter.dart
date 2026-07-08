@@ -2,6 +2,10 @@
 ///
 /// Utilisé par le [StateProvider] local à la feature tenants
 /// et le provider dérivé `filteredTenantsProvider`.
+///
+/// Enum nu (FEAT-043 i18n) — aucun libellé FR en dur : le mapping vers un
+/// libellé localisé vit dans la couche présentation, voir
+/// `lib/features/tenants/presentation/tenant_filter_l10n.dart`.
 enum TenantFilter {
   /// Tous les locataires (aucun filtre).
   all,
@@ -10,12 +14,5 @@ enum TenantFilter {
   withActiveLease,
 
   /// Locataires sans bail actif.
-  withoutActiveLease;
-
-  /// Libellé affiché dans l'UI française.
-  String get labelFr => switch (this) {
-    TenantFilter.all => 'Tous',
-    TenantFilter.withActiveLease => 'Actifs',
-    TenantFilter.withoutActiveLease => 'Sans bail',
-  };
+  withoutActiveLease,
 }

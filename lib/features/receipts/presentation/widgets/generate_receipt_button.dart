@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../application/generate_receipt_controller.dart';
+import '../../domain/receipt_action_error.dart';
 import '../../domain/receipt_generation_state.dart';
 import 'profile_incomplete_dialog.dart';
+import 'receipt_action_error_l10n.dart';
 import 'receipt_preview_dialog.dart';
 
 final _log = Logger('GenerateReceiptButton');
@@ -64,9 +67,12 @@ class GenerateReceiptButton extends ConsumerWidget {
         },
         error: (message) {
           _log.warning('generate receipt error: $message');
+          final errorMessage = ReceiptActionError.fromCode(
+            message,
+          ).message(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(message),
+              content: Text(errorMessage),
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
@@ -84,7 +90,7 @@ class GenerateReceiptButton extends ConsumerWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : const Icon(Icons.receipt_long_outlined),
-      tooltip: 'Générer une quittance',
+      tooltip: context.l10n.receiptsGenerateButtonTooltip,
       onPressed: isSubmitting
           ? null
           : () => ref

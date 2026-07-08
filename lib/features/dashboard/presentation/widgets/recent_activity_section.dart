@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/card_empty_state.dart';
 import '../../../../core/ui/theme/app_radii.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/activity_item.dart';
 
 /// Section "Activité récente" du dashboard.
@@ -40,6 +42,7 @@ class _RecentActivitySectionState extends State<RecentActivitySection> {
     final visible = _expanded
         ? items
         : items.take(RecentActivitySection.collapsedCount);
+    final l10n = context.l10n;
 
     return Container(
       padding: EdgeInsets.all(spacing.cardPaddingStandard),
@@ -53,22 +56,29 @@ class _RecentActivitySectionState extends State<RecentActivitySection> {
         children: [
           Row(
             children: [
-              Text('Activité récente', style: theme.textTheme.titleSmall),
+              Text(
+                l10n.dashboardRecentActivityTitle,
+                style: theme.textTheme.titleSmall,
+              ),
               const Spacer(),
               if (hasMore)
                 TextButton(
                   key: const Key('btn_activity_toggle'),
                   onPressed: () => setState(() => _expanded = !_expanded),
-                  child: Text(_expanded ? 'Réduire' : 'Voir tout'),
+                  child: Text(
+                    _expanded
+                        ? l10n.dashboardRecentActivityCollapseButton
+                        : l10n.dashboardRecentActivityShowAllButton,
+                  ),
                 ),
             ],
           ),
           const SizedBox(height: 4),
           if (items.isEmpty)
-            const CardEmptyState(
+            CardEmptyState(
               icon: Icons.history,
-              title: 'Aucune activité récente',
-              message: 'Commencez par enregistrer un paiement.',
+              title: l10n.dashboardRecentActivityEmptyTitle,
+              message: l10n.dashboardRecentActivityEmptyMessage,
             )
           else
             ...visible.map((item) => _ActivityTile(item: item)),
@@ -88,6 +98,7 @@ class _ActivityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return switch (item) {
       ActivityPaymentRecorded(
         :final paymentId,
@@ -98,7 +109,7 @@ class _ActivityTile extends StatelessWidget {
       ) =>
         _Tile(
           icon: Icons.payments_outlined,
-          title: 'Paiement enregistré · $tenantName',
+          title: l10n.dashboardActivityPaymentRecordedTitle(tenantName),
           subtitle:
               '${MoneyFormat.formatEurosFromCents(amountCents)} · ${FrenchDate.format(occurredAt)}',
           // push() (pas go()) : depuis l'onglet Accueil, on empile la
@@ -116,7 +127,14 @@ class _ActivityTile extends StatelessWidget {
       ) =>
         _Tile(
           icon: Icons.description_outlined,
-          title: 'Quittance générée · $periodLabel',
+          title: l10n.dashboardActivityReceiptGeneratedTitle(
+            // Sentinel FR produit côté data/ (pas de BuildContext là-bas,
+            // cf. kUnknownPeriodLabelSentinel) — relocalisé ici (FEAT-043,
+            // même pattern que LeaseListItemDisplayL10n).
+            periodLabel == kUnknownPeriodLabelSentinel
+                ? l10n.dashboardActivityUnknownPeriod
+                : periodLabel,
+          ),
           subtitle:
               '${MoneyFormat.formatEurosFromCents(totalCents)} · ${FrenchDate.format(occurredAt)}',
           // push() (pas go()) — voir F-1 ci-dessus.
@@ -132,19 +150,25 @@ class _ActivityTile extends StatelessWidget {
       ) =>
         _Tile(
           icon: Icons.attach_file_outlined,
+          // categoryLabel : valeur brute produite côté data/ (catégorie
+          // Firestore, ex. 'bail_signe' ou fallback 'document') — hors
+          // périmètre de cette extraction (couplage au module `documents`,
+          // cf. notes agent).
           title: '$categoryLabel · $filename',
           subtitle:
-              '${_formatSize(sizeBytes)} · ${FrenchDate.format(occurredAt)}',
+              '${_formatSize(sizeBytes, l10n)} · ${FrenchDate.format(occurredAt)}',
           // push() (pas go()) — voir F-1 ci-dessus.
           onTap: () => context.push('/leases/$leaseId'),
         ),
     };
   }
 
-  static String _formatSize(int bytes) {
-    if (bytes < 1024) return '$bytes o';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} Ko';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} Mo';
+  static String _formatSize(int bytes, AppLocalizations l10n) {
+    if (bytes < 1024) return l10n.dashboardActivityFileSizeBytes(bytes);
+    if (bytes < 1024 * 1024) {
+      return l10n.dashboardActivityFileSizeKilobytes((bytes / 1024).round());
+    }
+    return l10n.dashboardActivityFileSizeMegabytes(bytes / (1024 * 1024));
   }
 }
 

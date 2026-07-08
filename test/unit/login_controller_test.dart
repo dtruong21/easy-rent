@@ -1,5 +1,7 @@
 import 'package:easyrent/features/auth/application/login_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/auth_cta_label.dart';
+import 'package:easyrent/features/auth/domain/auth_error.dart';
 import 'package:easyrent/features/auth/domain/login_page_state.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -218,7 +220,7 @@ void main() {
         await ctrl.signIn(email: 'bademail', password: 'Password1');
         expect(repo.signInCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), 'Adresse email invalide');
+        expect(_errorMsg(ctrl.state), AuthError.invalidEmailFormat.name);
       });
 
       test('mot de passe vide → error sans appel repo', () async {
@@ -227,12 +229,12 @@ void main() {
         await ctrl.signIn(email: 'user@exemple.fr', password: '');
         expect(repo.signInCalled, isFalse);
         expect(_isError(ctrl.state), isTrue);
-        expect(_errorMsg(ctrl.state), 'Mot de passe requis');
+        expect(_errorMsg(ctrl.state), AuthError.passwordRequired.name);
       });
     });
 
     group('signIn — erreurs Firebase', () {
-      test('invalid_credentials → message français', () async {
+      test('invalid_credentials → AuthError.invalidCredentials', () async {
         final repo = _FakeAuthRepository()
           ..signInError = FirebaseAuthException(
             code: 'invalid-credential',
@@ -240,10 +242,10 @@ void main() {
           );
         final ctrl = _makeController(repo);
         await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
-        expect(_errorMsg(ctrl.state), 'Email ou mot de passe incorrect.');
+        expect(_errorMsg(ctrl.state), AuthError.invalidCredentials.name);
       });
 
-      test('email_not_confirmed → message français', () async {
+      test('email_not_confirmed → AuthError.invalidCredentials', () async {
         final repo = _FakeAuthRepository()
           ..signInError = FirebaseAuthException(
             code: 'invalid-credential',
@@ -251,18 +253,15 @@ void main() {
           );
         final ctrl = _makeController(repo);
         await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
-        expect(_errorMsg(ctrl.state), 'Email ou mot de passe incorrect.');
+        expect(_errorMsg(ctrl.state), AuthError.invalidCredentials.name);
       });
 
-      test('exception inconnue → message générique', () async {
+      test('exception inconnue → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..signInError = Exception('network error');
         final ctrl = _makeController(repo);
         await ctrl.signIn(email: 'user@exemple.fr', password: 'Password1');
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
 
@@ -281,10 +280,7 @@ void main() {
           expect(repo.sendVerificationCalled, isTrue);
           expect(repo.signOutCalled, isTrue);
           expect(_isError(ctrl.state), isTrue);
-          expect(
-            _errorMsg(ctrl.state),
-            contains('email n\'est pas encore vérifié'),
-          );
+          expect(_errorMsg(ctrl.state), AuthError.emailNotVerified.name);
         },
       );
     });
@@ -335,11 +331,8 @@ void main() {
             orElse: () => (null, null),
           );
           expect(cta.$1, '/signup');
-          expect(cta.$2, 'Créer un compte');
-          expect(
-            _errorMsg(state).startsWith('Aucun compte Baillan associé'),
-            isTrue,
-          );
+          expect(cta.$2, AuthCtaLabel.createAccount.name);
+          expect(_errorMsg(state), AuthError.googleNewUserOnLogin.name);
         },
       );
 
@@ -365,15 +358,12 @@ void main() {
         },
       );
 
-      test('exception générique → message fallback français', () async {
+      test('exception générique → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..signInWithGoogleError = Exception('boom');
         final ctrl = _makeController(repo);
         await ctrl.signInWithGoogle();
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
 
@@ -423,11 +413,8 @@ void main() {
             orElse: () => (null, null),
           );
           expect(cta.$1, '/signup');
-          expect(cta.$2, 'Créer un compte');
-          expect(
-            _errorMsg(state).startsWith('Aucun compte Baillan associé'),
-            isTrue,
-          );
+          expect(cta.$2, AuthCtaLabel.createAccount.name);
+          expect(_errorMsg(state), AuthError.appleNewUserOnLogin.name);
         },
       );
 
@@ -451,15 +438,12 @@ void main() {
         },
       );
 
-      test('exception générique → message fallback français', () async {
+      test('exception générique → AuthError.unknown', () async {
         final repo = _FakeAuthRepository()
           ..signInWithAppleError = Exception('boom');
         final ctrl = _makeController(repo);
         await ctrl.signInWithApple();
-        expect(
-          _errorMsg(ctrl.state),
-          'Une erreur est survenue. Veuillez réessayer.',
-        );
+        expect(_errorMsg(ctrl.state), AuthError.unknown.name);
       });
     });
 

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/password_validator.dart';
 import '../../application/reset_password_controller.dart';
+import '../../domain/auth_error.dart';
 import '../../domain/reset_password_state.dart';
+import '../auth_error_l10n.dart';
 import 'password_field.dart';
 
 /// Formulaire de réinitialisation du mot de passe.
@@ -63,19 +66,21 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
       submitting: () => true,
       orElse: () => false,
     );
-    final errorMessage = formState.maybeWhen(
+    final errorCode = formState.maybeWhen(
       error: (msg) => msg,
       orElse: () => null,
     );
+    final errorMessage = errorCode != null
+        ? AuthError.fromCode(errorCode).message(context)
+        : null;
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     ref.listen<ResetPasswordState>(resetPasswordControllerProvider, (_, next) {
       next.maybeWhen(
         success: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Mot de passe mis à jour. Connectez-vous.'),
-            ),
+            SnackBar(content: Text(l10n.authPasswordUpdatedSnackbar)),
           );
           context.go('/login');
         },
@@ -90,13 +95,13 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
         children: [
           PasswordField(
             controller: _passwordController,
-            labelText: 'Nouveau mot de passe',
+            labelText: l10n.authNewPasswordLabel,
             autofillHints: const [AutofillHints.newPassword],
             enabled: !isSubmitting,
           ),
           const SizedBox(height: 4),
           Text(
-            '8 caractères min, 1 lettre, 1 chiffre',
+            l10n.authPasswordRequirementsHelper,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -104,7 +109,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
           const SizedBox(height: 16),
           PasswordField(
             controller: _confirmController,
-            labelText: 'Confirmer le mot de passe',
+            labelText: l10n.authConfirmPasswordLabel,
             autofillHints: const [AutofillHints.newPassword],
             enabled: !isSubmitting,
             onSubmitted: _canSubmit ? _submit : null,
@@ -128,7 +133,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
                       color: theme.colorScheme.onPrimary,
                     ),
                   )
-                : const Text('Réinitialiser le mot de passe'),
+                : Text(l10n.authResetPasswordButton),
           ),
         ],
       ),

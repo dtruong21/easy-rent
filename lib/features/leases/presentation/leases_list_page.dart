@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
@@ -11,6 +12,7 @@ import '../../../core/ui/breakpoints.dart';
 import '../application/leases_filter_provider.dart';
 import '../application/leases_list_provider.dart';
 import '../domain/lease_filter.dart';
+import 'lease_filter_l10n.dart';
 import 'widgets/leases_card_view.dart';
 import 'widgets/leases_filter_bar.dart';
 import 'widgets/leases_table_view.dart';
@@ -70,12 +72,15 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
         : ref.watch(viewModeProvider('leases'));
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Mes baux', showBackButton: false),
+      appBar: AppAppBar(
+        title: context.l10n.leasesListTitle,
+        showBackButton: false,
+      ),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('fab_add_lease'),
         onPressed: () => context.push('/leases/new'),
         icon: const Icon(Icons.add),
-        label: const Text('Créer un bail'),
+        label: Text(context.l10n.leasesCreateButton),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,8 +93,8 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
                   : LeasesCardView.loading(),
               error: (e, _) => _ErrorView(
                 message: e is FirebaseException
-                    ? ("Erreur. Vérifiez votre connexion et réessayez.")
-                    : 'Erreur de chargement',
+                    ? context.l10n.leasesErrorConnection
+                    : context.l10n.leasesErrorLoading,
                 // Invalider la RACINE : le dérivé filtré relirait l'AsyncError
                 // caché par le notifier sans jamais refetcher.
                 onRetry: () => ref.invalidate(leasesListProvider),
@@ -107,31 +112,29 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
                   if (hasAnyLease && filter != LeaseFilter.all) {
                     return CardEmptyState(
                       icon: Icons.filter_alt_off_outlined,
-                      title: 'Aucun bail pour ce filtre',
-                      message:
-                          'Le filtre « ${filter.labelFr} » ne correspond '
-                          'à aucun de vos baux.',
+                      title: context.l10n.leasesEmptyFilterTitle,
+                      message: context.l10n.leasesEmptyFilterMessage(
+                        filter.label(context),
+                      ),
                       action: OutlinedButton.icon(
                         key: const Key('btn_show_all_leases'),
                         onPressed: () =>
                             ref.read(leaseFilterProvider.notifier).state =
                                 LeaseFilter.all,
                         icon: const Icon(Icons.filter_alt_off),
-                        label: const Text('Afficher tous les baux'),
+                        label: Text(context.l10n.leasesShowAllButton),
                       ),
                     );
                   }
                   return CardEmptyState(
                     icon: Icons.description_outlined,
-                    title: 'Aucun bail enregistré',
-                    message:
-                        'Créez un bail pour démarrer la gestion locative.\n'
-                        "Vous aurez besoin d'au moins un bien et un locataire.",
+                    title: context.l10n.leasesEmptyTitle,
+                    message: context.l10n.leasesEmptyMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_add_lease_empty'),
                       onPressed: () => context.push('/leases/new'),
                       icon: const Icon(Icons.add),
-                      label: const Text('Créer un bail'),
+                      label: Text(context.l10n.leasesCreateButton),
                     ),
                   );
                 }
@@ -175,7 +178,7 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Impossible de charger vos baux.',
+              context.l10n.leasesErrorUnableToLoad,
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -189,7 +192,7 @@ class _ErrorView extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text(context.l10n.commonRetry),
             ),
           ],
         ),

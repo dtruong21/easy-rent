@@ -2,7 +2,7 @@
 
 Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-<slug>.md`.
 
-> Dernière mise à jour : 2026-07-05 (Priorisation Post-MVP P1 — 10 items RICE, décision utilisateur attendue)
+> Dernière mise à jour : 2026-07-08 (FEAT-049 SEO livré + FEAT-050 site marketing cadré ; voir section Croissance/SEO)
 
 ## En cours
 
@@ -103,6 +103,13 @@ FEAT-001 (auth)
 | FEAT-041 | Dépenses — entité first-class (CRUD + catégorisation + justificatif + alimentation régularisation) | [`backlog/041-depenses.md`](backlog/041-depenses.md) | 📋 Cadré (2026-07-05) — absorbe FEAT-033 (archivage régularisation) ; V1.1 = rentabilité sur dépenses réelles (FEAT-017) ; 7 décisions produit ouvertes avant chiffrage |
 | FEAT-046 | Purge différée des quittances archivées (RGPD art. 5.1.e) — cron quotidien qui hard-delete les `receipts` avec `retentionUntil <= now` (stampées par `deleteAccount`, FEAT-045). Honore la promesse « puis supprimées à l'échéance » de la privacy policy v1.2. Effort S (pattern `cleanupExpiredAnon` + index composite `retentionUntil`) | — | 📋 Suivi audit FEAT-045 (L1, 2026-07-07) — horizon 5 ans, non urgent |
 | FEAT-047 | Export des données (RGPD art. 15/20 — droit d'accès + portabilité) : callable `exportAccountData` (JSON/CSV de toutes les collections du landlord) + bouton Profil. Gap relevé par l'audit FEAT-045 (docs/LEGAL.md promettait déjà `GET /export`) | — | 📋 Suivi audit FEAT-045 (2026-07-07) |
+
+## Croissance — SEO & acquisition
+
+| ID | Titre | Story | Statut |
+|---|---|---|---|
+| FEAT-049 | SEO du PWA — quick-wins (Option A) : `<html lang>`, title/description mots-clés, canonical, Open Graph + Twitter Card, JSON-LD, bloc HTML statique crawlable, `robots.txt`/`sitemap.xml`, noindex staging auto. Agent `seo-specialist` + workflow `seo-audit` (pipeline Growth). | [`docs/SEO.md`](SEO.md) | ✅ Livré staging 2026-07-08 (PR #73, commit bde1862) — vérifié live (head SEO + `#seo-static` servis, staging noindexé) |
+| FEAT-050 | Site marketing statique crawlable (SEO Option B) — sous-domaine `app.baillan.fr` (app Flutter inchangée, noindex) + `baillan.fr` (site Astro canonique) ; multi-site Firebase, déploiements scopés ; i18n `/en` différé page par page. | [`backlog/050-marketing-site-seo.md`](backlog/050-marketing-site-seo.md) | 📋 Cadré 2026-07-08 (panel d'architectes) — topologie sous-domaine confirmée ; démarre après le lancement ; effort v1 ~4-5 j |
 
 ---
 

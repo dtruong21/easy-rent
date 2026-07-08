@@ -18,6 +18,8 @@ import 'package:easyrent/features/dashboard/domain/chart_period.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/monthly_barchart.dart';
+import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -85,6 +87,9 @@ Widget _buildChart({bool empty = false, bool throwError = false}) =>
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
           extensions: const [AppColors.light, AppRadii()],
         ),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: supportedLocales,
+        locale: const Locale('fr'),
         home: const Scaffold(
           body: SingleChildScrollView(child: MonthlyBarchart()),
         ),

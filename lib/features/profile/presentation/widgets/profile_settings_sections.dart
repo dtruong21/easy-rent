@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/app_info/app_info_provider.dart';
 import '../../../../core/config/env.dart';
+import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/i18n/locale_provider.dart';
 import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../auth/application/login_controller.dart';
 import 'section_header.dart';
@@ -24,24 +26,82 @@ class ProfileAppearanceSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Apparence'),
+        SectionHeader(title: l10n.profileAppearanceTitle),
         const SizedBox(height: 12),
         SegmentedButton<ThemeMode>(
           key: const Key('segments_theme_mode'),
-          segments: const [
-            ButtonSegment(value: ThemeMode.system, label: Text('Système')),
-            ButtonSegment(value: ThemeMode.light, label: Text('Clair')),
-            ButtonSegment(value: ThemeMode.dark, label: Text('Sombre')),
+          segments: [
+            ButtonSegment(
+              value: ThemeMode.system,
+              label: Text(l10n.profileThemeSystem),
+            ),
+            ButtonSegment(
+              value: ThemeMode.light,
+              label: Text(l10n.profileThemeLight),
+            ),
+            ButtonSegment(
+              value: ThemeMode.dark,
+              label: Text(l10n.profileThemeDark),
+            ),
           ],
           selected: {mode},
           showSelectedIcon: false,
           onSelectionChanged: (selection) {
             if (selection.isNotEmpty) {
               ref.read(themeModeProvider.notifier).setMode(selection.first);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Langue — sélecteur Système / Français / English (FEAT-043)
+// ---------------------------------------------------------------------------
+
+/// Sélecteur de langue (Système / Français / English), persisté via
+/// [localeProvider]. Calque exact de [ProfileAppearanceSection].
+///
+/// `null` (Système) = suit la locale du navigateur/OS (résolue par
+/// `localeResolutionCallback` dans `main.dart`, fallback FR).
+class ProfileLanguageSection extends ConsumerWidget {
+  const ProfileLanguageSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+    final l10n = context.l10n;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: l10n.profileLanguageTitle),
+        const SizedBox(height: 12),
+        SegmentedButton<Locale?>(
+          key: const Key('segments_locale'),
+          segments: [
+            ButtonSegment(value: null, label: Text(l10n.profileLanguageSystem)),
+            ButtonSegment(
+              value: const Locale('fr'),
+              label: Text(l10n.profileLanguageFrench),
+            ),
+            ButtonSegment(
+              value: const Locale('en'),
+              label: Text(l10n.profileLanguageEnglish),
+            ),
+          ],
+          selected: {locale},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) {
+            if (selection.isNotEmpty) {
+              ref.read(localeProvider.notifier).setLocale(selection.first);
             }
           },
         ),
@@ -67,6 +127,7 @@ class ProfileLegalTiles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -74,7 +135,7 @@ class ProfileLegalTiles extends StatelessWidget {
           key: const Key('tile_terms'),
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.gavel_outlined),
-          title: const Text("Conditions générales d'utilisation"),
+          title: Text(l10n.profileHubTermsTile),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/terms'),
         ),
@@ -82,7 +143,7 @@ class ProfileLegalTiles extends StatelessWidget {
           key: const Key('tile_privacy'),
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.privacy_tip_outlined),
-          title: const Text('Politique de confidentialité'),
+          title: Text(l10n.profileHubPrivacyTile),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/privacy'),
         ),
@@ -105,19 +166,23 @@ class ProfileAboutSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final asyncInfo = ref.watch(appInfoProvider);
 
     final versionLabel = asyncInfo.when(
-      data: (info) => 'v${info.version} (build ${info.buildNumber})',
+      data: (info) =>
+          l10n.profileAboutVersionValue(info.version, info.buildNumber),
       loading: () => '…',
-      error: (_, _) => 'version inconnue',
+      error: (_, _) => l10n.profileAboutVersionUnknown,
     );
-    final envLabel = Env.isProd ? 'production' : 'dev/staging';
+    final envLabel = Env.isProd
+        ? l10n.profileAboutEnvProduction
+        : l10n.profileAboutEnvDevStaging;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'À propos'),
+        SectionHeader(title: l10n.profileAboutTitle),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -128,7 +193,7 @@ class ProfileAboutSection extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'Baillan. $versionLabel · $envLabel',
+              l10n.profileAboutSummary(l10n.appTitle, versionLabel, envLabel),
               key: const Key('txt_app_version'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -153,17 +218,18 @@ class ProfileSessionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Session'),
+        SectionHeader(title: l10n.profileSessionTitle),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           key: const Key('btn_logout_profile'),
           onPressed: () => ref.read(loginControllerProvider.notifier).signOut(),
           icon: const Icon(Icons.logout),
-          label: const Text('Se déconnecter'),
+          label: Text(l10n.profileSessionLogoutButton),
           style: OutlinedButton.styleFrom(foregroundColor: colorScheme.error),
         ),
       ],

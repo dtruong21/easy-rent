@@ -7,6 +7,7 @@ import '../data/tenant_repository.dart';
 import '../../dashboard/application/dashboard_provider.dart';
 import '../domain/tenant.dart';
 import '../domain/tenant_form_state.dart';
+import '../domain/tenant_submit_error.dart';
 import 'tenant_detail_provider.dart';
 import 'tenants_list_provider.dart';
 
@@ -134,41 +135,40 @@ class TenantFormController extends StateNotifier<TenantFormState> {
       state = TenantFormState.success(tenant: result);
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseFunctionsException submit (code=${e.code})', e, st);
-      state = TenantFormState.error(message: _mapFunctionsError(e));
+      state = TenantFormState.error(message: _mapFunctionsError(e).name);
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException submit (code=${e.code})', e, st);
-      state = const TenantFormState.error(
-        message: 'Erreur de sauvegarde. Vérifiez votre connexion et réessayez.',
-      );
+      state = TenantFormState.error(message: TenantSubmitError.saveFailed.name);
     } on TenantNotFoundException catch (notFound, st) {
       _log.warning('TenantNotFoundException lors de submit', notFound, st);
-      state = const TenantFormState.error(
-        message: 'Locataire introuvable. Il a peut-être été archivé.',
-      );
+      state = TenantFormState.error(message: TenantSubmitError.notFound.name);
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de submit', e, st);
-      state = const TenantFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
-      );
+      state = TenantFormState.error(message: TenantSubmitError.unknown.name);
     }
   }
 
   /// Remet le formulaire à l'état initial (ex. : après une erreur).
   void reset() => state = const TenantFormState.idle();
 
-  String _mapFunctionsError(FirebaseFunctionsException e) {
+  /// Mappe une [FirebaseFunctionsException] vers un [TenantSubmitError]
+  /// (clé technique stable, indépendante de la locale — cf.
+  /// `tenant_submit_error.dart`). Le champ `message` de
+  /// [TenantFormState.error] porte désormais `TenantSubmitError.name`,
+  /// traduit en présentation via `TenantSubmitErrorL10n.message(context)`.
+  TenantSubmitError _mapFunctionsError(FirebaseFunctionsException e) {
     final code = e.code;
     final msg = e.message ?? '';
     if (msg.contains('tenant_has_active_leases')) {
-      return 'Ce locataire a des baux actifs — résiliez-les avant d\'archiver.';
+      return TenantSubmitError.hasActiveLeases;
     }
     if (code == 'permission-denied' || code == 'unauthenticated') {
-      return 'Action non autorisée.';
+      return TenantSubmitError.permissionDenied;
     }
     if (code == 'unavailable' || code == 'deadline-exceeded') {
-      return 'Service temporairement indisponible. Réessayez.';
+      return TenantSubmitError.serviceUnavailable;
     }
-    return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+    return TenantSubmitError.saveFailed;
   }
 }
 

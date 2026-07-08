@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/auth_session_provider.dart';
 import 'widgets/profile_change_password_form.dart';
@@ -21,7 +22,7 @@ class ChangePasswordPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: 'Changer le mot de passe',
+        title: context.l10n.profilePasswordTitle,
         fallbackRoute: '/profile',
       ),
       body: Center(
@@ -49,8 +50,7 @@ class _NoPasswordNotice extends StatelessWidget {
     final theme = Theme.of(context);
     return Text(
       key: const Key('txt_no_password_notice'),
-      'Le mot de passe de ce compte est géré par votre fournisseur de '
-      'connexion.',
+      context.l10n.profilePasswordManagedByProviderNotice,
       style: theme.textTheme.bodyMedium?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
       ),

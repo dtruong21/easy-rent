@@ -8,6 +8,7 @@ import '../../dashboard/application/dashboard_provider.dart';
 import '../domain/heating_type.dart';
 import '../domain/property.dart';
 import '../domain/property_form_state.dart';
+import '../domain/property_submit_error.dart';
 import '../domain/property_type.dart';
 import 'properties_list_provider.dart';
 import 'property_detail_provider.dart';
@@ -151,21 +152,21 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
       state = PropertyFormState.success(property: result);
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('FirebaseFunctionsException submit (code=${e.code})', e, st);
-      state = PropertyFormState.error(message: _mapFunctionsError(e));
+      state = PropertyFormState.error(message: _mapFunctionsError(e).name);
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException submit (code=${e.code})', e, st);
-      state = const PropertyFormState.error(
-        message: 'Erreur de sauvegarde. Vérifiez votre connexion et réessayez.',
+      state = PropertyFormState.error(
+        message: PropertySubmitError.connectionError.name,
       );
     } on PropertyNotFoundException catch (notFound, st) {
       _log.warning('PropertyNotFoundException lors de submit', notFound, st);
-      state = const PropertyFormState.error(
-        message: 'Bien introuvable. Il a peut-être été archivé.',
+      state = PropertyFormState.error(
+        message: PropertySubmitError.notFound.name,
       );
     } catch (e, st) {
       _log.severe('Erreur inattendue lors de submit', e, st);
-      state = const PropertyFormState.error(
-        message: 'Une erreur est survenue. Veuillez réessayer.',
+      state = PropertyFormState.error(
+        message: PropertySubmitError.unknown.name,
       );
     }
   }
@@ -174,24 +175,25 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
   void reset() => state = const PropertyFormState.idle();
 }
 
-/// Mappe les codes d'erreur des Callables Firebase vers des messages
-/// utilisateur en français (équivalent de l'ancien `mapPostgrestError`).
-String _mapFunctionsError(FirebaseFunctionsException e) {
+/// Mappe les codes d'erreur des Callables Firebase vers un [PropertySubmitError]
+/// (FEAT-043 — équivalent de l'ancien `mapPostgrestError`, désormais sans FR
+/// en dur, cf. `property_submit_error.dart`).
+PropertySubmitError _mapFunctionsError(FirebaseFunctionsException e) {
   // Les messages métier ("property_has_active_leases", etc.) sont
   // renvoyés en `e.message`. Les codes "permission-denied",
   // "failed-precondition" matchent les HttpsError côté CF.
   final code = e.code;
   final msg = e.message ?? '';
   if (msg.contains('property_has_active_leases')) {
-    return 'Ce bien a des baux actifs — résiliez-les avant d\'archiver.';
+    return PropertySubmitError.hasActiveLeases;
   }
   if (code == 'permission-denied' || code == 'unauthenticated') {
-    return 'Action non autorisée.';
+    return PropertySubmitError.permissionDenied;
   }
   if (code == 'unavailable' || code == 'deadline-exceeded') {
-    return 'Service temporairement indisponible. Réessayez.';
+    return PropertySubmitError.serviceUnavailable;
   }
-  return 'Erreur lors de la sauvegarde. Veuillez réessayer.';
+  return PropertySubmitError.saveFailed;
 }
 
 /// Provider autoDispose du contrôleur de formulaire bien.
