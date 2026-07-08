@@ -4,7 +4,8 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "**/robots.staging.txt"
     ],
     "rewrites": [
       {
@@ -47,6 +48,25 @@
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "//": "SEO (FEAT-049) : robots.txt / sitemap.xml — cache court pour propager vite une bascule de domaine. Aucun glob suivant ne matche .txt/.xml, donc pas de collision de clé.",
+        "source": "/robots.txt",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
+          }
+        ]
+      },
+      {
+        "source": "/sitemap.xml",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
           }
         ]
       },

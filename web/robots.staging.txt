@@ -1,0 +1,8 @@
+# robots.txt — Baillan (STAGING / preview channels)
+# Ce fichier remplace build/web/robots.txt UNIQUEMENT sur les builds APP_ENV=dev
+# (étape "noindex staging" de .github/workflows/deploy.yml). Il ne doit JAMAIS
+# devenir le robots.txt de prod. Bloque tout crawl des URLs de preview
+# (easy-rent-54cd4--staging-*.web.app).
+
+User-agent: *
+Disallow: /
