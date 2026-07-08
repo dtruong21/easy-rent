@@ -120,6 +120,20 @@ class DeleteAccountController extends StateNotifier<DeleteAccountState> {
       case 'user-mismatch':
         return 'Le compte confirmé ne correspond pas au compte connecté. '
             'Réessayez avec le même compte.';
+      // Popup/fenêtre OAuth de ré-authentification (Google/Apple) fermée ou
+      // annulée par l'utilisateur — web (`popup-*`, `cancelled-popup-request`,
+      // `user-cancelled`) comme mobile natif (`web-context-canc[e]lled`).
+      case 'popup-closed-by-user':
+      case 'cancelled-popup-request':
+      case 'user-cancelled':
+      case 'web-context-canceled':
+      case 'web-context-cancelled':
+        return 'Connexion annulée.';
+      case 'popup-blocked':
+        return 'La fenêtre de connexion a été bloquée par le navigateur. '
+            'Autorisez les pop-ups puis réessayez.';
+      case 'network-request-failed':
+        return 'Erreur réseau. Vérifiez votre connexion puis réessayez.';
       default:
         // FEAT-045 : flux de suppression encore FR (non couvert par
         // l'i18n FEAT-043 — arrivé après les vagues d'extraction).
