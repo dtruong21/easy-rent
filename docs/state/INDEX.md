@@ -4,18 +4,18 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-07T12:00:00Z
-- **Commit ref** : `feature/045-account-deletion` (base FEAT-024 mobile, FEAT-045 suppression de compte, 2026-07-07)
-- **Branche** : `feature/045-account-deletion`
-- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + préparation release stores (FEAT-024 mobile + FEAT-045)
+- **Dernière mise à jour** : 2026-07-08T06:00:30Z
+- **Commit ref** : `205188b` (develop, FEAT-043 i18n + FEAT-045 suppression de compte + FEAT-048 FAQ + FEAT-024 mobile merged)
+- **Branche** : `develop`
+- **Phase projet** : MVP ✅ + Post-MVP M1 ✅ + Mobile + Stores ✅ (FEAT-024 iOS/Android, FEAT-043 i18n FR/EN, FEAT-045 suppression, FEAT-048 FAQ)
 
 ## Pointeurs
 
 | Aspect du projet | Fichier | Contenu clé |
 |---|---|---|
-| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase, **chargeMode FEAT-042** |
-| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 45+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041) |
-| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–042, MVP ✅ + Post-MVP M1 ✅ (FEAT-036, FEAT-041 V1, FEAT-042 merged) |
+| Schéma Firestore (collections, rules, indexes) | [`SCHEMA.md`](SCHEMA.md) | **11 collections** (+ `expenses` FEAT-041), 28+ composite indexes, 3-couche rules, Firestore camelCase, **chargeMode FEAT-042**, **receipts.accountDeletedAt/retentionUntil FEAT-045** |
+| Routes Flutter et gardiennage d'accès | [`ROUTES.md`](ROUTES.md) | 3-state router, 50+ routes, deep linking, `/properties/:id/expenses*` (FEAT-041), **/faq, /delete-account, /profile/delete-account** (FEAT-045/048) |
+| Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–048, MVP ✅ + Post-MVP M1 ✅ + Mobile ✅ (FEAT-024 iOS/Android, FEAT-043 i18n, FEAT-045 deletion, FEAT-048 FAQ merged) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
 | Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **28 callables** (+ `deleteAccount` FEAT-045) + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper** |
 | Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
@@ -53,11 +53,30 @@
 | **Hosting** | Firebase Hosting | Staging + prod channels, CSP (fonts.gstatic.com) |
 | **CI/CD** | GitHub Actions | ci.yml (format + analyze) + deploy.yml (manual channel) |
 
-## Changements récents (2026-07-03 — 2026-07-07)
+## Changements récents (2026-07-03 — 2026-07-08)
+
+### FEAT-043 : Internationalisation FR/EN (i18n)
+
+**Status** : ✅ DONE (merged PR #71, 2026-07-08)
+
+- **Fondation gen_l10n** : ARB files (app_{en,fr}.arb ~800+ clés), localeProvider (SharedPreferences), locale système défaut
+- **Errors localisés** : ValidationError + AuthError → ValidationErrorL10n.message(context) / AuthErrorL10n.message(context)
+- **Pattern freezed** : states stockent error `.name` (string) → présentation via l10n extensions
+- **Coverage** : toutes les features bilingues (leases, properties, tenants, payments, receipts, expenses, charge_regularization, simulator, landing, support, auth, dashboard, profile)
+- **Note** : flux suppression compte, e-mails, formatters dates/€ restent FR (suivi post-M1)
+
+### FEAT-048 : FAQ produit publique + réordonnancement hub Profil
+
+**Status** : ✅ DONE (merged PR #69, 2026-07-07)
+
+- **Route** : `/faq` (page publique, anonymes+comptes)
+- **Contenu** : 11 Q/R (quittances loi 1989, essai anonyme, RGPD, suppression, charges…)
+- **UI** : ExpansionTiles, accessible lien landing + tuile Profil Aide
+- **Hub Profil réordonné** : Compte (détails, mot de passe, **suppression**) / Apparence / Aide (**FAQ**, contact, légal) / À propos / Session
 
 ### FEAT-045 : Suppression de compte in-app + page publique /delete-account
 
-**Status** : ✅ DONE (branche feature/045-account-deletion, 2026-07-07)
+**Status** : ✅ DONE (merged PR #69, 2026-07-07)
 
 - **Bloquant stores levé** : Google Play « Account deletion » (13327111) + App Store 5.1.1(v) — cf. [docs/STORE_COMPLIANCE.md](../STORE_COMPLIANCE.md)
 - **CF callable `deleteAccount`** : garde fraîcheur token (auth_time < 5 min, anonymes exemptés), quittances CONSERVÉES 5 ans (loi 6/07/1989, stamp accountDeletedAt + retentionUntil), hard-delete paginé 8 collections + singletons + Storage documents/{uid}/, Auth supprimé EN DERNIER (retry porté par l'utilisateur)
@@ -68,7 +87,7 @@
 
 ### FEAT-024 : App mobile iOS/Android — setup + parité (2026-07-06)
 
-**Status** : 🚧 WIP (setup complet, smoke test émulateur ✅ — branche `claude/magical-jackson-d0116a`)
+**Status** : ✅ DONE (merged feature/024-mobile, 2026-07-06)
 
 - **Plateformes natives** : `android/` + `ios/` ajoutées au projet (une seule base de code) — applicationId/bundle ID **`com.daki.baillan`** (définitif stores)
 - **Firebase** : apps Android + iOS enregistrées sur `easy-rent-54cd4`, `firebase_options.dart` couvre web/android/ios, SHA debug déclarées
@@ -295,10 +314,12 @@ Auth:
   
 Backend:
   Firestore collections: landlords, properties, tenants, leases, payments,
-                         receipts, documents, expenses (FEAT-041), investment_scenarios,
-                         paid_plan_interest, support_requests (FEAT-025)
-  Cloud Functions: 27 callables + 8 triggers + 1 scheduled (Node.js 20)
-                   NEW: createExpense, updateExpense, setUpdatedAtExpenses (FEAT-041)
+                         receipts (accountDeletedAt/retentionUntil FEAT-045), documents,
+                         expenses (FEAT-041), investment_scenarios, paid_plan_interest,
+                         support_requests (FEAT-025)
+  Cloud Functions: 28 callables + 8 triggers + 1 scheduled (Node.js 20)
+                   FEAT-041: createExpense, updateExpense, setUpdatedAtExpenses
+                   FEAT-045: deleteAccount (RGPD art. 17, rétention quittances 5 ans)
   Storage: signed URLs (5 min), documents + receipts buckets
   
 Security:

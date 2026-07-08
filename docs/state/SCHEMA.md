@@ -1,6 +1,6 @@
 # Schéma Firestore — snapshot
 
-> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-07 (FEAT-045 : rules `list` owner-scoped sur les 8 collections multi-tenant — audit H1 ; tests émulateur `functions/rules-tests/`). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
+> Maintenu par `state-keeper`. **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-08 (FEAT-045 : champs `receipts.accountDeletedAt/retentionUntil` pour rétention légale 5 ans ; FEAT-043 i18n sans impact schema). **Pivot** : FEAT-019 (2026-06-30) — migration Supabase Postgres → Firestore camelCase.
 
 ## Collections (11 total)
 
@@ -226,6 +226,8 @@ Quittance loyer (loi 6 juillet 1989). **IMMUABLE** : jamais soft-delete (rétent
 | `status` | string | 'generated' \| 'voided' \| 'sent' (markers non-exclusifs, bits) |
 | `receiptDate` | timestamp | Date édition |
 | `voidReason` | string\|null | Raison annulation (si voided) |
+| `accountDeletedAt` | timestamp\|null | **FEAT-045** : stamp suppression compte (null si compte actif) — quittance conservée 5 ans |
+| `retentionUntil` | timestamp\|null | **FEAT-045** : date limite de rétention légale (5 ans après suppression) — purge async après |
 | `createdAt` | timestamp | Immuable |
 | `updatedAt` | timestamp | CF trigger (status only) |
 | `deletedAt` | timestamp\|null | null (jamais supprimée en practice, marquée voided) |
