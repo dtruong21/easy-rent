@@ -30,10 +30,14 @@ Document _makeDoc({bool legalHold = false}) => Document(
   updatedAt: DateTime(2026, 6, 1),
 );
 
-Widget _buildDialog({required Document document, VoidCallback? onConfirm}) {
+Widget _buildDialog({
+  required Document document,
+  VoidCallback? onConfirm,
+  Locale locale = const Locale('fr'),
+}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
-    locale: const Locale('fr'),
+    locale: locale,
     supportedLocales: supportedLocales,
     home: Scaffold(
       body: Builder(
@@ -155,5 +159,25 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'locale EN → citation « loi du 6 juillet 1989 » et « 5 ans » restent FR',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildDialog(
+            document: _makeDoc(legalHold: true),
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        // Citation légale + durée de conservation : jamais traduites.
+        expect(find.textContaining('loi du 6 juillet 1989'), findsOneWidget);
+        expect(find.textContaining('5 ans'), findsOneWidget);
+        expect(find.textContaining('law of 6 July 1989'), findsNothing);
+        expect(find.textContaining('5-year'), findsNothing);
+      },
+    );
   });
 }

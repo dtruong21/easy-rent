@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../application/delete_account_controller.dart';
 import '../application/auth_session_provider.dart';
+import '../domain/delete_account_error.dart';
 import '../domain/delete_account_state.dart';
 import '../domain/session_state.dart';
+import 'delete_account_error_l10n.dart';
 
 /// Page publique `/delete-account` — demande de suppression de compte
 /// Baillan (FEAT-045).
@@ -24,13 +27,28 @@ import '../domain/session_state.dart';
 class DeleteAccountRequestPage extends ConsumerWidget {
   const DeleteAccountRequestPage({super.key});
 
+  /// Phrase de rétention légale des quittances — contenu légal, non traduit
+  /// (citation loi n° 89-462), appendue au paragraphe d'introduction traduit.
+  /// Même règle que la notice du flux in-app (cf. `DeleteAccountWarning`) et
+  /// les documents légaux, `l10n_convention.dart` §7. Le test widget vérifie
+  /// la présence de la citation indépendamment de la locale active.
+  static const _receiptsRetentionSentenceFr =
+      'Seules vos quittances de loyer émises sont conservées '
+      '5 ans à titre de preuve (loi n° 89-462 du 6 juillet '
+      '1989), sous forme archivée et inaccessible, puis '
+      'supprimées — voir notre politique de confidentialité.';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final sessionState = ref.watch(sessionStateProvider);
 
     return Scaffold(
-      appBar: AppAppBar(title: 'Suppression de compte', fallbackRoute: '/'),
+      appBar: AppAppBar(
+        title: l10n.deleteAccountRequestPageTitle,
+        fallbackRoute: '/',
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -41,40 +59,30 @@ class DeleteAccountRequestPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Supprimer votre compte Baillan',
+                    l10n.deleteAccountRequestHeading,
                     style: theme.textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'La suppression de votre compte Baillan est immédiate, '
-                    'définitive et efface l\'ensemble de vos données : biens, '
-                    'locataires, baux, paiements, documents, dépenses, '
-                    'simulations, profil et compte de connexion (email, '
-                    'Google ou Apple).\n\n'
-                    'Seules vos quittances de loyer émises sont conservées '
-                    '5 ans à titre de preuve (loi n° 89-462 du 6 juillet '
-                    '1989), sous forme archivée et inaccessible, puis '
-                    'supprimées — voir notre politique de confidentialité.',
+                    '${l10n.deleteAccountRequestIntro}\n\n'
+                    '$_receiptsRetentionSentenceFr',
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 24),
-                  Text('Comment procéder', style: theme.textTheme.titleMedium),
+                  Text(
+                    l10n.deleteAccountRequestStepsTitle,
+                    style: theme.textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    '1. Connectez-vous à Baillan (application mobile ou web).\n'
-                    '2. Ouvrez l\'onglet « Profil » puis « Supprimer mon '
-                    'compte ».\n'
-                    '3. Confirmez votre identité (mot de passe, Google ou '
-                    'Apple) et validez.',
+                    l10n.deleteAccountRequestSteps,
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 24),
                   _SessionAwareAction(sessionState: sessionState),
                   const SizedBox(height: 24),
                   Text(
-                    'Vous avez perdu l\'accès à votre compte ? Utilisez '
-                    '« Mot de passe oublié » sur l\'écran de connexion pour '
-                    'le récupérer, puis procédez à la suppression.',
+                    l10n.deleteAccountRequestLostAccess,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -83,7 +91,7 @@ class DeleteAccountRequestPage extends ConsumerWidget {
                   TextButton(
                     key: const Key('btn_delete_request_privacy'),
                     onPressed: () => context.push('/privacy'),
-                    child: const Text('Politique de confidentialité'),
+                    child: Text(l10n.authPrivacyPolicyLink),
                   ),
                 ],
               ),
@@ -103,20 +111,21 @@ class _SessionAwareAction extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     switch (sessionState) {
       case SessionState.unauthenticated:
         return FilledButton.icon(
           key: const Key('btn_delete_request_login'),
           onPressed: () => context.go('/login'),
           icon: const Icon(Icons.login),
-          label: const Text('Se connecter pour supprimer mon compte'),
+          label: Text(l10n.deleteAccountRequestLoginButton),
         );
       case SessionState.fullyAuthenticated:
         return FilledButton.icon(
           key: const Key('btn_delete_request_go_profile'),
           onPressed: () => context.go('/profile/delete-account'),
           icon: const Icon(Icons.delete_forever_outlined),
-          label: const Text('Supprimer mon compte maintenant'),
+          label: Text(l10n.deleteAccountRequestGoProfileButton),
         );
       case SessionState.anonymous:
         return const _AnonymousDeleteAction();
@@ -133,10 +142,11 @@ class _AnonymousDeleteAction extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     final state = ref.watch(deleteAccountControllerProvider);
     final isWorking = state.maybeWhen(working: () => true, orElse: () => false);
     final errorMessage = state.maybeWhen(
-      error: (msg) => msg,
+      error: (code) => DeleteAccountError.fromCode(code).message(context),
       orElse: () => null,
     );
 
@@ -151,8 +161,10 @@ class _AnonymousDeleteAction extends ConsumerWidget {
           // par la garde avec l'état de session PÉRIMÉ (cf. même commentaire
           // dans DeleteAccountPage).
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Votre essai et ses données ont été supprimés.'),
+            SnackBar(
+              content: Text(
+                context.l10n.deleteAccountRequestAnonSuccessSnackbar,
+              ),
             ),
           );
         },
@@ -164,9 +176,7 @@ class _AnonymousDeleteAction extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Vous utilisez actuellement Baillan en essai sans compte : la '
-          'suppression efface immédiatement cette session et ses données '
-          '(simulations d\'investissement).',
+          l10n.deleteAccountRequestAnonDescription,
           style: theme.textTheme.bodyMedium,
         ),
         const SizedBox(height: 12),
@@ -187,7 +197,7 @@ class _AnonymousDeleteAction extends ConsumerWidget {
                   ),
                 )
               : const Icon(Icons.delete_forever_outlined),
-          label: const Text('Supprimer mon essai et ses données'),
+          label: Text(l10n.deleteAccountRequestAnonButton),
         ),
         if (errorMessage != null) ...[
           const SizedBox(height: 8),
@@ -202,19 +212,17 @@ class _AnonymousDeleteAction extends ConsumerWidget {
   }
 
   Future<void> _confirmThenDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Supprimer votre essai ?'),
-        content: const Text(
-          'Vos simulations et cette session d\'essai seront supprimées '
-          'immédiatement. Cette action ne peut pas être annulée.',
-        ),
+        title: Text(l10n.deleteAccountRequestAnonDialogTitle),
+        content: Text(l10n.deleteAccountRequestAnonDialogBody),
         actions: [
           TextButton(
             key: const Key('btn_delete_request_anon_cancel'),
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             key: const Key('btn_delete_request_anon_confirm'),
@@ -223,7 +231,7 @@ class _AnonymousDeleteAction extends ConsumerWidget {
               foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Supprimer'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),

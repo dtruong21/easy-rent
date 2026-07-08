@@ -73,12 +73,13 @@ class _FakeDocumentsRepository implements DocumentsRepository {
 Widget _buildField({
   required ProviderContainer container,
   String? existingDocumentId,
+  Locale locale = const Locale('fr'),
 }) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      locale: const Locale('fr'),
+      locale: locale,
       supportedLocales: supportedLocales,
       home: Scaffold(
         body: SingleChildScrollView(
@@ -127,6 +128,29 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('sans justificatif'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'locale EN → la durée légale de conservation reste « 5 à 10 ans » (FR)',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            documentsRepositoryProvider.overrideWithValue(
+              _FakeDocumentsRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          _buildField(container: container, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        // Durée légale de conservation : jamais traduite en anglais.
+        expect(find.textContaining('5 à 10 ans'), findsOneWidget);
+        expect(find.textContaining('5 to 10 years'), findsNothing);
       },
     );
   });

@@ -78,7 +78,7 @@ class ProfilePage extends ConsumerWidget {
                 color: theme.colorScheme.error,
               ),
               title: Text(
-                'Supprimer mon compte',
+                l10n.profileHubDeleteAccountTile,
                 style: TextStyle(color: theme.colorScheme.error),
               ),
               trailing: const Icon(Icons.chevron_right),

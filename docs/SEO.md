@@ -106,7 +106,7 @@ PAS corrigeable par de la config** — il faut exposer du HTML crawlable.
 |---|---|---|
 | 10 | Brancher domaine custom → substituer `VOTRE-DOMAINE` partout (head + robots + sitemap) | medium |
 | 11 | Search Console : vérif domaine, soumettre sitemap, Inspection d'URL | quick-win |
-| 12 | Image OG dédiée `og-image-1200x630.png` (wordmark + « Tenir registre. » sur fond #1B1A17) | quick-win |
+| 12 | ✅ Image OG dédiée `og-image-1200x630.png` (« B » paraphe + wordmark + « Tenir registre. » sur fond #1B1A17). Générée par `scripts/generate-og-image.sh` (source `scripts/og-image.svg`, rendu rsvg-convert). | quick-win |
 | 13 | Auto-héberger la police serif en woff2 sous-ensemblé (retire la dépendance fonts.gstatic.com, gagne du LCP) | medium |
 | 14 | `<link rel="preload">` boot (flutter_bootstrap.js, main.dart.js, canvaskit.wasm) | medium |
 
@@ -151,8 +151,8 @@ PAS corrigeable par de la config** — il faut exposer du HTML crawlable.
 <meta property="og:url" content="https://VOTRE-DOMAINE/">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:locale:alternate" content="en_US">
-<!-- Image OG en PNG/JPG 1200x630 (PAS webp — plusieurs scrapers sociaux ne le lisent pas).
-     Fallback tant que l'asset dédié n'existe pas : https://VOTRE-DOMAINE/icons/Icon-512.png -->
+<!-- Image OG en PNG 1200x630 (PAS webp — plusieurs scrapers sociaux ne le lisent pas).
+     Asset dédié : régénérable via scripts/generate-og-image.sh (source scripts/og-image.svg). -->
 <meta property="og:image" content="https://VOTRE-DOMAINE/icons/og-image-1200x630.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -409,7 +409,7 @@ déjà les mots-clés tête sur la home.
 - [ ] `web/robots.txt`, `web/robots.staging.txt`, `web/sitemap.xml` committés.
 - [ ] Étape deploy.yml « noindex staging » en place + testée sur un build dev.
 - [ ] Headers Cache-Control robots/sitemap dans `firebase.json`.
-- [ ] Image OG `og-image-1200x630.png` créée (ou fallback `Icon-512.png` en place).
+- [x] Image OG `og-image-1200x630.png` créée (générée par `scripts/generate-og-image.sh`).
 - [ ] **Vérif DOM servi** : `curl -s https://VOTRE-DOMAINE/ | grep -iE "og:|canonical|<h1|ld\+json"` → doit renvoyer le head + le bloc `#seo-static`.
 - [ ] **Vérif fichiers statiques** (servis avant le rewrite) :
       `curl -s https://VOTRE-DOMAINE/robots.txt` et `.../sitemap.xml` → renvoient le fichier, pas `index.html`.
