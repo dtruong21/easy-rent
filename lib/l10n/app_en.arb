@@ -4929,9 +4929,9 @@
   "@deleteAccountConfirmDialogTitle": {
     "description": "Title of the final confirmation dialog before account deletion."
   },
-  "deleteAccountConfirmDialogBody": "Your Baillan account and all your data will be deleted immediately (except rent receipts, kept for 5 years — legal requirement). This action cannot be undone.",
+  "deleteAccountConfirmDialogBody": "Your Baillan account and all your data will be deleted immediately (except rent receipts, kept for 5 ans — legal requirement). This action cannot be undone.",
   "@deleteAccountConfirmDialogBody": {
-    "description": "Body of the final confirmation dialog. Chrome UI (not the binding legal text); mentions the 5-year receipts retention as plain context. 'Baillan' is the brand name — keep untranslated."
+    "description": "Body of the final confirmation dialog. Chrome UI (not the binding legal text). The statutory retention term « 5 ans » is intentionally kept in French in every locale (project rule: the receipts-retention period always renders FR, aligned with the FR-only retention notice). 'Baillan' is the brand name — keep untranslated."
   },
   "deleteAccountSuccessSnackbar": "Your account has been deleted. Goodbye.",
   "@deleteAccountSuccessSnackbar": {

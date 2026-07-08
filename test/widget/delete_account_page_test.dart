@@ -349,5 +349,29 @@ void main() {
         );
       },
     );
+
+    testWidgets('locale EN → le dialog de confirmation garde « 5 ans » en FR', (
+      tester,
+    ) async {
+      final authRepo = _FakeAuthRepository(_userWithProvider('password'));
+      await tester.pumpWidget(
+        _buildPage(authRepo: authRepo, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_delete_account_password')),
+        'S3cret!!',
+      );
+      await _acknowledge(tester);
+      await _tapSubmit(tester);
+
+      // Le dialog s'ouvre bien en anglais…
+      expect(find.text('Delete permanently?'), findsOneWidget);
+      // …mais la durée de rétention légale reste « 5 ans » (jamais traduite
+      // en « 5 years »), dans le dialog comme dans la notice.
+      expect(find.textContaining('5 years'), findsNothing);
+      expect(find.textContaining('5 ans'), findsWidgets);
+    });
   });
 }
