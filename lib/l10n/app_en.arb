@@ -4862,5 +4862,163 @@
   "pwaInstallBannerIosConfirmButton": "OK, got it",
   "@pwaInstallBannerIosConfirmButton": {
     "description": "Button label in the PWA install banner (iOS Safari variant) that dismisses the banner once the user has read the manual install instructions."
+  },
+
+  "deleteAccountPageTitle": "Delete my account",
+  "@deleteAccountPageTitle": {
+    "description": "AppBar title of the in-app /profile/delete-account page (FEAT-045 account deletion flow)."
+  },
+  "deleteAccountWarningTitle": "This action is immediate and irreversible",
+  "@deleteAccountWarningTitle": {
+    "description": "Heading of the red warning box on the delete-account page, emphasizing that deletion is instant and cannot be undone."
+  },
+  "deleteAccountWarningIntro": "Deleting your Baillan account permanently erases:",
+  "@deleteAccountWarningIntro": {
+    "description": "Sentence introducing the bulleted list of data categories erased on account deletion. 'Baillan' is the brand name — keep untranslated in every locale."
+  },
+  "deleteAccountWarningItemProperties": "your properties and their expenses",
+  "@deleteAccountWarningItemProperties": {
+    "description": "Bullet item in the delete-account warning list: properties and their expenses."
+  },
+  "deleteAccountWarningItemTenants": "your tenants, leases and payments",
+  "@deleteAccountWarningItemTenants": {
+    "description": "Bullet item in the delete-account warning list: tenants, leases and payments."
+  },
+  "deleteAccountWarningItemDocuments": "your documents (including those under legal lock: signed leases, insurance certificates)",
+  "@deleteAccountWarningItemDocuments": {
+    "description": "Bullet item in the delete-account warning list: documents, including legally locked ones (signed leases, insurance certificates)."
+  },
+  "deleteAccountWarningItemSimulations": "your investment simulations",
+  "@deleteAccountWarningItemSimulations": {
+    "description": "Bullet item in the delete-account warning list: investment simulations."
+  },
+  "deleteAccountWarningItemAccount": "your landlord profile and your sign-in account",
+  "@deleteAccountWarningItemAccount": {
+    "description": "Bullet item in the delete-account warning list: landlord profile and sign-in account."
+  },
+  "deleteAccountWarningDownloadReminder": "Remember to download any documents you want to keep beforehand: no recovery will be possible.",
+  "@deleteAccountWarningDownloadReminder": {
+    "description": "Emphasized reminder below the warning list, urging the user to download documents before deletion since nothing can be recovered."
+  },
+  "deleteAccountRetentionTitle": "Legal retention of rent receipts",
+  "@deleteAccountRetentionTitle": {
+    "description": "Heading of the receipts-retention notice box. Chrome UI only — the notice body itself stays French because it carries the binding legal citation (loi n° 89-462 du 6 juillet 1989), out of this extraction's scope."
+  },
+  "deleteAccountPasswordPrompt": "Confirm your identity with your current password:",
+  "@deleteAccountPasswordPrompt": {
+    "description": "Prompt above the password field shown to email/password accounts before deletion (re-authentication step)."
+  },
+  "deleteAccountOAuthReauthNotice": "To confirm your identity, your {provider} sign-in will be re-validated right after confirmation.",
+  "@deleteAccountOAuthReauthNotice": {
+    "description": "Notice shown to Google/Apple accounts explaining that the OAuth flow will be re-run after the confirmation dialog. {provider} is a brand name ('Google' or 'Apple'), never translated.",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountAcknowledgeLabel": "I understand that deleting my account is permanent and that my data cannot be recovered.",
+  "@deleteAccountAcknowledgeLabel": {
+    "description": "Label of the mandatory acknowledgement checkbox on the delete-account page."
+  },
+  "deleteAccountSubmitButton": "Permanently delete my account",
+  "@deleteAccountSubmitButton": {
+    "description": "Label of the destructive submit button that opens the final confirmation dialog on the delete-account page."
+  },
+  "deleteAccountConfirmDialogTitle": "Delete permanently?",
+  "@deleteAccountConfirmDialogTitle": {
+    "description": "Title of the final confirmation dialog before account deletion."
+  },
+  "deleteAccountConfirmDialogBody": "Your Baillan account and all your data will be deleted immediately (except rent receipts, kept for 5 years — legal requirement). This action cannot be undone.",
+  "@deleteAccountConfirmDialogBody": {
+    "description": "Body of the final confirmation dialog. Chrome UI (not the binding legal text); mentions the 5-year receipts retention as plain context. 'Baillan' is the brand name — keep untranslated."
+  },
+  "deleteAccountSuccessSnackbar": "Your account has been deleted. Goodbye.",
+  "@deleteAccountSuccessSnackbar": {
+    "description": "SnackBar shown after the account has been successfully deleted, right before the router redirects to the sign-in screen."
+  },
+  "deleteAccountRequestPageTitle": "Account deletion",
+  "@deleteAccountRequestPageTitle": {
+    "description": "AppBar title of the public /delete-account request page (declared on the store listing, Google Play 'Account deletion' requirement)."
+  },
+  "deleteAccountRequestHeading": "Delete your Baillan account",
+  "@deleteAccountRequestHeading": {
+    "description": "Headline of the public account-deletion request page. 'Baillan' is the brand name — keep untranslated."
+  },
+  "deleteAccountRequestIntro": "Deleting your Baillan account is immediate, permanent, and erases all your data: properties, tenants, leases, payments, documents, expenses, simulations, profile and sign-in account (email, Google or Apple).",
+  "@deleteAccountRequestIntro": {
+    "description": "First paragraph of the public request page describing what deletion erases. The following legal retention sentence (loi n° 89-462) stays French and is appended in code. 'Baillan' is the brand name — keep untranslated."
+  },
+  "deleteAccountRequestStepsTitle": "How to proceed",
+  "@deleteAccountRequestStepsTitle": {
+    "description": "Subheading introducing the numbered in-app deletion steps on the public request page."
+  },
+  "deleteAccountRequestSteps": "1. Sign in to Baillan (mobile or web app).\n2. Open the \"Profile\" tab then \"Delete my account\".\n3. Confirm your identity (password, Google or Apple) and validate.",
+  "@deleteAccountRequestSteps": {
+    "description": "Numbered list (newline-separated) of the in-app steps to delete an account, shown on the public request page. 'Baillan' is the brand name — keep untranslated."
+  },
+  "deleteAccountRequestLostAccess": "Lost access to your account? Use \"Forgot password\" on the sign-in screen to recover it, then proceed with deletion.",
+  "@deleteAccountRequestLostAccess": {
+    "description": "Helper note on the public request page for users who can no longer sign in, pointing them to the password-reset flow."
+  },
+  "deleteAccountRequestLoginButton": "Sign in to delete my account",
+  "@deleteAccountRequestLoginButton": {
+    "description": "Primary action button on the public request page for signed-out visitors, navigating to /login."
+  },
+  "deleteAccountRequestGoProfileButton": "Delete my account now",
+  "@deleteAccountRequestGoProfileButton": {
+    "description": "Primary action button on the public request page for fully-authenticated accounts, navigating to /profile/delete-account."
+  },
+  "deleteAccountRequestAnonDescription": "You are currently using Baillan on a trial without an account: deletion immediately erases this session and its data (investment simulations).",
+  "@deleteAccountRequestAnonDescription": {
+    "description": "Explanation shown to anonymous (trial) sessions on the public request page before the direct-delete button. 'Baillan' is the brand name — keep untranslated."
+  },
+  "deleteAccountRequestAnonButton": "Delete my trial and its data",
+  "@deleteAccountRequestAnonButton": {
+    "description": "Destructive button on the public request page for anonymous sessions, opening the trial-deletion confirmation dialog."
+  },
+  "deleteAccountRequestAnonDialogTitle": "Delete your trial?",
+  "@deleteAccountRequestAnonDialogTitle": {
+    "description": "Title of the confirmation dialog when an anonymous (trial) session deletes itself from the public request page."
+  },
+  "deleteAccountRequestAnonDialogBody": "Your simulations and this trial session will be deleted immediately. This action cannot be undone.",
+  "@deleteAccountRequestAnonDialogBody": {
+    "description": "Body of the trial-deletion confirmation dialog on the public request page."
+  },
+  "deleteAccountRequestAnonSuccessSnackbar": "Your trial and its data have been deleted.",
+  "@deleteAccountRequestAnonSuccessSnackbar": {
+    "description": "SnackBar shown after an anonymous trial session has been successfully deleted from the public request page."
+  },
+  "profileHubDeleteAccountTile": "Delete my account",
+  "@profileHubDeleteAccountTile": {
+    "description": "List tile label in the /profile hub Account group navigating to /profile/delete-account. Rendered in the error color (destructive action)."
+  },
+  "deleteAccountErrorUserMismatch": "The confirmed account does not match the signed-in account. Try again with the same account.",
+  "@deleteAccountErrorUserMismatch": {
+    "description": "Error shown when re-authentication succeeds with a different account than the one signed in (FirebaseAuth 'user-mismatch') during account deletion."
+  },
+  "deleteAccountErrorReauthCancelled": "Sign-in cancelled.",
+  "@deleteAccountErrorReauthCancelled": {
+    "description": "Error shown when the user closes or cancels the OAuth re-authentication popup/window during account deletion."
+  },
+  "deleteAccountErrorPopupBlocked": "The sign-in window was blocked by your browser. Allow pop-ups then try again.",
+  "@deleteAccountErrorPopupBlocked": {
+    "description": "Error shown when the browser blocks the OAuth re-authentication popup during account deletion."
+  },
+  "deleteAccountErrorNetwork": "Network error. Check your connection then try again.",
+  "@deleteAccountErrorNetwork": {
+    "description": "Error shown when re-authentication fails on a network error ('network-request-failed') during account deletion."
+  },
+  "deleteAccountErrorSessionTooOld": "Your session is too old. Sign in again then try again.",
+  "@deleteAccountErrorSessionTooOld": {
+    "description": "Error shown when the deleteAccount callable rejects the token as not fresh enough ('failed-precondition' / recent-login-required)."
+  },
+  "deleteAccountErrorConnectionFailed": "Could not connect. Check your internet access and try again.",
+  "@deleteAccountErrorConnectionFailed": {
+    "description": "Error shown when the deleteAccount callable is unreachable ('unavailable' / 'deadline-exceeded')."
+  },
+  "deleteAccountErrorGeneric": "Deletion failed. Please try again.",
+  "@deleteAccountErrorGeneric": {
+    "description": "Generic fallback error for the account-deletion flow (unexpected failures, and default cases of the auth/callable error mappers)."
   }
 }

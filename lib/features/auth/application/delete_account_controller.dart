@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../data/auth_repository.dart';
+import '../domain/delete_account_error.dart';
 import '../domain/delete_account_reauth_method.dart';
 import '../domain/delete_account_state.dart';
 import 'auth_session_provider.dart';
@@ -94,14 +95,14 @@ class DeleteAccountController extends StateNotifier<DeleteAccountState> {
       _log.info('account deletion completed');
     } on FirebaseFunctionsException catch (e, st) {
       _log.warning('deleteAccount callable failed (code=${e.code})', e, st);
-      state = DeleteAccountState.error(message: _mapFunctionsError(e));
+      state = DeleteAccountState.error(message: _mapFunctionsError(e).name);
     } on FirebaseAuthException catch (e, st) {
       _log.warning('deleteAccount reauth failed (code=${e.code})', e, st);
-      state = DeleteAccountState.error(message: _mapAuthError(e));
+      state = DeleteAccountState.error(message: _mapAuthError(e).name);
     } catch (e, st) {
       _log.severe('unexpected deleteAccount failure', e, st);
-      state = const DeleteAccountState.error(
-        message: 'La suppression a échoué. Veuillez réessayer.',
+      state = DeleteAccountState.error(
+        message: DeleteAccountError.unknown.name,
       );
     }
   }
@@ -109,17 +110,17 @@ class DeleteAccountController extends StateNotifier<DeleteAccountState> {
   /// Remet le flux à l'état initial (après affichage d'une erreur).
   void reset() => state = const DeleteAccountState.idle();
 
-  /// Contexte « mot de passe actuel » : même surcharge de libellés que
-  /// [ChangePasswordController] (le mapper mutualisé mentionne « Email »,
-  /// hors sujet pour un utilisateur déjà connecté).
-  String _mapAuthError(FirebaseAuthException e) {
+  /// Mappe un code Firebase Auth (ré-authentification) vers un
+  /// [DeleteAccountError] — clé technique stable, jamais un message FR. La
+  /// couche présentation le localise via `DeleteAccountErrorL10n.message`
+  /// (`lib/features/auth/presentation/delete_account_error_l10n.dart`).
+  DeleteAccountError _mapAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Mot de passe actuel incorrect.';
+        return DeleteAccountError.wrongPassword;
       case 'user-mismatch':
-        return 'Le compte confirmé ne correspond pas au compte connecté. '
-            'Réessayez avec le même compte.';
+        return DeleteAccountError.userMismatch;
       // Popup/fenêtre OAuth de ré-authentification (Google/Apple) fermée ou
       // annulée par l'utilisateur — web (`popup-*`, `cancelled-popup-request`,
       // `user-cancelled`) comme mobile natif (`web-context-canc[e]lled`).
@@ -128,34 +129,28 @@ class DeleteAccountController extends StateNotifier<DeleteAccountState> {
       case 'user-cancelled':
       case 'web-context-canceled':
       case 'web-context-cancelled':
-        return 'Connexion annulée.';
+        return DeleteAccountError.reauthCancelled;
       case 'popup-blocked':
-        return 'La fenêtre de connexion a été bloquée par le navigateur. '
-            'Autorisez les pop-ups puis réessayez.';
+        return DeleteAccountError.popupBlocked;
       case 'network-request-failed':
-        return 'Erreur réseau. Vérifiez votre connexion puis réessayez.';
+        return DeleteAccountError.network;
       default:
-        // FEAT-045 : flux de suppression encore FR (non couvert par
-        // l'i18n FEAT-043 — arrivé après les vagues d'extraction).
-        // Suivi : migrer ce contrôleur vers AuthError + AuthErrorL10n.
-        return 'La suppression a échoué. Veuillez réessayer.';
+        return DeleteAccountError.unknown;
     }
   }
 
-  String _mapFunctionsError(FirebaseFunctionsException e) {
+  DeleteAccountError _mapFunctionsError(FirebaseFunctionsException e) {
     switch (e.code) {
       // Garde serveur `recent-login-required` (auth_time > 5 min) : la
       // réauthentification vient d'avoir lieu, ce cas signale une horloge
       // très décalée ou un flux contourné — on redemande une connexion.
       case 'failed-precondition':
-        return 'Votre session est trop ancienne. Reconnectez-vous puis '
-            'réessayez.';
+        return DeleteAccountError.sessionTooOld;
       case 'unavailable':
       case 'deadline-exceeded':
-        return 'Connexion impossible. Vérifiez votre accès internet et '
-            'réessayez.';
+        return DeleteAccountError.connectionFailed;
       default:
-        return 'La suppression a échoué. Veuillez réessayer.';
+        return DeleteAccountError.unknown;
     }
   }
 }

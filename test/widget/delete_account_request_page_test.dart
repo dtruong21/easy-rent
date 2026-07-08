@@ -11,6 +11,7 @@ import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/domain/session_state.dart';
 import 'package:easyrent/features/auth/presentation/delete_account_request_page.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,7 +69,15 @@ Widget _buildPage({
       authRepositoryProvider.overrideWithValue(authRepo),
       sessionStateProvider.overrideWithValue(sessionState),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      // Locale FR forcée : les assertions ci-dessous valent les valeurs
+      // verbatim des clés ARB `deleteAccountRequest*` ; la mention légale
+      // (loi n° 89-462) reste FR quelle que soit la locale.
+      locale: const Locale('fr'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    ),
   );
 }
 

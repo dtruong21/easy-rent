@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/delete_account_controller.dart';
+import '../../auth/domain/delete_account_error.dart';
 import '../../auth/domain/delete_account_reauth_method.dart';
 import '../../auth/domain/delete_account_state.dart';
+import '../../auth/presentation/delete_account_error_l10n.dart';
 import '../../auth/presentation/widgets/password_field.dart';
 import 'widgets/delete_account_warning.dart';
 
@@ -52,20 +55,17 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   }
 
   Future<void> _confirmThenSubmit(DeleteAccountReauthMethod method) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Supprimer définitivement ?'),
-        content: const Text(
-          'Votre compte Baillan et toutes vos données seront supprimés '
-          'immédiatement (hors quittances, conservées 5 ans — obligation '
-          'légale). Cette action ne peut pas être annulée.',
-        ),
+        title: Text(l10n.deleteAccountConfirmDialogTitle),
+        content: Text(l10n.deleteAccountConfirmDialogBody),
         actions: [
           TextButton(
             key: const Key('btn_delete_account_cancel'),
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             key: const Key('btn_delete_account_confirm'),
@@ -74,7 +74,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Supprimer'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -101,7 +101,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     final state = ref.watch(deleteAccountControllerProvider);
     final isWorking = state.maybeWhen(working: () => true, orElse: () => false);
     final errorMessage = state.maybeWhen(
-      error: (msg) => msg,
+      error: (code) => DeleteAccountError.fromCode(code).message(context),
       orElse: () => null,
     );
 
@@ -117,9 +117,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
           // On laisse la garde rediriger d'elle-même vers /login dès que
           // sessionStateProvider bascule sur unauthenticated.
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Votre compte a été supprimé. Au revoir.'),
-            ),
+            SnackBar(content: Text(context.l10n.deleteAccountSuccessSnackbar)),
           );
         },
         orElse: () {},
@@ -128,7 +126,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
 
     return Scaffold(
       appBar: AppAppBar(
-        title: 'Supprimer mon compte',
+        title: context.l10n.deleteAccountPageTitle,
         fallbackRoute: '/profile',
       ),
       body: Center(
@@ -155,9 +153,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    'Je comprends que la suppression de mon compte est '
-                    'définitive et que mes données ne pourront pas être '
-                    'récupérées.',
+                    context.l10n.deleteAccountAcknowledgeLabel,
                     style: theme.textTheme.bodyMedium,
                   ),
                 ),
@@ -192,7 +188,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
                           ),
                         )
                       : const Icon(Icons.delete_forever_outlined),
-                  label: const Text('Supprimer définitivement mon compte'),
+                  label: Text(context.l10n.deleteAccountSubmitButton),
                 ),
               ],
             ),
@@ -220,6 +216,7 @@ class _ReauthSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     switch (method) {
       case DeleteAccountReauthMethod.password:
         return Padding(
@@ -228,14 +225,14 @@ class _ReauthSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Confirmez votre identité avec votre mot de passe actuel :',
+                l10n.deleteAccountPasswordPrompt,
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
               PasswordField(
                 key: const Key('field_delete_account_password'),
                 controller: passwordController,
-                labelText: 'Mot de passe actuel',
+                labelText: l10n.profilePasswordCurrentLabel,
                 autofillHints: const [AutofillHints.password],
                 enabled: enabled,
               ),
@@ -244,14 +241,14 @@ class _ReauthSection extends StatelessWidget {
         );
       case DeleteAccountReauthMethod.google:
       case DeleteAccountReauthMethod.apple:
+        // Nom de provider (proper noun) — non traduit, injecté dans le libellé.
         final providerLabel = method == DeleteAccountReauthMethod.google
             ? 'Google'
             : 'Apple';
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            'Pour confirmer votre identité, votre connexion $providerLabel '
-            'sera revalidée juste après la confirmation.',
+            l10n.deleteAccountOAuthReauthNotice(providerLabel),
             key: const Key('txt_delete_account_reauth_oauth'),
             style: theme.textTheme.bodyMedium,
           ),
