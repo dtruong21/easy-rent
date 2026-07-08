@@ -89,7 +89,10 @@ MockUser _userWithProvider(String providerId) => MockUser(
   providerData: [_providerInfo(providerId)],
 );
 
-Widget _buildPage({required _FakeAuthRepository authRepo}) {
+Widget _buildPage({
+  required _FakeAuthRepository authRepo,
+  Locale locale = const Locale('fr'),
+}) {
   final router = GoRouter(
     initialLocation: '/profile/delete-account',
     routes: [
@@ -108,6 +111,10 @@ Widget _buildPage({required _FakeAuthRepository authRepo}) {
     overrides: [authRepositoryProvider.overrideWithValue(authRepo)],
     child: MaterialApp.router(
       routerConfig: router,
+      // Locale forcée (défaut FR) : les assertions FR ci-dessous valent les
+      // valeurs verbatim des clés ARB `deleteAccount*`, et la partie légale
+      // (loi n° 89-462, « 5 ans ») reste FR quelle que soit la locale.
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     ),
@@ -312,6 +319,59 @@ void main() {
       await _confirmDialog(tester);
 
       expect(authRepo.calls, ['reauthOAuth(apple.com)', 'deleteAccount']);
+    });
+  });
+
+  group('i18n (FEAT-043)', () {
+    testWidgets(
+      'locale EN → chrome traduit ; la mention légale des quittances reste FR',
+      (tester) async {
+        final authRepo = _FakeAuthRepository(_userWithProvider('password'));
+        await tester.pumpWidget(
+          _buildPage(authRepo: authRepo, locale: const Locale('en')),
+        );
+        await tester.pumpAndSettle();
+
+        // Le chrome bascule en anglais…
+        expect(
+          find.text('This action is immediate and irreversible'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Cette action est immédiate et irréversible'),
+          findsNothing,
+        );
+        expect(find.text('Permanently delete my account'), findsOneWidget);
+        // …mais la citation légale (loi n° 89-462) reste FR (contenu légal).
+        expect(
+          find.textContaining('loi n° 89-462 du 6 juillet 1989'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('locale EN → le dialog de confirmation garde « 5 ans » en FR', (
+      tester,
+    ) async {
+      final authRepo = _FakeAuthRepository(_userWithProvider('password'));
+      await tester.pumpWidget(
+        _buildPage(authRepo: authRepo, locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('field_delete_account_password')),
+        'S3cret!!',
+      );
+      await _acknowledge(tester);
+      await _tapSubmit(tester);
+
+      // Le dialog s'ouvre bien en anglais…
+      expect(find.text('Delete permanently?'), findsOneWidget);
+      // …mais la durée de rétention légale reste « 5 ans » (jamais traduite
+      // en « 5 years »), dans le dialog comme dans la notice.
+      expect(find.textContaining('5 years'), findsNothing);
+      expect(find.textContaining('5 ans'), findsWidgets);
     });
   });
 }

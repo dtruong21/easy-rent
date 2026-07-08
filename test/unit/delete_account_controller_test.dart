@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:easyrent/features/auth/application/delete_account_controller.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/domain/delete_account_error.dart';
 import 'package:easyrent/features/auth/domain/delete_account_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
 // FEAT-045 — orchestration de la suppression de compte : ordre
-// reauth → (révocation Apple) → purge, et mapping des erreurs FR.
+// reauth → (révocation Apple) → purge, et mapping des erreurs vers des codes
+// [DeleteAccountError] stables (i18n FEAT-043 : le contrôleur ne produit plus
+// de FR ; la présentation localise via `DeleteAccountErrorL10n`).
 // ---------------------------------------------------------------------------
 
 class _FakeAuthRepository implements AuthRepository {
@@ -130,7 +133,7 @@ void main() {
   });
 
   group('DeleteAccountController — chemins malheureux', () {
-    test('mot de passe incorrect → message dédié, pas de purge', () async {
+    test('mot de passe incorrect → code dédié, pas de purge', () async {
       final (:container, :repo) = _make();
       repo.reauthPasswordError = FirebaseAuthException(code: 'wrong-password');
       final controller = container.read(
@@ -142,35 +145,33 @@ void main() {
       expect(repo.calls, ['reauthPassword(mauvais)']);
       expect(
         container.read(deleteAccountControllerProvider),
-        const DeleteAccountState.error(
-          message: 'Mot de passe actuel incorrect.',
+        DeleteAccountState.error(
+          message: DeleteAccountError.wrongPassword.name,
         ),
       );
     });
 
-    test(
-      'callable failed-precondition → message session trop ancienne',
-      () async {
-        final (:container, :repo) = _make();
-        repo.deleteError = FirebaseFunctionsException(
-          message: 'recent-login-required',
-          code: 'failed-precondition',
-        );
-        final controller = container.read(
-          deleteAccountControllerProvider.notifier,
-        );
+    test('callable failed-precondition → code session trop ancienne', () async {
+      final (:container, :repo) = _make();
+      repo.deleteError = FirebaseFunctionsException(
+        message: 'recent-login-required',
+        code: 'failed-precondition',
+      );
+      final controller = container.read(
+        deleteAccountControllerProvider.notifier,
+      );
 
-        await controller.submitWithPassword('s3cret!');
+      await controller.submitWithPassword('s3cret!');
 
-        final state = container.read(deleteAccountControllerProvider);
-        state.maybeWhen(
-          error: (message) => expect(message, contains('trop ancienne')),
-          orElse: () => fail('expected error state, got $state'),
-        );
-      },
-    );
+      final state = container.read(deleteAccountControllerProvider);
+      state.maybeWhen(
+        error: (message) =>
+            expect(message, DeleteAccountError.sessionTooOld.name),
+        orElse: () => fail('expected error state, got $state'),
+      );
+    });
 
-    test('erreur réseau callable → message générique réessayer', () async {
+    test('erreur callable inconnue → code générique', () async {
       final (:container, :repo) = _make();
       repo.deleteError = FirebaseFunctionsException(
         message: 'internal',
@@ -184,12 +185,12 @@ void main() {
 
       final state = container.read(deleteAccountControllerProvider);
       state.maybeWhen(
-        error: (message) => expect(message, contains('réessayer')),
+        error: (message) => expect(message, DeleteAccountError.unknown.name),
         orElse: () => fail('expected error state, got $state'),
       );
     });
 
-    test('popup OAuth fermée → erreur mappée FR, pas de purge', () async {
+    test('popup OAuth fermée → code reauthCancelled, pas de purge', () async {
       final repo = _ThrowingOAuthRepo(
         FirebaseAuthException(code: 'popup-closed-by-user'),
       );
@@ -205,7 +206,8 @@ void main() {
 
       final state = container.read(deleteAccountControllerProvider);
       state.maybeWhen(
-        error: (message) => expect(message, 'Connexion annulée.'),
+        error: (message) =>
+            expect(message, DeleteAccountError.reauthCancelled.name),
         orElse: () => fail('expected error state, got $state'),
       );
       // Le compte n'a jamais été purgé.
