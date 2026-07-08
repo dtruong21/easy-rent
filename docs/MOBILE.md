@@ -62,8 +62,17 @@ Reste à faire (itérations suivantes) :
   (`additionalUserInfo`) et que `revokeTokenWithAuthorizationCode` révoque
   réellement (Réglages iOS → Apple ID → Connexion et sécurité) — la
   révocation est best-effort dans le code, exigée par la 5.1.1(v).
-- **Icônes/splash natifs** : icône launcher Baillan (actuellement icône
-  Flutter par défaut) — `flutter_launcher_icons` à envisager.
+- **Icônes natives** : ✅ **faites (2026-07-08)** — icône launcher Baillan
+  (B sérif italique crème sur fond encre + filet sauge) sur iOS **et** Android,
+  générées par `flutter_launcher_icons` (config dans `pubspec.yaml`) depuis un
+  master unique 1024 (`assets/icon/baillan_icon_master.png`, opaque pour l'App
+  Store) + un foreground adaptatif Android (`baillan_icon_foreground.png`,
+  fond encre `#1B1A17`). Le master est lui-même reproductible depuis la marque :
+  `python3 tool/branding/generate_app_icons.py` (rend le « B » via
+  `assets/fonts/EBGaramond-Italic.ttf`). Régénérer les icônes :
+  `dart run flutter_launcher_icons`. **web/icons/ non touché.**
+- **Splash natif** : écran de lancement natif Baillan à styliser (le splash
+  `index.html` web est sans objet sur mobile) — à faire.
 - **CI** : job build APK debug en PR (non bloquant), distribution différée.
 - QA parcours métier complet sur devices réels (J4 du plan).
 - **SDK 37 (Android 17)** : rien à faire avant ~août 2027 — targetSdk 36

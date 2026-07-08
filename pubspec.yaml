@@ -92,6 +92,13 @@ dev_dependencies:
   firebase_auth_mocks: ^0.14.2
   fake_cloud_firestore: ^3.1.0
 
+  # Icônes d'app natives Baillan (iOS + Android) — génère mipmaps + AppIcon
+  # + icône adaptative depuis un master unique. Régénérer avec :
+  #   dart run flutter_launcher_icons
+  # Le master lui-même est reproductible depuis la marque :
+  #   python3 tool/branding/generate_app_icons.py
+  flutter_launcher_icons: ^0.14.4
+
   # Riverpod codegen (optionnel, à activer si besoin)
   # riverpod_generator: ^2.6.3
   # custom_lint: ^0.6.5
@@ -118,3 +125,28 @@ flutter:
         - asset: assets/fonts/EBGaramond-SemiBoldItalic.ttf
           weight: 600
           style: italic
+
+# ============================================================================
+# Icônes d'app natives Baillan (iOS + Android) — flutter_launcher_icons
+# ----------------------------------------------------------------------------
+# Master unique = marque Baillan (B sérif italique crème sur fond encre, filet
+# sauge), rendu depuis assets/fonts/EBGaramond-Italic.ttf par
+# `tool/branding/generate_app_icons.py`. NE PAS toucher web/icons/ (icône web
+# gérée séparément). Régénérer les icônes natives :
+#   dart run flutter_launcher_icons
+#
+# - image_path             : master 1024 plein cadre, OPAQUE → iOS + Android legacy
+# - remove_alpha_ios       : App Store exige un PNG 1024 sans canal alpha
+# - background_color_ios   : encre (aplatissement alpha éventuel, jamais blanc)
+# - adaptive_icon_*        : icône adaptative Android 26+ (fond encre + B/filet
+#                            dans la safe zone centrale, fond transparent)
+# ============================================================================
+flutter_launcher_icons:
+  image_path: "assets/icon/baillan_icon_master.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#1B1A17"
+  min_sdk_android: 24
+  adaptive_icon_background: "#1B1A17"
+  adaptive_icon_foreground: "assets/icon/baillan_icon_foreground.png"
