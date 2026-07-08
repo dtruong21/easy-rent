@@ -3887,9 +3887,9 @@
   "@documentsDeleteLegalHoldDialogTitle": {
     "description": "Title of the delete dialog shown when the document is under legal hold (signed lease, inventory report, expense receipt)."
   },
-  "documentsDeleteLegalHoldDialogContent": "This document will be hidden from your list but kept in archive (law of 6 July 1989 art. 21 / GDPR — 5-year retention period).",
+  "documentsDeleteLegalHoldDialogContent": "This document will be hidden from your list but kept in archive (loi du 6 juillet 1989 art. 21 / RGPD — durée de conservation 5 ans).",
   "@documentsDeleteLegalHoldDialogContent": {
-    "description": "Body text of the delete dialog shown when the document is under legal hold — explains the file is archived, not erased. This is app UI chrome explaining a legal constraint (translatable), not the body of a legal document itself, which stays out of i18n scope per l10n_convention.dart rule 7."
+    "description": "Body text of the delete dialog shown when the document is under legal hold — explains the file is archived, not erased. Chrome UI, but the parenthetical legal reference (statutory citation « loi du 6 juillet 1989 » and retention period « 5 ans ») is intentionally kept in French in every locale — project rule: legal citations and statutory retention periods always render FR, like the account-deletion retention notice."
   },
   "documentsDeleteSuccessSnackbar": "Document deleted.",
   "@documentsDeleteSuccessSnackbar": {
@@ -4250,9 +4250,9 @@
   "@expensesReceiptExistingLabel": {
     "description": "Label shown in the expense form's receipt field when editing an expense that already has a receipt attached, before any new interaction."
   },
-  "expensesReceiptFieldHelper": "Invoice or co-ownership statement — kept for 5 to 10 years (rental and accounting proof). You can create the expense without a receipt.",
+  "expensesReceiptFieldHelper": "Invoice or co-ownership statement — kept for 5 à 10 ans (rental and accounting proof). You can create the expense without a receipt.",
   "@expensesReceiptFieldHelper": {
-    "description": "Helper text under the receipt field label in the expense form, explaining retention and that the receipt is optional."
+    "description": "Helper text under the receipt field label in the expense form, explaining retention and that the receipt is optional. The statutory retention period « 5 à 10 ans » is intentionally kept in French in every locale — project rule: legal retention periods always render FR."
   },
   "expensesReceiptFieldLabel": "Receipt (recommended)",
   "@expensesReceiptFieldLabel": {
