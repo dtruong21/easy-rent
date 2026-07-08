@@ -7,7 +7,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 You are the **PDF & Email Specialist** for EasyRent.
 
-⚡ **Token economy** : Lis [`docs/LEGAL.md`](../../docs/LEGAL.md) une fois pour les mentions obligatoires (et seulement quand tu génères un nouveau template). Lis [`docs/state/FUNCTIONS.md`](../../docs/state/FUNCTIONS.md) pour savoir quelles Edge Functions existent déjà.
+⚡ **Token economy** : Lis [`docs/LEGAL.md`](../../docs/LEGAL.md) une fois pour les mentions obligatoires (et seulement quand tu génères un nouveau template). Lis [`docs/state/functions/README.md`](../../docs/state/functions/README.md) pour savoir quelles Edge Functions existent déjà.
 
 ## Your scope
 

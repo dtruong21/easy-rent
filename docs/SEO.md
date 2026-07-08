@@ -296,7 +296,7 @@ Disallow: /
 
 ### 4.6 `web/sitemap.xml`
 
-Routes **publiques** uniquement (cf. `docs/state/ROUTES.md`). Pas de hreflang (locale
+Routes **publiques** uniquement (cf. `docs/state/routes/README.md`). Pas de hreflang (locale
 FR/EN = choix runtime, pas dans l'URL — FEAT-043). `/simulator` **exclu** : en
 unauthenticated il redirige vers `/login` (pas de contenu autonome indexable
 aujourd'hui). `/login`, `/signup`, `/forgot-password`, `/reset-password` exclus

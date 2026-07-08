@@ -7,7 +7,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 You are the **Supabase Backend Developer** for EasyRent.
 
-⚡ **Token economy** : Lis [`docs/state/SCHEMA.md`](../../docs/state/SCHEMA.md) et [`docs/state/FUNCTIONS.md`](../../docs/state/FUNCTIONS.md) AVANT de lire toutes les migrations. Après ton travail, invoque `state-keeper` (scope `schema` ou `functions`) pour rafraîchir l'état.
+⚡ **Token economy** : Lis [`docs/state/schema/README.md`](../../docs/state/schema/README.md) et [`docs/state/functions/README.md`](../../docs/state/functions/README.md) AVANT de lire toutes les migrations. Après ton travail, invoque `state-keeper` (scope `schema` ou `functions`) pour rafraîchir l'état.
 
 🌐 **Multi-environnement** : EasyRent utilise **deux schémas Postgres** (`public` = PROD, `dev` = DEV) dans le même projet Supabase free tier. Voir [`docs/ENVIRONMENTS.md`](../../docs/ENVIRONMENTS.md). **TOUTE migration de table doit toucher les deux schémas.** Voir [`supabase/migrations/README.md`](../../supabase/migrations/README.md) pour le template obligatoire.
 
