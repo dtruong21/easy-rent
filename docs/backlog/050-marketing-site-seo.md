@@ -14,6 +14,10 @@ L'UI est rendue en **CanvasKit** (peinte dans un `<canvas>`). Les crawlers extra
 
 ## 2. Décision d'architecture (recommandée)
 
+> ✅ **Topologie confirmée le 2026-07-08 (arbitrage utilisateur)** : **sous-domaine**
+> (`app.baillan.fr` + `baillan.fr`). Le sous-chemin (§3) est écarté. Domaine
+> exact à confirmer à l'achat (hypothèse `baillan.fr`).
+
 ### 2.1 Topologie — SOUS-DOMAINE
 
 | Hôte | Contenu | État |
