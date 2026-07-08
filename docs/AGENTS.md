@@ -31,11 +31,12 @@ Ce document décrit le système d'agents qui développe EasyRent de la discovery
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## Les 10 agents
+## Les agents
 
 | Agent | Rôle | Modèle | Phase |
 |---|---|---|---|
 | `feature-scout` | Trouve features manquantes en scannant code/docs | haiku | Discovery |
+| `seo-specialist` | SEO/découvrabilité d'un PWA Flutter Web : crawlabilité, meta/OG/JSON-LD, robots/sitemap, perf | sonnet | Growth |
 | `product-owner` | Écrit user stories + critères d'acceptation | sonnet | Discovery |
 | `architect` | Conçoit schéma DB, RLS, structure code | **opus** | Design |
 | `supabase-dev` | Migrations Postgres, RLS, Edge Functions | sonnet | Implementation |
@@ -114,6 +115,16 @@ jobs:
 | Vendredi matin | `/qa` | Passe QA complète avant la fin de semaine |
 | Vendredi après-midi | `/deliver staging` | Tester en conditions réelles |
 | Lundi suivant | `/deliver prod` | Mise en prod après recul du weekend |
+
+## Workflows multi-agents (`.claude/workflows/`)
+
+Certaines tâches transverses tournent en **workflow** (orchestration déterministe de plusieurs agents en parallèle → synthèse), pas en agent unique.
+
+| Workflow | Usage | Forme |
+|---|---|---|
+| `seo-audit` | Audit SEO complet du PWA Flutter Web | 5 dimensions en parallèle (crawlabilité, meta on-page, robots/sitemap, mots-clés/concurrence, contenu/perf/i18n) → synthèse `docs/SEO.md` + artefacts prêts à poser (head, JSON-LD, robots, sitemap) |
+
+> ⚠️ **Crawlabilité Flutter Web** : le rendu CanvasKit peint l'UI dans un `<canvas>` — les crawlers n'indexent pas ce contenu. Toute la stratégie SEO découle de ça (voir `seo-specialist` + `docs/SEO.md`).
 
 ## Comment ajouter un nouvel agent
 
