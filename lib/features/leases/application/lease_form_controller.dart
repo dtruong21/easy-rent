@@ -182,6 +182,10 @@ class LeaseFormController extends StateNotifier<LeaseFormState> {
         msg.contains('tenant is deleted')) {
       return LeaseSubmitError.propertyOrTenantArchived;
     }
+    // FEAT-044 : plafond free-tier de baux actifs (createLease/updateLease).
+    if (code == 'resource-exhausted' || msg.contains('lease_limit_reached')) {
+      return LeaseSubmitError.limitReached;
+    }
     if (code == 'permission-denied' || code == 'unauthenticated') {
       return LeaseSubmitError.permissionDenied;
     }

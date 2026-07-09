@@ -583,6 +583,10 @@
   "@leasesErrorSaveFailed": {
     "description": "LeaseSubmitError.saveFailed: fallback for any other Callable error code on LeaseFormController.submit/close."
   },
+  "leasesErrorLimitReached": "You've reached the free plan's active-lease limit. Upgrade to Pro to add more.",
+  "@leasesErrorLimitReached": {
+    "description": "LeaseSubmitError.limitReached: createLease/updateLease rejected because the free-tier active-lease cap is reached (FEAT-044). Invites the user to upgrade to Pro."
+  },
   "leasesEmptyFilterTitle": "No lease matches this filter",
   "@leasesEmptyFilterTitle": {
     "description": "Empty-state title shown when leases exist but the active filter hides them all."
@@ -1810,6 +1814,10 @@
   "@propertiesErrorSaveFailed": {
     "description": "PropertySubmitError.saveFailed: fallback for any other Callable error code on PropertyFormController.submit."
   },
+  "propertiesErrorLimitReached": "You've reached the free plan's property limit. Upgrade to Pro to add more properties.",
+  "@propertiesErrorLimitReached": {
+    "description": "PropertySubmitError.limitReached: the createProperty Callable rejected creation because the free-tier property cap is reached (FEAT-044, resource-exhausted / property_limit_reached). Invites the user to upgrade to the Pro plan."
+  },
 
   "tenantsListTitle": "My tenants",
   "@tenantsListTitle": {
@@ -2272,6 +2280,10 @@
   "tenantsErrorSaveFailed": "Error saving. Check your connection and try again.",
   "@tenantsErrorSaveFailed": {
     "description": "Tenant form submission error (TenantSubmitError.saveFailed): generic Firestore/save failure, including unrecognized Cloud Functions error codes."
+  },
+  "tenantsErrorLimitReached": "You've reached the free plan's tenant limit. Upgrade to Pro to add more tenants.",
+  "@tenantsErrorLimitReached": {
+    "description": "TenantSubmitError.limitReached: createTenant rejected because the free-tier tenant cap is reached (FEAT-044). Invites the user to upgrade to Pro."
   },
   "tenantsErrorUnknown": "An error occurred. Please try again.",
   "@tenantsErrorUnknown": {

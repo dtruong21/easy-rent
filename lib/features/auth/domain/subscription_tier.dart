@@ -38,4 +38,33 @@ enum SubscriptionTier {
     SubscriptionTier.free => 3,
     SubscriptionTier.paid => null,
   };
+
+  /// Nombre maximum de biens (properties actives) créables. `null` = illimité.
+  ///
+  /// FEAT-044 (freemium) : le registre de biens est réservé aux comptes ;
+  /// l'anonyme (simulateur seul) ne peut en créer aucun → 0. Le plafond est
+  /// répliqué côté serveur dans la Cloud Function `createProperty`
+  /// (`functions/src/callable/property_tenant.ts`) qui est la SOURCE DE VÉRITÉ
+  /// du gating — ce getter ne sert qu'à désactiver le bouton "ajouter" côté UI.
+  int? get propertyLimit => switch (this) {
+    SubscriptionTier.anonymous => 0,
+    SubscriptionTier.free => 2,
+    SubscriptionTier.paid => null,
+  };
+
+  /// Nombre maximum de locataires actifs. `null` = illimité. Source de vérité
+  /// serveur : Cloud Function `createTenant`. Voir [propertyLimit].
+  int? get activeTenantLimit => switch (this) {
+    SubscriptionTier.anonymous => 0,
+    SubscriptionTier.free => 3,
+    SubscriptionTier.paid => null,
+  };
+
+  /// Nombre maximum de baux ACTIFS. `null` = illimité. Source de vérité
+  /// serveur : Cloud Function `createLease` / `updateLease`. Voir [propertyLimit].
+  int? get activeLeaseLimit => switch (this) {
+    SubscriptionTier.anonymous => 0,
+    SubscriptionTier.free => 2,
+    SubscriptionTier.paid => null,
+  };
 }

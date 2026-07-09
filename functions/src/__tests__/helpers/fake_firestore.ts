@@ -183,6 +183,16 @@ export class FakeQuery {
     );
   }
 
+  /** Agrégation count() — sous-ensemble de l'API Admin SDK v12. */
+  count(): {get: () => Promise<{data: () => {count: number}}>} {
+    return {
+      get: async () => {
+        const res = await this.get();
+        return {data: () => ({count: res.size})};
+      },
+    };
+  }
+
   get(): Promise<{
     docs: FakeQueryDocSnapshot[];
     empty: boolean;

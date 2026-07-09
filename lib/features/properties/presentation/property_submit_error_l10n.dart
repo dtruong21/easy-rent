@@ -15,6 +15,7 @@ extension PropertySubmitErrorL10n on PropertySubmitError {
       PropertySubmitError.notFound => l10n.propertiesErrorNotFound,
       PropertySubmitError.hasActiveLeases =>
         l10n.propertiesErrorHasActiveLeases,
+      PropertySubmitError.limitReached => l10n.propertiesErrorLimitReached,
       PropertySubmitError.permissionDenied =>
         l10n.propertiesErrorPermissionDenied,
       PropertySubmitError.serviceUnavailable =>

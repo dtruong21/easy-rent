@@ -45,6 +45,7 @@ export {recomputeReceiptStale} from "./triggers/recompute_receipt_stale";
 
 // ---------- Callables ----------
 export {softDeleteEntity} from "./callable/soft_delete";
+export {createProperty, createTenant} from "./callable/property_tenant";
 export {
   createLease,
   updateLease,

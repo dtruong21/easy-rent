@@ -227,12 +227,18 @@ class FirestorePropertyRepository implements PropertyRepository {
     int? loanMonthlyPaymentOverrideCents,
   }) async {
     _log.info('create(type=${type.sqlValue})');
-    final uid = _uid;
-    final docRef = _col.doc(); // génère un docId Firestore
-    final now = FieldValue.serverTimestamp();
-    final payload = <String, dynamic>{
-      'id': docRef.id,
-      'landlordId': uid,
+    // FEAT-044 : la création passe par la Callable `createProperty` (au lieu
+    // d'un `docRef.set` direct) — elle impose le plafond free-tier côté serveur
+    // et maintient le compteur `landlords.activePropertiesCount`. La rule
+    // `properties/create` est passée à `if false` (CF-exclusif). Un dépassement
+    // de plafond remonte en `FirebaseFunctionsException(code: 'resource-exhausted')`.
+    // Dates envoyées en ISO-8601 (les Timestamp ne transitent pas par le
+    // protocole Callable) ; le serveur reconvertit via `optionalTimestamp`.
+    final callable = _functions.httpsCallable(
+      'createProperty',
+      options: HttpsCallableOptions(timeout: const Duration(seconds: 15)),
+    );
+    final res = await callable.call(<String, dynamic>{
       'name': name.trim(),
       'address': address.trim(),
       'type': type.sqlValue,
@@ -250,9 +256,7 @@ class FirestorePropertyRepository implements PropertyRepository {
       'gesLetter': gesLetter,
       'constructionYear': constructionYear,
       'purchasePriceCents': purchasePriceCents,
-      'purchaseDate': purchaseDate == null
-          ? null
-          : Timestamp.fromDate(purchaseDate.toUtc()),
+      'purchaseDate': purchaseDate?.toUtc().toIso8601String(),
       'notaryFeesCents': notaryFeesCents,
       'isNewProperty': isNewProperty,
       'propertyTaxAnnualCents': propertyTaxAnnualCents,
@@ -262,21 +266,14 @@ class FirestorePropertyRepository implements PropertyRepository {
       'loanRateBps': loanRateBps,
       'loanInsuranceBps': loanInsuranceBps,
       'loanDurationMonths': loanDurationMonths,
-      'loanStartDate': loanStartDate == null
-          ? null
-          : Timestamp.fromDate(loanStartDate.toUtc()),
+      'loanStartDate': loanStartDate?.toUtc().toIso8601String(),
       'loanMonthlyPaymentOverrideCents': loanMonthlyPaymentOverrideCents,
-      'createdAt': now,
-      'updatedAt': now,
-      'deletedAt': null,
-      'activeLeaseCount': 0,
-    };
-    await docRef.set(payload);
-
-    final saved = await docRef.get();
-    return Property.fromJson(
-      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
-    );
+    });
+    final propertyId = (res.data as Map?)?['propertyId'] as String?;
+    if (propertyId == null) {
+      throw StateError('createProperty did not return a propertyId');
+    }
+    return getById(propertyId);
   }
 
   @override

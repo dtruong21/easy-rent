@@ -141,6 +141,7 @@
   "leasesErrorInvalidState": "Opération impossible — vérifiez l'état du bail.",
   "leasesErrorServiceUnavailable": "Service temporairement indisponible. Réessayez.",
   "leasesErrorSaveFailed": "Erreur lors de la sauvegarde. Veuillez réessayer.",
+  "leasesErrorLimitReached": "Vous avez atteint la limite de baux actifs de l'offre gratuite. Passez à l'offre Pro pour en ajouter davantage.",
   "leasesEmptyFilterTitle": "Aucun bail pour ce filtre",
   "leasesEmptyFilterMessage": "Le filtre « {filterLabel} » ne correspond à aucun de vos baux.",
   "leasesShowAllButton": "Afficher tous les baux",
@@ -425,6 +426,7 @@
   "propertiesErrorServiceUnavailable": "Service temporairement indisponible. Réessayez.",
   "propertiesErrorConnectionError": "Erreur de sauvegarde. Vérifiez votre connexion et réessayez.",
   "propertiesErrorSaveFailed": "Erreur lors de la sauvegarde. Veuillez réessayer.",
+  "propertiesErrorLimitReached": "Vous avez atteint la limite de biens de l'offre gratuite. Passez à l'offre Pro pour en ajouter davantage.",
   "tenantsListTitle": "Mes locataires",
   "tenantsAddButton": "Ajouter un locataire",
   "tenantsEmptyTitle": "Aucun locataire enregistré",
@@ -531,6 +533,7 @@
   "tenantsErrorServiceUnavailable": "Service temporairement indisponible. Réessayez.",
   "tenantsErrorNotFound": "Locataire introuvable. Il a peut-être été archivé.",
   "tenantsErrorSaveFailed": "Erreur de sauvegarde. Vérifiez votre connexion et réessayez.",
+  "tenantsErrorLimitReached": "Vous avez atteint la limite de locataires de l'offre gratuite. Passez à l'offre Pro pour en ajouter davantage.",
   "tenantsErrorUnknown": "Une erreur est survenue. Veuillez réessayer.",
 
   "authEmailLabel": "Adresse email",
