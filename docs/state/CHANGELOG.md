@@ -22,7 +22,7 @@
 ### FEAT-043 : i18n FR/EN — ✅ DONE (PR #71, 2026-07-08)
 - Fondation gen_l10n : ARB `app_{en,fr}.arb` (~800+ clés), localeProvider (SharedPreferences), locale système défaut.
 - Erreurs localisées : ValidationError + AuthError → extensions `.message(context)`. Pattern freezed : states stockent `error.name` (string) → présentation via l10n.
-- Coverage : toutes features bilingues. Note : flux suppression compte, e-mails, formatters dates/€ restent FR (post-M1).
+- Coverage : toutes features bilingues. Note : e-mails et formatters dates/€ restent FR (post-M1) ; le flux de suppression de compte est désormais bilingue FR/EN (FEAT-045 i18n, PR #72) — le contenu légal (« 5 ans », loi 89-462) reste FR par design.
 
 ### FEAT-048 : FAQ produit publique + réordonnancement hub Profil — ✅ DONE (PR #69, 2026-07-07)
 - Route `/faq` (publique). 11 Q/R (quittances loi 1989, essai anonyme, RGPD, suppression, charges…). ExpansionTiles.
