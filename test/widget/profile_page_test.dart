@@ -263,6 +263,10 @@ Widget _buildPage({
         builder: (context, state) => const Scaffold(body: Text('page privacy')),
       ),
       GoRoute(
+        path: '/legal',
+        builder: (context, state) => const Scaffold(body: Text('page legal')),
+      ),
+      GoRoute(
         path: '/profile/delete-account',
         builder: (context, state) =>
             const Scaffold(body: Text('page suppression compte')),
@@ -552,6 +556,19 @@ void main() {
 
       expect(find.byKey(const Key('tile_terms')), findsOneWidget);
       expect(find.byKey(const Key('tile_privacy')), findsOneWidget);
+      expect(find.byKey(const Key('tile_legal')), findsOneWidget);
+    });
+
+    testWidgets('tile Mentions légales → navigue vers /legal', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('tile_legal')));
+      await tester.tap(find.byKey(const Key('tile_legal')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page legal'), findsOneWidget);
     });
 
     testWidgets('tile CGU → navigue vers /terms', (tester) async {

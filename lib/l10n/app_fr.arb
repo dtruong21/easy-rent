@@ -679,6 +679,7 @@
   "profileHubContactUsTile": "Nous contacter",
   "profileHubTermsTile": "Conditions générales d'utilisation",
   "profileHubPrivacyTile": "Politique de confidentialité",
+  "profileHubLegalTile": "Mentions légales",
   "profileAboutTitle": "À propos",
   "profileAboutVersionValue": "v{version} (build {buildNumber})",
   "profileAboutVersionUnknown": "version inconnue",
