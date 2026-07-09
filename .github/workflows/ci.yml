@@ -8,7 +8,12 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded runs only for pull requests (a new commit to a PR makes
+  # the previous run obsolete). For push to develop/main, let EVERY commit's
+  # CI run to completion: with cancel-in-progress on push, rapid back-to-back
+  # merges cancel each other and the branch HEAD never lands a completed
+  # (green) CI run. On push, runs serialize on the shared group instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze-test:
