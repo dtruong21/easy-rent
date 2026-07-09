@@ -1,0 +1,57 @@
+# Fastlane — livraison Android (Play Store) de Baillan (com.daki.baillan).
+#
+# RUNNABLE DÈS MAINTENANT : le keystore upload + android/key.properties existent
+# (le build signe l'AAB). Il ne manque que le JSON de compte de service Play
+# pour l'upload (cf. docs/FASTLANE.md).
+#
+# Lancer depuis android/ :  bundle exec fastlane <lane>
+# Versioning DÉRIVÉ DE GIT : passer build_name / build_number en options — NE
+# JAMAIS bumper pubspec. Ex :
+#   bundle exec fastlane beta build_name:1.2.3 build_number:456
+
+default_platform(:android)
+
+# Fastlane s'exécute avec le CWD = android/ ; la racine du projet Flutter est
+# donc un cran au-dessus. Chemins absolus → sans ambiguïté quel que soit le CWD.
+PROJECT_ROOT = File.expand_path("..", Dir.pwd)
+AAB_PATH = File.join(
+  PROJECT_ROOT, "build/app/outputs/bundle/release/app-release.aab"
+)
+
+platform :android do
+  desc "Build l'AAB release signé (clé upload via android/key.properties)"
+  lane :build do |options|
+    args = ["build", "appbundle", "--release"]
+    args << "--build-name=#{options[:build_name]}" if options[:build_name]
+    args << "--build-number=#{options[:build_number]}" if options[:build_number]
+    Dir.chdir(PROJECT_ROOT) { sh("flutter", *args) }
+  end
+
+  desc "Build + upload piste Play 'internal' en BROUILLON (pas de rollout auto)"
+  lane :beta do |options|
+    build(options)
+    upload_to_play_store(
+      track: "internal",
+      aab: AAB_PATH,
+      release_status: "draft", # un humain clique « examiner & déployer »
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Build + upload piste Play 'beta' en BROUILLON"
+  lane :deploy do |options|
+    build(options)
+    upload_to_play_store(
+      track: "beta",
+      aab: AAB_PATH,
+      release_status: "draft",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+end

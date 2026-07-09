@@ -1,0 +1,47 @@
+# Fastlane — livraison iOS (TestFlight / App Store) de Baillan (com.daki.baillan).
+#
+# ⚠️ SCAFFOLD SEULEMENT — NON EXÉCUTABLE tant que le compte Apple Developer
+# (payant, 99 $/an) n'est pas actif : `match` ne peut pas créer le certificat
+# de distribution ni le profil, et l'upload TestFlight exige l'App Store
+# Connect API key. Cf. docs/FASTLANE.md pour la liste des credentials.
+#
+# Lancer depuis ios/ :  bundle exec fastlane <lane>
+# Versioning dérivé de git : passer build_name / build_number — jamais pubspec.
+
+default_platform(:ios)
+
+# CWD = ios/ ; racine Flutter un cran au-dessus.
+PROJECT_ROOT = File.expand_path("..", Dir.pwd)
+
+platform :ios do
+  # Clé API App Store Connect (.p8) — requiert le compte payant.
+  def asc_api_key
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: "private_keys/AuthKey_#{ENV['ASC_KEY_ID']}.p8",
+      in_house: false,
+    )
+  end
+
+  desc "Build l'IPA release (nécessite ios/ExportOptions.plist + signing)"
+  lane :build do |options|
+    args = ["build", "ipa", "--release",
+            "--export-options-plist=ios/ExportOptions.plist"]
+    args << "--build-name=#{options[:build_name]}" if options[:build_name]
+    args << "--build-number=#{options[:build_number]}" if options[:build_number]
+    Dir.chdir(PROJECT_ROOT) { sh("flutter", *args) }
+  end
+
+  desc "Build + upload TestFlight (BLOQUÉ sans compte Apple Developer + match)"
+  lane :beta do |options|
+    api_key = asc_api_key
+    match(type: "appstore", readonly: true, api_key: api_key)
+    build(options)
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: File.join(PROJECT_ROOT, "build/ios/ipa/Baillan.ipa"),
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end

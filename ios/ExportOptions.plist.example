@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Gabarit ExportOptions pour `flutter build ipa` (App Store).
+  ⚠️ Copier en `ios/ExportOptions.plist` et renseigner teamID une fois le
+  compte Apple Developer actif. Le vrai fichier est gitignored (porte le
+  team id). Cf. docs/FASTLANE.md.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store</string>
+  <key>teamID</key>
+  <string>REMPLACER_PAR_APPLE_DEV_TEAM_ID</string>
+  <key>uploadBitcode</key>
+  <false/>
+  <key>uploadSymbols</key>
+  <true/>
+  <key>signingStyle</key>
+  <string>manual</string>
+</dict>
+</plist>

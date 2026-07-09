@@ -12,3 +12,12 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# fastlane (secrets + sorties générées) — cf. docs/FASTLANE.md
+play-store-service-account.json
+.env
+.env.*
+fastlane/report.xml
+fastlane/README.md
+fastlane/Preview.html
+fastlane/test_output/

@@ -32,3 +32,14 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# fastlane (secrets + sorties générées) — cf. docs/FASTLANE.md
+private_keys/
+*.p8
+ExportOptions.plist
+.env
+.env.*
+fastlane/report.xml
+fastlane/README.md
+fastlane/Preview.html
+fastlane/test_output/

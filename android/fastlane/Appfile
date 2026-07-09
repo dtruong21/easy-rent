@@ -1,0 +1,5 @@
+# Compte de service Play (JSON) — jamais commité. Fourni via la variable
+# d'env SUPPLY_JSON_KEY ou déposé en android/play-store-service-account.json
+# (gitignored). Cf. docs/FASTLANE.md.
+json_key_file(ENV["SUPPLY_JSON_KEY"] || "play-store-service-account.json")
+package_name("com.daki.baillan")
