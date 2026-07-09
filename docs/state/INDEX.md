@@ -18,7 +18,7 @@
 | Features implémentées et statut | [`FEATURES.md`](FEATURES.md) | FEAT-001–050, MVP ✅ + Post-MVP M1 ✅ + Mobile ✅ (FEAT-024 iOS/Android, FEAT-043 i18n, FEAT-045 deletion, FEAT-048 FAQ merged) + Growth ✅ (FEAT-049 SEO quick-wins merged, FEAT-050 topologie confirmée) |
 | Dépendances pubspec + functions + Firebase | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Firebase 3.6+, Riverpod 2.6, Node.js 20 |
 | Cloud Functions (callables, triggers, scheduled) | [`FUNCTIONS.md`](FUNCTIONS.md) | **28 callables** (+ `deleteAccount` FEAT-045) + 8 triggers + 1 scheduled; **`resolveChargeMode` FEAT-042 helper** |
-| Material 3 theme + dark mode | [`THEME.md`](THEME.md) | Indigo palette, EB Garamond serif, shadows |
+| Thème Baillan + dark mode | [`THEME.md`](THEME.md) | Palette papier/encre/olive (FEAT-020), `ColorScheme` écrit main (plus de seed), EB Garamond serif, `themeMode` utilisateur |
 | Design tokens (sémantique métier) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) | Couleurs (error, warning, success), spacing (4dp grid) |
 
 ## Comment l'utiliser
