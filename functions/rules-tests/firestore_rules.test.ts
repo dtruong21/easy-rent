@@ -72,6 +72,21 @@ beforeAll(async () => {
       amountCents: 70000,
       accountDeletedAt: new Date(),
     });
+
+    // FEAT-044 : landlord A « complet » avec 2 biens comptabilisés — support
+    // des tests d'immutabilité du compteur / gating.
+    await db.doc("landlords/landlord-a").set({
+      id: LANDLORD_A,
+      email: "a@example.com",
+      fullName: "Landlord A",
+      isAnonymous: false,
+      subscriptionTier: "free",
+      rgpdConsentAt: new Date(),
+      rgpdConsentVersion: "v2-2026-07",
+      activePropertiesCount: 2,
+      createdAt: new Date(),
+      deletedAt: null,
+    });
   });
 });
 
@@ -130,5 +145,73 @@ describe("get — ownership par doc (inchangé, non-régression)", () => {
 
   it("un autre compte ne lit pas le doc d'autrui", async () => {
     await assertFails(asOtherB().doc("receipts/doc-a").get());
+  });
+});
+
+describe("FEAT-044 — gating création de biens (rules)", () => {
+  const asUid = (uid: string) => env.authenticatedContext(uid).firestore();
+
+  // Payload de provisioning landlord « compte complet » valide (miroir du
+  // chemin client auth_repository.dart) ; `over` surcharge un champ à tester.
+  const landlordDoc = (uid: string, over: Record<string, unknown> = {}) => ({
+    id: uid,
+    email: `${uid}@example.com`,
+    fullName: "New Landlord",
+    isAnonymous: false,
+    subscriptionTier: "free",
+    rgpdConsentAt: new Date(),
+    rgpdConsentVersion: "v2-2026-07",
+    activePropertiesCount: 0,
+    createdAt: new Date(),
+    deletedAt: null,
+    ...over,
+  });
+
+  it("création d'un bien en direct (client) refusée — CF-exclusive", async () => {
+    await assertFails(
+      asOwnerA().doc("properties/p-new").set({
+        landlordId: LANDLORD_A,
+        deletedAt: null,
+        id: "p-new",
+        name: "Bien",
+        address: "1 rue",
+        type: "appartement",
+        activeLeaseCount: 0,
+      }),
+    );
+  });
+
+  it("provisioning avec subscriptionTier='paid' auto-déclaré → refusé (critique)", async () => {
+    await assertFails(
+      asUid("lld-paid")
+        .doc("landlords/lld-paid")
+        .set(landlordDoc("lld-paid", {subscriptionTier: "paid"})),
+    );
+  });
+
+  it("provisioning avec subscriptionTier='free' → autorisé", async () => {
+    await assertSucceeds(
+      asUid("lld-free").doc("landlords/lld-free").set(landlordDoc("lld-free")),
+    );
+  });
+
+  it("provisioning avec activePropertiesCount négatif → refusé", async () => {
+    await assertFails(
+      asUid("lld-neg")
+        .doc("landlords/lld-neg")
+        .set(landlordDoc("lld-neg", {activePropertiesCount: -50})),
+    );
+  });
+
+  it("reset de activePropertiesCount via update → refusé", async () => {
+    await assertFails(
+      asOwnerA().doc("landlords/landlord-a").update({activePropertiesCount: 0}),
+    );
+  });
+
+  it("update de profil normal (fullName) → autorisé, compteur préservé", async () => {
+    await assertSucceeds(
+      asOwnerA().doc("landlords/landlord-a").update({fullName: "Landlord A2"}),
+    );
   });
 });

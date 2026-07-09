@@ -422,6 +422,7 @@
   "propertiesErrorServiceUnavailable": "Service temporairement indisponible. Réessayez.",
   "propertiesErrorConnectionError": "Erreur de sauvegarde. Vérifiez votre connexion et réessayez.",
   "propertiesErrorSaveFailed": "Erreur lors de la sauvegarde. Veuillez réessayer.",
+  "propertiesErrorLimitReached": "Vous avez atteint la limite de biens de l'offre gratuite. Passez à l'offre Pro pour en ajouter davantage.",
   "tenantsListTitle": "Mes locataires",
   "tenantsAddButton": "Ajouter un locataire",
   "tenantsEmptyTitle": "Aucun locataire enregistré",

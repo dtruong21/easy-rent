@@ -1798,6 +1798,10 @@
   "@propertiesErrorSaveFailed": {
     "description": "PropertySubmitError.saveFailed: fallback for any other Callable error code on PropertyFormController.submit."
   },
+  "propertiesErrorLimitReached": "You've reached the free plan's property limit. Upgrade to Pro to add more properties.",
+  "@propertiesErrorLimitReached": {
+    "description": "PropertySubmitError.limitReached: the createProperty Callable rejected creation because the free-tier property cap is reached (FEAT-044, resource-exhausted / property_limit_reached). Invites the user to upgrade to the Pro plan."
+  },
 
   "tenantsListTitle": "My tenants",
   "@tenantsListTitle": {

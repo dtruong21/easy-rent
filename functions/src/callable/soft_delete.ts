@@ -94,6 +94,19 @@ export const softDeleteEntity = onCall(
         );
       }
 
+      // FEAT-044 : pré-lecture du compteur de biens du bailleur AVANT toute
+      // écriture (Firestore impose reads-before-writes en transaction) — permet
+      // de clamper le décrément à 0 plus bas. `null` = compteur absent (legacy).
+      let landlordPropCount: number | null = null;
+      if (collection === "properties") {
+        const lsnap = await tx.get(db.doc(`landlords/${uid}`));
+        const ldata = (lsnap.data() ?? {}) as Record<string, unknown>;
+        landlordPropCount =
+          typeof ldata.activePropertiesCount === "number" ?
+            ldata.activePropertiesCount :
+            null;
+      }
+
       tx.update(ref, {
         deletedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -118,6 +131,25 @@ export const softDeleteEntity = onCall(
             activeLeaseCount: admin.firestore.FieldValue.increment(-1),
           });
         }
+      }
+
+      // FEAT-044 : soft-delete d'un bien → libère un slot du plafond free-tier
+      // (miroir de l'incrément de createProperty). Sans ça le compteur ne ferait
+      // que croître et un free resterait bloqué après avoir archivé un bien.
+      // Décrément CLAMPÉ à 0 : on écrit la valeur relue en transaction moins 1,
+      // et seulement si elle est > 0 — jamais de valeur négative (qui rouvrirait
+      // le gate). Compteur absent (compte legacy) → on ne touche à rien :
+      // createProperty le sèmera correctement au prochain create via recompte.
+      // `uid` = propriétaire (vérifié plus haut) = landlords/{uid}. Idempotent
+      // via le court-circuit `deletedAt != null` ci-dessus.
+      if (
+        collection === "properties" &&
+        landlordPropCount !== null &&
+        landlordPropCount > 0
+      ) {
+        tx.update(db.doc(`landlords/${uid}`), {
+          activePropertiesCount: landlordPropCount - 1,
+        });
       }
 
       return {alreadyDeleted: false};

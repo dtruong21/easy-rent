@@ -118,6 +118,10 @@ export const finalizeAnonymousUpgrade = onCall(
         anonExpiresAt: null,
         rgpdConsentAt: now,
         rgpdConsentVersion,
+        // FEAT-044 : garantit un compteur de biens à 0 sur le compte fraîchement
+        // upgradé (un anon ne peut pas avoir créé de bien) — couvre aussi les
+        // docs anon legacy qui n'avaient pas encore le champ.
+        activePropertiesCount: 0,
         updatedAt: now,
       });
 

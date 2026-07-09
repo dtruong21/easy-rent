@@ -184,6 +184,12 @@ PropertySubmitError _mapFunctionsError(FirebaseFunctionsException e) {
   // "failed-precondition" matchent les HttpsError côté CF.
   final code = e.code;
   final msg = e.message ?? '';
+  // FEAT-044 : plafond free-tier atteint (createProperty). Doit être mappé
+  // AVANT le fallback saveFailed, sinon l'utilisateur voit un « échec de
+  // sauvegarde » générique au lieu de l'invitation à passer Pro.
+  if (code == 'resource-exhausted' || msg.contains('property_limit_reached')) {
+    return PropertySubmitError.limitReached;
+  }
   if (msg.contains('property_has_active_leases')) {
     return PropertySubmitError.hasActiveLeases;
   }
