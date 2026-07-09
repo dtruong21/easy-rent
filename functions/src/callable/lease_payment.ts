@@ -11,8 +11,8 @@
  * pour que la liste des cards charge en 1 query sans join client-side.
  *
  * activeLeaseCount maintenu transactionnellement à la création d'un lease
- * actif et au changement de status via updateLease ; la soft-delete est
- * gérée par softDeleteEntity (qui décrémente côté trigger ultérieurement).
+ * actif et au changement de status via updateLease ; la soft-delete d'un
+ * bail actif décrémente le compteur dans softDeleteEntity.
  */
 
 import * as admin from "firebase-admin";

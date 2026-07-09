@@ -11,7 +11,8 @@
  * Gardes :
  *   - properties / tenants : refuse si activeLeaseCount > 0 (RESTRICT)
  *   - documents : refuse si legalHold = true (rétention légale)
- *   - leases : autorisé (les payments restent visibles)
+ *   - leases : autorisé (les payments restent visibles) ; si le bail était
+ *     ACTIF, décrémente le activeLeaseCount du bien ET du locataire parents.
  *   - landlords : suppression de compte → cascade gérée séparément (RGPD)
  *   - investment_scenarios : autorisé
  *   - expenses : autorisé, aucune garde métier propre (FEAT-041a). Le
@@ -97,6 +98,27 @@ export const softDeleteEntity = onCall(
         deletedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Soft-delete d'un bail ACTIF : décrémenter le activeLeaseCount
+      // dénormalisé du bien ET du locataire parents (miroir exact de
+      // l'incrément de createLease / updateLease). Sans ça, le compteur reste
+      // gonflé → le bien/locataire devient indéfiniment non-supprimable (garde
+      // RESTRICT ci-dessus). Un bail terminé/archivé a déjà été décrémenté lors
+      // de sa transition de status (updateLease) : on ne touche qu'aux ACTIFS.
+      // Idempotent : le court-circuit `deletedAt != null` ci-dessus empêche
+      // tout double décompte sur un second appel.
+      if (collection === "leases" && doc.status === "active") {
+        const propertyId = doc.propertyId;
+        const tenantId = doc.tenantId;
+        if (typeof propertyId === "string" && typeof tenantId === "string") {
+          tx.update(db.doc(`properties/${propertyId}`), {
+            activeLeaseCount: admin.firestore.FieldValue.increment(-1),
+          });
+          tx.update(db.doc(`tenants/${tenantId}`), {
+            activeLeaseCount: admin.firestore.FieldValue.increment(-1),
+          });
+        }
+      }
 
       return {alreadyDeleted: false};
     });
