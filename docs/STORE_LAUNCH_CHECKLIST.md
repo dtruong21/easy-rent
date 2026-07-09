@@ -24,11 +24,11 @@
 3. Promouvoir `develop → main` (⚠️ **auto-déploie le web en prod**, Firebase live, via `deploy.yml`).
 4. Dérouler §2→§6 ci-dessous (comptes, DSA, formulaires, uploads).
 
-**⛔ AVANT DE FORMATER CE PC — sauvegardes hors git (git ne les contient pas) :**
-- **Clé d'upload Android** `~/keystores/baillan/` (`upload-keystore.jks` + `key.properties`) : **JAMAIS commitée** (secret). **La sauvegarder** (gestionnaire de mots de passe / disque chiffré) — sa perte = **impossible de mettre à jour l'app sur Play, définitivement**.
+**Avant de formater ce PC — éléments hors git (git ne les contient pas) :**
+- **Clé d'upload Android** `~/keystores/baillan/` (`upload-keystore.jks` + `key.properties`) : secret, **jamais commitée / jamais uploadée sur un service**. **Sauvegarde NON bloquante tant que Baillan n'est pas publié sur Play** : la clé n'est encore rattachée à aucune app → si perdue, on en **régénère une** (`keytool -genkeypair … -alias upload -dname "CN=Baillan, O=Daki, C=FR"`, 2 min) et on re-déclare le nouveau SHA-1/256 dans Firebase (§2.2). À **conserver une fois la 1ʳᵉ release faite** — et même là, avec **Play App Signing**, une clé d'upload perdue se **réinitialise** via Google (demande de reset), donc **pas de perte définitive**. Bref : formatage sans risque aujourd'hui.
 - Éventuellement le dossier mémoire Claude `~/.claude/…/memory/` (les points de reprise ; l'essentiel est aussi ici en git).
 
-**Sur le nouveau PC :** cloner le repo, installer Flutter (`~/Documents/flutter/bin`), restaurer la clé d'upload puis `cp ~/keystores/baillan/key.properties android/`, `firebase login`. Tout le code + docs sont sur `origin` (rien à récupérer localement).
+**Sur le nouveau PC :** cloner le repo, installer Flutter (`~/Documents/flutter/bin`), (re)créer/restaurer la clé d'upload puis `cp ~/keystores/baillan/key.properties android/`, `firebase login`. Tout le code + docs sont sur `origin` (rien à récupérer localement).
 
 ---
 
@@ -65,7 +65,7 @@
 
 ### 2.2 Signing Android
 - [x] AAB release signé avec la clé upload Baillan (fait le 2026-07-09).
-- [ ] **Play App Signing** : à l'upload du 1er AAB, laisser Google gérer la *app signing key* (notre clé `upload` ne sert qu'à signer les uploads). Conserver `~/keystores/baillan/upload-keystore.jks` + `key.properties` en lieu sûr (perte = impossible d'updater).
+- [ ] **Play App Signing** : à l'upload du 1er AAB, laisser Google gérer la *app signing key* (notre clé `upload` ne sert qu'à signer les uploads). Conserver `~/keystores/baillan/upload-keystore.jks` + `key.properties` en lieu sûr **une fois publié** — mais avec Play App Signing une clé d'upload perdue est **réinitialisable** via Google (demande de reset), donc pas de perte définitive. **Avant la 1ʳᵉ release, la clé est simplement régénérable** (aucun enjeu).
 - [ ] ⚠️ **SHA Google Sign-In** : ajouter dans **Firebase → app Android** :
   - le **SHA-1/SHA-256 de la clé `upload`** (`keytool -list -v -keystore ~/keystores/baillan/upload-keystore.jks -alias upload`), **et**
   - le **SHA-1/SHA-256 de la clé *App Signing* générée par Play** (Play Console → *App integrity* → *App signing*).
