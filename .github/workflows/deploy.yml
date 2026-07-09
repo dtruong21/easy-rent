@@ -54,8 +54,16 @@ jobs:
     needs: determine-env
     runs-on: ubuntu-latest
     environment: ${{ needs.determine-env.outputs.env_name }}
+    permissions:
+      contents: write # push du tag vX.Y.Z + GitHub Release (uniquement en prod)
     steps:
       - uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 → historique complet + tags. Indispensable pour la
+          # dérivation de version (git describe + rev-list --count) des steps
+          # « Determine version » et « Tag release ». Le checkout shallow par
+          # défaut casserait les deux.
+          fetch-depth: 0
 
       - uses: subosito/flutter-action@v2
         with:
@@ -68,6 +76,28 @@ jobs:
       - name: Generate code (freezed / json_serializable)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      # Dérive la version depuis git (tags + nb de commits) — voir
+      # tool/release/version.sh. En PROD on calcule la PROCHAINE version (bump
+      # déduit des commits conventionnels) ; en STAGING on reflète la dernière
+      # version publiée + le nb de commits de develop (build number plus haut →
+      # identifie le build staging). Rien n'est stocké dans un fichier édité par
+      # branche → aucun conflit de version.
+      - name: Determine version
+        id: ver
+        run: |
+          if [ "${{ needs.determine-env.outputs.app_env }}" = "prod" ]; then
+            NAME="$(bash tool/release/version.sh next auto)"
+            CODENAME="$(bash tool/release/version.sh codename-next auto)"
+          else
+            NAME="$(bash tool/release/version.sh name)"
+            CODENAME="$(bash tool/release/version.sh codename)"
+          fi
+          CODE="$(bash tool/release/version.sh code)"
+          echo "name=$NAME"         >> "$GITHUB_OUTPUT"
+          echo "code=$CODE"         >> "$GITHUB_OUTPUT"
+          echo "codename=$CODENAME" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Version::$NAME+$CODE « $CODENAME » (${{ needs.determine-env.outputs.app_env }})"
+
       - name: Build web (release)
         # En staging on désactive le service worker pour éviter le piège de cache PWA
         # quand un nouveau build est déployé (l'ancien SW continue sinon de servir l'ancien
@@ -77,8 +107,10 @@ jobs:
         # Firebase config (apiKey, projectId, etc.) est embarquée dans
         # lib/firebase_options.dart — pas besoin de dart-defines (les Firebase
         # Web keys sont publiques par design, sécurité via Rules + App Check).
-        # --build-number : numéro de run GitHub → version.json → affiché dans
-        # Profil → À propos (identifie le déploiement exact).
+        # --build-name / --build-number : version dérivée de git (step
+        # « Determine version ») → version.json (web) et versionCode/versionName
+        # (mobile) → Profil → À propos. Le build number = nb de commits, donc
+        # strictement croissant (contrainte stores satisfaite).
         # --pwa-strategy=none sur les DEUX environnements : index.html porte un
         # script qui désenregistre tout Service Worker (héritage FEAT-019, fix
         # cache-poisoning). Tant que ce script est présent, prod DOIT aussi être
@@ -88,7 +120,8 @@ jobs:
           flutter build web --release \
             --pwa-strategy=none \
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
-            --build-number=${{ github.run_number }}
+            --build-name=${{ steps.ver.outputs.name }} \
+            --build-number=${{ steps.ver.outputs.code }}
 
       # SEO (FEAT-049) — noindex sur STAGING uniquement. firebase.json est
       # partagé entre le channel live (prod) et les channels de preview, donc un
@@ -217,3 +250,17 @@ jobs:
           else
             echo "::warning::Could not resolve channel URL for $FIREBASE_CHANNEL — check Firebase Console."
           fi
+
+      # Marque la release APRÈS un deploy prod réussi : crée le tag annoté
+      # vX.Y.Z (codename gravé) + la GitHub Release. C'est la SEULE écriture git
+      # de la release — aucun commit sur main (verrouillée), juste un tag +
+      # une Release. Idempotent : si le tag existe déjà, release.sh sort en
+      # erreur mais le deploy est déjà fait (on ne casse pas la prod pour ça).
+      # Staging (develop) ne tague jamais.
+      - name: Tag release (prod only)
+        if: needs.determine-env.outputs.app_env == 'prod' && steps.firebase_deploy.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash tool/release/release.sh auto --push --gh-release --ci \
+            || echo "::warning::Tag/Release non créé (déjà existant ?) — prod déployée quand même."

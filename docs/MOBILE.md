@@ -222,7 +222,18 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
   strictement identiques (même projet, mêmes contrats).
 - **Le web continue de vivre** : une seule base de code, plusieurs cibles.
   Les gardes-fous (RLS, CGU/RGPD, quittances loi 1989) s'appliquent partout.
-- **Versioning** : `pubspec.yaml` porte la version unique ; sur mobile,
-  `--build-number` alimentera versionCode / CFBundleVersion comme il
-  alimente `version.json` sur le web (Profil → À propos affichera la même
-  chose).
+- **Versioning** : dérivé de git (tags + nb de commits), pas de `pubspec.yaml`
+  — voir [`docs/VERSIONING.md`](VERSIONING.md). `--build-name` alimente
+  versionName / CFBundleShortVersionString et `--build-number` alimente
+  versionCode / CFBundleVersion, exactement comme le `version.json` du web
+  (Profil → À propos affiche la même chose partout). Build mobile signé :
+
+  ```bash
+  flutter build appbundle --release \
+    --build-name="$(bash tool/release/version.sh name)" \
+    --build-number="$(bash tool/release/version.sh code)"
+  ```
+
+  Le build number (= nb de commits) est strictement croissant → un nouveau
+  build à uploader sur le store aura toujours un numéro supérieur au précédent
+  (fini le rejet « versionCode already used »).

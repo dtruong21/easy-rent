@@ -30,5 +30,9 @@ $ARGUMENTS (défaut: staging)
 ## Post-deploy
 
 - Affiche l'URL déployée
-- Affiche le chemin du release note
+- **Prod uniquement** : le tag `vX.Y.Z` + la GitHub Release (codename d'arbre)
+  sont créés **automatiquement** par la CI après un deploy prod réussi — voir
+  [`docs/VERSIONING.md`](../../docs/VERSIONING.md). Vérifie que le tag est bien
+  apparu (`git fetch --tags && git tag | tail -1`) et affiche le codename.
+  Ne crée PAS de tag à la main.
 - Propose un smoke test manuel (3-5 scénarios) si on est en prod
