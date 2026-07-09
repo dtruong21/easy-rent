@@ -13,7 +13,7 @@ Synthesis of four research streams into one buildable, phased plan. The freemium
 - **Launch sequence:** **Web/Stripe first** (Phase B) → mobile IAP later with FEAT-024 (Phase C). Web-first is the single biggest margin lever: ~2–3 % Stripe fee vs 15 % store commission. RevenueCat is the entitlement layer from day one (free below $2,500 MTR).
 - **Most important build insight:** *Leases are already server-gated via the `createLease` callable; properties and tenants are not.* Phase A's core work is **moving `createProperty`/`createTenant` server-side** and adding **denormalized per-landlord counters maintained transactionally inside the callables** — a hard cap cannot be enforced by Firestore rules (no aggregation, no atomic reserve) or by async triggers (boundary race).
 - **Phase A ships with zero payment code** — real revenue capture (Phase B) is gated behind **hard legal blockers**: SIREN/micro-entreprise, CGV, rétractation waiver, and a consumer mediator must exist *before* taking the first euro.
-- **Two latent bugs found in the repo — both already fixed (2026-07-09), ahead of Phase A:** (1) `softDeleteEntity` never decremented the parent `activeLeaseCount` on a direct lease soft-delete (property got stuck un-deletable) — fixed + regression test `soft_delete_leases.test.ts`; (2) `SCHEMA.md` said `subscriptionTier == 'pro'` while the code enum uses `'paid'` (the enum is authoritative — the webhook must write `'paid'`) — SCHEMA.md corrected.
+- **Two latent bugs found in the repo — both already fixed (2026-07-09), ahead of Phase A:** (1) `softDeleteEntity` never decremented the parent `activeLeaseCount` on a direct lease soft-delete (property got stuck un-deletable) — fixed + regression test `soft_delete_leases.test.ts`; (2) the state cache documented `subscriptionTier == 'pro'` while the code enum uses `'paid'` (the enum is authoritative — the webhook must write `'paid'`) — corrected in `docs/state/schema/account.md`.
 
 ---
 
@@ -182,7 +182,7 @@ Synthesis of four research streams into one buildable, phased plan. The freemium
 
 - **Counter-consistency races** — mitigated by transactional maintenance inside callables (atomic reserve). Triggers are *not* the gate. Add a scheduled reconciler (recompute from live queries) as a non-load-bearing drift healer. Verify the backfill matches before flipping rules to `create: if false`.
 - **`softDeleteEntity` drift bug** — ✅ fixed 2026-07-09 (property/tenant `activeLeaseCount` now decrements on active-lease soft-delete, with regression test). The *landlord-level* counter must follow the same pattern when Phase A adds it.
-- **`'paid'` vs `'pro'` mismatch** — webhook must write `'paid'`; a wrong value silently leaves users capped. (SCHEMA.md corrected 2026-07-09.)
+- **`'paid'` vs `'pro'` mismatch** — webhook must write `'paid'`; a wrong value silently leaves users capped. (`docs/state/schema/account.md` corrected 2026-07-09.)
 - **Grandfathering** — existing over-cap free accounts; confirm the "block new / never retro-restrict" behavior with product before shipping caps to all live users.
 - **Storage quota assumes Blaze / paid tier** — 500 MB/user requires the FEAT-019 Firebase billing to be live before promising it.
 - **TVA threshold volatility** — a future finance law could revive a lower threshold; keep the TVA-line switch ready. Re-check before launch.

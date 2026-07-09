@@ -1,11 +1,15 @@
 # EasyRent
 
-PWA française de gestion locative. Stack : **Flutter Web + Supabase + Firebase Hosting + GitHub**.
+PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutter (web + mobile) + Firebase (Firestore, Auth, Cloud Functions, Storage, Hosting) + GitHub**.
 
-## ⚠️ Règle d'or pour économiser les tokens
+## ⚠️ Règle d'or — économie de tokens
 
-**Avant de grep/scanner le codebase, lis toujours d'abord [`docs/state/INDEX.md`](docs/state/INDEX.md).**
-Cet index pointe vers un snapshot à jour du schéma, des routes, des features et des dépendances. Ne re-scan le code que si l'état est manquant, périmé (> 7 jours), ou si tu as un doute légitime.
+1. **Avant de grep/scanner le code, lis d'abord [`docs/state/INDEX.md`](docs/state/INDEX.md)** — c'est un routeur léger (~800 tokens), pas le contenu.
+2. **Charge UNIQUEMENT le(s) shard(s) du domaine concerné** : `docs/state/{schema,functions,routes}/<domaine>.md` (~0,2–1,5k tokens chacun). Ne charge JAMAIS tout l'état d'un coup ; un panorama transverse = le `README.md` du dossier.
+3. **Lis ciblé** : `Grep` ou `Read` avec `offset`/`limit` plutôt que des fichiers entiers ; ne relis pas un fichier déjà vu ce tour.
+4. **Sous-agents / workflows multi-agents = coûteux** (chaque agent consomme des tokens). Réserve-les aux gros travaux ponctuels (audit, migration en masse) ; pour une tâche de routine, travaille en solo.
+5. **`/clear` entre tâches sans rapport** pour repartir d'un contexte propre.
+6. Statut d'une feature → `docs/state/FEATURES.md` (matrice) ; historique détaillé → `docs/state/CHANGELOG.md` (rare). Ne re-scan le code que si l'état est manquant, périmé (> 7 j) ou douteux.
 
 ## Documents à lire à la demande (PAS auto-chargés)
 
@@ -23,23 +27,25 @@ Cet index pointe vers un snapshot à jour du schéma, des routes, des features e
 | App mobile iOS/Android (FEAT-024 : setup, build, décisions) | [`docs/MOBILE.md`](docs/MOBILE.md) |
 | Conformité Play Store / App Store (release production) | [`docs/STORE_COMPLIANCE.md`](docs/STORE_COMPLIANCE.md) |
 | Gestion des secrets et sécurité | [`docs/SECURITY.md`](docs/SECURITY.md) |
-| Schéma Supabase courant | [`docs/state/SCHEMA.md`](docs/state/SCHEMA.md) |
-| Routes Flutter courantes | [`docs/state/ROUTES.md`](docs/state/ROUTES.md) |
-| Features implémentées | [`docs/state/FEATURES.md`](docs/state/FEATURES.md) |
+| Schéma Firestore (par domaine) | [`docs/state/schema/`](docs/state/schema/README.md) |
+| Cloud Functions (par domaine) | [`docs/state/functions/`](docs/state/functions/README.md) |
+| Routes Flutter (par domaine) | [`docs/state/routes/`](docs/state/routes/README.md) |
+| Features (matrice de statut) | [`docs/state/FEATURES.md`](docs/state/FEATURES.md) |
+| Historique détaillé des changements | [`docs/state/CHANGELOG.md`](docs/state/CHANGELOG.md) |
 
 ## Definition of Done (essentiel)
 
 1. Code formaté, `flutter analyze` clean
-2. RLS testée (cross-user)
+2. Règles Firestore testées (cross-user)
 3. Tests passent
 4. `code-reviewer` ✅, `security-auditor` ✅
-5. Migration Supabase appliquée
+5. Migration Firestore (rules + indexes) déployée si applicable
 6. Déployé sur Firebase Hosting
 
 ## Garde-fous (jamais désactiver)
 
-- **RLS obligatoire** sur toutes les tables
+- **Règles Firestore obligatoires** sur toutes les collections (deny-by-default, isFullyAuthed/isOwner)
 - **Pas de deploy prod sans confirmation utilisateur**
 - **Quittances** : mentions légales loi 6 juillet 1989
 - **RGPD** : consentement, export, droit à l'effacement
-- **Secrets** : voir [`docs/SECURITY.md`](docs/SECURITY.md) — jamais de `sb_secret_*` / `service_role` / `re_*` côté client
+- **Secrets** : voir [`docs/SECURITY.md`](docs/SECURITY.md) — jamais de secret serveur / service account / clé `re_*` (Resend) côté client
