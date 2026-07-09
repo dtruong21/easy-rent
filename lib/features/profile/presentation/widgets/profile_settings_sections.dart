@@ -2,6 +2,7 @@
 // à propos (version) et déconnexion. Extraites de ProfilePage pour garder la
 // page sous la limite de 200 lignes.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../../../core/app_info/app_info_provider.dart';
 import '../../../../core/config/env.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/i18n/locale_provider.dart';
+import '../../../../core/observability/crash_reporting_provider.dart';
 import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../auth/application/login_controller.dart';
 import 'section_header.dart';
@@ -105,6 +107,48 @@ class ProfileLanguageSection extends ConsumerWidget {
             }
           },
         ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Confidentialité — consentement rapport d'incident (Crashlytics)
+// ---------------------------------------------------------------------------
+
+/// Interrupteur d'opt-in au rapport d'incident (Firebase Crashlytics).
+///
+/// **Mobile uniquement** : Crashlytics n'a pas d'implémentation web, donc la
+/// section n'est PAS rendue sur le web ([kIsWeb] → [SizedBox.shrink]). Opt-in,
+/// désactivé par défaut ; piloté par [crashReportingProvider] qui persiste le
+/// choix et appelle `setCrashlyticsCollectionEnabled`.
+class ProfileCrashReportingSection extends ConsumerWidget {
+  const ProfileCrashReportingSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Crashlytics = mobile only → rien à afficher sur le web.
+    if (kIsWeb) return const SizedBox.shrink();
+
+    final enabled = ref.watch(crashReportingProvider);
+    final l10n = context.l10n;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: l10n.profileCrashReportingSection),
+        SwitchListTile(
+          key: const Key('switch_crash_reporting'),
+          contentPadding: EdgeInsets.zero,
+          value: enabled,
+          onChanged: (value) =>
+              ref.read(crashReportingProvider.notifier).setEnabled(value),
+          title: Text(l10n.profileCrashReportingTitle),
+          subtitle: Text(l10n.profileCrashReportingSubtitle),
+        ),
+        // Espacement vers la section suivante — porté par la section elle-même
+        // pour rester absent sur le web (où la section n'est pas rendue).
+        const SizedBox(height: 32),
       ],
     );
   }

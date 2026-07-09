@@ -77,7 +77,7 @@
 - [ ] **Countries / pricing** : gratuit, sélectionner les pays (§0).
 
 ### 4.2 App content / déclarations *(tout bloquant si incomplet)*
-- [ ] **Privacy policy URL** (privacy policy v1.2 + § données de tiers).
+- [ ] **Privacy policy URL** (privacy policy v1.3 + § données de tiers).
 - [ ] **Data safety** (support 10787469) : remplir avec la table §5 — données bailleur **et locataires** collectées, *Sharing = none*, chiffrement en transit (TLS), suppression disponible. **Déclarer l'URL de suppression** `https://easy-rent-54cd4.web.app/delete-account`.
 - [ ] **App access** (9859455) : fournir le **compte démo review** + instructions EN (§1).
 - [ ] **Financial features** (13849271) : cocher **« no financial features »** (Baillan *suit* des loyers, n'octroie pas de crédit, ne traite aucun paiement — le futur IAP FEAT-044 n'y change rien).

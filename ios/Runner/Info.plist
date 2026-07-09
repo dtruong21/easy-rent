@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Rapport d'incident (Crashlytics) : collecte DÉSACTIVÉE par défaut au
+	     niveau natif (opt-in RGPD). Dart appelle setCrashlyticsCollectionEnabled(true)
+	     après consentement de l'utilisateur. -->
+	<key>FirebaseCrashlyticsCollectionEnabled</key>
+	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

@@ -78,7 +78,7 @@ Passer `firebase.json` `hosting` en **tableau** de 2 blocs + cibles nommées dan
 
 **Principe de gouvernance** : séparer le **contenu SEO** (statique, source = marketing) du **contenu légal versionné** (source canonique = **in-app**, lié à `rgpdConsentVersion`).
 
-- **Légal versionné** (`privacy` v1.2, `terms`/CGU v2-2026-07) → **reste canonique in-app** (`app.baillan.fr/privacy`, `/terms`). C'est la source du consentement RGPD au signup. Le footer marketing y renvoie. SEO quasi nul (priority 0.3) → perte négligeable, **drift évité**. L'app étant noindex, aucun duplicate content.
+- **Légal versionné** (`privacy` v1.3, `terms`/CGU v2-2026-07) → **reste canonique in-app** (`app.baillan.fr/privacy`, `/terms`). C'est la source du consentement RGPD au signup. Le footer marketing y renvoie. SEO quasi nul (priority 0.3) → perte négligeable, **drift évité**. L'app étant noindex, aucun duplicate content.
 - **Non versionné** (FAQ, mentions LCEN) → vit sur le statique sans risque de drift.
 
 ### v1 (au lancement, FR uniquement, crawlable sur `baillan.fr`)
