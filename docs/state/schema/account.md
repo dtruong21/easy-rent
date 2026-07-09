@@ -8,7 +8,7 @@ Collections : `landlords`, `paid_plan_interest`, `support_requests`. Patterns tr
 
 ## `landlords/{uid}` — docId = Firebase Auth UID
 
-Auth + tiers de compte (anonymous/free/pro). BAILLAN-M1 système 3-états.
+Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 
 | Champ | Type | Valeur | Immuable |
 |---|---|---|---|
@@ -16,7 +16,7 @@ Auth + tiers de compte (anonymous/free/pro). BAILLAN-M1 système 3-états.
 | `email` | string\|null | null (anon) / email (compte) | ✅ |
 | `fullName` | string | '' (anon) / nom complet | ✅ |
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ |
-| `subscriptionTier` | string | 'anonymous' \| 'free' \| 'pro' | ✅ |
+| `subscriptionTier` | string | 'anonymous' \| 'free' \| 'paid' | ✅ |
 | `anonExpiresAt` | timestamp | expiration essai (14j) | — |
 | `rgpdConsentAt` | timestamp\|null | null (anon) / date signature | ✅ |
 | `rgpdConsentVersion` | string | v1-2026-06 → v2-2026-07 | ✅ |

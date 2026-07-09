@@ -39,7 +39,7 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 |---|---|
 | Statut des features (matrice) | [`FEATURES.md`](FEATURES.md) |
 | Historique détaillé des changements | [`CHANGELOG.md`](CHANGELOG.md) |
-| Material 3 theme + dark mode | [`THEME.md`](THEME.md) |
+| Thème Baillan papier/encre/olive (FEAT-020) + dark mode + `themeMode` | [`THEME.md`](THEME.md) |
 | Design tokens (couleurs, spacing) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) |
 | Dépendances (pubspec + functions) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
 
