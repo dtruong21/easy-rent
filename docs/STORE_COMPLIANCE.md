@@ -121,6 +121,9 @@ Aucun partage à des tiers, aucun tracking publicitaire, chiffrement en transit
 
 ## 6. Plan d'action ordonné avant la première release
 
+> 📋 Checklist d'exécution ordonnée (semaine du 13/07) :
+> [`STORE_LAUNCH_CHECKLIST.md`](STORE_LAUNCH_CHECKLIST.md).
+
 1. **Code** (bloquants review) : ✅ **FEAT-045 suppression de compte in-app
    livrée (2026-07-07)** — purge Auth + Firestore + Storage (callable
    `deleteAccount`), révocation token Apple, mention rétention quittances,
