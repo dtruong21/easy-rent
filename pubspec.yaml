@@ -31,6 +31,10 @@ dependencies:
   cloud_firestore: ^5.4.4
   firebase_storage: ^12.3.2
   cloud_functions: ^5.1.3
+  # Rapport d'incident MOBILE (iOS/Android — pas de support web). Ligne 4.x :
+  # la 5.x exige firebase_core ^4 (incompatible). Collecte opt-in RGPD, off par
+  # défaut (cf. lib/core/observability/, Info.plist, AndroidManifest).
+  firebase_crashlytics: ^4.3.10
 
   # State management
   flutter_riverpod: ^2.6.0

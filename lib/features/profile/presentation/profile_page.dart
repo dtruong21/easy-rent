@@ -92,6 +92,10 @@ class ProfilePage extends ConsumerWidget {
             const ProfileLanguageSection(),
             const SizedBox(height: 32),
 
+            // Rapport d'incident (Crashlytics) — visible seulement sur mobile
+            // (rendu vide sur le web via kIsWeb).
+            const ProfileCrashReportingSection(),
+
             SectionHeader(title: l10n.profileHubHelpSection),
             const SizedBox(height: 8),
             ListTile(

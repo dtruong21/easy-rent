@@ -30,6 +30,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Rapport d'incident (Crashlytics) : collecte DÉSACTIVÉE par défaut au
+             niveau natif (opt-in RGPD). Le SDK ne collecte rien avant que Dart
+             n'appelle setCrashlyticsCollectionEnabled(true) après consentement. -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

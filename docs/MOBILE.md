@@ -81,6 +81,19 @@ Reste à faire (itérations suivantes) :
   (marque dans le cercle safe 768 px d'Android 12), régénérés par
   `tool/branding/generate_app_icons.py`. Régénérer :
   `dart run flutter_native_splash:create`. `web:false` → splash web non touché.
+- **Rapport d'incident (Crashlytics)** : ✅ **fait (2026-07-09)** — Firebase
+  Crashlytics **mobile uniquement** (pas de support web ; `firebase_crashlytics`
+  ^4.3.10, gardé par `kIsWeb`), collecte **opt-in RGPD désactivée par défaut**.
+  Consentement via Profil → Confidentialité (`crashReportingProvider` +
+  `lib/core/observability/`), défauts natifs OFF (`AndroidManifest` +
+  `Info.plist`). Gradle : plugin Crashlytics **2.9.9** (la 3.x exige
+  google-services ≥ 4.4.1 ; on garde 4.3.15). PdC v1.3 + `rgpdConsentVersion`
+  bumpé v3-2026-07 + STORE_COMPLIANCE §5 (Diagnostics/Crash Data, opt-in).
+  **Suites (non bloquantes)** : (1) build phase iOS de symbolication dSYM
+  (`${PODS_ROOT}/FirebaseCrashlytics/run`) — différée (les erreurs Dart
+  remontent avec leur stack ; à ajouter via Xcode UI) ; (2) vérifier
+  `ios/Runner/PrivacyInfo.xcprivacy` (NSPrivacyCollectedDataTypes crash) au 1ᵉʳ
+  upload TestFlight.
 - **CI** : job build APK debug en PR (non bloquant), distribution différée.
 - QA parcours métier complet sur devices réels (J4 du plan).
 - **SDK 37 (Android 17)** : rien à faire avant ~août 2027 — targetSdk 36

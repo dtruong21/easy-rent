@@ -13,6 +13,7 @@ import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/expenses/presentation/expense_form_page.dart';
 import '../../features/expenses/presentation/property_expenses_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
+import '../../features/privacy/presentation/legal_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/privacy/presentation/terms_page.dart';
 import '../../features/properties/presentation/properties_list_page.dart';
@@ -77,6 +78,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/reset-password',
         '/privacy',
         '/terms',
+        // Mentions légales (LCEN) — publiques, liées depuis le hub Profil.
+        '/legal',
         // FEAT-045 : URL de demande de suppression de compte, déclarée sur
         // la fiche Google Play — doit rester accessible sans login (et aux
         // anonymes, qui y suppriment leur essai).
@@ -184,6 +187,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => appPage(
           key: state.pageKey,
           child: const TermsPage(),
+          transition: AppTransition.fade,
+        ),
+      ),
+      GoRoute(
+        path: '/legal',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const LegalPage(),
           transition: AppTransition.fade,
         ),
       ),

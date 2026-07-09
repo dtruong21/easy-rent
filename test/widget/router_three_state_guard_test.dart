@@ -250,6 +250,15 @@ void main() {
       expect(loc, '/privacy');
     });
 
+    testWidgets('/legal → reste accessible (public)', (tester) async {
+      final loc = await _resolvedLocation(
+        tester,
+        sessionState: SessionState.anonymous,
+        location: '/legal',
+      );
+      expect(loc, '/legal');
+    });
+
     testWidgets('/terms → reste accessible (public)', (tester) async {
       final loc = await _resolvedLocation(
         tester,
