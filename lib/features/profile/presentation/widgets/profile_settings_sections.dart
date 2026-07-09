@@ -147,6 +147,14 @@ class ProfileLegalTiles extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/privacy'),
         ),
+        ListTile(
+          key: const Key('tile_legal'),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.info_outline),
+          title: Text(l10n.profileHubLegalTile),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/legal'),
+        ),
       ],
     );
   }

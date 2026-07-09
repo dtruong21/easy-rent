@@ -7,9 +7,10 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 /// Accessible sans login (route `/privacy` publique).
 /// Référencée depuis [LoginPage] et [ProfilePage].
 ///
-/// Dernière mise à jour : juillet 2026 (v1.2 — suppression de compte
-/// in-app et rétention des quittances, FEAT-045 ; v1.1 — collecte demandes
-/// de support, FEAT-025)
+/// Dernière mise à jour : juillet 2026 (v1.3 — précisions sur les données de
+/// tiers (locataires) et le devoir d'information du bailleur ; v1.2 —
+/// suppression de compte in-app et rétention des quittances, FEAT-045 ;
+/// v1.1 — collecte demandes de support, FEAT-025)
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
 
@@ -49,7 +50,7 @@ class _PrivacyContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Version 1.2 — Dernière mise à jour : juillet 2026',
+          'Version 1.3 — Dernière mise à jour : juillet 2026',
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 24),
@@ -65,7 +66,16 @@ class _PrivacyContent extends StatelessWidget {
               'Pour toute question relative à vos données personnelles, '
               'contactez le bailleur titulaire du compte Baillan. dont vous '
               'dépendez. Ses coordonnées vous ont été fournies à la signature '
-              'du bail.',
+              'du bail.\n\n'
+              'Données de tiers (locataires) : les données des locataires sont '
+              'saisies par le bailleur, seul responsable de leur traitement. '
+              'À ce titre, le bailleur s\'engage à informer ses locataires de '
+              'la collecte et du traitement de leurs données via Baillan. '
+              '(finalités, base légale, durée de conservation et droits — '
+              'RGPD art. 13 et 14), notamment lors de la signature du bail. '
+              'Baillan. et ses sous-traitants techniques (Google / Firebase, '
+              'cf. §4) agissent uniquement sur instruction du bailleur et ne '
+              'réutilisent jamais les données des locataires à d\'autres fins.',
         ),
 
         // 2. Données collectées

@@ -2913,6 +2913,10 @@
   "@profileHubPrivacyTile": {
     "description": "List tile label navigating to /privacy. Chrome UI only — the legal document body itself (privacy_page.dart content) stays French, out of this extraction's scope."
   },
+  "profileHubLegalTile": "Legal notice",
+  "@profileHubLegalTile": {
+    "description": "List tile label in the /profile hub Help group navigating to /legal (LCEN mentions légales — publisher/host identity). Chrome UI only — the legal page body itself (legal_page.dart content) stays French, out of scope."
+  },
   "profileAboutTitle": "About",
   "@profileAboutTitle": {
     "description": "Section header in the /profile hub showing the app version and environment."
