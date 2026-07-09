@@ -23,6 +23,7 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 | Pipeline d'agents | [`docs/AGENTS.md`](docs/AGENTS.md) |
 | Système de ticketing (GitHub Issues + agents) | [`docs/TICKETING.md`](docs/TICKETING.md) |
 | Git Flow (branches, releases, hotfixes) | [`docs/GITFLOW.md`](docs/GITFLOW.md) |
+| Versioning & releases (tags, codenames, build number) | [`docs/VERSIONING.md`](docs/VERSIONING.md) |
 | Stratégie multi-environnement (dev/prod sur 1 projet) | [`docs/ENVIRONMENTS.md`](docs/ENVIRONMENTS.md) |
 | App mobile iOS/Android (FEAT-024 : setup, build, décisions) | [`docs/MOBILE.md`](docs/MOBILE.md) |
 | Conformité Play Store / App Store (release production) | [`docs/STORE_COMPLIANCE.md`](docs/STORE_COMPLIANCE.md) |
