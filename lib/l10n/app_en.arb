@@ -101,6 +101,18 @@
   "@profileAppearanceTitle": {
     "description": "Section header in Profile settings for the theme selector."
   },
+  "profileCrashReportingSection": "Privacy",
+  "@profileCrashReportingSection": {
+    "description": "Section header in Profile settings for the crash-reporting opt-in (mobile only)."
+  },
+  "profileCrashReportingTitle": "Crash reporting",
+  "@profileCrashReportingTitle": {
+    "description": "Title of the crash-reporting opt-in switch (mobile only)."
+  },
+  "profileCrashReportingSubtitle": "Send crash reports (excluding your property, lease and tenant data) to help fix bugs. iOS and Android only, and off unless you turn it on.",
+  "@profileCrashReportingSubtitle": {
+    "description": "Subtitle explaining the crash-reporting opt-in switch."
+  },
   "profileThemeSystem": "System",
   "@profileThemeSystem": {
     "description": "Theme selector option: follow system theme."

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -9,6 +10,8 @@ import 'package:logging/logging.dart';
 import 'core/config/env.dart';
 import 'core/i18n/locale_provider.dart';
 import 'core/i18n/locale_resolution.dart';
+import 'core/observability/crash_reporting_service.dart';
+import 'core/observability/crash_reporting_storage.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
@@ -41,6 +44,17 @@ Future<void> main() async {
 
   // Initialise Firebase (FEAT-019). Source unique de la couche data.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Rapport d'incident (Crashlytics) — MOBILE UNIQUEMENT, opt-in RGPD.
+  // Branche les hooks d'erreur, puis applique le consentement PERSISTÉ
+  // (désactivé par défaut). No-op sur le web. La bascule runtime est gérée par
+  // `crashReportingProvider` (Profil → Confidentialité).
+  if (!kIsWeb) {
+    CrashReportingService.initialize();
+    await CrashReportingService.setEnabled(
+      await CrashReportingStorage().read() ?? false,
+    );
+  }
 
   // BLOCKER-1 : capture l'événement beforeinstallprompt le plus tôt possible,
   // avant runApp, pour ne pas le rater (émis très tôt par le navigateur).

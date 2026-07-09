@@ -116,8 +116,8 @@ Aucun partage à des tiers, aucun tracking publicitaire, chiffrement en transit
 | Baux, quittances PDF, documents uploadés | Files and docs (+ Photos si photos de biens) | User Content → Other User Content | Rétention légale quittances 5 ans à mentionner |
 | Demandes de support | App activity → Other user-generated content | User Content → Customer Support | — |
 | UID Firebase Auth, Firebase installation IDs | Device or other IDs | Identifiers → User ID | Cf. [Privacy disclosures Firebase](https://firebase.google.com/docs/ios/app-store-data-collection) |
-| Crash data / analytics | — (rien tant que Crashlytics/Analytics non intégrés) | — | Ne rien déclarer tant que non activé |
-| Tracking / partage tiers | Shared = none | Tracking = **No** (pas d'ATT) | Pas de pub, pas de data broker |
+| Crash / diagnostics (Crashlytics, **mobile only, opt-in**) | App activity → **Diagnostics** (crash logs) : collected, **not shared**, chiffré en transit, **optionnel** (opt-in) | Diagnostics → **Crash Data** (+ Other Diagnostic Data) : « Not Linked to You », « Not used for tracking » | Crashlytics iOS/Android uniquement, désactivé par défaut, activé sur opt-in (Profil → Confidentialité). Web non concerné. Cf. PdC v1.3 §2/§4/§7 |
+| Tracking / partage tiers | Shared = none | Tracking = **No** (pas d'ATT) | Pas de pub, pas de data broker — les crash data ne sont PAS liées à l'identité ni au tracking |
 
 ## 6. Plan d'action ordonné avant la première release
 

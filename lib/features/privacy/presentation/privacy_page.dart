@@ -8,9 +8,10 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 /// Référencée depuis [LoginPage] et [ProfilePage].
 ///
 /// Dernière mise à jour : juillet 2026 (v1.3 — précisions sur les données de
-/// tiers (locataires) et le devoir d'information du bailleur ; v1.2 —
-/// suppression de compte in-app et rétention des quittances, FEAT-045 ;
-/// v1.1 — collecte demandes de support, FEAT-025)
+/// tiers (locataires) et le devoir d'information du bailleur, + rapport
+/// d'incident Crashlytics mobile en opt-in ; v1.2 — suppression de compte
+/// in-app et rétention des quittances, FEAT-045 ; v1.1 — collecte demandes de
+/// support, FEAT-025)
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
 
@@ -100,7 +101,15 @@ class _PrivacyContent extends StatelessWidget {
               'via le formulaire « Nous contacter », associés à votre adresse '
               'email, un identifiant technique de compte, la version de '
               'l\'application et l\'environnement — utilisés uniquement pour '
-              'traiter votre demande.',
+              'traiter votre demande.\n\n'
+              '• Rapport d\'incident (applications mobiles iOS/Android '
+              'uniquement) : en cas de plantage, et UNIQUEMENT si vous avez '
+              'activé cette option — désactivée par défaut, dans Profil → '
+              'Confidentialité — des données de diagnostic sont collectées : '
+              'type d\'appareil, version du système et de l\'application, état '
+              'de l\'application et pile d\'appel du plantage. Ces données ne '
+              'contiennent pas le contenu de vos biens, baux ou locataires. Le '
+              'site web n\'est pas concerné.',
         ),
 
         // 3. Base légale
@@ -126,9 +135,11 @@ class _PrivacyContent extends StatelessWidget {
               'disposant d\'une politique DPA conforme au RGPD :\n\n'
               '• Google LLC / Google Ireland Ltd via Firebase (Cloud Firestore, '
               'Firebase Authentication, Cloud Functions, Cloud Storage, '
-              'Firebase Hosting) — hébergement de la base de données, '
-              'authentification, exécution serveur, stockage de fichiers et '
-              'hébergement web. Les données sont localisées dans la région '
+              'Firebase Hosting, et — sur les applications mobiles avec votre '
+              'opt-in — Firebase Crashlytics) — hébergement de la base de '
+              'données, authentification, exécution serveur, stockage de '
+              'fichiers, hébergement web et, le cas échéant, rapport '
+              'd\'incident. Les données sont localisées dans la région '
               'multi-region eur3 (Belgique + Pays-Bas + Finlande) pour '
               'Firestore et europe-west3 (Francfort) pour Cloud Storage. DPA '
               'disponible sur firebase.google.com/terms/data-processing-terms.\n\n'
@@ -219,8 +230,11 @@ class _PrivacyContent extends StatelessWidget {
               'de la connexion.\n\n'
               '• Préférences d\'interface (thème, dismiss du prompt d\'installation) — '
               'stockées en localStorage, non transmises à des tiers.\n\n'
-              'Aucun outil d\'analytics tiers (Google Analytics, Mixpanel, etc.) '
-              'n\'est actuellement intégré.',
+              'Aucun outil d\'analytics comportemental ou publicitaire (Google '
+              'Analytics, Mixpanel, etc.) n\'est intégré. Le seul outil tiers de '
+              'diagnostic est Firebase Crashlytics, limité aux applications '
+              'mobiles iOS/Android et activé uniquement après opt-in explicite '
+              '(cf. §2) — le site web n\'en fait pas usage.',
         ),
 
         // 8. Droits

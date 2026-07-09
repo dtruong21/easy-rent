@@ -11,7 +11,7 @@
 | `/signup` | SignupPage | !fullyAuth | inscription + gate RGPD |
 | `/forgot-password` | ForgotPasswordPage | public | reset mot de passe |
 | `/reset-password` | ResetPasswordPage | public | lien email, `?token=…` via `state.uri.queryParameters` |
-| `/privacy` | PrivacyPage | public | politique confid. v1.2 (loi 6 juillet 1989), FEAT-023 |
+| `/privacy` | PrivacyPage | public | politique confid. v1.3 (loi 6 juillet 1989), FEAT-023 |
 | `/terms` | TermsPage | public | CGU v2-2026-07 (FEAT-023) |
 | `/delete-account` | DeleteAccountRequestPage | public (anonyme inclus) | **FEAT-045** — URL Google Play « Account deletion » ; CTA adapté session (login / go profil / suppr essai anonyme) |
 | `/faq` | FaqPage | public (anonyme inclus) | **FEAT-048** — questions fréquentes (ExpansionTiles), aussi via Profil→Aide |
