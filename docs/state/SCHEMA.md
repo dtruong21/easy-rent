@@ -30,7 +30,7 @@ Authentication + account tiers (anonymous/free/pro). BAILLAN-M1 3-state system.
 | `email` | string\|null | null (anon) / email (compte) | ✅ | — |
 | `fullName` | string | '' (anon) / nom complet | ✅ | — |
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ | — |
-| `subscriptionTier` | string | 'anonymous' / 'free' / 'pro' | ✅ | — |
+| `subscriptionTier` | string | 'anonymous' / 'free' / 'paid' | ✅ | — |
 | `anonExpiresAt` | timestamp | Expiration essai (14j) | — | — |
 | `rgpdConsentAt` | timestamp\|null | null (anon) / date signature | ✅ | — |
 | `rgpdConsentVersion` | string | v1-2026-06 → v2-2026-07 | ✅ | — |
