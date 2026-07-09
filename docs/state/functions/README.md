@@ -18,14 +18,14 @@ Logique standard `setUpdatedAt*` (partagée par les 8 variants, `functions/src/t
 | `voidReceipt` | FEAT-007 | payments-receipts |
 | `markReceiptAsSent` | FEAT-007 | payments-receipts |
 | `createDocument` (v2) | FEAT-008/041b | expenses-documents |
-| `softDeleteDocument` | FEAT-008 | expenses-documents |
+| `getDocumentDownloadUrl` | FEAT-008 | expenses-documents |
 | `createExpense` | FEAT-041a | expenses-documents |
 | `updateExpense` | FEAT-041a | expenses-documents |
 | `softDeleteEntity` (universel) | — | account |
 | `finalizeAnonymousUpgrade` | BAILLAN-M1/FEAT-019 | account |
 | `deleteAccount` | FEAT-045 | account |
 
-## Triggers (10) → shard
+## Triggers (9 déployés + 1 planned) → shard
 
 | Trigger | Collection écoutée | Shard |
 |---|---|---|
@@ -46,7 +46,7 @@ Logique standard `setUpdatedAt*` (partagée par les 8 variants, `functions/src/t
 |---|---|---|
 | `cleanupExpiredAnon` (BAILLAN-M1) | Daily 2 AM UTC | account |
 
-> ⚠️ Le header source revendique « 28 callables + 8 triggers + 1 scheduled ». Ce snapshot documente nommément **14 callables + 10 triggers (8 `setUpdatedAt` + 2 `recompute`) + 1 scheduled**. L'écart de compteur (28 vs 14) est un drift du header non corrigé ici (fidélité à la source). Le résumé source mentionne aussi `setUpdatedAtReceipts` — inexistant dans les exports (receipts immuables) — voir payments-receipts.
+> ⚠️ Décompte vérifié dans `functions/src` (grep `onCall`/`onDocument*`/`onSchedule`, 2026-07-09) : **14 callables + 9 triggers déployés (8 `setUpdatedAt` + 1 `recompute` = `recomputeReceiptStale`) + 1 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. L'ancien header INDEX (« 28 callables + 8 triggers ») était erroné. `setUpdatedAtReceipts` n'existe pas (receipts immuables).
 
 > FEAT-043 (i18n « 5 ans » / citation loi 6/7/1989) : **no impact** sur les Cloud Functions (sync 2026-07-08).
 
