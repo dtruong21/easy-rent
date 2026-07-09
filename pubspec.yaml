@@ -92,6 +92,18 @@ dev_dependencies:
   firebase_auth_mocks: ^0.14.2
   fake_cloud_firestore: ^3.1.0
 
+  # Icônes d'app natives Baillan (iOS + Android) — génère mipmaps + AppIcon
+  # + icône adaptative depuis un master unique. Régénérer avec :
+  #   dart run flutter_launcher_icons
+  # Le master lui-même est reproductible depuis la marque :
+  #   python3 tool/branding/generate_app_icons.py
+  flutter_launcher_icons: ^0.14.4
+
+  # Splash natif Baillan (iOS + Android, y compris Android 12+ SplashScreen).
+  # Régénérer : `dart run flutter_native_splash:create`. Glyphes reproductibles
+  # via le même `tool/branding/generate_app_icons.py`.
+  flutter_native_splash: ^2.4.7
+
   # Riverpod codegen (optionnel, à activer si besoin)
   # riverpod_generator: ^2.6.3
   # custom_lint: ^0.6.5
@@ -118,3 +130,60 @@ flutter:
         - asset: assets/fonts/EBGaramond-SemiBoldItalic.ttf
           weight: 600
           style: italic
+
+# ============================================================================
+# Icônes d'app natives Baillan (iOS + Android) — flutter_launcher_icons
+# ----------------------------------------------------------------------------
+# Master unique = marque Baillan (B sérif italique crème sur fond encre, filet
+# sauge), rendu depuis assets/fonts/EBGaramond-Italic.ttf par
+# `tool/branding/generate_app_icons.py`. NE PAS toucher web/icons/ (icône web
+# gérée séparément). Régénérer les icônes natives :
+#   dart run flutter_launcher_icons
+#
+# - image_path             : master 1024 plein cadre, OPAQUE → iOS + Android legacy
+# - remove_alpha_ios       : App Store exige un PNG 1024 sans canal alpha
+# - background_color_ios   : encre (aplatissement alpha éventuel, jamais blanc)
+# - adaptive_icon_*        : icône adaptative Android 26+ (fond encre + B/filet
+#                            dans la safe zone centrale, fond transparent)
+# ============================================================================
+flutter_launcher_icons:
+  image_path: "assets/icon/baillan_icon_master.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#1B1A17"
+  min_sdk_android: 24
+  adaptive_icon_background: "#1B1A17"
+  adaptive_icon_foreground: "assets/icon/baillan_icon_foreground.png"
+
+# ============================================================================
+# Splash natif Baillan (iOS + Android) — flutter_native_splash
+# ----------------------------------------------------------------------------
+# Splash ADAPTATIF clair/sombre (suit l'apparence SYSTÈME — le splash est peint
+# avant Flutter, donc le toggle de thème in-app n'est pas consulté) :
+#   - CLAIR : fond papier #F7F4ED + « B » encre + paraphe olive
+#             (= fond de chargement web index.html + scaffold clair → aucun flash)
+#   - SOMBRE : fond encre #1B1A17 + « B » crème + paraphe sauge
+#             (= tuile de l'icône d'app + scaffold sombre → transition sans couture)
+# Glyphes = marque sur fond transparent, dans le cercle safe 768 px d'Android 12
+# (canevas 1152, SANS icon_background_color). NE PAS réutiliser le master carré
+# d'icône (ses coins seraient rognés par le masque circulaire).
+# web: false → le splash web reste géré par web/index.html (non touché).
+# Régénérer : `dart run flutter_native_splash:create`.
+# ============================================================================
+flutter_native_splash:
+  color: "#F7F4ED"
+  color_dark: "#1B1A17"
+  image: assets/splash/baillan_glyph_ink.png
+  image_dark: assets/splash/baillan_glyph_cream.png
+  android: true
+  ios: true
+  web: false
+  fullscreen: false
+  ios_content_mode: center
+  android_gravity: center
+  android_12:
+    color: "#F7F4ED"
+    color_dark: "#1B1A17"
+    image: assets/splash/baillan_glyph_ink.png
+    image_dark: assets/splash/baillan_glyph_cream.png
