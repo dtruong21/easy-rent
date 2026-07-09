@@ -14,6 +14,24 @@
 
 ---
 
+## 🔁 Reprise (handoff 2026-07-09 — avant reformatage du PC)
+
+**Où on en est :** FEAT-045 (suppression de compte) + i18n FR/EN sont **en prod**. La page `/legal` (mentions légales) et la privacy policy v1.3 sont sur `develop`/staging mais la **promotion `develop → main` a été volontairement RETENUE** : `lib/features/privacy/presentation/legal_page.dart` contient les mentions éditeur en placeholders `« à compléter »`.
+
+**Pour reprendre (dans l'ordre) :**
+1. Remplir les vraies mentions éditeur dans `legal_page.dart` (§1/§2 : dénomination, statut, SIREN/SIRET, adresse, email, téléphone, directeur de publication) une fois le micro-entrepreneur immatriculé, retirer le bandeau « brouillon ».
+2. PR → `develop` → contrôle sur staging.
+3. Promouvoir `develop → main` (⚠️ **auto-déploie le web en prod**, Firebase live, via `deploy.yml`).
+4. Dérouler §2→§6 ci-dessous (comptes, DSA, formulaires, uploads).
+
+**⛔ AVANT DE FORMATER CE PC — sauvegardes hors git (git ne les contient pas) :**
+- **Clé d'upload Android** `~/keystores/baillan/` (`upload-keystore.jks` + `key.properties`) : **JAMAIS commitée** (secret). **La sauvegarder** (gestionnaire de mots de passe / disque chiffré) — sa perte = **impossible de mettre à jour l'app sur Play, définitivement**.
+- Éventuellement le dossier mémoire Claude `~/.claude/…/memory/` (les points de reprise ; l'essentiel est aussi ici en git).
+
+**Sur le nouveau PC :** cloner le repo, installer Flutter (`~/Documents/flutter/bin`), restaurer la clé d'upload puis `cp ~/keystores/baillan/key.properties android/`, `firebase login`. Tout le code + docs sont sur `origin` (rien à récupérer localement).
+
+---
+
 ## 0. Décisions à trancher AVANT de commencer (gèlent le reste)
 
 - [ ] **Type de compte Play** : **organisation** (D-U-N-S requis) *ou* personnel.
