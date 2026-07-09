@@ -84,7 +84,7 @@ const SYNTH_SCHEMA = {
 const DIMENSIONS = [
   {
     key: 'technical-crawlability',
-    prompt: `Dimension **crawlabilité technique**. Audite : rendu CanvasKit vs DOM, dépendance JS, rewrite SPA, canonical/redirections, indexabilité des channels staging, mobile-friendliness, et l'implication Core Web Vitals du Flutter Web (poids main.dart.js + canvaskit.wasm, LCP/FID/CLS). Lis web/index.html, firebase.json, .github/workflows/deploy.yml, docs/state/ROUTES.md. Dis PLAINEMENT ce qu'un crawler voit aujourd'hui et pourquoi. Distingue ce qui est inhérent au Flutter Web de ce qui est corrigeable.`,
+    prompt: `Dimension **crawlabilité technique**. Audite : rendu CanvasKit vs DOM, dépendance JS, rewrite SPA, canonical/redirections, indexabilité des channels staging, mobile-friendliness, et l'implication Core Web Vitals du Flutter Web (poids main.dart.js + canvaskit.wasm, LCP/FID/CLS). Lis web/index.html, firebase.json, .github/workflows/deploy.yml, docs/state/routes/README.md. Dis PLAINEMENT ce qu'un crawler voit aujourd'hui et pourquoi. Distingue ce qui est inhérent au Flutter Web de ce qui est corrigeable.`,
   },
   {
     key: 'onpage-meta',
@@ -92,7 +92,7 @@ const DIMENSIONS = [
   },
   {
     key: 'infra-robots-sitemap',
-    prompt: `Dimension **infra : robots.txt / sitemap.xml / headers hosting**. Il n'existe ni robots.txt ni sitemap.xml. Produis en draftArtifacts : un web/robots.txt PROD (allow + ligne Sitemap, domaine paramétré), un robots.txt STAGING (Disallow: / total), un web/sitemap.xml (URLs publiques uniquement d'après docs/state/ROUTES.md — landing, /faq, pages légales publiques ; PAS les routes derrière auth ; domaine paramétré placeholder). Vérifie dans firebase.json que les fichiers statiques passent avant le rewrite SPA, et propose les headers utiles (X-Robots-Tag noindex sur le channel staging, cache court sur robots/sitemap). Explique la bascule domaine (le seul endroit à changer quand le domaine custom arrive).`,
+    prompt: `Dimension **infra : robots.txt / sitemap.xml / headers hosting**. Il n'existe ni robots.txt ni sitemap.xml. Produis en draftArtifacts : un web/robots.txt PROD (allow + ligne Sitemap, domaine paramétré), un robots.txt STAGING (Disallow: / total), un web/sitemap.xml (URLs publiques uniquement d'après docs/state/routes/README.md — landing, /faq, pages légales publiques ; PAS les routes derrière auth ; domaine paramétré placeholder). Vérifie dans firebase.json que les fichiers statiques passent avant le rewrite SPA, et propose les headers utiles (X-Robots-Tag noindex sur le channel staging, cache court sur robots/sitemap). Explique la bascule domaine (le seul endroit à changer quand le domaine custom arrive).`,
   },
   {
     key: 'keyword-competitive',
