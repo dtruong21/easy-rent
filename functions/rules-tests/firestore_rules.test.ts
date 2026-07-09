@@ -84,6 +84,8 @@ beforeAll(async () => {
       rgpdConsentAt: new Date(),
       rgpdConsentVersion: "v2-2026-07",
       activePropertiesCount: 2,
+      activeTenantsCount: 3,
+      activeLeasesCount: 1,
       createdAt: new Date(),
       deletedAt: null,
     });
@@ -178,6 +180,32 @@ describe("FEAT-044 — gating création de biens (rules)", () => {
         type: "appartement",
         activeLeaseCount: 0,
       }),
+    );
+  });
+
+  it("création d'un locataire en direct (client) refusée — CF-exclusive", async () => {
+    await assertFails(
+      asOwnerA().doc("tenants/t-new").set({
+        landlordId: LANDLORD_A,
+        deletedAt: null,
+        id: "t-new",
+        firstName: "Jean",
+        lastName: "Dupont",
+        email: "jean@example.com",
+        activeLeaseCount: 0,
+      }),
+    );
+  });
+
+  it("reset de activeTenantsCount via update → refusé", async () => {
+    await assertFails(
+      asOwnerA().doc("landlords/landlord-a").update({activeTenantsCount: 0}),
+    );
+  });
+
+  it("reset de activeLeasesCount via update → refusé", async () => {
+    await assertFails(
+      asOwnerA().doc("landlords/landlord-a").update({activeLeasesCount: 0}),
     );
   });
 

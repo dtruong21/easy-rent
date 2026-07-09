@@ -51,4 +51,20 @@ enum SubscriptionTier {
     SubscriptionTier.free => 2,
     SubscriptionTier.paid => null,
   };
+
+  /// Nombre maximum de locataires actifs. `null` = illimité. Source de vérité
+  /// serveur : Cloud Function `createTenant`. Voir [propertyLimit].
+  int? get activeTenantLimit => switch (this) {
+    SubscriptionTier.anonymous => 0,
+    SubscriptionTier.free => 3,
+    SubscriptionTier.paid => null,
+  };
+
+  /// Nombre maximum de baux ACTIFS. `null` = illimité. Source de vérité
+  /// serveur : Cloud Function `createLease` / `updateLease`. Voir [propertyLimit].
+  int? get activeLeaseLimit => switch (this) {
+    SubscriptionTier.anonymous => 0,
+    SubscriptionTier.free => 2,
+    SubscriptionTier.paid => null,
+  };
 }

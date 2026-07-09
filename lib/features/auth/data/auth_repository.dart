@@ -511,9 +511,11 @@ class FirebaseAuthRepository implements AuthRepository {
       'anonExpiresAt': null,
       'rgpdConsentAt': now,
       'rgpdConsentVersion': rgpdConsentVersion,
-      // FEAT-044 : compteur de biens maintenu ensuite par les Callables
-      // (createProperty / softDeleteEntity) ; init honnête à 0.
+      // FEAT-044 : compteurs de plan maintenus ensuite par les Callables
+      // (createProperty/createTenant/createLease / softDeleteEntity) ; init 0.
       'activePropertiesCount': 0,
+      'activeTenantsCount': 0,
+      'activeLeasesCount': 0,
       'createdAt': now,
       'updatedAt': now,
       'deletedAt': null,
@@ -668,7 +670,9 @@ class FirebaseAuthRepository implements AuthRepository {
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'google-popup',
         'signupProvider': 'google',
-        'activePropertiesCount': 0, // FEAT-044 : compteur maintenu par CF
+        'activePropertiesCount': 0, // FEAT-044 : compteurs maintenus par CF
+        'activeTenantsCount': 0,
+        'activeLeasesCount': 0,
         'createdAt': now,
         'updatedAt': now,
         'deletedAt': null,
@@ -782,7 +786,9 @@ class FirebaseAuthRepository implements AuthRepository {
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'apple-popup',
         'signupProvider': 'apple',
-        'activePropertiesCount': 0, // FEAT-044 : compteur maintenu par CF
+        'activePropertiesCount': 0, // FEAT-044 : compteurs maintenus par CF
+        'activeTenantsCount': 0,
+        'activeLeasesCount': 0,
         'createdAt': now,
         'updatedAt': now,
         'deletedAt': null,
@@ -821,6 +827,8 @@ class FirebaseAuthRepository implements AuthRepository {
       'isAnonymous': true,
       'subscriptionTier': 'anonymous',
       'activePropertiesCount': 0, // FEAT-044 : cohérence (l'anon ne crée rien)
+      'activeTenantsCount': 0,
+      'activeLeasesCount': 0,
       'anonExpiresAt': Timestamp.fromDate(
         DateTime.now().add(_anonProvisionExpiryWindow),
       ),

@@ -40,6 +40,11 @@ enum LeaseSubmitError {
   /// Service indisponible ou délai dépassé (unavailable / deadline-exceeded).
   serviceUnavailable,
 
+  /// Plafond de baux actifs de l'offre gratuite atteint (FEAT-044) — la
+  /// Callable `createLease`/`updateLease` a refusé (`resource-exhausted` /
+  /// `lease_limit_reached`). Invite à passer à l'offre Pro.
+  limitReached,
+
   /// Erreur réseau / Callable générique lors de la sauvegarde.
   saveFailed,
 

@@ -1,13 +1,17 @@
 /**
  * One-off backfill — FEAT-044 (Phase A).
  *
- * Recompute `landlords/{uid}.activePropertiesCount` from the live property docs
- * (non-deleted) for EXISTING accounts. New accounts already initialise the
- * counter to 0 at provisioning; only pre-existing landlords need this.
+ * Recompute the three plan counters on `landlords/{uid}` from live docs
+ * (non-deleted) for EXISTING accounts:
+ *   - activePropertiesCount = properties (deletedAt == null)
+ *   - activeTenantsCount    = tenants    (deletedAt == null)
+ *   - activeLeasesCount     = leases     (status == 'active' && deletedAt == null)
+ * New accounts initialise these to 0 at provisioning; only pre-existing
+ * landlords need this.
  *
- * MUST be run before the `createProperty` gate is trusted on existing data:
- * until an account's counter is set, the gate reads a missing counter as 0 and
- * would let an over-cap free account create more. Idempotent — safe to re-run.
+ * MUST be run before the create gates are trusted on existing data: until an
+ * account's counters are set, a gate reads a missing counter as 0 and would let
+ * an over-cap free account create more. Idempotent — safe to re-run.
  *
  * This file lives OUTSIDE `src/` on purpose: `tsconfig.json` only compiles
  * `src/**`, so it is never bundled into the deployed functions (a backfill must
@@ -31,6 +35,16 @@ const COMMIT = process.argv.includes("--commit");
 admin.initializeApp();
 const db = admin.firestore();
 
+async function activeCount(uid, collection, statusActive) {
+  let q = db
+    .collection(collection)
+    .where("landlordId", "==", uid)
+    .where("deletedAt", "==", null);
+  if (statusActive) q = q.where("status", "==", "active");
+  const agg = await q.count().get();
+  return agg.data().count;
+}
+
 async function main() {
   const landlords = await db.collection("landlords").get();
   let checked = 0;
@@ -40,22 +54,26 @@ async function main() {
   for (const doc of landlords.docs) {
     checked++;
     const uid = doc.id;
-    const current = doc.get("activePropertiesCount");
-    const agg = await db
-      .collection("properties")
-      .where("landlordId", "==", uid)
-      .where("deletedAt", "==", null)
-      .count()
-      .get();
-    const actual = agg.data().count;
+    const targets = {
+      activePropertiesCount: await activeCount(uid, "properties", false),
+      activeTenantsCount: await activeCount(uid, "tenants", false),
+      activeLeasesCount: await activeCount(uid, "leases", true),
+    };
 
-    if (current === actual) continue;
+    const update = {};
+    for (const [field, actual] of Object.entries(targets)) {
+      const current = doc.get(field);
+      if (current === actual) continue;
+      console.log(
+        `${uid}: ${field} ${current === undefined ? "(absent)" : current} -> ${actual}`,
+      );
+      update[field] = actual;
+    }
+
+    if (Object.keys(update).length === 0) continue;
     drift++;
-    console.log(
-      `${uid}: activePropertiesCount ${current === undefined ? "(absent)" : current} -> ${actual}`,
-    );
     if (COMMIT) {
-      await doc.ref.update({activePropertiesCount: actual});
+      await doc.ref.update(update);
       written++;
     }
   }

@@ -1,7 +1,7 @@
 import type {CallableRequest} from "firebase-functions/v2/https";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
-import {createProperty} from "../callable/property_tenant";
+import {createProperty, createTenant} from "../callable/property_tenant";
 import {softDeleteEntity} from "../callable/soft_delete";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
@@ -235,5 +235,159 @@ describe("cycle de vie du compteur (create ↔ soft-delete)", () => {
     expect(
       fakeDb.peek(`landlords/${UID}`)?.activePropertiesCount,
     ).toBeUndefined();
+  });
+});
+
+describe("createTenant — gating free-tier (FEAT-044)", () => {
+  const tenantPayload = (extra: Record<string, unknown> = {}) => ({
+    firstName: "Jean",
+    lastName: "Dupont",
+    email: "jean.dupont@example.com",
+    ...extra,
+  });
+
+  function seedTenantDoc(id: string) {
+    fakeDb.seed(`tenants/${id}`, {
+      id,
+      landlordId: UID,
+      firstName: "Legacy",
+      lastName: "Tenant",
+      email: "legacy@example.com",
+      deletedAt: null,
+      activeLeaseCount: 0,
+    });
+  }
+
+  function seedLandlordTenants(tier: string, count: number | undefined) {
+    const data: Record<string, unknown> = {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: tier,
+      deletedAt: null,
+    };
+    if (count !== undefined) data.activeTenantsCount = count;
+    fakeDb.seed(`landlords/${UID}`, data);
+  }
+
+  it("free sous le plafond (3) → crée + incrémente activeTenantsCount", async () => {
+    seedLandlordTenants("free", 2);
+    const res = await createTenant.run(makeRequest(UID, tenantPayload()));
+    const tenantId = (res as {tenantId: string}).tenantId;
+    expect(tenantId).toBeTruthy();
+    expect(fakeDb.peek(`tenants/${tenantId}`)?.landlordId).toBe(UID);
+    expect(fakeDb.peek(`landlords/${UID}`)?.activeTenantsCount).toBe(3);
+  });
+
+  it("free AU plafond (3) → refus resource-exhausted", async () => {
+    seedLandlordTenants("free", 3);
+    await expect(
+      createTenant.run(makeRequest(UID, tenantPayload())),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "tenant_limit_reached",
+    });
+  });
+
+  it("paid → illimité", async () => {
+    seedLandlordTenants("paid", 99);
+    const res = await createTenant.run(makeRequest(UID, tenantPayload()));
+    expect((res as {tenantId: string}).tenantId).toBeTruthy();
+  });
+
+  it("anonymous → refus", async () => {
+    seedLandlordTenants("anonymous", 0);
+    await expect(
+      createTenant.run(makeRequest(UID, tenantPayload())),
+    ).rejects.toMatchObject({code: "resource-exhausted"});
+  });
+
+  it("FAIL-CLOSED : compteur absent + 3 locataires existants → refus", async () => {
+    seedLandlordTenants("free", undefined);
+    seedTenantDoc("t-1");
+    seedTenantDoc("t-2");
+    seedTenantDoc("t-3");
+    await expect(
+      createTenant.run(makeRequest(UID, tenantPayload())),
+    ).rejects.toMatchObject({code: "resource-exhausted"});
+  });
+
+  it("email invalide → invalid-argument", async () => {
+    seedLandlordTenants("free", 0);
+    await expect(
+      createTenant.run(makeRequest(UID, tenantPayload({email: "pasunemail"}))),
+    ).rejects.toMatchObject({code: "invalid-argument"});
+  });
+});
+
+describe("softDeleteEntity — décréments landlord (FEAT-044 tenant + bail)", () => {
+  it("soft-delete d'un locataire décrémente activeTenantsCount (clampé)", async () => {
+    fakeDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: "free",
+      activeTenantsCount: 2,
+      deletedAt: null,
+    });
+    fakeDb.seed("tenants/t-1", {
+      id: "t-1",
+      landlordId: UID,
+      deletedAt: null,
+      activeLeaseCount: 0,
+    });
+    await softDeleteEntity.run(
+      makeRequest(UID, {collection: "tenants", id: "t-1"}),
+    );
+    expect(fakeDb.peek(`landlords/${UID}`)?.activeTenantsCount).toBe(1);
+  });
+
+  it("soft-delete d'un bail ACTIF décrémente activeLeasesCount du bailleur", async () => {
+    fakeDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: "free",
+      activeLeasesCount: 2,
+      deletedAt: null,
+    });
+    seedProperty("p-1");
+    fakeDb.seed("tenants/t-1", {
+      id: "t-1",
+      landlordId: UID,
+      deletedAt: null,
+      activeLeaseCount: 1,
+    });
+    fakeDb.seed("leases/l-1", {
+      id: "l-1",
+      landlordId: UID,
+      propertyId: "p-1",
+      tenantId: "t-1",
+      status: "active",
+      deletedAt: null,
+    });
+    await softDeleteEntity.run(
+      makeRequest(UID, {collection: "leases", id: "l-1"}),
+    );
+    expect(fakeDb.peek(`landlords/${UID}`)?.activeLeasesCount).toBe(1);
+  });
+
+  it("soft-delete d'un bail TERMINÉ ne touche pas activeLeasesCount", async () => {
+    fakeDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: "free",
+      activeLeasesCount: 2,
+      deletedAt: null,
+    });
+    fakeDb.seed("leases/l-1", {
+      id: "l-1",
+      landlordId: UID,
+      propertyId: "p-1",
+      tenantId: "t-1",
+      status: "terminated",
+      deletedAt: null,
+    });
+    await softDeleteEntity.run(
+      makeRequest(UID, {collection: "leases", id: "l-1"}),
+    );
+    expect(fakeDb.peek(`landlords/${UID}`)?.activeLeasesCount).toBe(2);
   });
 });

@@ -21,6 +21,7 @@ extension LeaseSubmitErrorL10n on LeaseSubmitError {
       LeaseSubmitError.permissionDenied => l10n.leasesErrorPermissionDenied,
       LeaseSubmitError.invalidState => l10n.leasesErrorInvalidState,
       LeaseSubmitError.serviceUnavailable => l10n.leasesErrorServiceUnavailable,
+      LeaseSubmitError.limitReached => l10n.leasesErrorLimitReached,
       LeaseSubmitError.saveFailed => l10n.leasesErrorSaveFailed,
       LeaseSubmitError.unknown => l10n.commonErrorGeneric,
     };

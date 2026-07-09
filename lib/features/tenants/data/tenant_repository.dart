@@ -120,38 +120,36 @@ class FirestoreTenantRepository implements TenantRepository {
     String? guarantorPhone,
   }) async {
     _log.info('create()');
-    final uid = _uid;
-    final docRef = _col.doc();
-    final now = FieldValue.serverTimestamp();
-    final payload = <String, dynamic>{
-      'id': docRef.id,
-      'landlordId': uid,
+    // FEAT-044 : création via la Callable `createTenant` (plafond free-tier
+    // imposé serveur + compteur landlord activeTenantsCount). Dates en ISO-8601
+    // (les Timestamp ne transitent pas par le protocole Callable) ; le serveur
+    // reconvertit + applique le trim/empty→null. Dépassement de plafond →
+    // FirebaseFunctionsException(code: 'resource-exhausted').
+    final callable = _functions.httpsCallable(
+      'createTenant',
+      options: HttpsCallableOptions(timeout: const Duration(seconds: 15)),
+    );
+    final res = await callable.call(<String, dynamic>{
       'firstName': firstName.trim(),
       'lastName': lastName.trim(),
       'email': email.trim(),
-      'phone': _orNull(phone),
-      'birthDate': birthDate == null
-          ? null
-          : Timestamp.fromDate(birthDate.toUtc()),
-      'birthPlace': _orNull(birthPlace),
-      'nationality': _orNull(nationality),
-      'profession': _orNull(profession),
-      'employer': _orNull(employer),
+      'phone': phone,
+      'birthDate': birthDate?.toUtc().toIso8601String(),
+      'birthPlace': birthPlace,
+      'nationality': nationality,
+      'profession': profession,
+      'employer': employer,
       'monthlyIncomeCents': monthlyIncomeCents,
-      'previousAddress': _orNull(previousAddress),
-      'guarantorName': _orNull(guarantorName),
-      'guarantorEmail': _orNull(guarantorEmail),
-      'guarantorPhone': _orNull(guarantorPhone),
-      'createdAt': now,
-      'updatedAt': now,
-      'deletedAt': null,
-      'activeLeaseCount': 0,
-    };
-    await docRef.set(payload);
-    final saved = await docRef.get();
-    return Tenant.fromJson(
-      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
-    );
+      'previousAddress': previousAddress,
+      'guarantorName': guarantorName,
+      'guarantorEmail': guarantorEmail,
+      'guarantorPhone': guarantorPhone,
+    });
+    final tenantId = (res.data as Map?)?['tenantId'] as String?;
+    if (tenantId == null) {
+      throw StateError('createTenant did not return a tenantId');
+    }
+    return getById(tenantId);
   }
 
   @override

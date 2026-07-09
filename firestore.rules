@@ -95,7 +95,9 @@ service cloud.firestore {
         && request.resource.data.deletedAt == null
         // FEAT-044 : compteur de biens honnête à la création (0 ou absent) —
         // empêche d'initialiser un compteur négatif pour contourner le gate.
-        && request.resource.data.get('activePropertiesCount', 0) == 0;
+        && request.resource.data.get('activePropertiesCount', 0) == 0
+        && request.resource.data.get('activeTenantsCount', 0) == 0
+        && request.resource.data.get('activeLeasesCount', 0) == 0;
 
       // CREATE (anonyme, BAILLAN-M1) : defense-in-depth — en pratique le
       // doc est provisionné par la Cloud Function `handleNewUser`
@@ -115,7 +117,9 @@ service cloud.firestore {
         && request.resource.data.rgpdConsentAt == null
         && request.resource.data.deletedAt == null
         // FEAT-044 : idem — compteur de biens honnête (0 ou absent) à la création.
-        && request.resource.data.get('activePropertiesCount', 0) == 0;
+        && request.resource.data.get('activePropertiesCount', 0) == 0
+        && request.resource.data.get('activeTenantsCount', 0) == 0
+        && request.resource.data.get('activeLeasesCount', 0) == 0;
 
       // UPDATE (compte complet) : profil propre. RGPD consent versionné,
       // identifiants et `subscriptionTier`/`isAnonymous` immuables côté
@@ -137,7 +141,9 @@ service cloud.firestore {
         && request.resource.data.isAnonymous == resource.data.isAnonymous
         // FEAT-044 : compteur de biens maintenu par CF uniquement — le client
         // ne peut jamais le muter (sinon reset → création illimitée).
-        && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0);
+        && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0)
+        && request.resource.data.get('activeTenantsCount', 0) == resource.data.get('activeTenantsCount', 0)
+        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0);
 
       // UPDATE (anonyme, BAILLAN-M1) : limité aux champs que le renewer
       // d'expiration et l'app cliente ont besoin de toucher — jamais
@@ -164,7 +170,9 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.deletedAt == resource.data.deletedAt
         // FEAT-044 : compteur de biens jamais muté côté client (CF only).
-        && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0);
+        && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0)
+        && request.resource.data.get('activeTenantsCount', 0) == resource.data.get('activeTenantsCount', 0)
+        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0);
 
       // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
       // anonymes expirés passe par la Cloud Function planifiée
@@ -211,18 +219,10 @@ service cloud.firestore {
       // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
       allow list: if isOwner(resource.data.landlordId);
 
-      // BAILLAN-M1 : create/update réservés aux comptes complets.
-      allow create: if isFullyAuthed()
-        && request.resource.data.landlordId == request.auth.uid
-        && request.resource.data.deletedAt == null
-        && request.resource.data.id == id
-        && request.resource.data.firstName is string
-        && request.resource.data.firstName.size() > 0
-        && request.resource.data.lastName is string
-        && request.resource.data.lastName.size() > 0
-        && request.resource.data.email is string
-        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
-        && request.resource.data.activeLeaseCount == 0;
+      // FEAT-044 : création CF-exclusive via la Callable `createTenant`
+      // (Admin SDK) — elle impose le plafond free-tier et maintient
+      // `landlords.activeTenantsCount`. Cf. properties/create.
+      allow create: if false;
 
       allow update: if isFullyAuthed()
         && isOwner(resource.data.landlordId)
