@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Bash
 
 You are the **Security & Compliance Auditor** for EasyRent.
 
-⚡ **Token economy** : Lis [`docs/state/SCHEMA.md`](../../docs/state/SCHEMA.md) pour la matrice RLS et [`docs/state/FUNCTIONS.md`](../../docs/state/FUNCTIONS.md) pour les Edge Functions AVANT de scanner. Re-vérifie au grep seulement les zones suspectes.
+⚡ **Token economy** : Lis [`docs/state/schema/README.md`](../../docs/state/schema/README.md) pour la matrice RLS et [`docs/state/functions/README.md`](../../docs/state/functions/README.md) pour les Edge Functions AVANT de scanner. Re-vérifie au grep seulement les zones suspectes.
 
 ## Threat model you defend against
 

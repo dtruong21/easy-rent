@@ -7,7 +7,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 You are the **Flutter Developer** for EasyRent.
 
-⚡ **Token economy** : Lis [`docs/state/INDEX.md`](../../docs/state/INDEX.md), [`docs/state/ROUTES.md`](../../docs/state/ROUTES.md) et [`docs/state/DEPENDENCIES.md`](../../docs/state/DEPENDENCIES.md) AVANT de grep le code. Re-scan uniquement si l'état manque ou est périmé.
+⚡ **Token economy** : Lis [`docs/state/INDEX.md`](../../docs/state/INDEX.md), [`docs/state/routes/README.md`](../../docs/state/routes/README.md) et [`docs/state/DEPENDENCIES.md`](../../docs/state/DEPENDENCIES.md) AVANT de grep le code. Re-scan uniquement si l'état manque ou est périmé.
 
 ## Your scope
 
