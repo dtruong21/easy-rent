@@ -29,7 +29,7 @@ Client invoke, **tout compte authentifié y compris anonyme**. Exigence stores :
 - **Retour** : `{deleted:true, receiptsRetained:number}`. Fichier `delete_account.ts`. Tests `delete_account.test.ts` (15 tests) + `rules-tests/firestore_rules.test.ts` (28 tests, `npm run test:rules`).
 
 ### `softDeleteEntity` (universel)
-Signature `{collection, docId}`. Soft-delete unifié (spec canonique ; `softDeleteDocument` = ce callable pour `documents`, voir expenses-documents).
+Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-delete des `documents` passe par ce callable universel — pas de `softDeleteDocument` dédié (voir expenses-documents).
 - **Par collection** : `landlords`/`properties`/`tenants` → vérifier no active leases ; `leases` → OK (trigger `activeLeaseCount` decrement) ; `payments` → OK (trigger `recomputeReceiptStale`) ; `receipts` → **REFUSE** (immuable, loi 6/7/1989) ; `documents` → check `legalHold` (refuse si true) ; `expenses` → OK (FEAT-041) ; `investment_scenarios` → OK.
 - **Mutations** : `deletedAt=now()` ; si collection in `[properties, tenants]` && `status=='active'` → DECREMENT `activeLeaseCount` ; idempotent.
 - **Erreurs** : FAILED_PRECONDITION (legalHold==true / active leases / receipts), NOT_FOUND, PERMISSION_DENIED.

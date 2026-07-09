@@ -30,14 +30,14 @@ Justificatifs (contrats, baux scannés, attestations assurance, **FEAT-041b : re
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
-- `create/update/delete` : CF exclusive (`createDocument`, `softDeleteDocument`)
+- `create/update/delete` : CF exclusive (`createDocument` ; soft-delete via `softDeleteEntity` universel)
 
 **Indexes** :
 - landlordId ↑, deletedAt ↑, leaseId ↑ (lease documents)
 - landlordId ↑, deletedAt ↑, expenseId ↑ (expense receipts, FEAT-041b)
 - landlordId ↑, deletedAt ↑, category ↑ (category archiving)
 
-**Callables** : `createDocument`, `softDeleteDocument`.
+**Callables** : `createDocument`, `getDocumentDownloadUrl` ; soft-delete via `softDeleteEntity` (universel).
 
 **Triggers** : setUpdatedAt.
 

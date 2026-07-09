@@ -13,8 +13,11 @@ Client invoke.
 - **Mutations** : upload → Storage `/documents/{landlordId}/{docId}.{ext}` ; **derive `legalHold` from category** (serveur, immuable) : `lease_scan`→true (rétention 3 ans), `insurance`→true (3 ans), `expense_receipt`→false (soft-delete autorisé), `other`→false ; CREATE `documents/{id}` ; si `expense_receipt`+`expenseId` → lien bilatéral.
 - **Retour** : `{documentId, storageUrl}`. **Note** : `legalHold` dérivée immuable empêche soft-delete si true (garde-fou légal). Fichier `documents.ts`.
 
-### `softDeleteDocument` (FEAT-008)
-Callable **via** `softDeleteEntity('documents')` (spec canonique → account). Fetch document ; si `legalHold==true` → FAILED_PRECONDITION (immutable) ; sinon `deletedAt=now()`. **Retour** : `{success:true}`. Fichier `soft_delete.ts`.
+### `getDocumentDownloadUrl` (FEAT-008)
+Client invoke. Génère une **URL signée court-terme (5 min)** pour télécharger le fichier. Ownership check (`landlordId==uid`) + refus si `deletedAt!=null`. **Retour** : `{downloadUrl, downloadUrlExpiresAt}`. Fichier `documents.ts`.
+
+### Soft-delete de documents — via `softDeleteEntity('documents')`
+Pas de callable dédié (`softDeleteDocument` n'existe pas) : le soft-delete passe par le `softDeleteEntity` universel (spec canonique → account). Fetch document ; si `legalHold==true` → FAILED_PRECONDITION (immutable) ; sinon `deletedAt=now()`. **Retour** : `{success:true}`. Fichier `soft_delete.ts`.
 
 ## Callables — Expenses
 
