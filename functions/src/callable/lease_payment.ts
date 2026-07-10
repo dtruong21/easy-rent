@@ -388,6 +388,29 @@ export const updateLease = onCall(
     const db = admin.firestore();
     const leaseRef = db.doc(`leases/${id}`);
 
+    // FEAT-044 : fail-closed sur activeLeasesCount absent (compte legacy) —
+    // même recompte que createLease, pour que la RÉACTIVATION d'un bail ne
+    // contourne pas le plafond tant que le compteur n'a pas été semé.
+    // count() n'existe pas en transaction. Pertinent uniquement si le patch
+    // peut réactiver (status demandé = active).
+    let seededLeaseCount: number | null = null;
+    if (cleanPatch.status === "active") {
+      const preSnap = await db.doc(`landlords/${uid}`).get();
+      if (preSnap.exists) {
+        const preData = (preSnap.data() ?? {}) as Record<string, unknown>;
+        if (typeof preData.activeLeasesCount !== "number") {
+          const agg = await db
+            .collection("leases")
+            .where("landlordId", "==", uid)
+            .where("status", "==", "active")
+            .where("deletedAt", "==", null)
+            .count()
+            .get();
+          seededLeaseCount = agg.data().count;
+        }
+      }
+    }
+
     return await db.runTransaction(async (tx) => {
       const snap = await tx.get(leaseRef);
       const lease = dataOrFail(snap, "lease not found");
@@ -411,16 +434,32 @@ export const updateLease = onCall(
         const ldata = (lsnap.data() ?? {}) as Record<string, unknown>;
         const raw = ldata.activeLeasesCount;
         landlordActiveLeases = typeof raw === "number" ? raw : null;
-        // Réactivation (terminé/archivé → actif) : re-vérifier le plafond.
-        // Compteur absent (legacy) → on ne bloque pas ici (le gate principal
-        // est createLease ; le compteur sera semé au prochain create).
-        if (delta === 1 && landlordActiveLeases !== null) {
+        if (delta === 1) {
+          // Réactivation (terminé/archivé → actif) : le bien et le locataire
+          // doivent encore exister et ne pas être soft-deleted — sinon on
+          // ressusciterait leur activeLeaseCount et on produirait un bail
+          // actif pointant vers une entité supprimée.
+          const propertyId = lease.propertyId;
+          const tenantId = lease.tenantId;
+          if (typeof propertyId === "string" && typeof tenantId === "string") {
+            const [psnap, tsnap] = await Promise.all([
+              tx.get(db.doc(`properties/${propertyId}`)),
+              tx.get(db.doc(`tenants/${tenantId}`)),
+            ]);
+            const property = dataOrFail(psnap, "property not found");
+            assertOwnedAndActive(property, uid, "property");
+            const tenant = dataOrFail(tsnap, "tenant not found");
+            assertOwnedAndActive(tenant, uid, "tenant");
+          }
+          // Re-vérifier le plafond. Compteur absent (legacy) → fail-closed
+          // sur le recompte pré-transaction (miroir createLease).
           const limit = activeLeaseLimitForTier(
             typeof ldata.subscriptionTier === "string" ?
               ldata.subscriptionTier :
               "anonymous",
           );
-          if (limit !== null && landlordActiveLeases >= limit) {
+          const count = landlordActiveLeases ?? seededLeaseCount ?? 0;
+          if (limit !== null && count >= limit) {
             throw new HttpsError("resource-exhausted", "lease_limit_reached");
           }
         }
@@ -493,10 +532,16 @@ export const updateLease = onCall(
         }
         // FEAT-044 : compteur de baux actifs du bailleur. Écriture absolue
         // clampée à 0 (basée sur la valeur relue en transaction → race-safe),
-        // jamais négative. Compteur absent (legacy) → on ne touche à rien.
+        // jamais négative. Compteur absent (legacy) : la réactivation sème la
+        // vraie valeur recomptée +1 (miroir createLease) ; la désactivation ne
+        // touche à rien (le compteur sera semé au prochain create/réactivation).
         if (landlordActiveLeases !== null) {
           tx.update(db.doc(`landlords/${uid}`), {
             activeLeasesCount: Math.max(0, landlordActiveLeases + delta),
+          });
+        } else if (delta === 1) {
+          tx.update(db.doc(`landlords/${uid}`), {
+            activeLeasesCount: (seededLeaseCount ?? 0) + 1,
           });
         }
       }
