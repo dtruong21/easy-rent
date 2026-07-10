@@ -17,12 +17,14 @@ Paiement loyer/charges. **CROSS-ENTITY** : leaseId doit appartenir au même land
 | `leaseId` | string | FK → leases.id, immuable, validation CF |
 | `propertyId` | string | snapshot leases.propertyId (dénorm) |
 | `tenantLastName` | string | snapshot leases.tenantLastName |
-| `rentAmountCents` | int | portion loyer versée |
-| `chargesAmountCents` | int | portion charges (= leases.chargesAmountCents prorate) versée |
-| `amountCents` | int | total (rentAmountCents + chargesAmountCents) |
-| `paidDate` | timestamp | date versement |
-| `paymentMethod` | string | 'virement' \| 'cheque' \| 'especes' \| 'prelevement' \| 'autre' |
-| `notes` | string\|null | motif libre (FEAT-029) → PDF |
+| `rentAmountCents` | int | portion loyer versée (immuable) |
+| `chargesAmountCents` | int | portion charges versée (immuable) |
+| `periodStart` | timestamp | début période (immuable) |
+| `periodEnd` | timestamp | fin période (immuable) |
+| `paidAt` | timestamp | date versement (mutable) |
+| `paymentMethod` | string | 'virement' \| 'cheque' \| 'especes' \| 'prelevement' \| 'autre' (mutable) |
+| `notes` | string\|null | motif libre, max 500 chars (FEAT-029, mutable) → snapshot reçu PDF |
+| `reference` | string\|null | référence externe/comptable (mutable) |
 | `createdAt` | timestamp | immuable |
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete |
@@ -32,8 +34,8 @@ Paiement loyer/charges. **CROSS-ENTITY** : leaseId doit appartenir au même land
 - `create/update/delete` : CF exclusive
 
 **Indexes** :
-- landlordId ↑, deletedAt ↑, leaseId ↑, paidDate ↓ (payment history)
-- leaseId ↑, deletedAt ↑, paidDate ↓ (payment timeline)
+- landlordId ↑, deletedAt ↑, leaseId ↑, paidAt ↓ (payment history)
+- leaseId ↑, deletedAt ↑, paidAt ↓ (payment timeline)
 
 **Callables** : `createPayment`, `updatePayment`.
 
@@ -43,41 +45,49 @@ Paiement loyer/charges. **CROSS-ENTITY** : leaseId doit appartenir au même land
 
 ---
 
-## `receipts/{id}` — CF exclusive (FEAT-007)
+## `receipts/{id}` — CF exclusive, immuable (FEAT-007)
 
-Quittance loyer (loi 6 juillet 1989). **IMMUABLE** : jamais soft-delete (rétention légale 5 ans). Annulation via `voidReceipt` (logique métier, jamais suppression).
+Quittance loyer (loi 6 juillet 1989 art. L145-40) ou reçu (paiement partiel). **Immuable** : jamais soft-delete ni update post-création (rétention légale 5 ans). Annulation logique via `voidReceipt` (flags `isVoided`/`voidedAt`/`voidedReason`). **PDF généré côté client** via package `pdf` Dart (pas de Storage, pas de génération serveur) — le doc Firestore est la preuve légale.
 
 | Champ | Type | Notes |
 |---|---|---|
 | `id` | string | UUID, immuable |
 | `landlordId` | string | FK → landlords.id, immuable |
 | `leaseId` | string | FK → leases.id, immuable |
-| `paymentId` | string\|null | FK → payments.id (null si générée manuellement) |
-| `propertyName` | string | snapshot properties.name |
-| `tenantName` | string | snapshot tenants lastName |
-| `amountCents` | int | montant |
-| `periodStart` | timestamp | début période |
-| `periodEnd` | timestamp | fin période |
-| `receiptNumber` | string | numéro séquentiel |
-| `status` | string | 'generated' \| 'voided' \| 'sent' (markers non-exclusifs, bits) |
-| `receiptDate` | timestamp | date édition |
-| `voidReason` | string\|null | raison annulation (si voided) |
-| `accountDeletedAt` | timestamp\|null | FEAT-045 : stamp suppression compte (null si actif) — quittance conservée 5 ans |
-| `retentionUntil` | timestamp\|null | FEAT-045 : date limite rétention légale (5 ans après suppression) — purge async après |
+| `paymentIds` | array[string] | FK → payments.id[] (paiement(s) versée(s) à l'origine) |
+| `propertyName` | string | snapshot properties.name (immuable, audit) |
+| `propertyAddress` | string | snapshot properties.address (immuable, audit) |
+| `landlordFullName` | string | snapshot landlords.fullName (requis loi 1989 art. 21) |
+| `landlordAddress` | string | snapshot landlords.address (requis loi 1989 art. 21) |
+| `tenantFullName` | string | snapshot `${tenants.firstName} ${tenants.lastName}` |
+| `rentCents` | int | loyer versé (somme paiements) |
+| `chargesCents` | int | charges versées (somme paiements) |
+| `totalCents` | int | total = rentCents + chargesCents |
+| `documentType` | string | 'quittance' (≥ loyer+charges dus) \| 'recu' (< loyer+charges dus) |
+| `periodStart` | timestamp | début période (earliest paymentId.periodStart) |
+| `periodEnd` | timestamp | fin période (latest paymentId.periodEnd) |
+| `lastPaidAt` | timestamp | date dernier versement (max paymentId.paidAt) |
+| `generatedAt` | timestamp | horodatage génération (= createdAt) |
+| `isVoided` | bool | annulation logique (jamais suppression physique) |
+| `voidedAt` | timestamp\|null | horodatage annulation (si isVoided) |
+| `voidedReason` | string\|null | motif annulation (si isVoided) |
+| `isStale` | bool | marquage staleness si paiement/lease change après génération (client rejoue `generateReceipt` si stale=true) |
+| `sentAt` | timestamp\|null | horodatage envoi (Web Share API côté client, audit only) |
+| `sentToEmail` | string\|null | email destinataire (optionnel, audit) |
+| `accountDeletedAt` | timestamp\|null | FEAT-045 : stamp suppression compte (null si actif) — quittance conservée 5 ans post-suppression |
 | `createdAt` | timestamp | immuable |
-| `updatedAt` | timestamp | CF trigger (status only) |
-| `deletedAt` | timestamp\|null | null (jamais supprimée en pratique, marquée voided) |
 
 **RLS** :
-- `get/list` : isOwner(landlordId) (**pas de filtre isActive** — voided restent lisibles audit)
-- `create/update/delete` : CF exclusive (`generateReceipt`, `voidReceipt`, `markReceiptAsSent`)
+- `get/list` : isOwner(landlordId) (**pas de filtre isActive** — annulées restent lisibles audit)
+- `create/update/delete` : **if false** (CF-exclusive via `generateReceipt`, `voidReceipt`, `markReceiptAsSent`)
 
 **Indexes** :
-- landlordId ↑, leaseId ↑, receiptDate ↓ (archiving, no isActive)
-- landlordId ↑, status ↑, receiptDate ↓ (status tracking)
+- landlordId ↑, leaseId ↑, generatedAt ↓ (archiving, pas de filtre isActive)
+- landlordId ↑, isVoided ↑, generatedAt ↓ (status tracking)
 
 **Callables** : `generateReceipt`, `voidReceipt`, `markReceiptAsSent`.
 
 **Triggers** :
-- setUpdatedAt (status seulement)
-- recomputeReceiptStale (si lease/payment change → flag staleness)
+- recomputeReceiptStale (si payment/lease change → flag `isStale=true` sur receipts liées, client rejoue `generateReceipt` si stale)
+  - onDocumentWritten(payments) : si `amountCents` change → query receipts liées, flag `isStale`
+  - onDocumentWritten(leases) : si champ snapshot (propertyName, etc) change → flag `isStale` sur receipts liées
