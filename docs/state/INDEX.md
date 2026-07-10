@@ -7,9 +7,9 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-09
-- **Commit ref** : `develop` (post FEAT-049/050 ; restructure état en shards)
-- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié)
+- **Dernière mise à jour** : 2026-07-10
+- **Commit ref** : `5a43e58` (develop, post PR #94 : verrouillage réactivation bail ; shards FEAT-044/PR #94 actualisés)
+- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié)
 
 ## Comment charger l'état (règle tokens)
 

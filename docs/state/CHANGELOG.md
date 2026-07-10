@@ -6,6 +6,24 @@
 > [`FEATURES.md`](FEATURES.md) (matrice) ; les détails techniques dans les shards
 > `schema/`, `functions/`, `routes/`.
 
+## Changements (2026-07-03 → 2026-07-10)
+
+### PR #94 : Verrouillage de la réactivation de bail (updateLease) — FIX (2026-07-10)
+- Transition `terminated|archived → active` (réactivation) imposait seulement une vérification d'existence du bien/locataire, pas soft-delete.
+- Résolution : Appel failed-precondition si le bien ou le locataire est soft-deleted lors de la réactivation — prévient la résurrection de baux vers des entités supprimées.
+- Recompte atomique fail-closed du plafond `landlors.activeLeasesCount` en cas de compteur absent (legacy).
+- Impact : shards leases.md + functions/leases.md actualisés.
+
+### FEAT-044 + Corrections shards — QA pré-release 2026-07-10
+- Shards payments-receipts.md, schema/account.md, schema/properties.md, functions/properties.md, functions/leases.md actualisés post-PR #91 (freemium) + PR #94 (réactivation):
+  - **payments-receipts.md** : Champ `paidAt` corrigé (non `paidDate`). Receipts schema refactorisé : champs réels (paymentIds, rentCents, chargesCents, totalCents, documentType, isVoided, isStale, sentAt) ; pas de receiptNumber séquentiel, pas d'amountCents unique, pas de Storage PDF (généré client), pas de trigger auto-génération. Indexes/RLS/Callables/Triggers actualisés.
+  - **account.md** : Ajout champs `phone`, `address`, `fullName` sur landlords. Compteurs FEAT-044 documentés : `activePropertiesCount`, `activeTenantsCount`, `activeLeasesCount`. rgpdConsentVersion mise à jour : v2-2026-07 → v3-2026-07.
+  - **properties.md** : Create = if false (CF-exclusive). Champs property FEAT-017 (financing) : ~25 champs documentés (loan*, tax*, insurance*, DPE, surface, rooms, etc.). Callables `createProperty`/`createTenant` avec gating free-tier (2 biens, 3 locataires) documentés.
+  - **leases.md** : Compteurs FEAT-044 (activeLeasesCount sur landlords/properties/tenants). PR #94 (réactivation verrouillée) : bien/locataire doivent exister et non soft-deleted.
+  - **functions/leases.md** : updateLease détail réactivation (PR #94) + plafonds (free=2, paid=∞).
+  - **functions/properties.md** : createProperty/createTenant callables avec plafonds FEAT-044.
+  - Champs tenant enrichis documentés (phone, birthDate, profession, guarantor, monthlyIncome, etc.).
+
 ## Changements (2026-07-03 → 2026-07-08)
 
 ### FEAT-049 : SEO du PWA (quick-wins, Option A) — ✅ DONE (PR #73, 2026-07-08)

@@ -47,6 +47,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-041 | Suivi dépenses unifié V1 (expenses + documents v2) | ✅ done | expenses-documents | PR #67 |
 | FEAT-042 | Mode de charges (provisions/forfait) + éligibilité régul. | ✅ done | leases | PR #68 |
 | FEAT-043 | Internationalisation FR/EN (i18n, gen_l10n) | ✅ done | account | PR #71 |
+| FEAT-044 | Freemium enforcement — plafonds free-tier (2 biens/3 locataires/2 baux) + callables CF-exclusive | ✅ done | properties, leases | PR #91 |
 | FEAT-045 | Suppression compte in-app + /delete-account (loi 6/7/1989) | ✅ done | account | PR #69 |
 | FEAT-048 | FAQ produit publique /faq | ✅ done | account | PR #69 |
 | FEAT-049 | SEO du PWA — quick-wins (Option A) | ✅ done | account | PR #73 |
