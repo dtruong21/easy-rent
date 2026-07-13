@@ -28,6 +28,7 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 | App mobile iOS/Android (FEAT-024 : setup, build, décisions) | [`docs/MOBILE.md`](docs/MOBILE.md) |
 | Conformité Play Store / App Store (release production) | [`docs/STORE_COMPLIANCE.md`](docs/STORE_COMPLIANCE.md) |
 | Gestion des secrets et sécurité | [`docs/SECURITY.md`](docs/SECURITY.md) |
+| Setup 2 PC (Claude Code Pro + ChatGPT Go/Codex) | [`docs/DUAL_PC_SETUP.md`](docs/DUAL_PC_SETUP.md) |
 | Schéma Firestore (par domaine) | [`docs/state/schema/`](docs/state/schema/README.md) |
 | Cloud Functions (par domaine) | [`docs/state/functions/`](docs/state/functions/README.md) |
 | Routes Flutter (par domaine) | [`docs/state/routes/`](docs/state/routes/README.md) |
