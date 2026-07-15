@@ -1,4 +1,4 @@
-# Setup 2 PC — Claude Code Pro + ChatGPT Go
+# Setup 2 PC — Claude Code Pro + ChatGPT Go/Codex
 
 Objectif : deux machines, deux quotas IA indépendants, GitHub comme hub. Aucune synchro directe entre PC (pas de Dropbox/USB) : tout passe par branches + PR.
 
@@ -22,7 +22,7 @@ Checklist d'installation :
 - `/model` → Sonnet pour les tâches mécaniques, garder le modèle fort pour l'architecture
 - `/clear` entre tâches sans rapport ; toujours lire `docs/state/` avant de scanner le code
 
-## PC B — machine secondaire (ChatGPT Go)
+## PC B — machine secondaire (ChatGPT Go + Codex)
 
 Rôle : l'amont (specs, recherche) + l'aval (revue de PR) + petites tâches de code via Codex.
 
@@ -30,11 +30,22 @@ Checklist d'installation :
 
 1. Git + clone du repo, VS Code (lecture/édition légère)
 2. ChatGPT web (compte Go)
-3. Codex CLI : `npm i -g @openai/codex`, connexion avec le compte ChatGPT — inclus dans Go, quota limité
+3. Codex : installer l'app Codex ou la CLI (`npm i -g @openai/codex`), puis se connecter avec le compte ChatGPT Go. Vérifier avec `codex login status`.
 4. Codex lit [`AGENTS.md`](../AGENTS.md) à la racine : périmètre restreint (docs, tests, petits fixes), branches `codex/*`
 5. `flutter pub get` + `dart run build_runner build` si Codex doit lancer les tests
 
 ⛔ Sur ce PC : **aucun secret** (pas de service account, pas de `firebase login` avec droits de deploy, pas de clé `re_*`). Rien de sensible collé dans ChatGPT — voir [`docs/SECURITY.md`](SECURITY.md).
+
+### Démarrage d'une tâche Codex
+
+1. Partir d'un arbre propre et à jour : `git switch develop`, `git pull --ff-only`, puis `git switch -c codex/<sujet>`.
+2. Ouvrir le dépôt dans Codex. `AGENTS.md` est le contexte projet chargé automatiquement ; il impose la lecture préalable de `docs/state/INDEX.md`.
+3. Donner à Codex une tâche bornée, le numéro d'issue ou le lien de PR, et les critères d'acceptation. Ne pas lui confier un déploiement ni un changement d'infrastructure sans ticket explicite.
+4. Avant la PR : exécuter les tests pertinents, `dart format .` et `flutter analyze`, puis indiquer clairement ce qui a été vérifié.
+
+### Handoff PC B → PC A
+
+Le handoff doit se faire dans une issue ou une PR, jamais par état local. Inclure : objectif, branche/commit, fichiers touchés, commandes exécutées et résultats, risques ou questions restantes. PC A reprend ensuite depuis `develop` ou la branche Codex et garde la responsabilité des changements Firebase et du déploiement.
 
 ## Répartition des rôles
 
