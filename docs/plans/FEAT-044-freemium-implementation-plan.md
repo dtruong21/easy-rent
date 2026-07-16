@@ -9,7 +9,7 @@ Synthesis of four research streams into one buildable, phased plan. The freemium
 ## 1. TL;DR
 
 - **What:** Convert Baillan from free to freemium. Free tier = **2 properties / 2 active leases / 3 tenants / 500 MB storage**. Paid "Pro" = unlimited + automation features. Enforcement is **server-authoritative** (Cloud Functions), because properties and tenants are currently plain client-side Firestore writes that a modified client can bypass.
-- **Resolved price:** **5,99 €/mois TTC** or **49 €/an TTC** (~32 % off, "≈4 mois offerts"), **14-day full-feature trial**, **no lifetime option**. Positioned as "*moitié prix de Rentila, en illimité, un seul prix quel que soit le nombre de biens*."
+- **Prix remplacé par la discovery FEAT-051 (2026-07-16) :** hypothèse de lancement **7,99 €/mois TTC** ou **79 €/an TTC**, avec offre Fondateur limitée à **59 € TTC la première année** ; à valider par test de disposition à payer avant commercialisation. Le Plan Pro n'est pas encore vendu. Essai complet 14 jours, sans option à vie.
 - **Launch sequence:** **Web/Stripe first** (Phase B) → mobile IAP later with FEAT-024 (Phase C). Web-first is the single biggest margin lever: ~2–3 % Stripe fee vs 15 % store commission. RevenueCat is the entitlement layer from day one (free below $2,500 MTR).
 - **Most important build insight:** *Leases are already server-gated via the `createLease` callable; properties and tenants are not.* Phase A's core work is **moving `createProperty`/`createTenant` server-side** and adding **denormalized per-landlord counters maintained transactionally inside the callables** — a hard cap cannot be enforced by Firestore rules (no aggregation, no atomic reserve) or by async triggers (boundary race).
 - **Phase A ships with zero payment code** — real revenue capture (Phase B) is gated behind **hard legal blockers**: SIREN/micro-entreprise, CGV, rétractation waiver, and a consumer mediator must exist *before* taking the first euro.
@@ -21,8 +21,8 @@ Synthesis of four research streams into one buildable, phased plan. The freemium
 
 | Decision | Recommendation | Rationale | Confidence |
 |---|---|---|---|
-| **Monthly price** | **5,99 €/mois TTC** | Charm "<6 €"; exactly half of Rentila Gold TTC (9,90 HT = 11,88 TTC) while being *unlimited*. Net after 15 % store = ~4,24 €; after Stripe = ~4,65 € — healthy. 4,90 € would crush margin for no positioning gain. | High |
-| **Annual price** | **49 €/an TTC** (~32 % off) | Front-loads cash, cuts churn, store commission applies once/yr not 12×. Beats Rentila Silver (49 €/an but capped at 5 biens) by being unlimited. Push annual-first. | High |
+| **Monthly price** | **7,99 €/mois TTC** *(hypothèse à tester)* | Prix simple et inférieur à BailFacile ; la valeur différenciante comprend la relocation sans ressaisie (FEAT-051), pas seulement les plafonds illimités. | Medium — validation par test de prix avant commercialisation |
+| **Annual price** | **79 €/an TTC** *(hypothèse à tester)* | 6,58 €/mois, deux mois offerts. Offre Fondateur limitée : 59 € la première année, puis 79 €/an. | Medium — validation par test de prix avant commercialisation |
 | **Trial length** | **14 days, full-feature, no card** | Matches/beats Rentila (15 j) & BailFacile (7 j). Note: a trial that grants immediate access triggers the rétractation-waiver requirement (§4.3). | High |
 | **Lifetime / IAP à vie** | **NO** | Recurring infra cost vs one-time pay → adverse selection; store taxes it 15–30 % up front; destroys MRR/LTV predictability. Substitute if a hook is wanted: limited "Fondateur" annual (e.g. 39 €/an for first N users) — marketing, not a true lifetime. | High |
 | **Free-tier storage quota** | **500 MB free / 10 GB Pro** | 10× Rentila's 50 MB → direct marketing line. Covers 2 biens + photo EDL (5–20 MB is the heavy item). Infra cost ~6,5 $/mo per 1 000 free users on Blaze — negligible. ⚠️ Assumes Firebase Blaze / paid tier (consistent with FEAT-019 pivot). | Med-High |
@@ -90,7 +90,7 @@ Synthesis of four research streams into one buildable, phased plan. The freemium
 1. RevenueCat account + project; model the "Pro" entitlement (free below $2,500 MTR; 1 % of gross above).
 2. RevenueCat **Web Billing** (Stripe-backed) or Stripe Checkout direct — [verify at build time] which gives better net (Stripe EU card ≈ 1,5 % + 0,25 €; SEPA Direct Debit ≈ 0,8 % + 0,30 € — cheaper for recurring FR subs; Stripe Billing +~0,7 %, Stripe Tax +~0,5 %). Sources: [Stripe FR](https://affonso.io/resources/stripe-fee-calculator/france), [SEPA](https://feetrace.com/blog/stripe-sepa-direct-debit-fees-for-saas-in-2026).
 3. **`revenueCatWebhook` CF** (`functions/src/callable/revenuecat_webhook.ts`): validate RC signature, flip `landlords/{uid}.subscriptionTier` between `'paid'` and `'free'`. This is the **only** writer of `'paid'`; Firestore tier stays the single source of truth for the Phase A gates. **Must write `'paid'` (not `'pro'`)** — enum is authoritative.
-4. Replace the "coming soon" paywall with a **real checkout** paywall (annual-first, monthly fallback). Price 5,99/49 TTC.
+4. Replace the "coming soon" paywall with a **real checkout** paywall (annual-first, monthly fallback). Hypothèse à tester : 7,99 €/mois ou 79 €/an TTC ; offre Fondateur limitée à 59 € la première année.
 5. Pricing engine must allow a **TVA rate/line to be switched on later** without re-architecting (franchise crossover — §4.1).
 
 **Acceptance criteria:** a web purchase flips the tier to `'paid'` via webhook (not client); caps lift immediately (unlimited); cancellation flips back to `'free'` and triggers the downgrade path; entitlement resolves via RevenueCat cross-platform; TVA line can be toggled by config.
