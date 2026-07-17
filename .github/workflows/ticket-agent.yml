@@ -71,6 +71,11 @@ jobs:
           #  - PAS de label agent-processing/agent-done/agent-skip
           #  - créé il y a plus de 3h (10800 secondes)
           # Trie par createdAt ASC, prend le premier
+          # Les labels annexes (priority-high, P1, ui, ...) ne doivent PAS
+          # disqualifier une issue : on teste la PRÉSENCE de bug/feature-request
+          # via index(), jamais l'exclusivité de la liste. Un `inside([...])`
+          # traînait ici et rejetait toute issue portant un label hors liste —
+          # càd la plupart des vraies issues. Ne pas le réintroduire.
           # Le shell des steps Actions tourne en `bash -e` : une affectation
           # PAYLOAD=$(gh ...) qui échoue tue le step AVANT le moindre echo, d'où
           # les logs vides et illisibles qui ont masqué le bug GH_REPO pendant
@@ -85,7 +90,6 @@ jobs:
             --jq '
               [.[]
                 | {number, createdAt, labels: [.labels[].name]}
-                | select(.labels | inside(["bug","feature-request","agent-processing","agent-done","agent-skip"]) | not | not)
                 | select((.labels | index("bug")) or (.labels | index("feature-request")))
                 | select((.labels | index("agent-processing")) | not)
                 | select((.labels | index("agent-done")) | not)
@@ -108,12 +112,11 @@ jobs:
           fi
 
           NUMBER=$(echo "$PAYLOAD" | jq -r '.number')
-          LABELS=$(echo "$PAYLOAD" | jq -r '.labels | join(",")')
-          if echo "$LABELS" | grep -q "bug"; then
-            KIND="bug"
-          else
-            KIND="feature"
-          fi
+          # Match exact via index(), pas un grep sur les labels joints : une
+          # feature-request étiquetée "debug-tools" ou "bugfix" contient "bug"
+          # en sous-chaîne et partait à tort en /fix-bug. Même idiome que le
+          # step « Manual override » ci-dessus.
+          KIND=$(echo "$PAYLOAD" | jq -r 'if (.labels | index("bug")) then "bug" else "feature" end')
 
           echo "🎯 Ticket sélectionné: #$NUMBER (kind: $KIND)"
           echo "issue_number=$NUMBER" >> $GITHUB_OUTPUT
