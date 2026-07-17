@@ -8,6 +8,15 @@
 
 ## Changements (2026-07-03 → 2026-07-17)
 
+### PR #106 : Labels système agent absents + garde-fous CI silencieux — FIX (2026-07-17)
+- Les 8 labels système documentés dans [`docs/TICKETING.md`](../TICKETING.md) (§ « Activer les labels système ») n'avaient jamais été créés dans le repo : seul `bug` existait (avec les labels GitHub par défaut). Créés hors PR via `gh label create` (un label n'est pas du code) : `feature-request`, `agent-skip`, `agent-processing`, `agent-needs-info`, `agent-failed`, `agent-done`.
+- Trois bugs, tous masqués par des `2>/dev/null || true` :
+  - **ticket-agent** — `--add-label agent-processing` échouait (« 'agent-processing' not found », exit 1) et le `|| true` renvoyait 0 : le step se croyait OK, label non posé. Or c'est le **seul** garde-fou contre le re-pick (le filtre de `find-mature-ticket` l'exclut) → l'issue restait éligible et le cron l'aurait reprise chaque heure, relançant l'agent en boucle.
+  - `agent-eligible` = **label fantôme** : référencé à un seul endroit du repo, absent de `TICKETING.md`, jamais créé → en échec systématique. C'est lui qui justifiait le `|| true`, qui emportait au passage l'échec de `--add-label`. Supprimé (même classe que l'alias `softDeleteDocument`, `8116432`).
+  - **ticket-done.yml** — même panne que #101 : pas de checkout, pas de `GH_REPO` → `gh` sortait en « failed to run git: not a git repository », masqué en permanence par `|| true`. **Aucun `agent-done` n'avait jamais été posé depuis la création du workflow.** `GH_REPO` ajouté au job.
+- Plus aucun `|| true` sur les ops de label : retirer un label simplement absent de l'issue ne fait pas échouer `gh` (exit 0) — seul un label inexistant dans le repo le fait, càd le fantôme supprimé ici.
+- Vérifié contre l'API GitHub réelle, hors dépôt git (condition CI), sur une issue de test refermée : avant, la ligne complète sortait en 0 alors que le label n'était pas posé ; après, `agent-processing` / `agent-done` sont bien posés.
+
 ### PR #105 : Release — refus de taguer sans commit depuis le dernier tag — FIX (2026-07-17)
 - **Bug** : pipeline de release **non idempotent**. `version.sh next auto` bumpait (patch) même avec **0 commit** dans le range depuis le dernier tag → un « Re-run all jobs » du deploy prod sur un SHA déjà publié créait un tag **neuf** + une GitHub Release au **changelog vide** (v1.0.0 → v1.0.1 → v1.0.2…). Le garde-fou `rev-parse --verify refs/tags/$TAG` (« existe déjà ») de `release.sh` ne pouvait **jamais** se déclencher dans le flux `auto` : le tag calculé était toujours neuf.
 - **Correctif en deux points** : `release.sh` refuse de couper une release si le range est vide — signature greppable **« rien à publier »**, au point de mutation, à côté de son frère « existe déjà ». `version.sh` expose `pending` (nb de commits depuis le dernier tag) et ses `next`/`codename-next` ne bumpent plus sur range vide : ils rendent la version **déjà publiée**.
@@ -17,6 +26,12 @@
 - Vérifié en pilotant les vrais scripts dans un clone jetable **sans remote** : range vide → refus, aucun tag ; range non vide → tag toujours créé avec le bon bump (`feat` → minor, `fix`/`docs` → patch, `!` → major). Le dépôt a toujours **zéro tag** (correct : le versioning n'est pas encore publié sur `main`).
 - Suite de **PR #102** (propagation des erreurs du step tag), dont le commentaire documentait ce bug comme « à traiter séparément » — commentaire mis à jour.
 - Doc : `docs/VERSIONING.md` — « aucun commit depuis le dernier tag = aucune release ».
+
+### PR #103 : ticket-agent — filtre jq rejetait les issues à labels annexes — FIX (2026-07-17)
+- Le `select(.labels | inside([…]) | not | not)` de « Auto-pick oldest eligible » ressemblait à du code mort (double négation) mais n'en était pas : `not | not` est bien l'identité sur un booléen, seulement `inside()` renvoie `false` dès qu'un label sort de la liste autorisée. Le select ne gardait donc que les issues dont **tous** les labels ∈ {bug, feature-request, agent-*} — rejetant en silence toute issue portant un label annexe (`priority-high`, `P1`, `ui`…), càd la plupart des vraies issues, en contradiction avec l'intention documentée trois lignes plus haut.
+- Bug latent jamais observé : le cron n'a commencé à tourner qu'avec le fix `GH_REPO` (#101, même jour). En prime, `inside()` compare en **sous-chaîne** et non en égalité (un label `ug`, `agent` ou `e` passait le filtre).
+- Correctif : ligne supprimée (les 4 `select` suivants implémentent déjà l'intention documentée : bug OU feature-request, pas de label agent-*, > 3h). Détection `KIND` passée de `grep -q "bug"` sur les labels joints à `index("bug")` — une `feature-request` étiquetée `debug-tools` partait sinon à tort en `/fix-bug` une fois le filtre corrigé.
+- Vérifié contre l'API GitHub réelle (issue #104 de test, `bug`+`priority-high`) : l'ancien filtre la rejette (`AUCUN`), le nouveau la sélectionne (`104`) ; la barrière des 3h reste inchangée.
 
 ### FEAT-052 : Feature Readiness Score — outillage dev (2026-07-17)
 - Ajout de `tool/feature_ready.dart` : script Dart pur (aucune dépendance hors `dart:io`/`dart:convert`) qui note une feature sur 100 en 7 catégories pondérées et rend un rapport markdown sur stdout.
