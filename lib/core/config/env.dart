@@ -58,13 +58,16 @@ class Env {
   /// local inexistant (app cassée). C'est un toggle de dev pur.
   static bool get useFirebaseEmulator => kDebugMode && _useEmulatorFlag;
 
-  /// Hôte des émulateurs Firebase. `localhost` convient pour le web, le
-  /// desktop et le simulateur iOS ; l'émulateur **Android** doit utiliser
-  /// `10.0.2.2` (alias de la machine hôte vu depuis la VM). Override :
-  /// `--dart-define=FIREBASE_EMULATOR_HOST=10.0.2.2`.
+  /// Hôte des émulateurs Firebase. Défaut `127.0.0.1` (PAS `localhost`) :
+  /// sur le web, Chromium résout `localhost` en IPv6 `::1`, or les émulateurs
+  /// firebase-tools n'écoutent que sur l'IPv4 `127.0.0.1` — l'app tombait alors
+  /// silencieusement sur le backend PROD (login en `invalid-credential`).
+  /// `127.0.0.1` force l'IPv4 et marche partout (web/desktop/simulateur iOS).
+  /// L'émulateur **Android** doit utiliser `10.0.2.2` (alias de la machine hôte
+  /// vu depuis la VM) : `--dart-define=FIREBASE_EMULATOR_HOST=10.0.2.2`.
   static const String firebaseEmulatorHost = String.fromEnvironment(
     'FIREBASE_EMULATOR_HOST',
-    defaultValue: 'localhost',
+    defaultValue: '127.0.0.1',
   );
 
   /// Ports par défaut des émulateurs — alignés sur `firebase.json` (défauts
