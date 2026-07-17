@@ -28,6 +28,17 @@ jobs:
   find-mature-ticket:
     name: Find oldest eligible ticket
     runs-on: ubuntu-latest
+    # Env au niveau du job (pas par step) : les deux steps ci-dessous appellent
+    # gh, et gh résout le repo cible via le remote git. Ce job n'a PAS de
+    # checkout — il ne fait que des appels API — donc sans GH_REPO, gh sort en
+    # « failed to run git: not a git repository » avant même tout appel réseau.
+    # C'était la cause de 100 % des runs planifiés en échec depuis la création
+    # du workflow (f3a36d2) jusqu'au fix du 2026-07-17. GH_REPO reste ici, au
+    # niveau du job, pour qu'un futur step gh hérite du contexte sans
+    # re-tomber dans le même piège.
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     outputs:
       issue_number: ${{ steps.find.outputs.issue_number }}
       kind: ${{ steps.find.outputs.kind }}
@@ -37,11 +48,18 @@ jobs:
         id: manual
         run: |
           ISSUE="${{ inputs.issue_number }}"
-          KIND=$(gh issue view "$ISSUE" --json labels --jq '.labels | map(.name) | if index("bug") then "bug" elif index("feature-request") then "feature" else "unknown" end')
+          ERR="$RUNNER_TEMP/gh-manual.err"
+          set +e
+          KIND=$(gh issue view "$ISSUE" --json labels --jq '.labels | map(.name) | if index("bug") then "bug" elif index("feature-request") then "feature" else "unknown" end' 2>"$ERR")
+          GH_EXIT=$?
+          set -e
+          if [ "$GH_EXIT" -ne 0 ]; then
+            echo "::error title=Ticket agent::gh issue view #$ISSUE a échoué (exit $GH_EXIT) :"
+            cat "$ERR"
+            exit "$GH_EXIT"
+          fi
           echo "issue_number=$ISSUE" >> $GITHUB_OUTPUT
           echo "kind=$KIND" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Auto-pick oldest eligible
         if: ${{ inputs.issue_number == '' }}
@@ -53,6 +71,13 @@ jobs:
           #  - PAS de label agent-processing/agent-done/agent-skip
           #  - créé il y a plus de 3h (10800 secondes)
           # Trie par createdAt ASC, prend le premier
+          # Le shell des steps Actions tourne en `bash -e` : une affectation
+          # PAYLOAD=$(gh ...) qui échoue tue le step AVANT le moindre echo, d'où
+          # les logs vides et illisibles qui ont masqué le bug GH_REPO pendant
+          # 9 jours. On capture donc stderr et l'exit code explicitement pour
+          # que la prochaine panne dise ce qui s'est réellement passé.
+          ERR="$RUNNER_TEMP/gh-list.err"
+          set +e
           PAYLOAD=$(gh issue list \
             --state open \
             --json number,createdAt,labels \
@@ -66,7 +91,14 @@ jobs:
                 | select((.labels | index("agent-done")) | not)
                 | select((.labels | index("agent-skip")) | not)
                 | select((now - (.createdAt | fromdateiso8601)) > 10800)
-              ] | sort_by(.createdAt) | .[0] // empty')
+              ] | sort_by(.createdAt) | .[0] // empty' 2>"$ERR")
+          GH_EXIT=$?
+          set -e
+          if [ "$GH_EXIT" -ne 0 ]; then
+            echo "::error title=Ticket agent::gh issue list a échoué (exit $GH_EXIT) :"
+            cat "$ERR"
+            exit "$GH_EXIT"
+          fi
 
           if [ -z "$PAYLOAD" ] || [ "$PAYLOAD" = "empty" ]; then
             echo "🟢 Aucun ticket éligible cette heure."
@@ -86,8 +118,6 @@ jobs:
           echo "🎯 Ticket sélectionné: #$NUMBER (kind: $KIND)"
           echo "issue_number=$NUMBER" >> $GITHUB_OUTPUT
           echo "kind=$KIND" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Consolidate output
         id: find
