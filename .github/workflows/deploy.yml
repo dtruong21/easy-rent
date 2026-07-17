@@ -257,16 +257,16 @@ jobs:
       # une Release. Staging (develop) ne tague jamais.
       #
       # Même politique que le step « Deploy to Firebase Hosting » ci-dessus :
-      # on tolère UNE signature d'erreur connue et bénigne, on propage tout le
-      # reste. Le cas toléré est la COLLISION de tag : release.sh calcule un tag
-      # qui existe déjà et sort en « le tag vX.Y.Z existe déjà ».
+      # on tolère des signatures d'erreur connues et bénignes, on propage tout
+      # le reste. Deux cas tolérés, tous deux émis par release.sh :
+      #   - RIEN À PUBLIER : aucun commit depuis le dernier tag → HEAD est déjà
+      #     publié. C'est le cas d'un « Re-run all jobs » sur un SHA déjà
+      #     released : la prod est re-déployée à l'identique, aucun tag à créer.
+      #   - COLLISION de tag : release.sh calcule un tag qui existe déjà.
       #
-      # ⚠️ Ce garde-fou ne couvre PAS le re-run du workflow sur un SHA déjà
-      # publié : `version.sh next auto` re-bumpe (patch) même avec 0 commit dans
-      # le range, donc un re-run calcule un tag NEUF (v1.0.0 → v1.0.1) et crée
-      # une release fantôme au changelog vide au lieu de lever « existe déjà ».
-      # Le pipeline n'est donc PAS idempotent — c'est un bug distinct, à traiter
-      # dans version.sh/release.sh (refuser de taguer si range vide), pas ici.
+      # Le re-run est idempotent : `version.sh next` ne bumpe plus quand le
+      # range est vide, donc le build porte le même label que la release en
+      # place (et non une 1.0.1 fantôme), et release.sh refuse de taguer.
       #
       # Pourquoi ne PAS avaler les autres erreurs (l'ancien `|| echo ::warning`
       # le faisait) : le tag n'est pas décoratif, c'est la base de calcul de la
@@ -294,12 +294,18 @@ jobs:
             exit 0
           fi
 
-          # Seul cas toléré — signature émise par release.sh :
+          # Cas tolérés — signatures émises par release.sh (ne pas les
+          # reformuler d'un côté sans l'autre) :
+          #   « release.sh: rien à publier — aucun commit depuis vX.Y.Z … »
+          if grep -qF "rien à publier" "$OUT"; then
+            echo "::warning::Aucun commit depuis le dernier tag — rien à publier. Prod re-déployée à l'identique, aucune release créée (comportement attendu d'un re-run)."
+            exit 0
+          fi
           #   « release.sh: le tag vX.Y.Z existe déjà — rien à faire. »
           if grep -qF "existe déjà" "$OUT"; then
             echo "::warning::Tag/Release déjà existant — prod déployée, rien à faire."
             exit 0
           fi
 
-          echo "::error title=Release::release.sh a échoué pour une raison INCONNUE (ce n'est PAS le cas « tag déjà existant ») — voir le log ci-dessus. La PROD EST DÉPLOYÉE : ne pas re-deployer. Créer le tag à la main puis investiguer, sinon le bump de la prochaine release sera faux."
+          echo "::error title=Release::release.sh a échoué pour une raison INCONNUE (ce n'est NI « rien à publier » NI « tag déjà existant ») — voir le log ci-dessus. La PROD EST DÉPLOYÉE : ne pas re-deployer. Créer le tag à la main puis investiguer, sinon le bump de la prochaine release sera faux."
           exit "$EXIT"

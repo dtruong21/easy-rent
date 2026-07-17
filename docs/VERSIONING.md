@@ -59,6 +59,13 @@ Détection du bump (depuis le dernier tag) : `!:` ou `BREAKING CHANGE` → **maj
 un `feat:` → **minor** ; sinon → **patch**. Première release = version du
 pubspec (ex. `1.0.0`), sans bump.
 
+**Aucun commit depuis le dernier tag = aucune release.** `release.sh` refuse de
+taguer (« rien à publier ») et `version.sh next` ne bumpe pas : il rend la
+version déjà publiée. Un « Re-run all jobs » sur un deploy prod déjà passé
+re-déploie donc la prod **à l'identique** (même version, même build) sans créer
+de tag ni de GitHub Release fantôme. Le step « Tag release » traite ce cas comme
+bénin (warning, run vert).
+
 ## Outils
 
 ```bash
@@ -67,6 +74,7 @@ tool/release/version.sh code          # build number (nb de commits)
 tool/release/version.sh codename      # essence courante
 tool/release/version.sh full          # "X.Y.Z+CODE (Codename)"
 tool/release/version.sh next  [bump]  # prochaine version (sans taguer)
+tool/release/version.sh pending       # nb de commits depuis le dernier tag (0 = rien à publier)
 
 tool/release/release.sh [major|minor|patch|auto]   # coupe une release
   --push          pousse le tag

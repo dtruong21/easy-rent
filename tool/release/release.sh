@@ -38,6 +38,18 @@ done
 
 LAST_TAG="$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || true)"
 
+# Garde-fou d'idempotence : on refuse de couper une release depuis un HEAD qui
+# n'a AUCUN commit depuis le dernier tag — il est déjà publié, il n'y a rien à
+# publier de plus. Sans ce garde-fou, un simple « Re-run all jobs » sur le
+# deploy prod créait un tag NEUF au changelog vide (v1.0.0 → v1.0.1 → v1.0.2…),
+# car le tag calculé n'entrait jamais en collision avec l'existant.
+# La signature « rien à publier » est tolérée par le step « Tag release » de
+# deploy.yml (re-run bénin) — ne pas la reformuler sans mettre le step à jour.
+if [ -n "$LAST_TAG" ] && [ "$(bash "$VERSION" pending)" -eq 0 ]; then
+  echo "release.sh: rien à publier — aucun commit depuis $LAST_TAG (HEAD est déjà publié)." >&2
+  exit 1
+fi
+
 if [ -n "$INITIAL" ]; then
   NAME="$INITIAL"
   CODENAME="$(bash "$VERSION" codename-next minor)"   # 1re essence disponible
