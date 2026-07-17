@@ -8,6 +8,16 @@
 
 ## Changements (2026-07-03 → 2026-07-17)
 
+### PR #105 : Release — refus de taguer sans commit depuis le dernier tag — FIX (2026-07-17)
+- **Bug** : pipeline de release **non idempotent**. `version.sh next auto` bumpait (patch) même avec **0 commit** dans le range depuis le dernier tag → un « Re-run all jobs » du deploy prod sur un SHA déjà publié créait un tag **neuf** + une GitHub Release au **changelog vide** (v1.0.0 → v1.0.1 → v1.0.2…). Le garde-fou `rev-parse --verify refs/tags/$TAG` (« existe déjà ») de `release.sh` ne pouvait **jamais** se déclencher dans le flux `auto` : le tag calculé était toujours neuf.
+- **Correctif en deux points** : `release.sh` refuse de couper une release si le range est vide — signature greppable **« rien à publier »**, au point de mutation, à côté de son frère « existe déjà ». `version.sh` expose `pending` (nb de commits depuis le dernier tag) et ses `next`/`codename-next` ne bumpent plus sur range vide : ils rendent la version **déjà publiée**.
+- **Contrainte structurante** (raison du découpage) : `version.sh next auto` est aussi appelé par le step « Determine version » de `deploy.yml` pour le **label du build prod**, *avant* le deploy. L'y faire échouer aurait cassé **tout le re-run** au lieu de le rendre bénin → le refus vit dans `release.sh`. Le re-build porte ainsi le bon label (`1.0.0`, et non une `1.0.1` fantôme) → re-run idempotent **de bout en bout**.
+- `deploy.yml` : le step « Tag release » tolère « rien à publier » (`::warning`, run vert) comme re-run bénin, et continue de propager tout le reste avec son exit code (politique de PR #102, préservée).
+- **Portée** : prod uniquement (`app_env == 'prod'`) → aucun effet sur staging. Ce chemin n'a **jamais tourné en CI** (`deploy.yml` versionné vit sur `develop`, qui ne déploie que staging) : première exécution au prochain `develop` → `main`.
+- Vérifié en pilotant les vrais scripts dans un clone jetable **sans remote** : range vide → refus, aucun tag ; range non vide → tag toujours créé avec le bon bump (`feat` → minor, `fix`/`docs` → patch, `!` → major). Le dépôt a toujours **zéro tag** (correct : le versioning n'est pas encore publié sur `main`).
+- Suite de **PR #102** (propagation des erreurs du step tag), dont le commentaire documentait ce bug comme « à traiter séparément » — commentaire mis à jour.
+- Doc : `docs/VERSIONING.md` — « aucun commit depuis le dernier tag = aucune release ».
+
 ### FEAT-052 : Feature Readiness Score — outillage dev (2026-07-17)
 - Ajout de `tool/feature_ready.dart` : script Dart pur (aucune dépendance hors `dart:io`/`dart:convert`) qui note une feature sur 100 en 7 catégories pondérées et rend un rapport markdown sur stdout.
 - **Lecture seule et non bloquant** : n'écrit aucun fichier du dépôt, sort toujours en 0 (sauf `--strict`, opt-in manuel). `.github/workflows/ci.yml` **n'est pas modifié**.

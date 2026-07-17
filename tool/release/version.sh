@@ -25,6 +25,7 @@
 #   version.sh next  [bump]      # PROCHAINE version (sans créer de tag)
 #   version.sh codename-next [bump]  # codename de la prochaine version
 #   version.sh resolve-bump [bump]   # major|minor|patch effectif (résout "auto")
+#   version.sh pending           # nb de commits depuis le dernier tag (0 = rien à publier)
 #
 #   bump = major | minor | patch | auto (défaut : auto = déduit des commits
 #          conventionnels depuis le dernier tag : "feat" → minor, "!"/BREAKING
@@ -46,6 +47,16 @@ latest_tag() {
 
 # Numéro de build : nombre total de commits ancêtres de HEAD.
 build_code() { git rev-list --count HEAD; }
+
+# Commits publiables : nb de commits depuis le dernier tag (tout HEAD si aucun).
+# 0 = HEAD est DÉJÀ publié (le tag pointe dessus) → il n'y a rien à releaser.
+# Les merges sont comptés : le critère est « HEAD a-t-il bougé depuis le tag ? »,
+# pas « le changelog est-il non vide ? ».
+pending_count() {
+  local tag; tag="$(latest_tag)"
+  [ -z "$tag" ] && { build_code; return; }
+  git rev-list --count "$tag..HEAD"
+}
 
 # Version du pubspec (X.Y.Z), sert d'amorce pour la toute première release.
 pubspec_version() {
@@ -108,6 +119,12 @@ next_version() {
   # Amorce : la toute première release reprend la version du pubspec (ex.
   # 1.0.0), sans bump — on ne « saute » pas la 1.0.0 du lancement.
   [ -z "$tag" ] && { pubspec_version; return; }
+  # Rien à publier (HEAD déjà taggué) → PAS de bump : la « prochaine » version
+  # est celle déjà publiée. Sans ça, un re-run du deploy prod sur un SHA déjà
+  # publié buildait une 1.0.1 fantôme (et release.sh la taguait). C'est ce qui
+  # rend le re-run idempotent : même SHA → même label de build.
+  # Le refus de taguer, lui, est dans release.sh (« rien à publier »).
+  [ "$(pending_count)" -eq 0 ] && { echo "${tag#v}"; return; }
   local bump major minor patch
   bump="$(resolve_bump "${1:-auto}")"
   IFS=. read -r major minor patch <<<"${tag#v}"
@@ -123,6 +140,8 @@ next_version() {
 next_codename() {
   local tag; tag="$(latest_tag)"
   [ -z "$tag" ] && { codename_at 0; return; }   # amorce → 1re essence
+  # Rien à publier → codename de la version déjà publiée (cf. next_version).
+  [ "$(pending_count)" -eq 0 ] && { current_codename; return; }
   local bump; bump="$(resolve_bump "${1:-auto}")"
   case "$bump" in
     major | minor) codename_at "$(minor_release_count)" ;; # essence suivante
@@ -144,5 +163,6 @@ case "${1:-full}" in
   next) next_version "${2:-auto}" ;;
   codename-next) next_codename "${2:-auto}" ;;
   resolve-bump) resolve_bump "${2:-auto}" ;;
+  pending) pending_count ;;
   *) die "commande inconnue : ${1:-} (voir l'en-tête du script)" ;;
 esac
