@@ -1,5 +1,5 @@
 {
   "APP_ENV": "dev",
   "USE_FIREBASE_EMULATOR": "true",
-  "FIREBASE_EMULATOR_HOST": "localhost"
+  "FIREBASE_EMULATOR_HOST": "127.0.0.1"
 }
