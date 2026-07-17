@@ -11,6 +11,10 @@
 /// ```json
 /// { "APP_ENV": "prod" }
 /// ```
+library;
+
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 class Env {
   const Env._();
 
@@ -36,4 +40,35 @@ class Env {
 
   /// `true` si on tourne en environnement de dev/staging.
   static bool get isDev => !isProd;
+
+  /// Flag opt-in brut du branchement émulateurs Firebase (dart-define).
+  /// NE PAS lire directement — passer par [useFirebaseEmulator], qui ajoute le
+  /// garde-fou release.
+  static const bool _useEmulatorFlag = bool.fromEnvironment(
+    'USE_FIREBASE_EMULATOR',
+    defaultValue: false,
+  );
+
+  /// `true` uniquement en build DEBUG **et** avec `USE_FIREBASE_EMULATOR=true`.
+  ///
+  /// Double garde-fou volontaire : le `kDebugMode` garantit qu'un build
+  /// release ou profile ne branchera JAMAIS les émulateurs, même si le
+  /// dart-define fuit dans la commande de build. Sans ça, un build de prod
+  /// avec le flag activé pointerait les vrais utilisateurs vers un backend
+  /// local inexistant (app cassée). C'est un toggle de dev pur.
+  static bool get useFirebaseEmulator => kDebugMode && _useEmulatorFlag;
+
+  /// Hôte des émulateurs Firebase. `localhost` convient pour le web, le
+  /// desktop et le simulateur iOS ; l'émulateur **Android** doit utiliser
+  /// `10.0.2.2` (alias de la machine hôte vu depuis la VM). Override :
+  /// `--dart-define=FIREBASE_EMULATOR_HOST=10.0.2.2`.
+  static const String firebaseEmulatorHost = String.fromEnvironment(
+    'FIREBASE_EMULATOR_HOST',
+    defaultValue: 'localhost',
+  );
+
+  /// Ports par défaut des émulateurs — alignés sur `firebase.json` (défauts
+  /// firebase-tools) et sur `tool/seed/seed_tiers.mjs`.
+  static const int firestoreEmulatorPort = 8080;
+  static const int authEmulatorPort = 9099;
 }
