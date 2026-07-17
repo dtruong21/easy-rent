@@ -254,13 +254,52 @@ jobs:
       # Marque la release APRÈS un deploy prod réussi : crée le tag annoté
       # vX.Y.Z (codename gravé) + la GitHub Release. C'est la SEULE écriture git
       # de la release — aucun commit sur main (verrouillée), juste un tag +
-      # une Release. Idempotent : si le tag existe déjà, release.sh sort en
-      # erreur mais le deploy est déjà fait (on ne casse pas la prod pour ça).
-      # Staging (develop) ne tague jamais.
+      # une Release. Staging (develop) ne tague jamais.
+      #
+      # Même politique que le step « Deploy to Firebase Hosting » ci-dessus :
+      # on tolère UNE signature d'erreur connue et bénigne, on propage tout le
+      # reste. Le cas toléré est la COLLISION de tag : release.sh calcule un tag
+      # qui existe déjà et sort en « le tag vX.Y.Z existe déjà ».
+      #
+      # ⚠️ Ce garde-fou ne couvre PAS le re-run du workflow sur un SHA déjà
+      # publié : `version.sh next auto` re-bumpe (patch) même avec 0 commit dans
+      # le range, donc un re-run calcule un tag NEUF (v1.0.0 → v1.0.1) et crée
+      # une release fantôme au changelog vide au lieu de lever « existe déjà ».
+      # Le pipeline n'est donc PAS idempotent — c'est un bug distinct, à traiter
+      # dans version.sh/release.sh (refuser de taguer si range vide), pas ici.
+      #
+      # Pourquoi ne PAS avaler les autres erreurs (l'ancien `|| echo ::warning`
+      # le faisait) : le tag n'est pas décoratif, c'est la base de calcul de la
+      # release SUIVANTE. version.sh dérive la prochaine version depuis
+      # `git describe --tags` ; un tag silencieusement manquant fait repartir le
+      # range du mauvais point → bump faux et changelog faux à la release d'après.
+      # Un échec de push/gh/release.sh doit donc être visible immédiatement, pas
+      # noyé dans un warning jaune sur un run vert.
+      #
+      # La prod EST déployée quand ce step tourne (il dépend de
+      # firebase_deploy.outcome == 'success') : un échec ici = release à taguer
+      # à la main, PAS une prod cassée. Le message d'erreur le dit explicitement
+      # pour éviter un re-deploy réflexe.
       - name: Tag release (prod only)
         if: needs.determine-env.outputs.app_env == 'prod' && steps.firebase_deploy.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          bash tool/release/release.sh auto --push --gh-release --ci \
-            || echo "::warning::Tag/Release non créé (déjà existant ?) — prod déployée quand même."
+          set +e
+          OUT="$RUNNER_TEMP/release.log"
+          bash tool/release/release.sh auto --push --gh-release --ci 2>&1 | tee "$OUT"
+          EXIT=${PIPESTATUS[0]}
+
+          if [ "$EXIT" -eq 0 ]; then
+            exit 0
+          fi
+
+          # Seul cas toléré — signature émise par release.sh :
+          #   « release.sh: le tag vX.Y.Z existe déjà — rien à faire. »
+          if grep -qF "existe déjà" "$OUT"; then
+            echo "::warning::Tag/Release déjà existant — prod déployée, rien à faire."
+            exit 0
+          fi
+
+          echo "::error title=Release::release.sh a échoué pour une raison INCONNUE (ce n'est PAS le cas « tag déjà existant ») — voir le log ci-dessus. La PROD EST DÉPLOYÉE : ne pas re-deployer. Créer le tag à la main puis investiguer, sinon le bump de la prochaine release sera faux."
+          exit "$EXIT"
