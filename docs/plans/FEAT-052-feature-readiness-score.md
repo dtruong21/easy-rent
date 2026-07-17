@@ -1,8 +1,21 @@
-# FEAT-045 – Feature Readiness Score
+# FEAT-052 – Feature Readiness Score
 
 ## Status
 
-Draft
+En cours — implémenté par `tool/feature_ready.dart` + `/feature-ready`.
+
+> **Renumérotation FEAT-045 → FEAT-052** : le plan initial réutilisait
+> `FEAT-045`, déjà attribué à « Suppression compte in-app + /delete-account »
+> (✅ done, PR #69, cf. `docs/state/FEATURES.md`). Les suivis d'audit FEAT-046
+> et FEAT-047 (`docs/BACKLOG.md`) référencent FEAT-045 dans ce sens-là.
+>
+> Le report vers `FEAT-051` était lui aussi occupé — « Baillan Pro — annonces
+> & diffusion multi-portails » (`docs/backlog/051-annonces-diffusion-pro.md`,
+> PR #98), mergée sur `develop` et donc **invisible depuis `main`**. L'ID
+> retenu est `FEAT-052`.
+>
+> ⚠️ Corollaire pour la suite : chercher le prochain ID libre **depuis
+> `develop`**, jamais depuis `main`, qui retarde de plusieurs features.
 
 ---
 
