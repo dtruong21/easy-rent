@@ -143,9 +143,16 @@ jobs:
 
       - name: Mark issue as agent-processing
         run: |
+          # `agent-processing` est le SEUL garde-fou contre le re-pick : le
+          # filtre de find-mature-ticket l'exclut, donc sans lui l'issue reste
+          # éligible et le cron la reprend à l'heure suivante, en boucle.
+          # Il doit donc échouer bruyamment. Le `2>/dev/null || true` d'origine
+          # existait pour avaler l'échec de `--remove-label agent-eligible` —
+          # un label fantôme, jamais créé ni documenté dans TICKETING.md — et
+          # emportait au passage l'échec de --add-label : le step sortait en 0
+          # sans que le label soit posé.
           gh issue edit ${{ needs.find-mature-ticket.outputs.issue_number }} \
-            --add-label "agent-processing" \
-            --remove-label "agent-eligible" 2>/dev/null || true
+            --add-label "agent-processing"
           gh issue comment ${{ needs.find-mature-ticket.outputs.issue_number }} \
             --body "🤖 Pris en charge par l'agent IA — pipeline démarré (run: $GITHUB_RUN_ID)"
         env:
