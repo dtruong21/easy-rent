@@ -25,9 +25,20 @@ jobs:
           ISSUES=$(echo "$BODY" | grep -oEi '(closes|fixes|resolves) +#[0-9]+' | grep -oE '[0-9]+' | sort -u)
           for ISSUE in $ISSUES; do
             echo "→ Marking issue #$ISSUE as agent-done"
+            # Pas de `|| true` : agent-done sort l'issue du pool éligible de
+            # ticket-agent, son échec doit casser le run. Retirer un label
+            # simplement absent de l'issue ne fait pas échouer gh (exit 0) —
+            # seul un label inexistant dans le repo le fait — donc aucune
+            # tolérance n'est nécessaire ici.
             gh issue edit "$ISSUE" \
               --add-label "agent-done" \
-              --remove-label "agent-processing" 2>/dev/null || true
+              --remove-label "agent-processing"
           done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Ce job n'a pas de checkout : sans GH_REPO, gh résout le repo via le
+          # remote git et sort en « not a git repository » — le bug corrigé
+          # dans ticket-agent par #101, resté vivant ici et masqué en permanence
+          # par l'ancien `|| true`. Ce workflow n'avait donc jamais posé un seul
+          # label agent-done, en silence, depuis sa création.
+          GH_REPO: ${{ github.repository }}
