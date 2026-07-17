@@ -52,3 +52,4 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-048 | FAQ produit publique /faq | ✅ done | account | PR #69 |
 | FEAT-049 | SEO du PWA — quick-wins (Option A) | ✅ done | account | PR #73 |
 | FEAT-050 | Site marketing statique crawlable (Option B) | 📋 planned | account | docs/backlog/050-marketing-site-seo.md |
+| FEAT-051 | Feature Readiness Score (`/feature-ready`, advisory) | 🚧 wip | tooling | feature/051-feature-readiness-score |

@@ -6,6 +6,17 @@
 > [`FEATURES.md`](FEATURES.md) (matrice) ; les détails techniques dans les shards
 > `schema/`, `functions/`, `routes/`.
 
+## Changements (2026-07-03 → 2026-07-17)
+
+### FEAT-051 : Feature Readiness Score — outillage dev (2026-07-17)
+- Ajout de `tool/feature_ready.dart` : script Dart pur (aucune dépendance hors `dart:io`/`dart:convert`) qui note une feature sur 100 en 7 catégories pondérées et rend un rapport markdown sur stdout.
+- **Lecture seule et non bloquant** : n'écrit aucun fichier du dépôt, sort toujours en 0 (sauf `--strict`, opt-in manuel). `.github/workflows/ci.yml` **n'est pas modifié**.
+- **Déterministe** : aucun timestamp dans le rapport, collections triées ; deux exécutions sur le même arbre donnent un résultat identique à l'octet près (couvert par `test/unit/feature_ready_test.dart`).
+- Commande `/feature-ready` (`.claude/commands/feature-ready.md`) : wrapper mince qui déduit le FEAT-ID de la branche et affiche le rapport sans le recalculer.
+- La parité ARB réutilise la règle de `test/l10n/arb_parity_test.dart` (exclusion des clés `@…`) plutôt que de la redéfinir.
+- **Renumérotation** : le plan initial portait `FEAT-045`, déjà attribué à « Suppression compte in-app » (✅ done, PR #69) et référencé sous ce sens par FEAT-046/047 dans `docs/BACKLOG.md`. Feature renumérotée en `FEAT-051`.
+- Limite assumée : les catégories « Accessibilité » et « Complétude produit » sont un accusé de réception documentaire (le script lit le plan), pas une preuve de qualité — le rapport l'affiche.
+
 ## Changements (2026-07-03 → 2026-07-10)
 
 ### PR #94 : Verrouillage de la réactivation de bail (updateLease) — FIX (2026-07-10)

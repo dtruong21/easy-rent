@@ -1,8 +1,14 @@
-# FEAT-045 – Feature Readiness Score
+# FEAT-051 – Feature Readiness Score
 
 ## Status
 
-Draft
+En cours — implémenté par `tool/feature_ready.dart` + `/feature-ready`.
+
+> **Renumérotation FEAT-045 → FEAT-051** : le plan initial réutilisait
+> `FEAT-045`, déjà attribué à « Suppression compte in-app + /delete-account »
+> (✅ done, PR #69, cf. `docs/state/FEATURES.md`). Les suivis d'audit FEAT-046
+> et FEAT-047 (`docs/BACKLOG.md`) référencent FEAT-045 dans ce sens-là ;
+> l'ID de cette feature est donc passé à `FEAT-051`, premier libre.
 
 ---
 
