@@ -18,7 +18,8 @@ void main() {
         expect(
           SubscriptionTier.fromRaw(tier.raw),
           tier,
-          reason: 'le palier $tier ne round-trip pas via sa valeur brute '
+          reason:
+              'le palier $tier ne round-trip pas via sa valeur brute '
               '"${tier.raw}"',
         );
       }
