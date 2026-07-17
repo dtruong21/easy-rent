@@ -44,6 +44,10 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 5. Migration Firestore (rules + indexes) déployée si applicable
 6. Déployé sur Firebase Hosting
 
+> Checklist rapide avant PR : `/feature-ready <FEAT-ID>` (lecture seule,
+> advisory, ne bloque rien). Elle liste ce qui manque — elle ne remplace ni la
+> revue ni la QA.
+
 ## Garde-fous (jamais désactiver)
 
 - **Règles Firestore obligatoires** sur toutes les collections (deny-by-default, isFullyAuthed/isOwner)
