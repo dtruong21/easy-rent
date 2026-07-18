@@ -1,6 +1,7 @@
 # ADR 0002 — Monétisation Baillan Pro : RevenueCat (IAP mobile + Web Billing)
 
-- **Statut** : proposé (2026-07-18) — à valider avant implémentation
+- **Statut** : accepté (2026-07-18) — plan de mise en œuvre détaillé :
+  [`docs/plans/FEAT-044-payment-revenuecat-plan.md`](../plans/FEAT-044-payment-revenuecat-plan.md)
 - **Contexte technique** : Flutter (PWA web + apps natives iOS/Android) +
   Firebase (Firestore, Auth, Cloud Functions, Hosting) — projet `easy-rent-54cd4`
 - **Feature** : FEAT-044 (monétisation freemium) — volet *paiement*, non couvert
