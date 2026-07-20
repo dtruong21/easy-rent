@@ -69,5 +69,9 @@ export {
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
 
+// ---------- HTTP (webhooks) ----------
+export {revenueCatWebhook} from "./http/revenuecat_webhook";
+
 // ---------- Scheduled ----------
 export {cleanupExpiredAnon} from "./scheduled/cleanup_expired_anon";
+export {reconcileEntitlements} from "./scheduled/reconcile_entitlements";
