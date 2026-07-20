@@ -72,6 +72,14 @@ void main() {
       expect(SubscriptionTier.paid.activeLeaseLimit, isNull);
     });
 
+    test('documents : anon 0 / free 10 / paid illimité', () {
+      // Gating Pro du stockage (matrice free/Pro 2026-07-20). Source de vérité
+      // serveur : Cloud Function `createDocument`.
+      expect(SubscriptionTier.anonymous.documentLimit, 0);
+      expect(SubscriptionTier.free.documentLimit, 10);
+      expect(SubscriptionTier.paid.documentLimit, isNull);
+    });
+
     test('paid = aucun plafond sur aucune dimension', () {
       // Invariant transverse : le palier payant n'est jamais limité. Garde
       // contre l'ajout d'une nouvelle dimension de plafond qui oublierait
@@ -80,6 +88,7 @@ void main() {
       expect(SubscriptionTier.paid.propertyLimit, isNull);
       expect(SubscriptionTier.paid.activeTenantLimit, isNull);
       expect(SubscriptionTier.paid.activeLeaseLimit, isNull);
+      expect(SubscriptionTier.paid.documentLimit, isNull);
     });
   });
 }

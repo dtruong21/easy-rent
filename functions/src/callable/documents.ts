@@ -66,6 +66,61 @@ const ALLOWED_MIME = new Set([
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
 const DOWNLOAD_URL_EXPIRY_SECONDS = 5 * 60;
 
+// Plafond de documents ACTIFS en free — miroir de
+// `SubscriptionTier.documentLimit` (lib/features/auth/domain/subscription_tier.dart).
+const FREE_DOCUMENT_LIMIT = 10;
+
+/**
+ * Plafond du tier. `null` = illimité (paid). Tier inconnu/anonyme → 0
+ * (le registre documentaire est réservé aux comptes complets).
+ * Miroir de `limitForTier` dans property_tenant.ts.
+ */
+function limitForTier(tier: string, freeLimit: number): number | null {
+  switch (tier) {
+    case "paid":
+      return null;
+    case "free":
+      return freeLimit;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Gating free/Pro du stockage documentaire (matrice free/Pro 2026-07-20) — le
+ * stockage a un coût réel, donc le volume est plafonné en free.
+ *
+ * **Comptage live** (pas de compteur dénormalisé comme properties/tenants) :
+ * le volume est borné (10 en free) et surtout le soft-delete est universel
+ * (`softDeleteEntity`) — sans compteur, il n'y a rien à décrémenter donc
+ * aucune dérive possible. L'UI empêche déjà l'upload au plafond ; ce gate est
+ * la defense-in-depth et la SOURCE DE VÉRITÉ.
+ */
+async function assertDocumentQuota(
+  db: admin.firestore.Firestore,
+  uid: string,
+): Promise<void> {
+  const landlordSnap = await db.doc(`landlords/${uid}`).get();
+  if (!landlordSnap.exists) {
+    throw new HttpsError("not-found", "landlord not found");
+  }
+  const landlord = (landlordSnap.data() ?? {}) as Record<string, unknown>;
+  const raw = landlord.subscriptionTier;
+  const tier = typeof raw === "string" ? raw : "anonymous";
+  const limit = limitForTier(tier, FREE_DOCUMENT_LIMIT);
+  if (limit === null) return; // paid → illimité
+
+  const agg = await db
+    .collection("documents")
+    .where("landlordId", "==", uid)
+    .where("deletedAt", "==", null)
+    .count()
+    .get();
+  if (agg.data().count >= limit) {
+    throw new HttpsError("resource-exhausted", "document_limit_reached");
+  }
+}
+
 // ============================================================================
 // createDocument
 // ============================================================================
@@ -110,6 +165,10 @@ export const createDocument = onCall(
     }
 
     const db = admin.firestore();
+
+    // Gating free/Pro AVANT tout travail coûteux (lookups cross-entity + accès
+    // Storage) : un compte au plafond est refusé immédiatement.
+    await assertDocumentQuota(db, uid);
 
     // Validate lease ownership (cross-entity) — inchangé si leaseId fourni.
     if (leaseId !== null) {

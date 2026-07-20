@@ -67,4 +67,17 @@ enum SubscriptionTier {
     SubscriptionTier.free => 2,
     SubscriptionTier.paid => null,
   };
+
+  /// Nombre maximum de documents ACTIFS (non soft-deleted). `null` = illimité.
+  ///
+  /// Gating Pro (matrice free/Pro 2026-07-20) : le stockage a un coût réel, donc
+  /// le volume est plafonné en free. Source de vérité serveur : Cloud Function
+  /// `createDocument` (refus `resource-exhausted` / `document_limit_reached`) —
+  /// ce getter ne sert qu'à l'UI (désactiver le bouton + upsell). Voir
+  /// [propertyLimit] pour le même pattern.
+  int? get documentLimit => switch (this) {
+    SubscriptionTier.anonymous => 0,
+    SubscriptionTier.free => 10,
+    SubscriptionTier.paid => null,
+  };
 }

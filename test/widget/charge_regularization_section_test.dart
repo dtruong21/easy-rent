@@ -14,6 +14,8 @@ library;
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/charge_regularization/presentation/widgets/charge_regularization_section.dart';
 import 'package:easyrent/features/expenses/data/expenses_repository.dart';
 import 'package:easyrent/features/expenses/domain/expense.dart';
@@ -130,11 +132,21 @@ Lease _makeLease({
   updatedAt: DateTime(2024),
 );
 
-Widget _buildSection(Lease lease) {
+/// [tier] par défaut `paid` (illimité) → le gate Pro (FEAT-044) n'interfère PAS
+/// avec les tests du gate LÉGAL ci-dessous. Même convention que les tests CF
+/// (`lease_payment.test.ts`, `documents.test.ts`). Les tests du gate Pro
+/// passent explicitement `free` / `anonymous`.
+Widget _buildSection(
+  Lease lease, {
+  SubscriptionTier tier = SubscriptionTier.paid,
+}) {
   return ProviderScope(
     overrides: [
       paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
       expensesRepositoryProvider.overrideWithValue(_FakeExpensesRepo()),
+      landlordTierProvider.overrideWith(
+        (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
+      ),
     ],
     child: MaterialApp(
       // AppTheme.light requis : StatusPill (utilisé dans le résumé du solde
@@ -352,5 +364,98 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  // ========================================================================
+  // Gate PRO (FEAT-044, matrice free/Pro) — s'ajoute au gate LÉGAL.
+  // ========================================================================
+  group('Gate Pro — régularisation réservée au palier paid', () {
+    testWidgets('free + bail éligible → bouton ABSENT, état verrouillé Pro', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildSection(
+          _makeLease(leaseType: LeaseType.unfurnished),
+          tier: SubscriptionTier.free,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_charge_regularization')), findsNothing);
+      expect(
+        find.byKey(const Key('text_charge_regularization_pro_only')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('anonymous + bail éligible → état verrouillé Pro', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildSection(
+          _makeLease(leaseType: LeaseType.unfurnished),
+          tier: SubscriptionTier.anonymous,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_charge_regularization')), findsNothing);
+      expect(
+        find.byKey(const Key('text_charge_regularization_pro_only')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('paid + bail éligible → bouton visible (pas d\'upsell)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildSection(
+          _makeLease(leaseType: LeaseType.unfurnished),
+          tier: SubscriptionTier.paid,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('btn_charge_regularization')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('text_charge_regularization_pro_only')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+      '★ PRÉCÉDENCE : free + bail au FORFAIT → message légal, PAS d\'upsell Pro',
+      (tester) async {
+        // Le gate légal prime : vendre le Pro sur un bail où la loi n'autorise
+        // pas la régularisation serait trompeur.
+        await tester.pumpWidget(
+          _buildSection(
+            _makeLease(
+              leaseType: LeaseType.furnished,
+              chargeMode: ChargeMode.forfait,
+            ),
+            tier: SubscriptionTier.free,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('text_charge_regularization_not_applicable')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('text_charge_regularization_pro_only')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('btn_charge_regularization')),
+          findsNothing,
+        );
+      },
+    );
   });
 }
