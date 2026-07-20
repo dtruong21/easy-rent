@@ -1,6 +1,8 @@
 # ADR 0002 — Monétisation Baillan Pro : RevenueCat (IAP mobile + Web Billing)
 
-- **Statut** : accepté (2026-07-18) — plan de mise en œuvre détaillé :
+- **Statut** : accepté (2026-07-18) — **amendé le 2026-07-20** (checkout web : voir
+  [§Amendement](#amendement-2026-07-20--checkout-web-propre-vs-web-billing)) —
+  plan de mise en œuvre détaillé :
   [`docs/plans/FEAT-044-payment-revenuecat-plan.md`](../plans/FEAT-044-payment-revenuecat-plan.md)
 - **Contexte technique** : Flutter (PWA web + apps natives iOS/Android) +
   Firebase (Firestore, Auth, Cloud Functions, Hosting) — projet `easy-rent-54cd4`
@@ -52,8 +54,11 @@ surfaces :
 
 - **Mobile** : achat intégré natif (StoreKit iOS / Play Billing Android) **wrappé
   par le SDK `purchases_flutter`**.
-- **Web** : **RevenueCat Web Billing** (checkout web propulsé par Stripe ;
-  Apple Pay / Google Pay disponibles comme boutons wallet *dans* le checkout web).
+- **Web** : **notre propre Stripe Checkout**, RevenueCat en **plan de gestion**
+  (voir §Amendement) — checkout web = Stripe Checkout ; RevenueCat ingère
+  l'abonnement Stripe via son **intégration Stripe Billing / External Purchase
+  Tracking** et reste la source de vérité unique des entitlements. Apple Pay /
+  Google Pay disponibles comme boutons wallet *dans* Stripe Checkout.
 - **Une entitlement unique `pro`** mappée sur les deux produits (`pro_monthly`,
   `pro_annual`) côté App Store Connect, Play Console et dashboard RevenueCat.
 - **Identité** : `Purchases.logIn(firebaseUid)` — la clé d'entitlement RevenueCat
@@ -146,6 +151,51 @@ d'autant que le mobile passe de toute façon par l'IAP magasin.
 4. **Web** : RC Web Billing (checkout + Apple Pay/Google Pay), portail de gestion.
 5. **Conformité** : TVA/Stripe Tax, CGV + rétractation, checklist
    `docs/STORE_COMPLIANCE.md`, QA multi-plateforme.
+
+## Amendement (2026-07-20) — checkout web propre vs Web Billing
+
+**Décision affinée** : RevenueCat est un **plan de gestion des paiements** (source
+de vérité unique des entitlements + analytics + webhook unifié), **pas** le
+portail de paiement. Le **checkout appartient à chaque plateforme** :
+
+```
+web      →  Stripe Checkout        →  RevenueCat
+Android  →  Google Play Billing    →  RevenueCat
+iOS      →  StoreKit               →  RevenueCat
+                                        │
+                                        └─→ webhook → landlords/{uid}.subscriptionTier
+```
+
+**Mécanisme web confirmé** (doc RevenueCat) : on connecte NOTRE compte Stripe à
+RevenueCat (**Stripe Billing integration / External Purchase Tracking**). On crée
+notre propre **Stripe Checkout Session** en y attachant l'**App User ID
+RevenueCat (= UID Firebase)** dans la **metadata de la Checkout Session ET de
+`subscription_data`** (nom du champ metadata configuré côté dashboard RevenueCat).
+On mappe les **product IDs Stripe** (`pro_monthly`, `pro_annual`) vers
+l'entitlement `pro`. RevenueCat ingère alors l'abonnement et émet ses **events
+standard** (`INITIAL_PURCHASE`, `RENEWAL`, `EXPIRATION`…).
+
+**Conséquence majeure — le back-end est déjà fait.** Comme RevenueCat unifie les
+trois sources et émet des events standard, le `revenueCatWebhook` livré (PR #114)
+**gère le web sans modification** (`storeOf` mappe déjà `STRIPE`/`RC_BILLING` →
+`web`). Ce qui reste à construire côté web = **la création de la Stripe Checkout
+Session** (Cloud Function) + la config dashboard.
+
+**Cela lève le rejet initial** de « Stripe direct + RevenueCat » (§Alternatives :
+« deux webhooks ») : ici RevenueCat **reste le point d'ingestion unique**, il n'y
+a donc pas deux webhooks d'entitlement à réconcilier.
+
+**Fork restant à trancher** (comment l'achat Stripe atteint RevenueCat) :
+- **A — ingestion par compte connecté** : RevenueCat observe notre Stripe via la
+  metadata configurée et émet ses events. Moins de code (pas de webhook Stripe
+  chez nous). *Recommandé — colle à « RevenueCat = plan de gestion ».*
+- **B — push API explicite** : notre webhook Stripe (`checkout.session.completed`)
+  POST le couple `app_user_id` + `fetch_token` (subscription ID Stripe) à l'API
+  RevenueCat. Plus de contrôle, plus de code.
+
+Dans les deux cas, la **Stripe Checkout Session avec la metadata `app_user_id`**
+est commune → c'est le prochain incrément buildable. TVA/merchant-of-record web,
+rétractation, etc. (§Obligations) restent inchangés.
 
 ## Références
 
