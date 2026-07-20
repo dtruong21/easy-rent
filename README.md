@@ -121,4 +121,8 @@ Conventions détaillées dans [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md).
 
 ## 📄 Licence
 
-_(à définir)_
+**Propriétaire — tous droits réservés.** Voir [`LICENSE`](LICENSE).
+
+Ce dépôt est consultable mais n'est **pas** open source : aucun droit d'usage,
+de copie, de modification ou de redistribution n'est accordé. Toute demande de
+licence passe par le contact indiqué dans le fichier `LICENSE`.

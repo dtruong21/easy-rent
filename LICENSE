@@ -1,0 +1,85 @@
+Copyright (c) 2026 Daki Studio. Tous droits réservés. / All rights reserved.
+
+================================================================================
+FRANÇAIS — LICENCE PROPRIÉTAIRE
+================================================================================
+
+Ce logiciel et son code source (« le Logiciel »), incluant sans limitation le
+code, la documentation, les schémas de données, les maquettes et les ressources
+graphiques contenus dans ce dépôt, sont la propriété exclusive de
+Daki Studio et sont protégés par le Code de la propriété intellectuelle
+français ainsi que par les conventions internationales sur le droit d'auteur.
+
+AUCUNE LICENCE N'EST ACCORDÉE.
+
+Il est notamment interdit, en l'absence d'une autorisation écrite préalable et
+expresse du titulaire des droits, de :
+
+  1. utiliser le Logiciel, en tout ou partie, à des fins personnelles,
+     commerciales ou de recherche ;
+  2. reproduire, copier, télécharger ou stocker le Logiciel ;
+  3. modifier, adapter, traduire ou créer des œuvres dérivées ;
+  4. distribuer, publier, sous-licencier, louer, vendre ou céder le Logiciel ;
+  5. décompiler, désassembler ou pratiquer l'ingénierie inverse, sauf dans les
+     limites impératives prévues par l'article L.122-6-1 du Code de la
+     propriété intellectuelle ;
+  6. supprimer ou altérer les mentions de propriété intellectuelle.
+
+CONSULTATION PUBLIQUE ≠ LICENCE. La mise à disposition de ce dépôt en lecture
+sur une plateforme d'hébergement de code (GitHub ou autre) ne constitue ni une
+publication sous licence libre, ni une renonciation aux droits, ni une
+autorisation tacite d'usage ou de réutilisation.
+
+DÉPENDANCES TIERCES. Les bibliothèques tierces utilisées par le Logiciel
+restent régies par leurs licences respectives. La présente licence ne s'applique
+qu'au code original de ce dépôt.
+
+ABSENCE DE GARANTIE. Le Logiciel est fourni « en l'état », sans garantie
+d'aucune sorte, expresse ou implicite. Le titulaire des droits ne saurait être
+tenu responsable de tout dommage résultant de l'utilisation du Logiciel.
+
+DROIT APPLICABLE. La présente licence est régie par le droit français. Tout
+litige relève de la compétence exclusive des tribunaux français.
+
+Demandes de licence : daki.tle.26@gmail.com
+
+================================================================================
+ENGLISH — PROPRIETARY LICENSE
+================================================================================
+
+This software and its source code (the "Software"), including without
+limitation the code, documentation, data schemas, designs and assets contained
+in this repository, are the exclusive property of Daki Studio and are
+protected by French intellectual property law and international copyright
+treaties.
+
+NO LICENSE IS GRANTED.
+
+Without the prior express written permission of the copyright holder, you may
+not:
+
+  1. use the Software, in whole or in part, for personal, commercial or
+     research purposes;
+  2. reproduce, copy, download or store the Software;
+  3. modify, adapt, translate or create derivative works;
+  4. distribute, publish, sublicense, rent, sell or transfer the Software;
+  5. decompile, disassemble or reverse-engineer the Software, except to the
+     extent such restriction is prohibited by applicable law;
+  6. remove or alter any proprietary notices.
+
+PUBLIC VISIBILITY IS NOT A LICENSE. Making this repository readable on a code
+hosting platform (GitHub or otherwise) does not constitute open source
+publication, a waiver of rights, or any implied permission to use or reuse.
+
+THIRD-PARTY DEPENDENCIES. Third-party libraries used by the Software remain
+governed by their own respective licenses. This license applies only to the
+original code in this repository.
+
+NO WARRANTY. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+GOVERNING LAW. This license is governed by French law. Any dispute falls under
+the exclusive jurisdiction of the French courts.
+
+Licensing enquiries: daki.tle.26@gmail.com

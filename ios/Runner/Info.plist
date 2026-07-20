@@ -29,6 +29,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Daki Studio. Tous droits réservés.</string>
 	<!-- Export compliance : uniquement du chiffrement standard (HTTPS/TLS
 	     des SDKs Apple/Firebase) → exempt. Évite la question « Export
 	     Compliance » à chaque upload App Store Connect (FEAT-024). -->
