@@ -45,3 +45,34 @@ jobs:
 
       - name: Detect secrets in repo
         run: bash scripts/check-secrets.sh --all
+
+  functions:
+    name: Functions (lint · build · test)
+    runs-on: ubuntu-latest
+    # Job Node séparé (les Cloud Functions sont un projet npm indépendant sous
+    # functions/). Jusqu'ici la suite vitest (createLease/createPayment, webhook
+    # RevenueCat, etc.) n'était validée qu'en local — ce job la met sous CI.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+        working-directory: functions
+
+      - name: Lint
+        run: npm run lint
+        working-directory: functions
+
+      - name: Typecheck (build déployable)
+        run: npm run build
+        working-directory: functions
+
+      - name: Tests
+        run: npm test
+        working-directory: functions
