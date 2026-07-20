@@ -14,10 +14,35 @@
 
 | # | Tâche | Resp. | Notes |
 |---|---|---|---|
-| 1 | **Rétablir le quota GitHub Actions** (Settings → Billing → Actions) | Toi | Débloque **toute** la CI, le deploy staging au merge, et le ticket agent. Rien ne tourne tant que ce n'est pas réglé. |
-| 3 | Décider : **offre Fondateur 59 €** au lancement ou plus tard ? | Toi | impacte le setup produits |
-| 4 | Décider : **essai gratuit** (7/14 j) oui/non ? | Toi | impacte la config produits |
-| 5 | Décider : **web avant mobile** ? | Toi | recommandé (pas de revue store sur le web) |
+| 1 | ~~Rétablir le quota GitHub Actions~~ | Toi | ✅ **RÉSOLU 2026-07-20** — dépôt passé en **public** → Actions illimitées. Staging redéployé (build 305) + CI verte (dont le job `functions`). Peut repasser en privé plus tard : l'historique a été scanné, **aucun secret** exposé. |
+| 3 | Décider : **offre Fondateur 59 €** au lancement ou plus tard ? | Toi | ⏳ ouvert — impacte le setup produits |
+| 4 | ~~Décider : essai gratuit~~ | Toi | ✅ **DÉCIDÉ 2026-07-20 : essai gratuit de 7 jours** → voir #27 |
+| 5 | Décider : **web avant mobile** ? | Toi | ⏳ ouvert — recommandé (pas de revue store sur le web) |
+
+## 🎯 Matrice free / Pro (validée 2026-07-20)
+
+| Fonctionnalité | Free | Pro | Note |
+|---|---|---|---|
+| Registre (biens / locataires / baux) | 2 / 3 / 2 | illimité | déjà en place (FEAT-044 enforcement) |
+| Scénarios simulateur | 3 | illimité | déjà en place |
+| **Quittance PDF + partage natif** | ✅ **OUI** | ✅ | 🔒 **NE PAS GATER** — voir encadré |
+| Upload documents | quota (ex. 10) | illimité | coût stockage réel → #29 |
+| Régularisation annuelle des charges | ❌ | ✅ | fonction « comptable » avancée → #28 |
+| Rappels / envoi auto par email (FEAT-031) | ❌ | ✅ | **le vrai levier email** → #30 |
+| Annonces multi-portails (FEAT-051) | ❌ | ✅ | déjà réservé Pro |
+| Comparateur, sensibilité taux, LMNP, export PDF pro | ❌ | ✅ | déjà promis dans le paywall → #24 |
+
+> 🔒 **La génération et le partage de quittance restent GRATUITS — décision ferme.**
+> C'est le cœur de la promesse produit et l'instrument légal (loi 6 juillet 1989
+> art. 21 : le bailleur doit fournir la quittance gratuitement sur demande). La
+> gater viderait le tier free de sa valeur et donnerait l'impression de monétiser
+> une obligation légale. **Ne pas revenir dessus sans réévaluer cet arbitrage.**
+
+> ℹ️ **Précision « quittance par mail »** : il n'existe **aucun envoi d'email
+> serveur** dans Baillan. La quittance est générée en PDF **côté client** puis
+> partagée via **Web Share natif** (fallback download + `mailto:`) — donc le
+> client mail de l'utilisateur, sans coût pour nous. Le vrai candidat au gating
+> est l'**envoi automatisé serveur** (FEAT-031), qui reste à construire.
 
 ## 🟣 Setup dashboards RevenueCat + Stripe + stores (toi)
 
@@ -53,7 +78,11 @@
 | 23 | Mobile : `purchases_flutter` (IAP + **Restaurer les achats**) | Moi | #12, #14 |
 | 24 | Débrider les **fonctions Pro-only** pour `paid` (comparateur, export PDF, etc.) | Moi | — |
 | 25 | Verrouiller les champs `pro*` dans les règles Firestore (durcissement optionnel) | Moi | — |
-| 26 | Ajouter la suite `functions` à la CI — **fait** (#115) mais ne tournera qu'au retour des Actions | Moi | #1 |
+| 26 | ~~Ajouter la suite `functions` à la CI~~ | Moi | ✅ **fait** (#115) — job vert depuis le passage en public |
+| 27 | **Essai gratuit 7 j** : `trial_period_days=7` sur le prix Stripe (dashboard, zéro code) **ou** dans `createCheckoutSession` (code) ; mobile = offre introductive App Store/Play | Toi ou Moi | décision #4. ✅ **Le webhook gère déjà l'essai** : `INITIAL_PURCHASE` (period_type TRIAL) → `paid` ; fin sans conversion → `EXPIRATION` → `free`. Aucun changement back-end. |
+| 28 | Gating Pro : **régularisation annuelle des charges** | Moi | matrice 🎯 |
+| 29 | Gating Pro : **quota documents** (free ~10 / Pro illimité) | Moi | matrice 🎯 — coût stockage |
+| 30 | Gating Pro : **rappels + envoi auto email** — nécessite d'abord de construire l'infra email (FEAT-031) | Moi | matrice 🎯 |
 
 ## ✅ Déjà livré
 
@@ -67,5 +96,7 @@
 
 ---
 
-**Chemin critique** : #1 (débloquer Actions) → #6–11 (dashboards RevenueCat/Stripe)
+**Chemin critique** : ~~#1 débloquer Actions~~ ✅ → **#6–11 (dashboards RevenueCat/Stripe)**
 → me lancer sur #20/#22. Tout le 🔵 est côté moi une fois le 🟣 (tes dashboards) en place.
+
+**Décisions restant ouvertes** : #3 (offre Fondateur 59 €) · #5 (web avant mobile).
