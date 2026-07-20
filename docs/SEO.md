@@ -411,6 +411,26 @@ déjà les mots-clés tête sur la home.
       `www` en redirection), DNS (TXT de vérification puis A), SSL provisionné, et
       **`baillan.com` ajouté aux domaines autorisés de Firebase Auth** (sinon liens
       email + Google/Apple cassés).
+
+> ### ⚠️ DNS chez Cloudflare — le piège du nuage orange
+>
+> Le DNS de `baillan.com` est géré par **Cloudflare** (NS `*.ns.cloudflare.com`).
+> Cloudflare met les nouveaux enregistrements A en **Proxied (nuage orange 🟠)**
+> par défaut : l'A résout alors vers des **IP Cloudflare** (`188.114.x.x`) au lieu
+> des IP Firebase. **Firebase ne peut alors ni vérifier le domaine ni émettre le
+> certificat SSL** — la console reste bloquée en « en attente », sans erreur
+> explicite. Constaté le 2026-07-20.
+>
+> 👉 **Passer chaque enregistrement A en gris ⚪ « DNS only ».** Recommandé de
+> l'y laisser en permanence : Firebase Hosting a déjà CDN + SSL, empiler le proxy
+> Cloudflare n'apporte rien. Si un jour le proxy est réactivé, il FAUT passer
+> SSL/TLS en **Full (strict)** — le mode « Flexible » crée des boucles de
+> redirection infinies.
+>
+> **Diagnostic rapide** : `dig +short A baillan.com` doit renvoyer une IP
+> **Firebase** (ex. `199.36.158.100`), jamais `188.114.x.x` / `104.x.x.x`
+> (Cloudflare). Interroger le NS autoritaire pour contourner le cache :
+> `dig @melissa.ns.cloudflare.com +short A baillan.com`.
 - [ ] Mettre à jour l'URL `/delete-account` déclarée sur la fiche Google Play (FEAT-045).
 - [ ] `<head>` enrichi appliqué (title, description, canonical, OG, Twitter, JSON-LD),
       `<html lang="fr">`, sans toucher aux scripts de boot FEAT-019.
