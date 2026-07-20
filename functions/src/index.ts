@@ -68,6 +68,7 @@ export {
 } from "./callable/expenses";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
+export {createCheckoutSession} from "./callable/create_checkout_session";
 
 // ---------- HTTP (webhooks) ----------
 export {revenueCatWebhook} from "./http/revenuecat_webhook";
