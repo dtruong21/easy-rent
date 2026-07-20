@@ -1,6 +1,6 @@
 # robots.txt — Baillan (PRODUCTION)
-# Domaine : URL interim easy-rent-54cd4.web.app. Au lancement du domaine custom,
-# remplacer l'hôte de la ligne Sitemap (unique occurrence ici). Voir docs/SEO.md.
+# Domaine canonique : baillan.com (domaine custom branché 2026-07-20).
+# La ligne Sitemap doit pointer sur l'apex (unique occurrence ici). Voir docs/SEO.md.
 #
 # App SPA Flutter (rewrite ** -> /index.html) : toute URL renvoie 200 + le shell
 # index.html ; on interdit explicitement les sections privées (rendu canvas, sans
@@ -22,4 +22,4 @@ Disallow: /profile
 # Pages utilitaires auth avec jetons
 Disallow: /reset-password
 
-Sitemap: https://easy-rent-54cd4.web.app/sitemap.xml
+Sitemap: https://baillan.com/sitemap.xml

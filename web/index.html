@@ -40,26 +40,27 @@
   <link rel="manifest" href="manifest.json">
 
   <!-- ===================== SEO (FEAT-049) =====================
-       Domaine : URL interim easy-rent-54cd4.web.app. Au lancement du domaine
-       custom, remplacer easy-rent-54cd4.web.app ICI + dans web/robots.txt
-       (ligne Sitemap) + dans chaque <loc> de web/sitemap.xml. Voir docs/SEO.md.
+       Domaine canonique : baillan.com (domaine custom branché 2026-07-20).
+       `www.baillan.com` doit rediriger vers l'apex — une seule URL canonique.
+       Le `.web.app` Firebase reste servi mais n'est plus canonique.
+       Voir docs/SEO.md.
        Robots : "index, follow" par défaut (prod). L'étape "noindex staging" de
        deploy.yml bascule en "noindex, nofollow" sur les builds APP_ENV=dev. -->
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://easy-rent-54cd4.web.app/">
+  <link rel="canonical" href="https://baillan.com/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Baillan">
   <meta property="og:title" content="Baillan — Gestion locative &amp; quittances de loyer pour bailleurs">
   <meta property="og:description" content="Quittances conformes (loi du 6 juillet 1989), suivi des loyers et des retards, régularisation des charges et simulateur d'investissement locatif. Simple, gratuit, données en Europe.">
-  <meta property="og:url" content="https://easy-rent-54cd4.web.app/">
+  <meta property="og:url" content="https://baillan.com/">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:locale:alternate" content="en_US">
   <!-- Image OG 1200x630 (PNG, pas webp : certains scrapers sociaux ne le lisent
        pas). Asset dédié généré par scripts/generate-og-image.sh (source
        scripts/og-image.svg). Régénérer via ce script si la charte évolue. -->
-  <meta property="og:image" content="https://easy-rent-54cd4.web.app/icons/og-image-1200x630.png">
+  <meta property="og:image" content="https://baillan.com/icons/og-image-1200x630.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Baillan — Tenir registre.">
@@ -68,7 +69,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Baillan — Gestion locative &amp; quittances de loyer">
   <meta name="twitter:description" content="Quittances conformes, suivi des loyers, régularisation des charges et simulateur d'investissement. Simple, gratuit, données en Europe.">
-  <meta name="twitter:image" content="https://easy-rent-54cd4.web.app/icons/og-image-1200x630.png">
+  <meta name="twitter:image" content="https://baillan.com/icons/og-image-1200x630.png">
 
   <!-- Données structurées -->
   <script type="application/ld+json">
@@ -76,8 +77,8 @@
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Baillan",
-    "url": "https://easy-rent-54cd4.web.app/",
-    "logo": "https://easy-rent-54cd4.web.app/icons/Icon-512.png",
+    "url": "https://baillan.com/",
+    "logo": "https://baillan.com/icons/Icon-512.png",
     "slogan": "Tenir registre.",
     "description": "Outil de gestion locative pour bailleurs particuliers : quittances de loyer, suivi des loyers, régularisation des charges et simulateur d'investissement.",
     "areaServed": "FR"
@@ -88,7 +89,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Baillan",
-    "url": "https://easy-rent-54cd4.web.app/",
+    "url": "https://baillan.com/",
     "applicationCategory": "BusinessApplication",
     "applicationSubCategory": "Property Management",
     "operatingSystem": "Web, iOS, Android",
@@ -110,7 +111,7 @@
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Baillan",
-    "url": "https://easy-rent-54cd4.web.app/",
+    "url": "https://baillan.com/",
     "inLanguage": "fr-FR",
     "publisher": { "@type": "Organization", "name": "Daki Studio" }
   }
