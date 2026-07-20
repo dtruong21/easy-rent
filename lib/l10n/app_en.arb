@@ -4320,6 +4320,10 @@
   "@chargeRegularizationForfaitNotApplicable": {
     "description": "Informational text shown instead of the action button when the lease's effective charge mode is 'forfait' (flat fee, not eligible for regularization, FEAT-042). References the law for landlord context only — this is UI chrome/explanation, not the legal PDF document itself, so it is in scope for translation."
   },
+  "chargeRegularizationProOnly": "Annual charge regularization is reserved for the Pro plan.",
+  "@chargeRegularizationProOnly": {
+    "description": "Locked-state message shown instead of the action button when the lease IS legally eligible for regularization but the landlord is not on the paid tier (free/Pro gating matrix, FEAT-044). Only shown for eligible leases — a 'forfait' lease shows chargeRegularizationForfaitNotApplicable instead, since the feature does not legally apply there at all."
+  },
   "chargeRegularizationDialogTitle": "Annual charge regularization",
   "@chargeRegularizationDialogTitle": {
     "description": "AlertDialog title of ChargeRegularizationDialog (the annual charge regularization workflow: reference period, provisions vs. actual expenses, balance, PDF + share)."

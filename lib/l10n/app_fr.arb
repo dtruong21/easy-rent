@@ -992,6 +992,7 @@
   "chargeRegularizationSectionTitle": "Régularisation des charges",
   "chargeRegularizationOpenDialogButton": "Régularisation annuelle des charges",
   "chargeRegularizationForfaitNotApplicable": "Ce bail est au forfait de charges : le forfait est libératoire et ne donne pas lieu à régularisation (loi du 6 juillet 1989, art. 23 a contrario).",
+  "chargeRegularizationProOnly": "La régularisation annuelle des charges est réservée au Plan Pro.",
   "chargeRegularizationDialogTitle": "Régularisation annuelle des charges",
   "chargeRegularizationPaymentsLoadError": "Erreur lors du chargement des paiements.",
   "chargeRegularizationGenerateButton": "Générer et partager",
