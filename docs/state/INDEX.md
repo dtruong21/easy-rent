@@ -7,9 +7,22 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-10
-- **Commit ref** : `5a43e58` (develop, post PR #94 : verrouillage réactivation bail ; shards FEAT-044/PR #94 actualisés)
-- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié)
+- **Dernière mise à jour** : 2026-07-21
+- **Commit ref** : `970d73d` (develop, post PR #132)
+- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌ non construit** (FEAT-044c/d livrés, 044e planifié) + Growth/SEO ✅ (FEAT-049, domaine `baillan.com` ; FEAT-050 planifié)
+
+### Périmètre réellement re-vérifié le 2026-07-21
+
+| Zone | État |
+|---|---|
+| `functions/` (index.ts, callables, HTTP, scheduled) | ✅ relu ligne à ligne |
+| `firestore.indexes.json` (décomptes) · `firestore.rules` (collections) | ✅ relu |
+| `lib/core/router/app_router.dart` (guards, publicRoutes, 36 GoRoute) | ✅ relu |
+| Domaine `account` (schéma/functions/routes), `expenses-documents`, gates `leases` | ✅ re-vérifié contre le code |
+| Shards `properties`, `payments-receipts`, `simulator`, `dashboard` | ⚠️ **NON re-vérifiés champ par champ** — seuls les décomptes transverses et les titres de section l'ont été. Traiter leur contenu détaillé comme daté du **2026-07-08**. |
+| `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** (hors périmètre de cette passe) — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
+
+> Vu l'écart accumulé (44 commits), cette passe a priorisé les domaines touchés depuis la PR #94 plutôt qu'un balayage uniforme. Les zones marquées ⚠️ n'ont **pas** gagné en fraîcheur : ne pas s'y fier sans relire le code.
 
 ## Comment charger l'état (règle tokens)
 
@@ -31,7 +44,7 @@
 | **simulator** (investment_scenarios) | [schema/simulator](schema/simulator.md) | [functions/simulator](functions/simulator.md) | [routes/simulator](routes/simulator.md) |
 | **dashboard** (accueil) | — | — | [routes/dashboard](routes/dashboard.md) |
 
-Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + patterns RLS/soft-delete/index) · [`functions/README`](functions/README.md) (callables + triggers + scheduled) · [`routes/README`](routes/README.md) (3-états + shell nav).
+Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + patterns règles Firestore/soft-delete/index) · [`functions/README`](functions/README.md) (callables + triggers + HTTP + scheduled) · [`routes/README`](routes/README.md) (3-états + shell nav).
 
 ## Autres fichiers d'état (charge à la demande)
 
@@ -48,8 +61,9 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 - **Frontend** : Flutter 3.x + Dart 3.11+ (web + Android + iOS `com.daki.baillan`), CanvasKit, EB Garamond serif.
 - **State/Nav** : Riverpod 2.6 (StreamProvider) · GoRouter 14.6 (garde 3-états via sessionStateProvider).
 - **Auth** : Firebase Auth natif (email/password + Google + Apple + anonyme).
-- **Backend** : Firestore (11 collections, camelCase, soft-delete + 28 index composites, rules 3 couches) + Cloud Functions Node 20 (callables + triggers + 1 scheduled).
-- **Storage** : Firebase Storage (signed URLs 5 min). **PDF** : `pdf` + `share_plus` (quittance loi 6/07/1989). **Hosting** : Firebase (staging channel + prod), CSP fonts.gstatic.com. **CI** : GitHub Actions (format + analyze + tests, Flutter pin 3.41.2).
+- **Backend** : Firestore (11 collections, camelCase, soft-delete + **37 index composites**, règles 3 couches) + Cloud Functions Node 20 (**17 callables + 9 triggers + 1 HTTP + 2 scheduled**).
+- **Paiement** : Stripe Checkout (web) + RevenueCat comme plan de gestion (entitlement `pro`) → webhook serveur-autoritaire. **Back-end seul : aucune UI, aucun `purchases_flutter`.**
+- **Storage** : Firebase Storage (signed URLs 5 min ; documents ≤ 10 MiB, quota free 10). **PDF** : `pdf` + `share_plus` (quittance loi 6/07/1989). **Hosting** : Firebase **multi-site** (`prod` → baillan.com, `stage` → stage.baillan.com) ; ⚠️ **les deux partagent Firestore/Auth/Storage du même projet — un test sur staging écrit en prod**. **CI** : GitHub Actions (format + analyze + tests Flutter, + job `functions` lint/build/test).
 
 ## Quand mettre à jour cet état
 

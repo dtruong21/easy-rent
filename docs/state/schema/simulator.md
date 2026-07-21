@@ -19,7 +19,7 @@ Simulateur immobilier. Accessible anonymes + comptes (CRUD direct client).
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete |
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
 - `create` : isSignedIn() (anon OK) && landlordId==uid
 - `update` : isOwner(landlordId) && preservesImmutables()

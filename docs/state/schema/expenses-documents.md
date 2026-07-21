@@ -12,30 +12,43 @@ Justificatifs (contrats, baux scannés, attestations assurance, **FEAT-041b : re
 
 | Champ | Type | Notes |
 |---|---|---|
-| `id` | string | UUID, immuable |
+> ⚠️ **Table corrigée le 2026-07-21** contre le `set()` réel de `createDocument` : plusieurs champs listés ici n'existaient pas (`expenseId`, `fileUrl`) et quatre portaient un nom faux (`fileName`, `fileSizeBytes`, `uploadedDate`, et les valeurs de `category`).
+
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | docId auto Firestore, immuable |
 | `landlordId` | string | FK → landlords.id, immuable |
 | `leaseId` | string\|null | FK → leases.id (optionnel), immuable |
-| `propertyId` | string\|null | FK → properties.id (optionnel, context), immuable |
-| `expenseId` | string\|null | FK → expenses.id (optionnel, FEAT-041b), immuable |
-| `category` | string | 'lease_scan' \| 'insurance' \| 'expense_receipt' \| 'other' — dérivé catégorie juridique |
-| `legalHold` | bool | true (lease_scan, insurance) / false (other) — immuable, verrouille soft-delete |
-| `fileName` | string | nom fichier original |
-| `fileUrl` | string | signed URL (5 min, renouvellement @ access) |
-| `fileSizeBytes` | int | taille (validation < 25 MB) |
-| `mimeType` | string | 'image/jpeg' \| 'application/pdf' \| … |
-| `uploadedDate` | timestamp | date chargement |
+| `propertyId` | string\|null | FK → properties.id (optionnel), immuable — **au moins un de leaseId/propertyId requis** |
+| `category` | string | `bail_signe` \| `etat_des_lieux` \| `attestation_assurance` \| `quittance_scannee` \| `expense_receipt` \| `autre` |
+| `legalHold` | bool | dérivé serveur : true si category ∈ {`bail_signe`, `etat_des_lieux`, `expense_receipt`} — immuable, verrouille le soft-delete |
+| `filename` | string | nom fichier original (minuscule `n`) |
+| `storagePath` | string | chemin Storage, doit commencer par `documents/{uid}/` ; l'existence du fichier est vérifiée à la création |
+| `sizeBytes` | int | taille, ∈ [1, **10 MiB**] |
+| `mimeType` | string | PDF \| JPEG \| PNG \| WEBP |
+| `uploadedAt` | timestamp | date chargement (serverTimestamp) |
 | `createdAt` | timestamp | immuable |
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete refusée si legalHold==true |
 
-**RLS** :
+**Pas de `fileUrl` stocké** : l'URL signée (5 min) est générée à la demande par `getDocumentDownloadUrl`, jamais persistée.
+
+**Lien dépense ↔ justificatif** : porté par `expenses.documentId` (sens expense → document). Il n'y a **pas** de champ `expenseId` sur `documents`.
+
+**Rétention légale** : `bail_signe`/`etat_des_lieux` (loi 6/07/1989) et `expense_receipt` (10 ans, obligation comptable — cf. `docs/LEGAL.md`). `attestation_assurance` n'est **pas** sous legalHold.
+
+**Quota free (FEAT-044, PR #120)** : documents **actifs** plafonnés à 10 en free (0 en anonyme, illimité en paid), compté **live** côté `createDocument` — aucun compteur dénormalisé sur `landlords`.
+
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
 - `create/update/delete` : CF exclusive (`createDocument` ; soft-delete via `softDeleteEntity` universel)
 
-**Indexes** :
-- landlordId ↑, deletedAt ↑, leaseId ↑ (lease documents)
-- landlordId ↑, deletedAt ↑, expenseId ↑ (expense receipts, FEAT-041b)
-- landlordId ↑, deletedAt ↑, category ↑ (category archiving)
+**Indexes** (3, relevés dans `firestore.indexes.json` le 2026-07-21) :
+- landlordId ↑, leaseId ↑, deletedAt ↑, uploadedAt ↓ (documents d'un bail)
+- landlordId ↑, deletedAt ↑, category ↑ (archivage par catégorie)
+- deletedAt ↑, landlordId ↑, uploadedAt ↓ (registre documentaire, tri récent)
+
+⚠️ L'index `landlordId, deletedAt, expenseId` précédemment listé **n'existe pas** (le champ non plus).
 
 **Callables** : `createDocument`, `getDocumentDownloadUrl` ; soft-delete via `softDeleteEntity` (universel).
 
@@ -80,7 +93,7 @@ Dépenses immobilières. Registre unifié (nature + catégorie + régularisation
 
 **Mutable fields** (updateExpense) : amountCents, expenseDate, nature, category, periodStart, periodEnd, periodYear, documentId, notes. Re-dérivation @ nature/category change (category applique verrouillage).
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
 - `create/update/delete` : CF exclusive (`createExpense`, `updateExpense`, `softDeleteEntity`)
 

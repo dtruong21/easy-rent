@@ -2,7 +2,7 @@
 
 > Source d'état — README (transverse). Maintenu par `state-keeper`.
 
-**Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-08 (FEAT-045 rétention 5 ans ; FEAT-043 i18n sans impact schema). **Pivot** : FEAT-019 (2026-06-30) — Supabase Postgres → Firestore camelCase.
+**Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-21 (FEAT-044 paiement : champs `pro*` sur `landlords` ; quota documents free). **Pivot** : FEAT-019 (2026-06-30) — Supabase Postgres → Firestore camelCase (le backend Postgres/RLS n'existe plus ; les sections de garde s'appellent désormais « Règles Firestore »).
 
 ## 11 collections → shard
 
@@ -38,17 +38,17 @@
 
 **List owner-scoped (audit FEAT-045 H1)** : `allow list: if isOwner(resource.data.landlordId)` sur les 8 collections multi-tenant → toute query DOIT porter `where('landlordId','==',uid)` (rules ≠ filtres ; ancien `isSignedIn()` = lecture cross-tenant). Vérifié `npm run test:rules` (émulateur).
 
-**Trigger transverse `setUpdatedAt`** (×9) : landlords, properties, tenants, leases, payments, documents, expenses, investment_scenarios, receipts (receipts = status only). Note : delete triggers = soft-delete logic CF.
+**Trigger transverse `setUpdatedAt`** (×8) : landlords, properties, tenants, leases, payments, documents, expenses, investment_scenarios. ⚠️ **`setUpdatedAtReceipts` n'existe pas** (receipts immuables) — corrigé 2026-07-21, cette liste comptait 9 entrées à tort. Note : delete triggers = soft-delete logic CF.
 
 **Callable transverse `softDeleteEntity`** : soft-delete unifié (landlords, properties, tenants, leases, payments, documents, expenses, investment_scenarios). Receipts exclus (rétention légale, voir payments-receipts).
 
-**Callables cross-entity/cross-tenant (Couche 2)** : listés par shard. Détail (signatures TS, error handling, tests) → [`../FUNCTIONS.md`](../FUNCTIONS.md).
+**Callables cross-entity/cross-tenant (Couche 2)** : listés par shard. Détail (signatures TS, error handling, tests) → [`../functions/README.md`](../functions/README.md) puis le shard du domaine.
 
-## Indexes composites (28 total)
+## Indexes composites (37 total)
 
-23 soft-delete patterns + 5 cross-entity. Tous `Collection > Composite`. Filtrage `deletedAt` systématique (sauf `receipts`). Détail par shard.
+Décompte vérifié 2026-07-21 (`firestore.indexes.json`, 0 `fieldOverrides`) — l'ancien chiffre **28 était périmé**. Par collection : `leases` 10 · `expenses` 7 · `payments` 7 · `receipts` 4 · `documents` 3 · `properties` 2 · `tenants` 2 · `landlords` 1 · `investment_scenarios` 1. Tous `Collection > Composite`. Filtrage `deletedAt` systématique (sauf `receipts`). Détail par shard.
 
-## Audit (2026-07-05)
+## Audit (2026-07-05, décomptes rafraîchis 2026-07-21)
 
-✅ 11 collections mappées 1:1 routes+features ; 28 indexes couvrent soft-delete + cross-filters ; 3 couches RLS (rules+CF+triggers) zéro `WHERE field==null` sans index ; dénorm (propertyName, tenantLastName, propertyId snapshots) systématique.
+✅ 11 collections mappées 1:1 routes+features ; 37 indexes couvrent soft-delete + cross-filters ; 3 couches de garde (règles Firestore + CF + triggers) zéro `WHERE field==null` sans index ; dénorm (propertyName, tenantLastName, propertyId snapshots) systématique.
 ⚠️ FEAT-041c (`recomputeChargeRegularization`) planné, pas déployé (V1.1). FEAT-033 (snapshot figé dépense) **absorbé** par FEAT-041 V1 (categoryOverridden + nature enum immuable).

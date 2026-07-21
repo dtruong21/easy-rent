@@ -54,7 +54,7 @@ Collection : `leases`. CF exclusive (FEAT-036, FEAT-042, FEAT-044, FEAT-006). Pa
 - Recompte fail-closed du plafond `landlords.activeLeasesCount` si compteur absent (legacy) — même pattern que `createLease`.
 - Vérification atomique du plafond free-tier dans la même transaction que la mutation (bail_limit_reached si saturé).
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
 - `create/update/delete` : CF exclusive (`createLease`, `updateLease`, `softDeleteEntity`)
 
