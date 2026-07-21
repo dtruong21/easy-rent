@@ -110,22 +110,26 @@ Depuis FEAT-002, un flag de session custom `app.allow_deleted_at_change` est uti
 
 **Hardening prévu en P1** : remplacer le flag par un mécanisme intransférable (ex: `pg_trigger_depth() > 0` testé dans une fonction SECURITY DEFINER de niveau supérieur), afin de retirer toute surface d'attaque future. Tracké dans `docs/BACKLOG.md` (dette technique post-FEAT-002).
 
-## 🔐 Politique mot de passe (FEAT-011 pivot 2026-06-22)
+## 🔐 Politique mot de passe (FEAT-011 pivot 2026-06-22 — backend Firebase depuis FEAT-019)
 
-**Authentification** : Email + password classique (remplace magic link FEAT-001).
+**Authentification** : Email + password classique (remplace magic link FEAT-001). Backend **Firebase Auth** — cette section décrivait Supabase jusqu'au pivot FEAT-019 ; toute mention résiduelle de Supabase ici serait un reliquat, pas une description valide.
 
-**Hachage** : Bcrypt côté Supabase. Jamais en clair côté client, jamais stocké en localStorage.
+**Hachage** : délégué à **Firebase Auth**, côté serveur (scrypt modifié, implémentation Google — non configurable côté projet). L'app ne voit le mot de passe qu'en mémoire, le temps de l'appel SDK : aucune écriture en localStorage / SharedPreferences (vérifié — aucune persistance de credential dans `lib/`), aucun log.
 
-**Validation** (Supabase built-in `letters_digits`) :
-- Longueur minimale : 8 caractères
-- Complexité : au moins 1 lettre + 1 chiffre
+**Validation** ([`PasswordValidator`](../lib/core/utils/password_validator.dart), **côté client**) :
+- Longueur minimale : 8 caractères (`PasswordValidator.minLength`)
+- Complexité : au moins 1 lettre (`[a-zA-Z]`) + au moins 1 chiffre (`\d`)
 - Pas d'autres restrictions (majuscules, caractères spéciaux optionnels)
+
+> ⚠️ **Cette règle n'est PAS appliquée côté serveur.** Aucune password policy Firebase (Identity Platform) n'est configurée dans le projet : le seul plancher serveur est le rejet natif `weak-password` de Firebase, à **6 caractères**, sans contrainte de composition. Un appel direct à l'API Identity Toolkit, ou un client modifié, peut donc créer un compte à 6 caractères. Acceptable tant que le client officiel est le seul chemin d'écriture ; à durcir (password policy côté Firebase) si le risque devient réel. Cf. `AuthError.weakPassword` ([`auth_error.dart`](../lib/features/auth/domain/auth_error.dart)).
 
 **Transport** : HTTPS exclusif. Tous les formulaires password utilisant TLS 1.3+.
 
-**Rate limiting** : Supabase built-in 3 tentatives/minute. Pas de throttling custom côté client.
+**Rate limiting** : natif Firebase Auth (quotas par IP / par compte, seuils **non publiés** par Google et non configurables — ne pas documenter de chiffre ici, il serait inventé). Se manifeste par le code `too-many-requests`, mappé en `AuthError.tooManyRequests` ([`auth_error_mapper.dart`](../lib/features/auth/data/auth_error_mapper.dart)) et surfacé à l'utilisateur (notamment sur « mot de passe oublié », cf. `forgot_password_controller.dart`). **Aucun throttling custom** côté client ni côté Cloud Functions — vérifié, le seul throttle du codebase concerne le renouvellement d'expiration des sessions anonymes (`anon_expiry_renewer.dart`), sans rapport avec l'auth par mot de passe.
 
-**Session recovery** : PKCE implicit flow via `supabase_flutter` 2.x. Session persiste dans localStorage (survit au refresh navigateur, perdue à fermeture). Acceptable pour MVP ; audit RGPD post-MVP pour conformité « pas de remember me ».
+**Session recovery** (Firebase Auth, pivot FEAT-019) : aucun `setPersistence` n'est appelé dans `lib/` — c'est donc la persistance **par défaut** de `firebase_auth_web` qui s'applique, soit la chaîne de repli `indexedDBLocalPersistence` → `browserLocalPersistence` → `browserSessionPersistence` (cf. `getAuthInstance`, `firebase_auth_web/lib/src/interop/auth.dart`). En pratique le jeton vit dans **IndexedDB** ; localStorage n'est qu'un repli si IndexedDB est indisponible (navigation privée, quota). La session survit au refresh **et à la fermeture du navigateur** — elle ne prend fin que sur `signOut()` explicite ([`auth_repository.dart`](../lib/features/auth/data/auth_repository.dart)), suppression de compte, ou révocation du jeton côté Firebase.
+
+**RGPD — « pas de remember me »** : contrainte **révisée le 2026-05-27**, ce n'est plus une dette. La décision figée (`docs/backlog/001-auth-magic-link.md`) retient la persistance standard après fermeture, sans bascule UI « se souvenir de moi », à charge d'en documenter la base légale dans la politique de confidentialité. C'est fait : §7 « Cookies et traceurs » déclare la session Firebase en IndexedDB / cookies first-party ([`privacy_page.dart`](../lib/features/privacy/presentation/privacy_page.dart)). Aucun audit post-MVP n'est en attente sur ce point.
 
 **Reset password** :
 - Email de reset avec lien signé (token expiry 1h)
