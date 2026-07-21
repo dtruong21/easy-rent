@@ -1,0 +1,8 @@
+# match — certificats/profils iOS chiffrés dans un dépôt git PRIVÉ.
+# ⚠️ SCAFFOLD : inutilisable tant que le compte Apple Developer n'existe pas
+# (match ne peut pas générer le certificat de distribution). Cf. docs/FASTLANE.md.
+git_url(ENV["MATCH_GIT_URL"])   # dépôt git privé des certs chiffrés
+storage_mode("git")
+type("appstore")
+app_identifier(["com.daki.baillan"])
+# readonly piloté par lane (readonly: true en CI ; false pour (re)générer).

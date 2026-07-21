@@ -99,10 +99,12 @@ FEAT-001 (auth)
 
 | ID | Titre | Story | Statut |
 |---|---|---|---|
+| FEAT-051 | Baillan Pro — annonces réutilisables & diffusion multi-portails | [`backlog/051-annonces-diffusion-pro.md`](backlog/051-annonces-diffusion-pro.md) | 📋 Discovery cadrée (2026-07-16) — réservé au Plan Pro ; annonce canonique et partage d'abord, connecteurs portails après accords. Tarif Pro à tester : 7,99 € TTC/mois ou 79 € TTC/an ; offre Fondateur 59 € la première année. |
 | FEAT-029 | Charges copropriété exceptionnelles + régularisation annuelle des charges | [`backlog/029-charges-regularisation.md`](backlog/029-charges-regularisation.md) | 📋 Cadré (2026-07-03) — scope V1 réduit (bail nu, doc `documents` réutilisé), décisions ouvertes avant chiffrage, risque `firestore.rules`/`functions/` signalé |
 | FEAT-041 | Dépenses — entité first-class (CRUD + catégorisation + justificatif + alimentation régularisation) | [`backlog/041-depenses.md`](backlog/041-depenses.md) | 📋 Cadré (2026-07-05) — absorbe FEAT-033 (archivage régularisation) ; V1.1 = rentabilité sur dépenses réelles (FEAT-017) ; 7 décisions produit ouvertes avant chiffrage |
 | FEAT-046 | Purge différée des quittances archivées (RGPD art. 5.1.e) — cron quotidien qui hard-delete les `receipts` avec `retentionUntil <= now` (stampées par `deleteAccount`, FEAT-045). Honore la promesse « puis supprimées à l'échéance » de la privacy policy v1.2. Effort S (pattern `cleanupExpiredAnon` + index composite `retentionUntil`) | — | 📋 Suivi audit FEAT-045 (L1, 2026-07-07) — horizon 5 ans, non urgent |
 | FEAT-047 | Export des données (RGPD art. 15/20 — droit d'accès + portabilité) : callable `exportAccountData` (JSON/CSV de toutes les collections du landlord) + bouton Profil. Gap relevé par l'audit FEAT-045 (docs/LEGAL.md promettait déjà `GET /export`) | — | 📋 Suivi audit FEAT-045 (2026-07-07) |
+| FEAT-053 | Catégories N/A déclarées par le plan (readiness) — permettre à un plan de déclarer une catégorie hors-sujet (front-matter type `readiness: {accessibility: n/a}`), pour que `/feature-ready` redistribue son poids au lieu de la noter. Corrige deux biais mesurés sur FEAT-052 : ✅ accessibilité **non mérité** (le script grep le plan ; un plan qui *cite* l'a11y s'auto-valide) et ❌ « tests widget » sur une feature sans UI. Effort S (le mécanisme de redistribution existe déjà : `Category.skipped`) | — | 📋 Suivi FEAT-052 (2026-07-17) — à faire seulement si le score prouve son utilité ; sinon le rapport reste advisory et ses limites sont documentées |
 
 ## Croissance — SEO & acquisition
 

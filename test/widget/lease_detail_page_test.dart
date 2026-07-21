@@ -1,5 +1,7 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -135,11 +137,15 @@ Lease _makeLease({
   updatedAt: DateTime(2024),
 );
 
+/// [tier] par défaut `paid` → le gate Pro de la régularisation (FEAT-044)
+/// n'interfère PAS avec les tests ci-dessous (dont l'ouverture auto par
+/// deep-link). Les tests du gate lui-même passent explicitement `free`.
 Widget _buildDetailPage({
   required String leaseId,
   required _FakeRepo repo,
   _FakePaymentRepo? paymentRepo,
   bool openRegularizationOnLoad = false,
+  SubscriptionTier tier = SubscriptionTier.paid,
 }) {
   final router = GoRouter(
     routes: [
@@ -187,6 +193,9 @@ Widget _buildDetailPage({
       leaseRepositoryProvider.overrideWithValue(repo),
       paymentRepositoryProvider.overrideWithValue(
         paymentRepo ?? _FakePaymentRepo(),
+      ),
+      landlordTierProvider.overrideWith(
+        (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
       ),
     ],
     child: MaterialApp.router(

@@ -18,8 +18,14 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ |
 | `subscriptionTier` | string | 'anonymous' \| 'free' \| 'paid' | ✅ |
 | `anonExpiresAt` | timestamp | expiration essai (14j) | — |
+| `fullName` | string | '' (anon) / nom complet | ✅ |
+| `phone` | string\|null | téléphone (optionnel) | — |
+| `address` | string\|null | adresse postale (requis pour quittances) | — |
 | `rgpdConsentAt` | timestamp\|null | null (anon) / date signature | ✅ |
-| `rgpdConsentVersion` | string | v1-2026-06 → v2-2026-07 | ✅ |
+| `rgpdConsentVersion` | string | v3-2026-07 (v1-2026-06 legacy ; v2-2026-07 ancien) | ✅ |
+| `activePropertiesCount` | int | FEAT-044 : biens actifs (dénorm, maintenu CF exclusive) | — |
+| `activeTenantsCount` | int | FEAT-044 : locataires actifs (dénorm, maintenu CF exclusive) | — |
+| `activeLeasesCount` | int | FEAT-044 : baux actifs (dénorm, maintenu CF createLease/updateLease) | — |
 | `createdAt` | timestamp | — | ✅ |
 | `updatedAt` | timestamp | CF trigger | — |
 | `deletedAt` | timestamp\|null | null (actif) / soft-delete | — |

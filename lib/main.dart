@@ -1,6 +1,9 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -9,6 +12,8 @@ import 'package:logging/logging.dart';
 import 'core/config/env.dart';
 import 'core/i18n/locale_provider.dart';
 import 'core/i18n/locale_resolution.dart';
+import 'core/observability/crash_reporting_service.dart';
+import 'core/observability/crash_reporting_storage.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
@@ -41,6 +46,35 @@ Future<void> main() async {
 
   // Initialise Firebase (FEAT-019). Source unique de la couche data.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // DEBUG UNIQUEMENT : branche les émulateurs Firebase (Firestore + Auth)
+  // quand `USE_FIREBASE_EMULATOR=true` est passé en dart-define. Le garde-fou
+  // release vit dans `Env.useFirebaseEmulator` (kDebugMode). DOIT être appelé
+  // APRÈS initializeApp et AVANT tout accès Firestore/Auth (donc avant runApp).
+  // Cf. tool/seed/seed_tiers.mjs pour peupler les comptes de test.
+  if (Env.useFirebaseEmulator) {
+    final host = Env.firebaseEmulatorHost;
+    FirebaseFirestore.instance.useFirestoreEmulator(
+      host,
+      Env.firestoreEmulatorPort,
+    );
+    await FirebaseAuth.instance.useAuthEmulator(host, Env.authEmulatorPort);
+    Logger('main').warning(
+      'Firebase ÉMULATEUR actif — Firestore $host:${Env.firestoreEmulatorPort}, '
+      'Auth $host:${Env.authEmulatorPort}. Données locales, PAS la prod.',
+    );
+  }
+
+  // Rapport d'incident (Crashlytics) — MOBILE UNIQUEMENT, opt-in RGPD.
+  // Branche les hooks d'erreur, puis applique le consentement PERSISTÉ
+  // (désactivé par défaut). No-op sur le web. La bascule runtime est gérée par
+  // `crashReportingProvider` (Profil → Confidentialité).
+  if (!kIsWeb) {
+    CrashReportingService.initialize();
+    await CrashReportingService.setEnabled(
+      await CrashReportingStorage().read() ?? false,
+    );
+  }
 
   // BLOCKER-1 : capture l'événement beforeinstallprompt le plus tôt possible,
   // avant runApp, pour ne pas le rater (émis très tôt par le navigateur).
@@ -91,6 +125,17 @@ class _BaillanAppState extends ConsumerState<BaillanApp> {
       localeResolutionCallback: resolveLocale,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      // Ruban « EMULATOR » (debug only) pour ne jamais confondre les données
+      // locales de l'émulateur avec la prod pendant les tests UI. No-op dès
+      // que le toggle est éteint (build normal, release).
+      builder: Env.useFirebaseEmulator
+          ? (context, child) => Banner(
+              message: 'EMULATOR',
+              location: BannerLocation.topStart,
+              color: Colors.deepOrange,
+              child: child ?? const SizedBox.shrink(),
+            )
+          : null,
     );
   }
 }

@@ -122,6 +122,20 @@ Exemples :
 | `/fix-bug` (hotfix label) | `main` | crée `hotfix/*`, PR vers `main` |
 | `ticket-agent.yml` | `develop` | crée branches, PR vers `develop` |
 
+## 🏷️ Versioning (branché sur ce flow)
+
+Chaque push sur `main` = une **release** taguée automatiquement par la CI.
+Rien à éditer à la main : la version est **dérivée de git** et le tag `vX.Y.Z`
+(+ GitHub Release) est créé après un deploy prod réussi. Détail complet :
+[`docs/VERSIONING.md`](VERSIONING.md).
+
+- Bump déduit des commits conventionnels ci-dessous : `feat` → **minor** (+ nouveau
+  codename d'arbre), `fix`/reste → **patch** (garde le codename), `!`/`BREAKING
+  CHANGE` → **major**.
+- Build number = nb de commits (monotone) → uploads stores jamais rejetés.
+- `main` verrouillée ⇒ la CI ne pousse **qu'un tag** (aucun commit de bump,
+  aucun conflit de version).
+
 ## ✅ Avant de promouvoir develop → main
 
 Checklist obligatoire :
@@ -129,5 +143,6 @@ Checklist obligatoire :
 - [ ] CI verte sur develop
 - [ ] Staging testé manuellement (smoke tests : auth + créer un bien + envoyer une quittance)
 - [ ] Pas de migration DB cassante non préparée
-- [ ] Release notes rédigées dans `docs/releases/<version>.md`
 - [ ] Confirmation utilisateur explicite (jamais auto-promote en prod)
+- [ ] (Le tag `vX.Y.Z` + la GitHub Release sont créés **automatiquement** par la
+      CI au push sur `main` — voir [`docs/VERSIONING.md`](VERSIONING.md))

@@ -40,7 +40,7 @@ Obligations à respecter :
     suppression l'avertit explicitement de les télécharger avant ; la
     plateforme ne conserve en son nom que la trace des quittances émises
   - La rétention des quittances est annoncée dans le flux de suppression
-    ET dans la politique de confidentialité (v1.2, §5) — exigence des
+    ET dans la politique de confidentialité (v1.3, §5) — exigence des
     politiques Google Play / App Store
 - **Nom du responsable de traitement** dans les emails sortants
 - **Lien de désabonnement** dans les emails non-transactionnels

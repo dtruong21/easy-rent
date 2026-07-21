@@ -101,6 +101,18 @@
   "@profileAppearanceTitle": {
     "description": "Section header in Profile settings for the theme selector."
   },
+  "profileCrashReportingSection": "Privacy",
+  "@profileCrashReportingSection": {
+    "description": "Section header in Profile settings for the crash-reporting opt-in (mobile only)."
+  },
+  "profileCrashReportingTitle": "Crash reporting",
+  "@profileCrashReportingTitle": {
+    "description": "Title of the crash-reporting opt-in switch (mobile only)."
+  },
+  "profileCrashReportingSubtitle": "Send crash reports (excluding your property, lease and tenant data) to help fix bugs. iOS and Android only, and off unless you turn it on.",
+  "@profileCrashReportingSubtitle": {
+    "description": "Subtitle explaining the crash-reporting opt-in switch."
+  },
   "profileThemeSystem": "System",
   "@profileThemeSystem": {
     "description": "Theme selector option: follow system theme."
@@ -570,6 +582,10 @@
   "leasesErrorSaveFailed": "Error while saving. Please try again.",
   "@leasesErrorSaveFailed": {
     "description": "LeaseSubmitError.saveFailed: fallback for any other Callable error code on LeaseFormController.submit/close."
+  },
+  "leasesErrorLimitReached": "You've reached the free plan's active-lease limit. Upgrade to Pro to add more.",
+  "@leasesErrorLimitReached": {
+    "description": "LeaseSubmitError.limitReached: createLease/updateLease rejected because the free-tier active-lease cap is reached (FEAT-044). Invites the user to upgrade to Pro."
   },
   "leasesEmptyFilterTitle": "No lease matches this filter",
   "@leasesEmptyFilterTitle": {
@@ -1798,6 +1814,10 @@
   "@propertiesErrorSaveFailed": {
     "description": "PropertySubmitError.saveFailed: fallback for any other Callable error code on PropertyFormController.submit."
   },
+  "propertiesErrorLimitReached": "You've reached the free plan's property limit. Upgrade to Pro to add more properties.",
+  "@propertiesErrorLimitReached": {
+    "description": "PropertySubmitError.limitReached: the createProperty Callable rejected creation because the free-tier property cap is reached (FEAT-044, resource-exhausted / property_limit_reached). Invites the user to upgrade to the Pro plan."
+  },
 
   "tenantsListTitle": "My tenants",
   "@tenantsListTitle": {
@@ -2260,6 +2280,10 @@
   "tenantsErrorSaveFailed": "Error saving. Check your connection and try again.",
   "@tenantsErrorSaveFailed": {
     "description": "Tenant form submission error (TenantSubmitError.saveFailed): generic Firestore/save failure, including unrecognized Cloud Functions error codes."
+  },
+  "tenantsErrorLimitReached": "You've reached the free plan's tenant limit. Upgrade to Pro to add more tenants.",
+  "@tenantsErrorLimitReached": {
+    "description": "TenantSubmitError.limitReached: createTenant rejected because the free-tier tenant cap is reached (FEAT-044). Invites the user to upgrade to Pro."
   },
   "tenantsErrorUnknown": "An error occurred. Please try again.",
   "@tenantsErrorUnknown": {
@@ -2912,6 +2936,10 @@
   "profileHubPrivacyTile": "Privacy policy",
   "@profileHubPrivacyTile": {
     "description": "List tile label navigating to /privacy. Chrome UI only — the legal document body itself (privacy_page.dart content) stays French, out of this extraction's scope."
+  },
+  "profileHubLegalTile": "Legal notice",
+  "@profileHubLegalTile": {
+    "description": "List tile label in the /profile hub Help group navigating to /legal (LCEN mentions légales — publisher/host identity). Chrome UI only — the legal page body itself (legal_page.dart content) stays French, out of scope."
   },
   "profileAboutTitle": "About",
   "@profileAboutTitle": {
@@ -4291,6 +4319,10 @@
   "chargeRegularizationForfaitNotApplicable": "This lease uses a flat charge fee: the flat fee is final and does not require regularization (loi du 6 juillet 1989, art. 23 a contrario).",
   "@chargeRegularizationForfaitNotApplicable": {
     "description": "Informational text shown instead of the action button when the lease's effective charge mode is 'forfait' (flat fee, not eligible for regularization, FEAT-042). References the law for landlord context only — this is UI chrome/explanation, not the legal PDF document itself, so it is in scope for translation."
+  },
+  "chargeRegularizationProOnly": "Annual charge regularization is reserved for the Pro plan.",
+  "@chargeRegularizationProOnly": {
+    "description": "Locked-state message shown instead of the action button when the lease IS legally eligible for regularization but the landlord is not on the paid tier (free/Pro gating matrix, FEAT-044). Only shown for eligible leases — a 'forfait' lease shows chargeRegularizationForfaitNotApplicable instead, since the feature does not legally apply there at all."
   },
   "chargeRegularizationDialogTitle": "Annual charge regularization",
   "@chargeRegularizationDialogTitle": {

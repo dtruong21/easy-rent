@@ -23,10 +23,12 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 | Pipeline d'agents | [`docs/AGENTS.md`](docs/AGENTS.md) |
 | Système de ticketing (GitHub Issues + agents) | [`docs/TICKETING.md`](docs/TICKETING.md) |
 | Git Flow (branches, releases, hotfixes) | [`docs/GITFLOW.md`](docs/GITFLOW.md) |
+| Versioning & releases (tags, codenames, build number) | [`docs/VERSIONING.md`](docs/VERSIONING.md) |
 | Stratégie multi-environnement (dev/prod sur 1 projet) | [`docs/ENVIRONMENTS.md`](docs/ENVIRONMENTS.md) |
 | App mobile iOS/Android (FEAT-024 : setup, build, décisions) | [`docs/MOBILE.md`](docs/MOBILE.md) |
 | Conformité Play Store / App Store (release production) | [`docs/STORE_COMPLIANCE.md`](docs/STORE_COMPLIANCE.md) |
 | Gestion des secrets et sécurité | [`docs/SECURITY.md`](docs/SECURITY.md) |
+| Setup 2 PC (Claude Code Pro + ChatGPT Go/Codex) | [`docs/DUAL_PC_SETUP.md`](docs/DUAL_PC_SETUP.md) |
 | Schéma Firestore (par domaine) | [`docs/state/schema/`](docs/state/schema/README.md) |
 | Cloud Functions (par domaine) | [`docs/state/functions/`](docs/state/functions/README.md) |
 | Routes Flutter (par domaine) | [`docs/state/routes/`](docs/state/routes/README.md) |
@@ -41,6 +43,10 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 4. `code-reviewer` ✅, `security-auditor` ✅
 5. Migration Firestore (rules + indexes) déployée si applicable
 6. Déployé sur Firebase Hosting
+
+> Checklist rapide avant PR : `/feature-ready <FEAT-ID>` (lecture seule,
+> advisory, ne bloque rien). Elle liste ce qui manque — elle ne remplace ni la
+> revue ni la QA.
 
 ## Garde-fous (jamais désactiver)
 

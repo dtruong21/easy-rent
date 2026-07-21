@@ -24,6 +24,11 @@ enum PropertySubmitError {
   /// (`property_has_active_leases`).
   hasActiveLeases,
 
+  /// Plafond de biens de l'offre gratuite atteint (FEAT-044) — la Callable
+  /// `createProperty` a refusé la création (`resource-exhausted` /
+  /// `property_limit_reached`). Invite à passer à l'offre Pro.
+  limitReached,
+
   /// Action refusée (permission-denied / unauthenticated).
   permissionDenied,
 

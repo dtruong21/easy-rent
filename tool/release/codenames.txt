@@ -1,0 +1,41 @@
+# Codenames des releases — essences d'arbres, ordre alphabétique.
+# UNE release mineure (ou majeure) = LA ligne suivante de ce fichier.
+#   release nº1 → 1re ligne (Alisier), nº2 → 2e (Aulne), etc.
+# L'index est déterministe (= nombre de tags vX.Y.0 déjà publiés), donc
+# personne ne « réserve » un nom → aucun conflit d'auteur possible.
+# Les patches (vX.Y.Z, Z>0) réutilisent le nom de leur ligne mineure.
+#
+# ⚠️ Les lignes commençant par # sont ignorées. N'INSÈRE JAMAIS un nom au
+# milieu (ça décalerait tout l'historique) : ajoute uniquement À LA FIN.
+Alisier
+Aulne
+Bouleau
+Charme
+Chêne
+Cormier
+Cyprès
+Épicéa
+Érable
+Frêne
+Genévrier
+Hêtre
+If
+Jujubier
+Laurier
+Marronnier
+Mélèze
+Merisier
+Micocoulier
+Noisetier
+Noyer
+Olivier
+Orme
+Peuplier
+Pin
+Platane
+Robinier
+Sapin
+Saule
+Sorbier
+Tilleul
+Tremble

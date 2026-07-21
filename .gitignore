@@ -58,9 +58,11 @@ dart-defines.local.json
 dart-defines.*.local.json
 dart-defines.prod.json
 dart-defines.dev.json
+dart-defines.emulator.json
 # Mais on garde les templates :
 !dart-defines.example.json
 !dart-defines.prod.example.json
+!dart-defines.emulator.example.json
 
 # Patterns supplémentaires de secrets (defense in depth)
 *-service-account.json

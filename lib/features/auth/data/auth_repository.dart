@@ -16,12 +16,16 @@ final _log = Logger('AuthRepository');
 /// Format : 'vN-YYYY-MM' — à incrémenter à chaque mise à jour des CGU, du
 /// texte de politique de confidentialité ou des finalités de traitement.
 /// Persisté dans landlords.rgpdConsentVersion (champ immuable post-création).
-/// **Doit rester synchronisé avec functions/src/auth/handle_new_user.ts**.
+/// **Doit rester synchronisé avec `CURRENT_RGPD_VERSION`
+/// (functions/src/callable/finalize_anonymous_upgrade.ts) et le test
+/// test/unit/rgpd_consent_test.dart.**
 /// Historique :
 /// - v1-2026-06 : politique de confidentialité v1.0 seule
 /// - v2-2026-07 : CGU v1.0 + politique de confidentialité v1.0
 ///   (case d'acceptation unique au signup)
-const String rgpdConsentVersion = 'v2-2026-07';
+/// - v3-2026-07 : politique de confidentialité v1.3 — ajout du rapport
+///   d'incident Crashlytics (mobile, opt-in) + correction §7 (analytics tiers)
+const String rgpdConsentVersion = 'v3-2026-07';
 
 /// Fenêtre d'expiration glissante d'une session anonyme (BAILLAN-M1).
 ///
@@ -511,6 +515,11 @@ class FirebaseAuthRepository implements AuthRepository {
       'anonExpiresAt': null,
       'rgpdConsentAt': now,
       'rgpdConsentVersion': rgpdConsentVersion,
+      // FEAT-044 : compteurs de plan maintenus ensuite par les Callables
+      // (createProperty/createTenant/createLease / softDeleteEntity) ; init 0.
+      'activePropertiesCount': 0,
+      'activeTenantsCount': 0,
+      'activeLeasesCount': 0,
       'createdAt': now,
       'updatedAt': now,
       'deletedAt': null,
@@ -665,6 +674,9 @@ class FirebaseAuthRepository implements AuthRepository {
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'google-popup',
         'signupProvider': 'google',
+        'activePropertiesCount': 0, // FEAT-044 : compteurs maintenus par CF
+        'activeTenantsCount': 0,
+        'activeLeasesCount': 0,
         'createdAt': now,
         'updatedAt': now,
         'deletedAt': null,
@@ -778,6 +790,9 @@ class FirebaseAuthRepository implements AuthRepository {
         'rgpdConsentVersion': rgpdConsentVersion,
         'rgpdConsentSource': 'apple-popup',
         'signupProvider': 'apple',
+        'activePropertiesCount': 0, // FEAT-044 : compteurs maintenus par CF
+        'activeTenantsCount': 0,
+        'activeLeasesCount': 0,
         'createdAt': now,
         'updatedAt': now,
         'deletedAt': null,
@@ -815,6 +830,9 @@ class FirebaseAuthRepository implements AuthRepository {
       'address': null,
       'isAnonymous': true,
       'subscriptionTier': 'anonymous',
+      'activePropertiesCount': 0, // FEAT-044 : cohérence (l'anon ne crée rien)
+      'activeTenantsCount': 0,
+      'activeLeasesCount': 0,
       'anonExpiresAt': Timestamp.fromDate(
         DateTime.now().add(_anonProvisionExpiryWindow),
       ),

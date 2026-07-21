@@ -31,34 +31,73 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 // ---------------------------------------------------------------------------
 type FakeDoc = Record<string, unknown>;
 
-const {store, makeRef, makeSnap} = vi.hoisted(() => {
+// Sous-ensemble d'agrégation count() utilisé par createLease (fail-closed).
+interface CountQuery {
+  where(field: string, op: string, value: unknown): CountQuery;
+  count(): {get(): Promise<{data(): {count: number}}>};
+}
+
+const {store, makeRef, makeSnap, makeColl} = vi.hoisted(() => {
   type FakeDocH = Record<string, unknown>;
   const storeH = new Map<string, FakeDocH>();
+
+  function makeSnapH(path: string) {
+    const data = storeH.get(path);
+    return {exists: data !== undefined, data: () => data};
+  }
 
   function makeRefH(path: string) {
     return {
       id: path.split("/").pop() as string,
       path,
+      // FEAT-044 : createLease lit landlordRef.get() (hors transaction).
+      get: () => Promise.resolve(makeSnapH(path)),
     };
   }
 
-  function makeSnapH(path: string) {
-    const data = storeH.get(path);
+  // FEAT-044 : query minimale `where(...).count().get()` sur le store.
+  function makeQueryH(
+    name: string,
+    filters: ReadonlyArray<readonly [string, unknown]>,
+  ): CountQuery {
     return {
-      exists: data !== undefined,
-      data: () => data,
+      where: (field: string, _op: string, value: unknown) =>
+        makeQueryH(name, [...filters, [field, value]]),
+      count: () => ({
+        get: () => {
+          const prefix = `${name}/`;
+          let n = 0;
+          for (const [path, data] of storeH.entries()) {
+            if (!path.startsWith(prefix)) continue;
+            if (path.slice(prefix.length).includes("/")) continue;
+            if (filters.every(([f, v]) => data[f] === v)) n++;
+          }
+          return Promise.resolve({data: () => ({count: n})});
+        },
+      }),
     };
   }
 
-  return {store: storeH, makeRef: makeRefH, makeSnap: makeSnapH};
+  function makeCollH(name: string) {
+    return {
+      doc: (id?: string) =>
+        makeRefH(`${name}/${id ?? `auto-${Math.random()}`}`),
+      where: (field: string, _op: string, value: unknown) =>
+        makeQueryH(name, [[field, value]]),
+    };
+  }
+
+  return {
+    store: storeH,
+    makeRef: makeRefH,
+    makeSnap: makeSnapH,
+    makeColl: makeCollH,
+  };
 });
 
 vi.mock("firebase-admin", () => {
   const fakeFirestore = () => ({
-    collection: (name: string) => ({
-      doc: (id?: string) =>
-        makeRef(`${name}/${id ?? `auto-${Math.random()}`}`),
-    }),
+    collection: (name: string) => makeColl(name),
     doc: (path: string) => makeRef(path),
     runTransaction: async (
       cb: (tx: {
@@ -179,10 +218,25 @@ const baseCreateLeaseData = {
   entryInventoryDone: true,
 };
 
+// FEAT-044 : createLease exige désormais un doc landlord (gate + compteur).
+// Seedé en 'paid' (illimité) par défaut → le gate n'interfère PAS avec les
+// tests existants ; les tests de gating dédiés surchargent en 'free'.
+function seedLandlord(overrides: FakeDoc = {}) {
+  store.set(`landlords/${LANDLORD_UID}`, {
+    id: LANDLORD_UID,
+    landlordId: LANDLORD_UID,
+    deletedAt: null,
+    subscriptionTier: "paid",
+    activeLeasesCount: 0,
+    ...overrides,
+  });
+}
+
 beforeEach(() => {
   store.clear();
   seedProperty("prop-1");
   seedTenant("tenant-1");
+  seedLandlord();
 });
 
 describe("createLease — nonRecoverableChargesCents (FEAT-036)", () => {
@@ -648,5 +702,218 @@ describe("updateLease — chargeMode coercition (FEAT-042)", () => {
     const doc = store.get("leases/lease-1");
     expect(doc?.leaseType).toBe("furnished");
     expect(doc?.chargeMode).toBe("provisions");
+  });
+});
+
+describe("createLease / updateLease — plafond de baux actifs (FEAT-044)", () => {
+  it("free AU plafond (2 baux actifs) → createLease refusé", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 2});
+    await expect(
+      createLease.run(callableRequest(LANDLORD_UID, {...baseCreateLeaseData})),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "lease_limit_reached",
+    });
+  });
+
+  it("free sous le plafond → createLease OK + incrémente activeLeasesCount", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 1});
+    const res = (await createLease.run(
+      callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+    )) as {leaseId: string};
+    expect(res.leaseId).toBeTruthy();
+    expect(store.get(`landlords/${LANDLORD_UID}`)?.activeLeasesCount).toBe(2);
+  });
+
+  it("bail créé INACTIF (terminated) → pas de gate ni d'incrément", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 2});
+    const res = (await createLease.run(
+      callableRequest(LANDLORD_UID, {
+        ...baseCreateLeaseData,
+        status: "terminated",
+      }),
+    )) as {leaseId: string};
+    expect(res.leaseId).toBeTruthy();
+    expect(store.get(`landlords/${LANDLORD_UID}`)?.activeLeasesCount).toBe(2);
+  });
+
+  it("FAIL-CLOSED : compteur absent + 2 baux actifs existants → refusé", async () => {
+    // landlord free SANS activeLeasesCount (legacy) → recompte live = 2 → refus.
+    store.set(`landlords/${LANDLORD_UID}`, {
+      id: LANDLORD_UID,
+      landlordId: LANDLORD_UID,
+      subscriptionTier: "free",
+      deletedAt: null,
+    });
+    seedLease("l-old-1", {status: "active"});
+    seedLease("l-old-2", {status: "active"});
+    await expect(
+      createLease.run(callableRequest(LANDLORD_UID, {...baseCreateLeaseData})),
+    ).rejects.toMatchObject({code: "resource-exhausted"});
+  });
+
+  it("réactivation (terminated→active) AU plafond → updateLease refusé", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 2});
+    seedLease("lease-1", {status: "terminated"});
+    await expect(
+      updateLease.run(
+        callableRequest(LANDLORD_UID, {
+          id: "lease-1",
+          patch: {status: "active"},
+        }),
+      ),
+    ).rejects.toMatchObject({code: "resource-exhausted"});
+  });
+
+  it("désactivation (active→terminated) → décrémente activeLeasesCount (clampé)", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 2});
+    seedLease("lease-1", {status: "active"});
+    const res = (await updateLease.run(
+      callableRequest(LANDLORD_UID, {
+        id: "lease-1",
+        patch: {status: "terminated"},
+      }),
+    )) as {updated: boolean};
+    expect(res.updated).toBe(true);
+    expect(store.get(`landlords/${LANDLORD_UID}`)?.activeLeasesCount).toBe(1);
+  });
+
+  it("FAIL-CLOSED réactivation : compteur absent + 2 baux actifs → refusé", async () => {
+    // landlord free SANS activeLeasesCount (legacy, backfill pas encore
+    // passé) → le recompte live (2 actifs) doit fermer le gate, comme
+    // createLease.
+    store.set(`landlords/${LANDLORD_UID}`, {
+      id: LANDLORD_UID,
+      landlordId: LANDLORD_UID,
+      subscriptionTier: "free",
+      deletedAt: null,
+    });
+    seedLease("l-old-1", {status: "active"});
+    seedLease("l-old-2", {status: "active"});
+    seedLease("lease-1", {status: "terminated"});
+    await expect(
+      updateLease.run(
+        callableRequest(LANDLORD_UID, {
+          id: "lease-1",
+          patch: {status: "active"},
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "lease_limit_reached",
+    });
+    expect(store.get("leases/lease-1")?.status).toBe("terminated");
+  });
+
+  it("réactivation compteur absent SOUS le plafond → OK + sème le compteur", async () => {
+    store.set(`landlords/${LANDLORD_UID}`, {
+      id: LANDLORD_UID,
+      landlordId: LANDLORD_UID,
+      subscriptionTier: "free",
+      deletedAt: null,
+    });
+    seedLease("l-old-1", {status: "active"});
+    seedLease("lease-1", {status: "terminated"});
+    const res = (await updateLease.run(
+      callableRequest(LANDLORD_UID, {
+        id: "lease-1",
+        patch: {status: "active"},
+      }),
+    )) as {updated: boolean};
+    expect(res.updated).toBe(true);
+    // Semé à la vraie valeur recomptée (1 actif) + 1 réactivé = 2.
+    expect(store.get(`landlords/${LANDLORD_UID}`)?.activeLeasesCount).toBe(2);
+  });
+
+  it("réactivation archived→active : même gate (refusée au plafond)", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 2});
+    seedLease("lease-1", {status: "archived"});
+    await expect(
+      updateLease.run(
+        callableRequest(LANDLORD_UID, {
+          id: "lease-1",
+          patch: {status: "active"},
+        }),
+      ),
+    ).rejects.toMatchObject({code: "resource-exhausted"});
+  });
+
+  it("réactivation sous le plafond (compteur présent) → incrémente les compteurs", async () => {
+    seedLandlord({subscriptionTier: "free", activeLeasesCount: 1});
+    seedLease("lease-1", {status: "terminated"});
+    const res = (await updateLease.run(
+      callableRequest(LANDLORD_UID, {
+        id: "lease-1",
+        patch: {status: "active"},
+      }),
+    )) as {updated: boolean};
+    expect(res.updated).toBe(true);
+    expect(store.get(`landlords/${LANDLORD_UID}`)?.activeLeasesCount).toBe(2);
+    expect(store.get("properties/prop-1")?.activeLeaseCount).toBe(1);
+    expect(store.get("tenants/tenant-1")?.activeLeaseCount).toBe(1);
+  });
+
+  it("réactivation refusée si le bien est soft-deleted", async () => {
+    // Tier paid (illimité) pour isoler la garde bien/locataire du plafond.
+    store.set("properties/prop-1", {
+      ...store.get("properties/prop-1"),
+      deletedAt: "2026-07-01T00:00:00.000Z",
+      activeLeaseCount: 0,
+    });
+    seedLease("lease-1", {status: "terminated"});
+    await expect(
+      updateLease.run(
+        callableRequest(LANDLORD_UID, {
+          id: "lease-1",
+          patch: {status: "active"},
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "property is deleted",
+    });
+    // Rien n'a bougé : ni le bail, ni le compteur du bien supprimé.
+    expect(store.get("leases/lease-1")?.status).toBe("terminated");
+    expect(store.get("properties/prop-1")?.activeLeaseCount).toBe(0);
+  });
+
+  it("réactivation refusée si le locataire est soft-deleted", async () => {
+    store.set("tenants/tenant-1", {
+      ...store.get("tenants/tenant-1"),
+      deletedAt: "2026-07-01T00:00:00.000Z",
+    });
+    seedLease("lease-1", {status: "terminated"});
+    await expect(
+      updateLease.run(
+        callableRequest(LANDLORD_UID, {
+          id: "lease-1",
+          patch: {status: "active"},
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "tenant is deleted",
+    });
+    expect(store.get("leases/lease-1")?.status).toBe("terminated");
+  });
+
+  it("désactivation d'un bail dont le bien est soft-deleted → autorisée", async () => {
+    // État en principe impossible (softDeleteEntity bloque un bien avec bail
+    // actif) mais défensif : la clôture d'un bail ne doit jamais être bloquée
+    // par l'état du bien.
+    store.set("properties/prop-1", {
+      ...store.get("properties/prop-1"),
+      deletedAt: "2026-07-01T00:00:00.000Z",
+      activeLeaseCount: 1,
+    });
+    seedLease("lease-1", {status: "active"});
+    const res = (await updateLease.run(
+      callableRequest(LANDLORD_UID, {
+        id: "lease-1",
+        patch: {status: "terminated"},
+      }),
+    )) as {updated: boolean};
+    expect(res.updated).toBe(true);
+    expect(store.get("leases/lease-1")?.status).toBe("terminated");
   });
 });

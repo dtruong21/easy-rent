@@ -159,6 +159,11 @@ class TenantFormController extends StateNotifier<TenantFormState> {
   TenantSubmitError _mapFunctionsError(FirebaseFunctionsException e) {
     final code = e.code;
     final msg = e.message ?? '';
+    // FEAT-044 : plafond free-tier atteint (createTenant) — mappé AVANT le
+    // fallback saveFailed pour afficher l'invitation à passer Pro.
+    if (code == 'resource-exhausted' || msg.contains('tenant_limit_reached')) {
+      return TenantSubmitError.limitReached;
+    }
     if (msg.contains('tenant_has_active_leases')) {
       return TenantSubmitError.hasActiveLeases;
     }

@@ -6,6 +6,60 @@
 > [`FEATURES.md`](FEATURES.md) (matrice) ; les détails techniques dans les shards
 > `schema/`, `functions/`, `routes/`.
 
+## Changements (2026-07-03 → 2026-07-17)
+
+### PR #106 : Labels système agent absents + garde-fous CI silencieux — FIX (2026-07-17)
+- Les 8 labels système documentés dans [`docs/TICKETING.md`](../TICKETING.md) (§ « Activer les labels système ») n'avaient jamais été créés dans le repo : seul `bug` existait (avec les labels GitHub par défaut). Créés hors PR via `gh label create` (un label n'est pas du code) : `feature-request`, `agent-skip`, `agent-processing`, `agent-needs-info`, `agent-failed`, `agent-done`.
+- Trois bugs, tous masqués par des `2>/dev/null || true` :
+  - **ticket-agent** — `--add-label agent-processing` échouait (« 'agent-processing' not found », exit 1) et le `|| true` renvoyait 0 : le step se croyait OK, label non posé. Or c'est le **seul** garde-fou contre le re-pick (le filtre de `find-mature-ticket` l'exclut) → l'issue restait éligible et le cron l'aurait reprise chaque heure, relançant l'agent en boucle.
+  - `agent-eligible` = **label fantôme** : référencé à un seul endroit du repo, absent de `TICKETING.md`, jamais créé → en échec systématique. C'est lui qui justifiait le `|| true`, qui emportait au passage l'échec de `--add-label`. Supprimé (même classe que l'alias `softDeleteDocument`, `8116432`).
+  - **ticket-done.yml** — même panne que #101 : pas de checkout, pas de `GH_REPO` → `gh` sortait en « failed to run git: not a git repository », masqué en permanence par `|| true`. **Aucun `agent-done` n'avait jamais été posé depuis la création du workflow.** `GH_REPO` ajouté au job.
+- Plus aucun `|| true` sur les ops de label : retirer un label simplement absent de l'issue ne fait pas échouer `gh` (exit 0) — seul un label inexistant dans le repo le fait, càd le fantôme supprimé ici.
+- Vérifié contre l'API GitHub réelle, hors dépôt git (condition CI), sur une issue de test refermée : avant, la ligne complète sortait en 0 alors que le label n'était pas posé ; après, `agent-processing` / `agent-done` sont bien posés.
+
+### PR #105 : Release — refus de taguer sans commit depuis le dernier tag — FIX (2026-07-17)
+- **Bug** : pipeline de release **non idempotent**. `version.sh next auto` bumpait (patch) même avec **0 commit** dans le range depuis le dernier tag → un « Re-run all jobs » du deploy prod sur un SHA déjà publié créait un tag **neuf** + une GitHub Release au **changelog vide** (v1.0.0 → v1.0.1 → v1.0.2…). Le garde-fou `rev-parse --verify refs/tags/$TAG` (« existe déjà ») de `release.sh` ne pouvait **jamais** se déclencher dans le flux `auto` : le tag calculé était toujours neuf.
+- **Correctif en deux points** : `release.sh` refuse de couper une release si le range est vide — signature greppable **« rien à publier »**, au point de mutation, à côté de son frère « existe déjà ». `version.sh` expose `pending` (nb de commits depuis le dernier tag) et ses `next`/`codename-next` ne bumpent plus sur range vide : ils rendent la version **déjà publiée**.
+- **Contrainte structurante** (raison du découpage) : `version.sh next auto` est aussi appelé par le step « Determine version » de `deploy.yml` pour le **label du build prod**, *avant* le deploy. L'y faire échouer aurait cassé **tout le re-run** au lieu de le rendre bénin → le refus vit dans `release.sh`. Le re-build porte ainsi le bon label (`1.0.0`, et non une `1.0.1` fantôme) → re-run idempotent **de bout en bout**.
+- `deploy.yml` : le step « Tag release » tolère « rien à publier » (`::warning`, run vert) comme re-run bénin, et continue de propager tout le reste avec son exit code (politique de PR #102, préservée).
+- **Portée** : prod uniquement (`app_env == 'prod'`) → aucun effet sur staging. Ce chemin n'a **jamais tourné en CI** (`deploy.yml` versionné vit sur `develop`, qui ne déploie que staging) : première exécution au prochain `develop` → `main`.
+- Vérifié en pilotant les vrais scripts dans un clone jetable **sans remote** : range vide → refus, aucun tag ; range non vide → tag toujours créé avec le bon bump (`feat` → minor, `fix`/`docs` → patch, `!` → major). Le dépôt a toujours **zéro tag** (correct : le versioning n'est pas encore publié sur `main`).
+- Suite de **PR #102** (propagation des erreurs du step tag), dont le commentaire documentait ce bug comme « à traiter séparément » — commentaire mis à jour.
+- Doc : `docs/VERSIONING.md` — « aucun commit depuis le dernier tag = aucune release ».
+
+### PR #103 : ticket-agent — filtre jq rejetait les issues à labels annexes — FIX (2026-07-17)
+- Le `select(.labels | inside([…]) | not | not)` de « Auto-pick oldest eligible » ressemblait à du code mort (double négation) mais n'en était pas : `not | not` est bien l'identité sur un booléen, seulement `inside()` renvoie `false` dès qu'un label sort de la liste autorisée. Le select ne gardait donc que les issues dont **tous** les labels ∈ {bug, feature-request, agent-*} — rejetant en silence toute issue portant un label annexe (`priority-high`, `P1`, `ui`…), càd la plupart des vraies issues, en contradiction avec l'intention documentée trois lignes plus haut.
+- Bug latent jamais observé : le cron n'a commencé à tourner qu'avec le fix `GH_REPO` (#101, même jour). En prime, `inside()` compare en **sous-chaîne** et non en égalité (un label `ug`, `agent` ou `e` passait le filtre).
+- Correctif : ligne supprimée (les 4 `select` suivants implémentent déjà l'intention documentée : bug OU feature-request, pas de label agent-*, > 3h). Détection `KIND` passée de `grep -q "bug"` sur les labels joints à `index("bug")` — une `feature-request` étiquetée `debug-tools` partait sinon à tort en `/fix-bug` une fois le filtre corrigé.
+- Vérifié contre l'API GitHub réelle (issue #104 de test, `bug`+`priority-high`) : l'ancien filtre la rejette (`AUCUN`), le nouveau la sélectionne (`104`) ; la barrière des 3h reste inchangée.
+
+### FEAT-052 : Feature Readiness Score — outillage dev (2026-07-17)
+- Ajout de `tool/feature_ready.dart` : script Dart pur (aucune dépendance hors `dart:io`/`dart:convert`) qui note une feature sur 100 en 7 catégories pondérées et rend un rapport markdown sur stdout.
+- **Lecture seule et non bloquant** : n'écrit aucun fichier du dépôt, sort toujours en 0 (sauf `--strict`, opt-in manuel). `.github/workflows/ci.yml` **n'est pas modifié**.
+- **Déterministe** : aucun timestamp dans le rapport, collections triées ; deux exécutions sur le même arbre donnent un résultat identique à l'octet près (couvert par `test/unit/feature_ready_test.dart`).
+- Commande `/feature-ready` (`.claude/commands/feature-ready.md`) : wrapper mince qui déduit le FEAT-ID de la branche et affiche le rapport sans le recalculer.
+- La parité ARB réutilise la règle de `test/l10n/arb_parity_test.dart` (exclusion des clés `@…`) plutôt que de la redéfinir.
+- **Renumérotation `FEAT-045` → `FEAT-052`** (deux collisions successives) : le plan initial portait `FEAT-045`, déjà attribué à « Suppression compte in-app » (✅ done, PR #69) et référencé sous ce sens par FEAT-046/047 dans `docs/BACKLOG.md`. Le premier report vers `FEAT-051` était lui aussi pris — « Baillan Pro — annonces & diffusion multi-portails » (discovery cadrée 2026-07-16, PR #98), invisible depuis `main` car mergée sur `develop` seulement. D'où `FEAT-052`. **Leçon** : vérifier les IDs libres depuis `develop`, jamais depuis `main` (qui retarde).
+- Limite assumée : les catégories « Accessibilité » et « Complétude produit » sont un accusé de réception documentaire (le script lit le plan), pas une preuve de qualité — le rapport l'affiche.
+
+## Changements (2026-07-03 → 2026-07-10)
+
+### PR #94 : Verrouillage de la réactivation de bail (updateLease) — FIX (2026-07-10)
+- Transition `terminated|archived → active` (réactivation) imposait seulement une vérification d'existence du bien/locataire, pas soft-delete.
+- Résolution : Appel failed-precondition si le bien ou le locataire est soft-deleted lors de la réactivation — prévient la résurrection de baux vers des entités supprimées.
+- Recompte atomique fail-closed du plafond `landlors.activeLeasesCount` en cas de compteur absent (legacy).
+- Impact : shards leases.md + functions/leases.md actualisés.
+
+### FEAT-044 + Corrections shards — QA pré-release 2026-07-10
+- Shards payments-receipts.md, schema/account.md, schema/properties.md, functions/properties.md, functions/leases.md actualisés post-PR #91 (freemium) + PR #94 (réactivation):
+  - **payments-receipts.md** : Champ `paidAt` corrigé (non `paidDate`). Receipts schema refactorisé : champs réels (paymentIds, rentCents, chargesCents, totalCents, documentType, isVoided, isStale, sentAt) ; pas de receiptNumber séquentiel, pas d'amountCents unique, pas de Storage PDF (généré client), pas de trigger auto-génération. Indexes/RLS/Callables/Triggers actualisés.
+  - **account.md** : Ajout champs `phone`, `address`, `fullName` sur landlords. Compteurs FEAT-044 documentés : `activePropertiesCount`, `activeTenantsCount`, `activeLeasesCount`. rgpdConsentVersion mise à jour : v2-2026-07 → v3-2026-07.
+  - **properties.md** : Create = if false (CF-exclusive). Champs property FEAT-017 (financing) : ~25 champs documentés (loan*, tax*, insurance*, DPE, surface, rooms, etc.). Callables `createProperty`/`createTenant` avec gating free-tier (2 biens, 3 locataires) documentés.
+  - **leases.md** : Compteurs FEAT-044 (activeLeasesCount sur landlords/properties/tenants). PR #94 (réactivation verrouillée) : bien/locataire doivent exister et non soft-deleted.
+  - **functions/leases.md** : updateLease détail réactivation (PR #94) + plafonds (free=2, paid=∞).
+  - **functions/properties.md** : createProperty/createTenant callables avec plafonds FEAT-044.
+  - Champs tenant enrichis documentés (phone, birthDate, profession, guarantor, monthlyIncome, etc.).
+
 ## Changements (2026-07-03 → 2026-07-08)
 
 ### FEAT-049 : SEO du PWA (quick-wins, Option A) — ✅ DONE (PR #73, 2026-07-08)

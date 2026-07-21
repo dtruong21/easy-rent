@@ -45,6 +45,7 @@ export {recomputeReceiptStale} from "./triggers/recompute_receipt_stale";
 
 // ---------- Callables ----------
 export {softDeleteEntity} from "./callable/soft_delete";
+export {createProperty, createTenant} from "./callable/property_tenant";
 export {
   createLease,
   updateLease,
@@ -67,6 +68,11 @@ export {
 } from "./callable/expenses";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
+export {createCheckoutSession} from "./callable/create_checkout_session";
+
+// ---------- HTTP (webhooks) ----------
+export {revenueCatWebhook} from "./http/revenuecat_webhook";
 
 // ---------- Scheduled ----------
 export {cleanupExpiredAnon} from "./scheduled/cleanup_expired_anon";
+export {reconcileEntitlements} from "./scheduled/reconcile_entitlements";

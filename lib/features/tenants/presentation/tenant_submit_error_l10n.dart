@@ -13,6 +13,7 @@ extension TenantSubmitErrorL10n on TenantSubmitError {
     final l10n = context.l10n;
     return switch (this) {
       TenantSubmitError.hasActiveLeases => l10n.tenantsErrorHasActiveLeases,
+      TenantSubmitError.limitReached => l10n.tenantsErrorLimitReached,
       TenantSubmitError.permissionDenied => l10n.tenantsErrorPermissionDenied,
       TenantSubmitError.serviceUnavailable =>
         l10n.tenantsErrorServiceUnavailable,

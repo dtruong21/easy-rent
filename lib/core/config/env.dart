@@ -11,6 +11,10 @@
 /// ```json
 /// { "APP_ENV": "prod" }
 /// ```
+library;
+
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 class Env {
   const Env._();
 
@@ -26,9 +30,13 @@ class Env {
   /// builds mobiles iOS/Android (FEAT-024) : les pages /login et
   /// /reset-password restent hébergées par l'app web. Sur le web, l'origin
   /// courant (prod ou channel staging) reste prioritaire.
+  ///
+  /// ⚠️ Ce domaine DOIT figurer dans les **domaines autorisés** de Firebase
+  /// Auth (Console → Authentication → Settings), sinon les liens email
+  /// (vérification, reset password) et les connexions Google/Apple échouent.
   static const String publicAppUrl = String.fromEnvironment(
     'APP_PUBLIC_URL',
-    defaultValue: 'https://easy-rent-54cd4.web.app',
+    defaultValue: 'https://baillan.com',
   );
 
   /// `true` si on tourne en environnement de prod.
@@ -36,4 +44,38 @@ class Env {
 
   /// `true` si on tourne en environnement de dev/staging.
   static bool get isDev => !isProd;
+
+  /// Flag opt-in brut du branchement émulateurs Firebase (dart-define).
+  /// NE PAS lire directement — passer par [useFirebaseEmulator], qui ajoute le
+  /// garde-fou release.
+  static const bool _useEmulatorFlag = bool.fromEnvironment(
+    'USE_FIREBASE_EMULATOR',
+    defaultValue: false,
+  );
+
+  /// `true` uniquement en build DEBUG **et** avec `USE_FIREBASE_EMULATOR=true`.
+  ///
+  /// Double garde-fou volontaire : le `kDebugMode` garantit qu'un build
+  /// release ou profile ne branchera JAMAIS les émulateurs, même si le
+  /// dart-define fuit dans la commande de build. Sans ça, un build de prod
+  /// avec le flag activé pointerait les vrais utilisateurs vers un backend
+  /// local inexistant (app cassée). C'est un toggle de dev pur.
+  static bool get useFirebaseEmulator => kDebugMode && _useEmulatorFlag;
+
+  /// Hôte des émulateurs Firebase. Défaut `127.0.0.1` (PAS `localhost`) :
+  /// sur le web, Chromium résout `localhost` en IPv6 `::1`, or les émulateurs
+  /// firebase-tools n'écoutent que sur l'IPv4 `127.0.0.1` — l'app tombait alors
+  /// silencieusement sur le backend PROD (login en `invalid-credential`).
+  /// `127.0.0.1` force l'IPv4 et marche partout (web/desktop/simulateur iOS).
+  /// L'émulateur **Android** doit utiliser `10.0.2.2` (alias de la machine hôte
+  /// vu depuis la VM) : `--dart-define=FIREBASE_EMULATOR_HOST=10.0.2.2`.
+  static const String firebaseEmulatorHost = String.fromEnvironment(
+    'FIREBASE_EMULATOR_HOST',
+    defaultValue: '127.0.0.1',
+  );
+
+  /// Ports par défaut des émulateurs — alignés sur `firebase.json` (défauts
+  /// firebase-tools) et sur `tool/seed/seed_tiers.mjs`.
+  static const int firestoreEmulatorPort = 8080;
+  static const int authEmulatorPort = 9099;
 }

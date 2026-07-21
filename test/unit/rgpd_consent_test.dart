@@ -25,11 +25,11 @@ void main() {
       );
     });
 
-    test('version courante = v2-2026-07 (CGU 1.0 + PdC 1.0)', () {
+    test('version courante = v3-2026-07 (PdC 1.3 — Crashlytics opt-in)', () {
       // Si la constante change, ce test force une révision consciente :
-      // un bump = de nouveaux documents acceptés au signup, à synchroniser
-      // avec handle_new_user.ts et finalize_anonymous_upgrade.ts.
-      expect(rgpdConsentVersion, 'v2-2026-07');
+      // un bump = nouveau texte / nouvelle finalité, à synchroniser avec
+      // finalize_anonymous_upgrade.ts (CURRENT_RGPD_VERSION).
+      expect(rgpdConsentVersion, 'v3-2026-07');
     });
   });
 

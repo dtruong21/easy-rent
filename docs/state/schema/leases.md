@@ -2,9 +2,9 @@
 
 > Source d'état — leases. Maintenu par `state-keeper`.
 
-Collection : `leases`. CF exclusive (FEAT-036, FEAT-042, FEAT-006). Patterns transverses → [README](README.md).
+Collection : `leases`. CF exclusive (FEAT-036, FEAT-042, FEAT-044, FEAT-006). Patterns transverses → [README](README.md).
 
-**CROSS-ENTITY** : propertyId + tenantId doivent appartenir au même landlord (validation ownership CF). Charges = `chargesAmountCents` (récupérable, FEAT-036) + `nonRecoverableChargesCents` (informatif bailleur, FEAT-036). `chargeMode` (FEAT-042) détermine éligibilité régularisation (provisions uniquement).
+**CROSS-ENTITY** : propertyId + tenantId doivent appartenir au même landlord (validation ownership CF). Charges = `chargesAmountCents` (récupérable, FEAT-036) + `nonRecoverableChargesCents` (informatif bailleur, FEAT-036). `chargeMode` (FEAT-042) détermine éligibilité régularisation (provisions uniquement). **FEAT-044 : compteurs dénormalisés** sur `landlords.activeLeasesCount` (baux actifs), `properties.activeLeaseCount`, `tenants.activeLeaseCount` — maintenus transactionnellement par createLease/updateLease/softDeleteEntity.
 
 ## `leases/{id}`
 
@@ -48,6 +48,11 @@ Collection : `leases`. CF exclusive (FEAT-036, FEAT-042, FEAT-006). Patterns tra
 - **Forfait** : `nonRecoverableChargesCents` forcé à 0 serveur (ventilation interdite) — vaut aussi pour baux legacy mobilité
 
 **Mutable fields** (updateLease) : rentAmountCents, chargesAmountCents, nonRecoverableChargesCents, endDate, status, leaseType, chargeMode, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone.
+
+**Réactivation (PR #94, 2026-07-10)** : Transition `terminated|archived → active` verrouillée via `updateLease` :
+- Le bien (propertyId) et locataire (tenantId) doivent exister et ne pas être soft-deleted (failed-precondition sinon) — sinon on créerait un bail pointant vers une entité supprimée.
+- Recompte fail-closed du plafond `landlords.activeLeasesCount` si compteur absent (legacy) — même pattern que `createLease`.
+- Vérification atomique du plafond free-tier dans la même transaction que la mutation (bail_limit_reached si saturé).
 
 **RLS** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)

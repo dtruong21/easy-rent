@@ -8,34 +8,35 @@ Paiements (FEAT-006/029) + quittances (FEAT-007). Fichiers : `functions/src/call
 
 ### `createPayment` (FEAT-006)
 Client invoke.
-- **Params** : `leaseId, amountCents, paidDate, paymentMethod, notes` (FEAT-029 — motif libre, max 500 chars).
-- **Validations** : auth + FK + ownership (via lease) ; `amountCents > 0` ; `notes.length <= 500` (FEAT-029).
-- **Mutations** (transact) : CREATE `payments/{id}` snapshot denorm ; trigger `recomputeReceiptStale` (invalidate liens receipts).
-- **Retour** : `{paymentId}`. **Trigger post-write** : auto-invoke `generateReceipt` (async, FEAT-007).
+- **Params** : `leaseId, rentAmountCents, chargesAmountCents, paidAt, paymentMethod, periodStart, periodEnd, notes` (FEAT-029 — motif libre, max 500 chars).
+- **Validations** : auth + FK + ownership (via lease) ; `rentAmountCents > 0` or `chargesAmountCents > 0` ; `notes.length <= 500` (FEAT-029) ; periodStart < periodEnd.
+- **Mutations** (transact) : CREATE `payments/{id}` snapshot denorm (propertyId, tenantLastName, etc) ; trigger `recomputeReceiptStale` (flag receipts liées staleness si montants changent).
+- **Retour** : `{paymentId}`. **Post-write async** : `generateReceipt` AUTO-INVOKED sur ce paiement (crée/met à jour quittance associée).
 
 ### `updatePayment` (FEAT-006)
-Rare — idempotent no-op si amount/period unchanged. Trigger `recomputeReceiptStale` si `amountCents` change.
+Client invoke.
+- **Mutable** : `paidAt, paymentMethod, notes, reference` (immutable : leaseId, rentAmountCents, chargesAmountCents, periodStart, periodEnd, createdAt).
+- **Logique** : fetch + ownership + isActive check ; patch cleanPatch (paidAt timestamp-validated) ; update transaction + trigger `recomputeReceiptStale` si montants changeaient (défense — code rejette les mutations quantitatives).
+- **Retour** : `{updated:true}`.
 
 ## Callables — Receipts
 
 ### `generateReceipt` (FEAT-007)
-Client invoke **OU** triggered post-payment.
-- **Params** : `leaseId, paymentId` (optionnel — direct call ou post-payment trigger).
-- **Logique** : fetch lease + payment + landlord (auth) ; PDF via `pdf`+`printing` (quittance loi 6/7/1989) ; upload → Storage `/receipts/{leaseId}/{receiptId}.pdf` ; CREATE `receipts/{id}` : `amountCents, periodStart/End, receiptNumber, receiptDate, status='generated', fileUrl`=signed URL (5 min, auto-refresh @access), `createdAt/updatedAt=now(), deletedAt=null`.
-- **Retour** : `{receiptId, pdfUrl}`. Chemin trigger : payment creation → auto-invoke async. Chemin client : `LeaseReceiptsPage` bouton « Générer ».
-- **Note** : quittance **immuable** (art. L145-40, loi 6/7/1989 — rétention 5 ans).
+Client invoke.
+- **Params** : `leaseId` (immuable) + **soit** `paymentIds: string[]` **soit** `(periodStart, periodEnd)` pour requêter les paiements sur la période.
+- **Logique** : fetch lease + landlord (auth + fields fullName/address requis loi 1989) ; load paiements (par IDs ou par période) ; calcul totaux (rentCents, chargesCents, totalCents) + période min/max + lastPaidAt ; dérive documentType (quittance si total ≥ loyer+charges, sinon reçu) ; CREATE `receipts/{id}` snapshot complet (propertyName, landlordFullName, tenantFullName, etc) + flags (isVoided=false, isStale=false, sentAt=null).
+- **Retour** : `{receiptId, documentType, totalCents}`. **Pas de PDF côté serveur** — client (Flutter) génère via package `pdf` Dart à partir des champs immuables stockés ici. **Pas de Storage upload**.
+- **Note** : quittance **immuable** post-création (art. L145-40 loi 6/7/1989 — rétention légale 5 ans).
 
 ### `voidReceipt` (FEAT-007)
-Fetch receipt + payment lié ; soft-delete payment (`deletedAt=now()`) ; receipt `status |= 'voided'` ; auto-`generateReceipt` remplacement (nouveau doc, relinking `payment.id` optionnel). **Retour** : `{newReceiptId}`.
+Fetch receipt (auth + owner check) ; transaction : set `isVoided=true`, `voidedAt=now()`, `voidedReason=<motif>`. Idempotent (noop si déjà voided). **Retour** : `{voided:true}`.
 
 ### `markReceiptAsSent` (FEAT-007)
-Fetch receipt ; `status |= 'sent'` ; audit trail (**pas de mail** — Web Share API côté client). **Retour** : `{success:true}`.
+Fetch receipt (auth + owner check) ; transaction : set `sentAt=now()`, `sentToEmail=<optionnel>`. Audit trail (enregistre tentative d'envoi Web Share API côté client). **Pas de mail serveur** — Web Share API natif. **Retour** : `{sent:true}`.
 
 ## Triggers
 
 | Trigger | Type / collection | Logique |
 |---|---|---|
 | `setUpdatedAtPayments` | `onDocumentWritten(payments)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
-| `recomputeReceiptStale` | `onDocumentWritten(payments)` | Create/update/delete payment → fetch ALL receipts liées au lease ; si `payment.amountCents` change → invalidate, `isStale=true` ; client `generateReceipt` rejoue si `isStale==true` ; Admin SDK batch. Quittances immuables (pas de soft-delete) — flag `isStale` seulement. Fichier `recompute_receipt_stale.ts` |
-
-> ⚠️ Le résumé source mentionne `setUpdatedAtReceipts` mais **aucun variant receipts n'existe** dans les exports `setUpdatedAt` (receipts immuables → pas de `updatedAt` recompute).
+| `recomputeReceiptStale` | `onDocumentWritten(payments)` | Create/update/delete payment → query ALL receipts où `leaseId==lease.id && paymentIds.contains(payment.id)` ; si montant (`rentAmountCents`, `chargesAmountCents`) change → flag `isStale=true` sur chaque receipt. Client rejoue `generateReceipt` si reçu stale. Admin SDK batch update. Quittances immuables (jamais update post-create, jamais soft-delete) — flag `isStale` seulement. Fichier `recompute_receipt_stale.ts`. |

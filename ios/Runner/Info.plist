@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Rapport d'incident (Crashlytics) : collecte DÉSACTIVÉE par défaut au
+	     niveau natif (opt-in RGPD). Dart appelle setCrashlyticsCollectionEnabled(true)
+	     après consentement de l'utilisateur. -->
+	<key>FirebaseCrashlyticsCollectionEnabled</key>
+	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -24,6 +29,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Daki Studio. Tous droits réservés.</string>
 	<!-- Export compliance : uniquement du chiffrement standard (HTTPS/TLS
 	     des SDKs Apple/Firebase) → exempt. Évite la question « Export
 	     Compliance » à chaque upload App Store Connect (FEAT-024). -->

@@ -86,7 +86,18 @@ service cloud.firestore {
         && request.resource.data.rgpdConsentVersion.size() > 0
         && request.resource.data.rgpdConsentAt is timestamp
         && request.resource.data.isAnonymous == false
-        && request.resource.data.deletedAt == null;
+        // FEAT-044 (CRITIQUE) : le doc landlord est provisionné côté client —
+        // figer le tier à 'free' à la création empêche un client modifié de
+        // s'auto-déclarer 'paid' et de lever le plafond de biens. Tout passage
+        // à 'paid' doit venir d'un chemin serveur de confiance (webhook
+        // paiement / CF Admin SDK), jamais d'un write client.
+        && request.resource.data.subscriptionTier == 'free'
+        && request.resource.data.deletedAt == null
+        // FEAT-044 : compteur de biens honnête à la création (0 ou absent) —
+        // empêche d'initialiser un compteur négatif pour contourner le gate.
+        && request.resource.data.get('activePropertiesCount', 0) == 0
+        && request.resource.data.get('activeTenantsCount', 0) == 0
+        && request.resource.data.get('activeLeasesCount', 0) == 0;
 
       // CREATE (anonyme, BAILLAN-M1) : defense-in-depth — en pratique le
       // doc est provisionné par la Cloud Function `handleNewUser`
@@ -104,7 +115,11 @@ service cloud.firestore {
         && request.resource.data.subscriptionTier == 'anonymous'
         && request.resource.data.anonExpiresAt is timestamp
         && request.resource.data.rgpdConsentAt == null
-        && request.resource.data.deletedAt == null;
+        && request.resource.data.deletedAt == null
+        // FEAT-044 : idem — compteur de biens honnête (0 ou absent) à la création.
+        && request.resource.data.get('activePropertiesCount', 0) == 0
+        && request.resource.data.get('activeTenantsCount', 0) == 0
+        && request.resource.data.get('activeLeasesCount', 0) == 0;
 
       // UPDATE (compte complet) : profil propre. RGPD consent versionné,
       // identifiants et `subscriptionTier`/`isAnonymous` immuables côté
@@ -123,7 +138,12 @@ service cloud.firestore {
         && request.resource.data.rgpdConsentAt == resource.data.rgpdConsentAt
         && request.resource.data.rgpdConsentVersion == resource.data.rgpdConsentVersion
         && request.resource.data.subscriptionTier == resource.data.subscriptionTier
-        && request.resource.data.isAnonymous == resource.data.isAnonymous;
+        && request.resource.data.isAnonymous == resource.data.isAnonymous
+        // FEAT-044 : compteur de biens maintenu par CF uniquement — le client
+        // ne peut jamais le muter (sinon reset → création illimitée).
+        && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0)
+        && request.resource.data.get('activeTenantsCount', 0) == resource.data.get('activeTenantsCount', 0)
+        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0);
 
       // UPDATE (anonyme, BAILLAN-M1) : limité aux champs que le renewer
       // d'expiration et l'app cliente ont besoin de toucher — jamais
@@ -148,7 +168,11 @@ service cloud.firestore {
         // Même raison que la rule UPDATE compte complet : pas de
         // preservesImmutables() sur landlords (pas de champ landlordId).
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.deletedAt == resource.data.deletedAt;
+        && request.resource.data.deletedAt == resource.data.deletedAt
+        // FEAT-044 : compteur de biens jamais muté côté client (CF only).
+        && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0)
+        && request.resource.data.get('activeTenantsCount', 0) == resource.data.get('activeTenantsCount', 0)
+        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0);
 
       // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
       // anonymes expirés passe par la Cloud Function planifiée
@@ -170,18 +194,12 @@ service cloud.firestore {
       // reste un choix de requête du propriétaire, pas un enjeu d'accès.
       allow list: if isOwner(resource.data.landlordId);
 
-      // BAILLAN-M1 : create/update réservés aux comptes complets — un
-      // anonyme n'a accès qu'au simulateur, jamais au registre de biens.
-      allow create: if isFullyAuthed()
-        && request.resource.data.landlordId == request.auth.uid
-        && request.resource.data.deletedAt == null
-        && request.resource.data.id == id
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.address is string
-        && request.resource.data.type in ['appartement', 'maison', 'studio', 'autre']
-        // activeLeaseCount maintenu par CF — doit valoir 0 à la création
-        && request.resource.data.activeLeaseCount == 0;
+      // FEAT-044 : création CF-exclusive via la Callable `createProperty`
+      // (Admin SDK, bypasse les rules) — elle impose le plafond free-tier et
+      // maintient `landlords.activePropertiesCount`. Le client ne crée plus de
+      // bien en direct : sinon il contournerait le gate de plan (les rules ne
+      // peuvent ni agréger ni réserver atomiquement).
+      allow create: if false;
 
       allow update: if isFullyAuthed()
         && isOwner(resource.data.landlordId)
@@ -201,18 +219,10 @@ service cloud.firestore {
       // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
       allow list: if isOwner(resource.data.landlordId);
 
-      // BAILLAN-M1 : create/update réservés aux comptes complets.
-      allow create: if isFullyAuthed()
-        && request.resource.data.landlordId == request.auth.uid
-        && request.resource.data.deletedAt == null
-        && request.resource.data.id == id
-        && request.resource.data.firstName is string
-        && request.resource.data.firstName.size() > 0
-        && request.resource.data.lastName is string
-        && request.resource.data.lastName.size() > 0
-        && request.resource.data.email is string
-        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
-        && request.resource.data.activeLeaseCount == 0;
+      // FEAT-044 : création CF-exclusive via la Callable `createTenant`
+      // (Admin SDK) — elle impose le plafond free-tier et maintient
+      // `landlords.activeTenantsCount`. Cf. properties/create.
+      allow create: if false;
 
       allow update: if isFullyAuthed()
         && isOwner(resource.data.landlordId)

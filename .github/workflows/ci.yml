@@ -8,7 +8,12 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded runs only for pull requests (a new commit to a PR makes
+  # the previous run obsolete). For push to develop/main, let EVERY commit's
+  # CI run to completion: with cancel-in-progress on push, rapid back-to-back
+  # merges cancel each other and the branch HEAD never lands a completed
+  # (green) CI run. On push, runs serialize on the shared group instead.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze-test:
@@ -40,3 +45,34 @@ jobs:
 
       - name: Detect secrets in repo
         run: bash scripts/check-secrets.sh --all
+
+  functions:
+    name: Functions (lint · build · test)
+    runs-on: ubuntu-latest
+    # Job Node séparé (les Cloud Functions sont un projet npm indépendant sous
+    # functions/). Jusqu'ici la suite vitest (createLease/createPayment, webhook
+    # RevenueCat, etc.) n'était validée qu'en local — ce job la met sous CI.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+        working-directory: functions
+
+      - name: Lint
+        run: npm run lint
+        working-directory: functions
+
+      - name: Typecheck (build déployable)
+        run: npm run build
+        working-directory: functions
+
+      - name: Tests
+        run: npm test
+        working-directory: functions

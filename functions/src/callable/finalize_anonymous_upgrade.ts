@@ -31,10 +31,10 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {asBag, requireAuthUid} from "../utils/callable_helpers";
 
 /** Doit rester synchronisé avec `lib/features/auth/data/auth_repository.dart`
- * (`rgpdConsentVersion`) et `functions/src/auth/handle_new_user.ts`
- * (`CURRENT_RGPD_VERSION`).
- * Historique : v1-2026-06 = PdC seule ; v2-2026-07 = CGU 1.0 + PdC 1.0. */
-export const CURRENT_RGPD_VERSION = "v2-2026-07";
+ * (`rgpdConsentVersion`) et le test `test/unit/rgpd_consent_test.dart`.
+ * Historique : v1-2026-06 = PdC seule ; v2-2026-07 = CGU 1.0 + PdC 1.0 ;
+ * v3-2026-07 = PdC 1.3 (rapport d'incident Crashlytics mobile, opt-in). */
+export const CURRENT_RGPD_VERSION = "v3-2026-07";
 
 /**
  * Résout la version de consentement RGPD à persister.
@@ -118,6 +118,12 @@ export const finalizeAnonymousUpgrade = onCall(
         anonExpiresAt: null,
         rgpdConsentAt: now,
         rgpdConsentVersion,
+        // FEAT-044 : garantit des compteurs de plan à 0 sur le compte
+        // fraîchement upgradé (un anon ne peut avoir créé ni bien ni locataire
+        // ni bail) — couvre aussi les docs anon legacy sans ces champs.
+        activePropertiesCount: 0,
+        activeTenantsCount: 0,
+        activeLeasesCount: 0,
         updatedAt: now,
       });
 

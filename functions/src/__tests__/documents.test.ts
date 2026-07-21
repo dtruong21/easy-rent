@@ -39,11 +39,41 @@ const baseInput = {
   sizeBytes: 1024,
 };
 
+/**
+ * Landlord propriétaire des documents. Semé en **`paid`** (illimité) par défaut
+ * → le gating de quota (FEAT-044) n'interfère PAS avec les tests de validation
+ * ci-dessous. Même convention que `lease_payment.test.ts`. Les tests de quota
+ * re-sèment explicitement le tier voulu.
+ */
+function seedLandlord(
+  tier = "paid",
+  landlordId = LANDLORD_A,
+) {
+  fakeDb.seed(`landlords/${landlordId}`, {
+    id: landlordId,
+    landlordId,
+    subscriptionTier: tier,
+    deletedAt: null,
+  });
+}
+
+/** N documents ACTIFS appartenant à [landlordId] (pour saturer le quota). */
+function seedDocuments(count: number, landlordId = LANDLORD_A) {
+  for (let i = 0; i < count; i++) {
+    fakeDb.seed(`documents/doc-seed-${i}`, {
+      id: `doc-seed-${i}`,
+      landlordId,
+      deletedAt: null,
+    });
+  }
+}
+
 beforeEach(() => {
   fakeDb = new FakeFirestore();
   fakeStorage = new FakeStorage();
   fakeAdminFirestoreHolder.db = fakeDb;
   fakeAdminFirestoreHolder.storage = fakeStorage;
+  seedLandlord();
 });
 
 function seedLease(
@@ -307,5 +337,90 @@ describe("createDocument — v2 leaseId/propertyId (FEAT-041b)", () => {
         }),
       ),
     ).rejects.toMatchObject({code: "failed-precondition"});
+  });
+});
+
+// ==========================================================================
+// Gating free/Pro du quota documentaire (matrice free/Pro 2026-07-20)
+// ==========================================================================
+describe("createDocument — gating quota documents (FEAT-044)", () => {
+  /** Appel valide minimal (bail possédé par LANDLORD_A). */
+  function callCreate() {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+    return createDocument.run(
+      makeRequest(LANDLORD_A, {
+        ...baseInput,
+        leaseId: "lease-1",
+        category: "bail_signe",
+      }),
+    );
+  }
+
+  it("free SOUS le plafond (9/10) → crée le document", async () => {
+    seedLandlord("free");
+    seedDocuments(9);
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+  });
+
+  it("free AU plafond (10/10) → refus resource-exhausted, rien créé", async () => {
+    seedLandlord("free");
+    seedDocuments(10);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
+  });
+
+  it("paid → illimité (crée même bien au-delà de 10)", async () => {
+    seedLandlord("paid");
+    seedDocuments(50);
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+  });
+
+  it("anonymous → refus même à 0 document (registre réservé aux comptes)", async () => {
+    seedLandlord("anonymous");
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+    });
+  });
+
+  it("les documents SOFT-DELETED ne comptent pas dans le quota", async () => {
+    seedLandlord("free");
+    seedDocuments(9);
+    // 3 docs supprimés : ne doivent pas saturer le plafond.
+    for (let i = 0; i < 3; i++) {
+      fakeDb.seed(`documents/deleted-${i}`, {
+        id: `deleted-${i}`,
+        landlordId: LANDLORD_A,
+        deletedAt: new Date(),
+      });
+    }
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+  });
+
+  it("les documents d'un AUTRE landlord ne comptent pas", async () => {
+    seedLandlord("free");
+    seedDocuments(20, LANDLORD_B); // saturerait si compté à tort
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+  });
+
+  it("landlord inexistant → not-found (fail-closed)", async () => {
+    // 'ghost' n'a aucun doc landlords/ → le gate refuse avant tout le reste.
+    // storagePath aligné sur son uid pour passer la validation de préfixe.
+    seedLease("lease-1", "ghost", "prop-1");
+    await expect(
+      createDocument.run(
+        makeRequest("ghost", {
+          ...baseInput,
+          storagePath: "documents/ghost/doc-1.pdf",
+          leaseId: "lease-1",
+          category: "bail_signe",
+        }),
+      ),
+    ).rejects.toMatchObject({code: "not-found"});
   });
 });

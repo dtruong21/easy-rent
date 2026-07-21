@@ -18,9 +18,13 @@ canonical / OG / sitemap.
 > + bloc statique + `<html lang="fr">`), `web/robots.txt`, `web/robots.staging.txt`,
 > `web/sitemap.xml`, `firebase.json` (headers + ignore de `robots.staging.txt`),
 > `.github/workflows/deploy.yml` (étape noindex staging).
-> **Au lancement du domaine custom** : remplacer `easy-rent-54cd4.web.app` dans
-> `web/index.html`, `web/robots.txt` (ligne Sitemap) et chaque `<loc>` de
-> `web/sitemap.xml` (voir §6 Checklist). Options B/C restent à faire (P2).
+> ✅ **Domaine custom branché (2026-07-20)** : le canonique est **`baillan.com`**
+> (apex ; `www.baillan.com` redirige). Substitution faite dans `web/index.html`,
+> `web/robots.txt` (ligne Sitemap), chaque `<loc>` de `web/sitemap.xml`,
+> `Env.publicAppUrl` et `WEB_APP_BASE_URL` (Stripe).
+> ⚠️ Ne JAMAIS remplacer `easy-rent-54cd4` dans `lib/firebase_options.dart` /
+> `firebase.json` : ce sont les identifiants du **projet Firebase** (projectId,
+> authDomain, storageBucket), pas le domaine public. Options B/C restent à faire (P2).
 
 ---
 
@@ -400,9 +404,34 @@ déjà les mots-clés tête sur la home.
 
 ## 6. Checklist de lancement
 
-- [ ] Domaine custom attribué → remplacer **toutes** les occurrences de `VOTRE-DOMAINE`
-      (head `index.html`, `robots.txt`, `sitemap.xml`) + aligner `Env.publicAppUrl` /
-      `APP_PUBLIC_URL`.
+- [x] Domaine custom attribué (**`baillan.com`**, 2026-07-20) → substitution faite
+      (head `index.html`, `robots.txt`, `sitemap.xml`) + `Env.publicAppUrl` /
+      `APP_PUBLIC_URL` + `WEB_APP_BASE_URL` alignés.
+- [ ] **Côté consoles (hors dépôt)** : domaine ajouté dans Firebase Hosting (apex +
+      `www` en redirection), DNS (TXT de vérification puis A), SSL provisionné, et
+      **`baillan.com` ajouté aux domaines autorisés de Firebase Auth** (sinon liens
+      email + Google/Apple cassés).
+
+> ### ⚠️ DNS chez Cloudflare — le piège du nuage orange
+>
+> Le DNS de `baillan.com` est géré par **Cloudflare** (NS `*.ns.cloudflare.com`).
+> Cloudflare met les nouveaux enregistrements A en **Proxied (nuage orange 🟠)**
+> par défaut : l'A résout alors vers des **IP Cloudflare** (`188.114.x.x`) au lieu
+> des IP Firebase. **Firebase ne peut alors ni vérifier le domaine ni émettre le
+> certificat SSL** — la console reste bloquée en « en attente », sans erreur
+> explicite. Constaté le 2026-07-20.
+>
+> 👉 **Passer chaque enregistrement A en gris ⚪ « DNS only ».** Recommandé de
+> l'y laisser en permanence : Firebase Hosting a déjà CDN + SSL, empiler le proxy
+> Cloudflare n'apporte rien. Si un jour le proxy est réactivé, il FAUT passer
+> SSL/TLS en **Full (strict)** — le mode « Flexible » crée des boucles de
+> redirection infinies.
+>
+> **Diagnostic rapide** : `dig +short A baillan.com` doit renvoyer une IP
+> **Firebase** (ex. `199.36.158.100`), jamais `188.114.x.x` / `104.x.x.x`
+> (Cloudflare). Interroger le NS autoritaire pour contourner le cache :
+> `dig @melissa.ns.cloudflare.com +short A baillan.com`.
+- [ ] Mettre à jour l'URL `/delete-account` déclarée sur la fiche Google Play (FEAT-045).
 - [ ] `<head>` enrichi appliqué (title, description, canonical, OG, Twitter, JSON-LD),
       `<html lang="fr">`, sans toucher aux scripts de boot FEAT-019.
 - [ ] Bloc statique `#seo-static` + `<noscript>` en tête de `<body>`.

@@ -18,6 +18,11 @@ enum TenantSubmitError {
   /// Le locataire a des baux actifs — l'archivage a été refusé côté backend.
   hasActiveLeases,
 
+  /// Plafond de locataires de l'offre gratuite atteint (FEAT-044) — la
+  /// Callable `createTenant` a refusé (`resource-exhausted` /
+  /// `tenant_limit_reached`). Invite à passer à l'offre Pro.
+  limitReached,
+
   /// Action refusée (permission-denied / unauthenticated).
   permissionDenied,
 
