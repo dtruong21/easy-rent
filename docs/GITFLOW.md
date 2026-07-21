@@ -10,7 +10,7 @@ main          ──●──────●──────●──→   (PR
                          ╲          ╲
 develop       ──●─●─●─●──●─●─●─●──●─●──→  (DEV — Firebase staging, schéma dev)
                  ╲ ╲ ╱ ╱
-                  feature/*    (branches courtes — depuis develop)
+                  feat/*     (branches courtes — depuis develop)
 ```
 
 ### Branches long-lived
@@ -24,10 +24,16 @@ develop       ──●─●─●─●──●─●─●─●──●─
 
 | Préfixe | Source | Destination | Quand |
 |---|---|---|---|
-| `feature/<slug>` | `develop` | `develop` (PR) | Nouvelle fonctionnalité |
+| `feat/<slug>` | `develop` | `develop` (PR) | Nouvelle fonctionnalité |
 | `fix/<slug>` | `develop` | `develop` (PR) | Bug non-urgent |
 | `hotfix/<slug>` | `main` | `main` + `develop` (cherry-pick ou re-PR) | Bug critique en prod |
 | `chore/<slug>` | `develop` | `develop` (PR) | Maintenance, refacto |
+| `docs/<slug>` | `develop` | `develop` (PR) | Documentation seule |
+
+> Préfixes alignés sur les types de commits conventionnels (`feat:`, `fix:`,
+> `chore:`, `docs:`). Les branches antérieures à juillet 2026 utilisaient
+> `feature/…` — les documents d'historique (plans, ADR) gardent ces noms tels
+> quels, ce sont des enregistrements de ce qui s'est passé.
 
 ## 🔒 Branch protection (à configurer sur GitHub)
 
@@ -52,10 +58,10 @@ Pour les deux long-lived branches (`main` et `develop`) — Settings → Branche
 ```bash
 git checkout develop
 git pull
-git checkout -b feature/quittance-pdf-mensuelle
+git checkout -b feat/quittance-pdf-mensuelle
 # ... code ...
-git push -u origin feature/quittance-pdf-mensuelle
-gh pr create --base develop --head feature/quittance-pdf-mensuelle
+git push -u origin feat/quittance-pdf-mensuelle
+gh pr create --base develop --head feat/quittance-pdf-mensuelle
 ```
 
 Quand la PR est mergée → la feature arrive sur `develop` → CI build et déploie automatiquement sur **staging** (Firebase staging channel, schéma `dev`).
@@ -117,7 +123,7 @@ Exemples :
 
 | Agent / Commande | Source branch | Target branch |
 |---|---|---|
-| `/build-feature` | `develop` | crée `feature/*`, PR vers `develop` |
+| `/build-feature` | `develop` | crée `feat/*`, PR vers `develop` |
 | `/fix-bug` (non-urgent) | `develop` | crée `fix/*`, PR vers `develop` |
 | `/fix-bug` (hotfix label) | `main` | crée `hotfix/*`, PR vers `main` |
 | `ticket-agent.yml` | `develop` | crée branches, PR vers `develop` |

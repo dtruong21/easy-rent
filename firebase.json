@@ -1,96 +1,192 @@
 {
-  "hosting": {
-    "public": "build/web",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "**/robots.staging.txt"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "//": "Entry points: jamais cachés — le browser doit toujours re-vérifier pour récupérer le dernier index.html / bootstrap / SW.",
-        "source": "/index.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/flutter_bootstrap.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/flutter_service_worker.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/manifest.json",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "//": "SEO (FEAT-049) : robots.txt / sitemap.xml — cache court pour propager vite une bascule de domaine. Aucun glob suivant ne matche .txt/.xml, donc pas de collision de clé.",
-        "source": "/robots.txt",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          }
-        ]
-      },
-      {
-        "source": "/sitemap.xml",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          }
-        ]
-      },
-      {
-        "//": "Flutter Web ne fingerprint AUCUN fichier : noms STABLES, contenus VARIABLES (main.dart.js à chaque build, canvaskit à chaque upgrade SDK, subsets d'icônes au gré du tree-shaking, manifests à chaque build). JAMAIS immutable ici — un contenu variable derrière un nom stable marqué immutable rend les deploys invisibles jusqu'à un hard refresh. Vécu deux fois : subsets d'icônes (icône Simulateur FEAT-018), puis flutter_bootstrap.js/main.dart.js servis immutable car cette règle, placée après, écrasait leur no-cache — Firebase applique la DERNIÈRE config matchante pour une clé donnée (2026-07-03). no-cache = revalidation ETag → 304 léger si inchangé, deploy servi immédiatement sinon.",
-        "source": "**/*.@(js|wasm|mjs|json|bin|woff|woff2|ttf|otf)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(png|jpg|jpeg|gif|svg|ico|webp)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=2592000"
-          }
-        ]
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "target": "prod",
+      "public": "build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "**/robots.staging.txt"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "//": "Entry points: jamais cachés — le browser doit toujours re-vérifier pour récupérer le dernier index.html / bootstrap / SW.",
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/flutter_bootstrap.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/flutter_service_worker.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "//": "SEO (FEAT-049) : robots.txt / sitemap.xml — cache court pour propager vite une bascule de domaine. Aucun glob suivant ne matche .txt/.xml, donc pas de collision de clé.",
+          "source": "/robots.txt",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600"
+            }
+          ]
+        },
+        {
+          "source": "/sitemap.xml",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600"
+            }
+          ]
+        },
+        {
+          "//": "Flutter Web ne fingerprint AUCUN fichier : noms STABLES, contenus VARIABLES (main.dart.js à chaque build, canvaskit à chaque upgrade SDK, subsets d'icônes au gré du tree-shaking, manifests à chaque build). JAMAIS immutable ici — un contenu variable derrière un nom stable marqué immutable rend les deploys invisibles jusqu'à un hard refresh. Vécu deux fois : subsets d'icônes (icône Simulateur FEAT-018), puis flutter_bootstrap.js/main.dart.js servis immutable car cette règle, placée après, écrasait leur no-cache — Firebase applique la DERNIÈRE config matchante pour une clé donnée (2026-07-03). no-cache = revalidation ETag → 304 léger si inchangé, deploy servi immédiatement sinon.",
+          "source": "**/*.@(js|wasm|mjs|json|bin|woff|woff2|ttf|otf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(png|jpg|jpeg|gif|svg|ico|webp)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "stage",
+      "public": "build/web",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "**/robots.staging.txt"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "//": "Entry points: jamais cachés — le browser doit toujours re-vérifier pour récupérer le dernier index.html / bootstrap / SW.",
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/flutter_bootstrap.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/flutter_service_worker.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "//": "SEO (FEAT-049) : robots.txt / sitemap.xml — cache court pour propager vite une bascule de domaine. Aucun glob suivant ne matche .txt/.xml, donc pas de collision de clé.",
+          "source": "/robots.txt",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600"
+            }
+          ]
+        },
+        {
+          "source": "/sitemap.xml",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=3600"
+            }
+          ]
+        },
+        {
+          "//": "Flutter Web ne fingerprint AUCUN fichier : noms STABLES, contenus VARIABLES (main.dart.js à chaque build, canvaskit à chaque upgrade SDK, subsets d'icônes au gré du tree-shaking, manifests à chaque build). JAMAIS immutable ici — un contenu variable derrière un nom stable marqué immutable rend les deploys invisibles jusqu'à un hard refresh. Vécu deux fois : subsets d'icônes (icône Simulateur FEAT-018), puis flutter_bootstrap.js/main.dart.js servis immutable car cette règle, placée après, écrasait leur no-cache — Firebase applique la DERNIÈRE config matchante pour une clé donnée (2026-07-03). no-cache = revalidation ETag → 304 léger si inchangé, deploy servi immédiatement sinon.",
+          "source": "**/*.@(js|wasm|mjs|json|bin|woff|woff2|ttf|otf)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(png|jpg|jpeg|gif|svg|ico|webp)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=2592000"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "firestore": {
     "database": "(default)",
     "location": "eur3",
