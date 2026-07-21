@@ -2,7 +2,7 @@
 
 > Source d'état — routes (index). Maintenu par state-keeper.
 
-**Source** : `lib/core/router/app_router.dart`. Sync 2026-07-08. GoRouter 14.6.0, `StatefulShellRoute.indexedStack`. ~50 routes nommées, ~45 GoRouter routes (nested). Redirect `redirect(context, state)` lit `state.matchedLocation`.
+**Source** : `lib/core/router/app_router.dart`. Sync 2026-07-21. GoRouter 14.6.0, `StatefulShellRoute.indexedStack`. **36 `GoRoute` déclarées** (nested), **0 route nommée** — la navigation se fait par chemin (`context.go/push('/...')`), il n'y a **aucun `name:`** dans le router (l'état annonçait « ~50 routes nommées », ce qui envoyait chercher des `goNamed` inexistants). Redirect `redirect(context, state)` lit `state.matchedLocation`.
 
 ## Modèle 3-états (sessionStateProvider, Riverpod StreamProvider)
 
@@ -12,8 +12,8 @@
 | anonymous (essai 14j BAILLAN-M1) | `/simulator[/:id]` + publicRoutes ; `/`→`/simulator` | `/` (RED-002, route métier→landing) |
 | fullyAuthenticated (email/pwd/Google/Apple) | shell + toutes routes ; `/`→`/dashboard` ; `/login`\|`/signup`→`/dashboard` | — (RED-003) |
 
-- `publicRoutes` = {`/login`, `/signup`, `/forgot-password`, `/reset-password`, `/privacy`, `/terms`}.
-- `/delete-account` + `/faq` = publics anonyme inclus (hors set publicRoutes mais accessibles).
+- `publicRoutes` (valeur exacte du code) = {`/login`, `/signup`, `/forgot-password`, `/reset-password`, `/privacy`, `/terms`, `/legal`, `/delete-account`, `/faq`} — **9 entrées**.
+- ⚠️ Corrigé 2026-07-21 : `/legal` manquait de la liste, et `/delete-account`/`/faq` étaient décrits comme « hors set publicRoutes » alors qu'ils **sont dans le set** (donc accessibles à tous les états, anonyme inclus).
 - `isAnonAccessible` = `location == '/simulator'` OU `location.startsWith('/simulator/')`.
 - Refresh : `ref.listen(sessionStateProvider)` → `_RouterRefreshNotifier.refresh()` re-évalue redirect immédiatement post-auth (fix race commit 07f20a3, FEAT-030).
 
@@ -48,7 +48,8 @@
 
 ## Deep linking & navigation externe
 
-- Web URLs = chemins directs `https://easyrent.app/<path>` (landing, /login, /dashboard, /properties/:id, /leases/:id?action=regularize, /simulator…).
+- Web URLs = chemins directs `https://baillan.com/<path>` (landing, /login, /dashboard, /properties/:id, /leases/:id?action=regularize, /simulator…). **Domaine canonique depuis PR #121** (`Env.publicAppUrl`, `web/index.html`, sitemap, robots) — l'ancienne mention `easyrent.app` était fausse. Staging = `stage.baillan.com` (site Hosting distinct, cible `stage`, PR #124).
+- ⚠️ Les identifiants du **projet** Firebase (`projectId`/`authDomain`/`storageBucket` = `easy-rent-54cd4*`) ne sont PAS le domaine public et ne doivent pas être renommés.
 - Email : `/reset-password?token=…` (extraction via `state.uri.queryParameters`).
 - Firebase Dynamic Links : à implémenter (passthrough → URLs standard).
 - Deep-links spécifiques par domaine : voir shard concerné.

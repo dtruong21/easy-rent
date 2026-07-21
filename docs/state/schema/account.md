@@ -18,7 +18,6 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ |
 | `subscriptionTier` | string | 'anonymous' \| 'free' \| 'paid' | ✅ |
 | `anonExpiresAt` | timestamp | expiration essai (14j) | — |
-| `fullName` | string | '' (anon) / nom complet | ✅ |
 | `phone` | string\|null | téléphone (optionnel) | — |
 | `address` | string\|null | adresse postale (requis pour quittances) | — |
 | `rgpdConsentAt` | timestamp\|null | null (anon) / date signature | ✅ |
@@ -30,7 +29,21 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 | `updatedAt` | timestamp | CF trigger | — |
 | `deletedAt` | timestamp\|null | null (actif) / soft-delete | — |
 
-**RLS** :
+**Champs `pro*` (FEAT-044 paiement, PR #114)** — écrits UNIQUEMENT par `revenueCatWebhook` / `reconcileEntitlements` via Admin SDK (bypass rules). Cache d'affichage : la source de vérité de l'accès reste `subscriptionTier`.
+
+| Champ | Type | Notes |
+|---|---|---|
+| `proEntitlementActive` | bool | entitlement `pro` actif. Requêté par le cron (`== true`) |
+| `proStore` | string\|null | `app_store` \| `play_store` \| `web` (Stripe/RC Billing) \| `promo` |
+| `proProductId` | string\|null | product ID RevenueCat/store |
+| `proExpiresAt` | timestamp\|null | échéance de l'entitlement |
+| `proWillRenew` | bool | auto-renouvellement actif |
+| `proSince` | timestamp\|null | 1re activation, **conservé après downgrade** (audit) |
+| `proLastEventAtMs` | int | garde d'ordre : un event antérieur est ignoré (idempotence webhook) |
+
+**Aucun compteur `activeDocumentsCount`** : le quota documents free (10) est compté **live** (`count()` sur `documents` where `deletedAt == null`) — voir [expenses-documents](expenses-documents.md). Choix délibéré : le soft-delete est universel, donc sans compteur il n'y a rien à décrémenter ni à faire dériver.
+
+**Règles Firestore** :
 - `get` : isOwner(uid) && (resource==null \|\| isActive(rsc))
 - `create` compte : isFullyAuthed() + RGPD consent v2-2026-07
 - `create` anon : isAnonymous() + anonExpiresAt <= now+15j
@@ -38,14 +51,21 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 - `update` anon : isAnonymous() && anonExpiresAt valide
 - `delete` : interdit (soft-delete CF)
 
-**Index** : `isAnonymous ↑, anonExpiresAt ↑` (expiration cleanup).
+**Index** : `isAnonymous ↑, anonExpiresAt ↑` (expiration cleanup). Le cron d'entitlements interroge `proEntitlementActive == true` (égalité simple + filtre d'échéance en mémoire) → **aucun index composite requis**.
 
 **Triggers** : setUpdatedAt.
 
+**Écrivains du `subscriptionTier`** (le client ne peut JAMAIS l'écrire — immuable par les règles) :
+- `finalizeAnonymousUpgrade` (callable) : anon → `free`. N'écrit jamais `paid`.
+- `revenueCatWebhook` (HTTP) : `free` ⇄ `paid` selon l'entitlement. **Seul chemin vers `paid`.**
+- `reconcileEntitlements` (scheduled) : filet de sécurité, corrige `paid` → `free` sur webhook manqué.
+
 **Callables** :
-- `softDeleteLandlord` : soft-delete compte
-- `cleanupExpiredAnon` (scheduled) : purge anonymes expirés (hard-delete 14j)
-- `finalize_anonymous_upgrade` : transition anon → compte (met à jour subscriptionTier)
+- `softDeleteEntity` : soft-delete compte (nom réel de la callable universelle)
+- `cleanupExpiredAnon` (scheduled) : purge anonymes expirés (hard-delete)
+- `finalizeAnonymousUpgrade` : transition anon → compte (met à jour subscriptionTier)
+- `deleteAccount` : suppression RGPD (FEAT-045)
+- `createCheckoutSession` : initie le paiement web — **n'accorde aucun droit**
 
 ---
 
@@ -59,7 +79,7 @@ Marque d'intérêt futur Plan Pro. Singleton par compte complet (anonyme non él
 | `features` | array[string] | ex: ['reminders', 'ocr'] |
 | `createdAt` | timestamp | immuable |
 
-**RLS** :
+**Règles Firestore** :
 - `get` : isOwner(uid)
 - `create/update` : isFullyAuthed() && isOwner(uid)
 - `delete` : interdit
@@ -82,7 +102,7 @@ Formulaire « Nous contacter ». Traitement Admin SDK / console (pas de back-off
 | `status` | string | 'new' (jamais changé client) |
 | `createdAt` | timestamp | request.time, immuable |
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : false (jamais relu V1)
 - `create` : isFullyAuthed() && landlordId==uid + bornes subject/message
 - `update/delete` : false

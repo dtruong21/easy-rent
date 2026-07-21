@@ -27,6 +27,115 @@
 - Rate limiting : le « 3 tentatives/minute » était un chiffre Supabase. Firebase ne publie pas ses seuils → **chiffre retiré sans être remplacé**, description du mécanisme réel à la place (`too-many-requests` → `AuthError.tooManyRequests`).
 - Archives `docs/plans/FEAT-*.md` et `docs/backlog/*.md` **non touchées** (mentions Supabase légitimes et datées).
 
+### PR #126 : Version + environnement en pied de la page de garde — FEAT (2026-07-21)
+- Distingue prod et staging d'un coup d'œil sans ouvrir le Profil — utile depuis que les deux ont un vrai domaine (`baillan.com` / `stage.baillan.com`).
+- Réutilise **exactement** les mêmes sources que « Profil → À propos » (`appInfoProvider` + `Env.isProd` + clés l10n existantes) : une seule vérité sur la version, aucune nouvelle chaîne à traduire.
+- Rendu volontairement asymétrique : hors prod, pastille d'environnement visible (tout l'intérêt) ; en prod, version seule et discrète — afficher « production » à de vrais utilisateurs serait du bruit, l'absence de pastille suffit.
+- Si la version n'est pas encore chargée : on n'affiche **rien** plutôt qu'un placeholder (évite un saut de mise en page sur la 1re vue).
+- `ConsumerWidget` dédié plutôt que conversion de `LandingSheet` (`StatelessWidget`) → diff minimal sur un fichier de design sensible. 3 tests ; suite 2508.
+
+### PR #125 : Commentaire d'en-tête d'`env.dart` — DOC (2026-07-21)
+- Le doc comment affirmait que la séparation prod/dev passe par « `(default)` vs `dev` Firestore database ». **Ce n'est pas implémenté** : les 21 accès Firestore de `lib/` utilisent `FirebaseFirestore.instance` (base `(default)`), aucun `instanceFor(databaseId:)` ; `firebase.json` ne déclare que `"database": "(default)"`.
+- **Conséquence à retenir** : staging et prod partagent Firestore, Auth, Storage et Functions du projet `easy-rent-54cd4`. L'isolation est au niveau **Hosting uniquement** (deux sites). **Un test sur staging écrit en PRODUCTION.** Le seul environnement réellement isolé est l'émulateur (`Env.useFirebaseEmulator`).
+- Commentaire uniquement — aucun changement de comportement.
+
+### PR #124 : Staging sur son propre site Hosting → `stage.baillan.com` — CI (2026-07-21)
+- Hosting passe en multi-site : deux cibles `prod` et `stage` dans `firebase.json` (au lieu d'un channel de prévisualisation).
+- Ne change **pas** l'isolation des données : voir #125 — staging et prod partagent le même projet Firebase.
+
+### PR #123 : `CONVENTIONS.md` + `ENVIRONMENTS.md` alignés sur Firebase, préfixe `feat/` — DOC (2026-07-21)
+- `CONVENTIONS.md` décrivait encore Supabase alors que le pivot FEAT-019 (2026-06-30) a migré le backend vers Firestore : les agents lisant ce fichier étaient orientés vers le **mauvais backend**.
+- Réécrit : camelCase, montants en centimes, helpers `firestore.rules`, soft-delete via `softDeleteEntity`, immutables, index composites ; renvoie vers `docs/state/schema/` comme source de vérité.
+- Souligne la règle `allow list` + `where('landlordId','==',uid)` (audit FEAT-045 H1) : **les rules ne sont pas des filtres**.
+- Arborescence : retire `supabase/`, ajoute `functions/`, `android/`, `ios/`, `assets/`, `tool/`. Tests : `test/integration/` (et non `integration_test/`), `npm test` (CF), `npm run test:rules` (règles).
+- Nouvelle section Cloud Storage CLI : `gcloud storage`, **jamais `gsutil`** (retrait du bundle gcloud en mars 2027).
+- Préfixe de branche standardisé sur `feat/` (`CONVENTIONS.md` disait `feat/`, `GITFLOW.md` disait `feature/`). Git : PR vers `develop`, jamais `main`.
+
+### PR #121 : Domaine canonique `baillan.com` — FEAT/SEO (2026-07-21)
+- Bascule toutes les URL **publiques** de l'URL intérimaire `.web.app` vers l'apex : `web/index.html` (canonical, og:url, og:image, twitter:image, 3 URLs JSON-LD + logo — 8 occurrences), `web/sitemap.xml` (5 `<loc>`), `web/robots.txt` (Sitemap), `Env.publicAppUrl`, et le défaut `WEB_APP_BASE_URL` de `create_checkout_session.ts` (redirections Stripe success/cancel).
+- ⚠️ **Les identifiants du PROJET Firebase restent inchangés à dessein** : `projectId`/`authDomain`/`storageBucket` (`easy-rent-54cd4*`) ne sont pas le domaine public — les remplacer casserait auth/Firestore/Storage.
+- Reste-à-faire côté consoles documenté dans `docs/SEO.md` (Hosting apex + www en redirection, DNS, SSL, domaines autorisés Firebase Auth, URL `/delete-account` sur la fiche Play).
+
+### PR #120 : Gating Pro — quota documents (#29) + régularisation des charges (#28) — FEAT (2026-07-20)
+- Applique la matrice free/Pro validée le 2026-07-20.
+- **Quota documents — enforcement SERVEUR** (ressource réelle à protéger) : `SubscriptionTier.documentLimit` = anonyme 0 / free **10** / paid illimité. `createDocument` gate **AVANT** tout travail coûteux (lookups cross-entity + Storage) → `resource-exhausted` / `document_limit_reached`.
+- **Comptage LIVE** plutôt qu'un compteur dénormalisé : le volume est borné et le soft-delete est universel — sans compteur, **aucune dérive possible** (rien à décrémenter). 7 tests dont : soft-deleted non comptés, docs d'un autre landlord non comptés, landlord absent → `not-found` (fail-closed).
+- **Régularisation des charges — gate CLIENT** réservé au palier `paid` : calcul + PDF 100 % côté client, donc restriction produit et **pas** frontière de sécurité (rien à protéger côté serveur).
+- **Précédence volontaire** : le gate **LÉGAL prime** — un bail au forfait affiche le message d'inapplicabilité, PAS un upsell Pro (il serait trompeur de vendre une fonction que la loi n'autorise pas sur ce bail). Gate appliqué **aussi** au deep-link `?action=regularize`, qui contournait la section (un compte free atteignait le dialog par URL).
+- Fail-closed pendant le chargement du tier → pas de flash du bouton. Clé l10n `chargeRegularizationProOnly` (FR + EN). Suites : functions 209 · Flutter 2505.
+
+### PR #119 : TODO paiement — matrice free/Pro validée + essai 7 jours — DOC (2026-07-20)
+- **Décision ferme** : quittance PDF + partage restent **GRATUITS** (cœur produit + instrument légal, loi 1989 art. 21). Gating Pro sur : régularisation des charges, quota documents, envoi auto email (FEAT-031), annonces (FEAT-051), simulateur avancé.
+- Précision importante : **aucun envoi d'email serveur n'existe** (quittance = PDF client + Web Share natif / mailto). Le vrai levier de gating « email » est FEAT-031, à construire.
+- Essai gratuit **7 jours** tranché. Le webhook le gère déjà (`INITIAL_PURCHASE` period_type TRIAL → `paid` ; fin → `EXPIRATION` → `free`) ; reste à câbler `trial_period_days` côté prix Stripe.
+
+### Licence propriétaire + attribution éditeur Daki Studio — CHORE (2026-07-20, hors PR)
+- Le dépôt était **public sans fichier LICENSE**. Ajout d'une licence propriétaire bilingue FR/EN (tous droits réservés, droit français) précisant que la consultation publique sur GitHub ne vaut ni licence libre ni autorisation tacite de réutilisation.
+- `README` (section Licence), `web/index.html` (meta author/copyright + publisher JSON-LD → « Daki Studio »), `ios/Runner/Info.plist` (`NSHumanReadableCopyright`).
+- Baillan reste le **nom du produit** ; Daki Studio est l'**éditeur**. `applicationId` et bundle identifier inchangés.
+
+### PR #118 : Checklist vivante du paiement FEAT-044 — DOC (2026-07-20)
+- Consolide en une checklist cochable tout le reste-à-faire du volet paiement : blocages/décisions, setup dashboards RevenueCat/Stripe/stores, config des secrets de déploiement, reste-à-construire client. État « déjà livré » (#108–#117) inclus.
+
+### PR #117 : Stripe Checkout Session pour Baillan Pro web (approche A) — FEAT (2026-07-20)
+- `createCheckoutSession` (onCall) crée une Stripe Checkout Session d'abonnement et renvoie l'URL hostée. Volet **web** de la monétisation (ADR 0002 §Amendement).
+- Architecture « RevenueCat = plan de gestion » : web → Stripe Checkout → Stripe → RevenueCat (ingestion compte connecté) → `revenueCatWebhook` (#114) → `subscriptionTier`.
+- **Le lien vers le compte passe par la metadata** : App User ID RevenueCat (= UID Firebase) posé sur la Checkout Session **ET** sur `subscription_data` (`RC_APP_USER_ID_METADATA_KEY = "rc_app_user_id"`, à faire correspondre au dashboard RevenueCat) ; `client_reference_id` en ceinture-bretelles.
+- **La fonction n'accorde aucun droit** — le déverrouillage reste 100 % serveur via le webhook. Logique critique isolée en fonction pure `buildCheckoutSessionParams` → 5 tests.
+- Dépendance `stripe` (^22.3.2). Suite functions : 202 tests. Config déploiement : `STRIPE_SECRET_KEY` (secret), `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`, `WEB_APP_BASE_URL`.
+- ⚠️ Les redirections pointent vers `/pro/success` et `/pro/cancel`, **routes non déclarées dans le GoRouter à ce jour**.
+
+### PR #116 : ADR 0002 amendé — checkout web = Stripe Checkout propre — DOC (2026-07-20)
+- RevenueCat devient un **plan de gestion** (source de vérité unique des entitlements) et non le portail de paiement. Le checkout appartient à chaque plateforme : web → Stripe Checkout · Android → Play Billing · iOS → StoreKit, tous → RevenueCat.
+- Lève le rejet initial « Stripe direct = deux webhooks » : RevenueCat reste le point d'ingestion unique. Le `revenueCatWebhook` livré en #114 gère le web **sans modification** (`storeOf` mappe déjà STRIPE/RC_BILLING → `web`).
+
+### PR #115 : Suite Cloud Functions validée en CI — CI (2026-07-20)
+- Les Cloud Functions sont un projet npm indépendant sous `functions/` ; leur suite vitest (197 tests à l'époque) **n'était validée qu'en local, aucun job CI ne la lançait**. Ajout d'un job `functions` (Node 20, `npm ci`) : lint + build (tsc déployable) + test, en parallèle du job Flutter.
+
+### PR #114 : Webhook RevenueCat + réconciliation d'entitlements — FEAT (2026-07-20)
+- Volet paiement de FEAT-044 (ADR 0002) : le back-end de déverrouillage Pro. **Aucune intégration client ici** (différée).
+- `revenueCatWebhook` (**1re fonction `onRequest` du codebase**) : vérifie le header `Authorization` en **temps constant** contre `REVENUECAT_WEBHOOK_AUTH`, puis écrit `landlords/{uid}.subscriptionTier` (+ champs `pro*` de cache) via l'Admin SDK. **Règles Firestore inchangées** (tier client-immuable).
+- **Idempotent + garde d'ordre** (`proLastEventAtMs`) : un event antérieur au dernier appliqué est ignoré — évite qu'un RENEWAL retardé écrase une EXPIRATION plus récente. Toujours 2xx après traitement ; 500 seulement sur panne inattendue (déclenche le retry).
+- Mapping type→accès : `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION`/`PRODUCT_CHANGE`/`SUBSCRIPTION_EXTENDED` → paid ; `NON_RENEWING_PURCHASE` → paid non renouvelable ; `CANCELLATION`/`BILLING_ISSUE` → paid tant que non expiré (grâce) ; `EXPIRATION`/`SUBSCRIPTION_PAUSED` → free ; `TRANSFER`/inconnu/`TEST` → no-op.
+- `reconcileEntitlements` (onSchedule quotidien, `30 3 * * *` Europe/Paris) : filet de sécurité des webhooks manqués. Requête `proEntitlementActive == true` (ensemble borné) + filtre d'échéance **en mémoire** → **aucun index composite**. Fetcher injectable → coeur testable sans réseau. Ne fait jamais d'upgrade.
+- Logique métier en fonctions pures exportées → 24 tests. Suite functions : 197.
+- Déploiement : `firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH` et `REVENUECAT_API_KEY` **AVANT** `firebase deploy --only functions`.
+
+### PR #113 : ADR 0002 — monétisation Baillan Pro via RevenueCat — DOC (2026-07-18)
+- Acte l'architecture de paiement de FEAT-044 : RevenueCat comme couche unique sur les deux surfaces (IAP natif mobile + web), une entitlement `pro`, mensuel + annuel. Statut : proposé → **accepté** (2026-07-18).
+- Déverrouillage **serveur autoritaire** via webhook `onRequest` écrivant `subscriptionTier` (règles Firestore inchangées) ; réconciliation `onSchedule` **obligatoire** (les webhooks sont manquables).
+- **TVA UE** : Baillan devient merchant of record sur le web (Stripe Tax), contrairement au mobile où le magasin l'est.
+- Alternatives rejetées : Stripe-direct + IAP ; Apple/Google Pay sur mobile (interdit) ; achat web-only. Cadre de frais / politique magasins UE (DMA) vérifié mi-2026, à re-vérifier au build.
+
+### PR #112 : e2e registre locatif utilisateur FREE + 1re couverture `createPayment` — TEST (2026-07-17)
+- Enchaîne les **vraies** Cloud Functions (createProperty → createTenant → createLease → createPayment) comme un seul landlord FREE bâtissant un registre cohérent, IDs réels threadés d'une étape à l'autre.
+- Comble deux trous : aucun test ne chaînait les 4 callables bout-en-bout (les existants les testent isolément, **en tier `paid`** pour neutraliser le gate FEAT-044) ; et **`createPayment` n'avait AUCUNE couverture** — ce fichier est sa première.
+- Couvre la cohérence cross-entité + l'incrément des compteurs de plan + les plafonds FREE opposés en cours de registre (3e bien refusé, 4e locataire refusé → `resource-exhausted`). Suite functions : 173.
+
+### PR #111 : e2e registre locatif — bien→locataire→bail→paiement, done/late — TEST (2026-07-17)
+- Comble le trou signalé : aucun test ne chaînait le flux complet du registre locatif (les briques étaient couvertes isolément).
+- `test/integration/rental_flow_lateness_test.dart` : construit les 4 entités avec IDs liés, round-trippe la sérialisation JSON de chacune (`fromJson(toJson())` = contrat de persistance CF), et prouve le basculement du **même** bail : paiement couvrant → à jour ; aucun paiement (échéance + grâce 5 j dépassées) → en retard ; paiement d'un autre mois → en retard ; bail résilié → jamais en retard (règle FEAT-028).
+- Horloge figée pour n'avoir qu'un seul mois dû → basculement isolé. 5 tests.
+
+### PR #110 : Défaut émulateur `127.0.0.1` au lieu de `localhost` — FIX (2026-07-17)
+- Sur le web, Chromium résout `localhost` en IPv6 `::1`, mais les émulateurs firebase-tools n'écoutent que sur l'IPv4 `127.0.0.1`. **Résultat : l'app tombait silencieusement sur le backend PROD** (login en `invalid-credential`) au lieu de l'émulateur, sans erreur visible. Constaté en pilotant l'app web contre l'émulateur (#109).
+- `127.0.0.1` force l'IPv4 et marche sur web/desktop/simulateur iOS. L'override Android (`10.0.2.2`) reste documenté.
+
+### PR #109 : Toggle émulateurs Firebase (debug only) + ruban EMULATOR — FEAT (2026-07-17)
+- Branche l'app Flutter sur les émulateurs (Firestore + Auth) pour le dev et les tests UI bout-en-bout, sans toucher la prod. Se combine avec `tool/seed/seed_tiers.mjs`.
+- Activation : `--dart-define-from-file=dart-defines.emulator.example.json` (ou `USE_FIREBASE_EMULATOR=true`) ; hôte via `FIREBASE_EMULATOR_HOST`.
+- **Garde-fou release (critique)** : `Env.useFirebaseEmulator = kDebugMode && flag`. `kDebugMode` étant une const `false` en release/profile, tout le bloc émulateur **et** le ruban sont éliminés par tree-shaking d'un build de prod — impossible qu'un build release pointe de vrais users vers un backend local, **même si le dart-define fuit dans la commande de build**.
+- Ruban orange « EMULATOR » (`BannerLocation.topStart`) affiché uniquement quand le toggle est actif, pour ne jamais confondre données locales et prod.
+
+### PR #108 : Seed de tiers émulateur + test du contrat SubscriptionTier — CHORE (2026-07-17)
+- `tool/seed/seed_tiers.mjs` sème des landlords `free` et `paid` sur les émulateurs via l'Admin SDK. **Le palier `paid` n'a aucun chemin client** (règles : tier immuable côté client ; `finalize` n'écrit que `'free'` ; pas encore d'IAP) — l'Admin SDK, qui bypasse les règles, est le **seul** moyen de voir l'app en `paid` à cette date.
+- **Garde-fou dur** : refuse de tourner sans `FIRESTORE_EMULATOR_HOST` (jamais la prod). Aucune dépendance ajoutée (`firebase-admin` résolu depuis `functions/node_modules`).
+- `test/unit/subscription_tier_test.dart` fige le contrat SEED ↔ APP : round-trip des valeurs brutes, fail-safe (null/inconnu → `anonymous`), matrice de plafonds freemium sur l'enum.
+- Non vérifié à l'époque : run émulateur bout-en-bout (pas de JRE sur la machine).
+
+### PR #107 : Consigner #103 et #106 dans le changelog — DOC (2026-07-17)
+- Les deux PR avaient été mergées sans embarquer leur entrée de changelog. Rattrapage au bon rang chronologique. Rappel de convention : les bug fixes vont au CHANGELOG **sans FEAT-ID**.
+
 ### PR #106 : Labels système agent absents + garde-fous CI silencieux — FIX (2026-07-17)
 - Les 8 labels système documentés dans [`docs/TICKETING.md`](../TICKETING.md) (§ « Activer les labels système ») n'avaient jamais été créés dans le repo : seul `bug` existait (avec les labels GitHub par défaut). Créés hors PR via `gh label create` (un label n'est pas du code) : `feature-request`, `agent-skip`, `agent-processing`, `agent-needs-info`, `agent-failed`, `agent-done`.
 - Trois bugs, tous masqués par des `2>/dev/null || true` :

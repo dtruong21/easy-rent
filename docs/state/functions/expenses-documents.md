@@ -6,12 +6,15 @@ Dépenses (FEAT-041a) + documents (FEAT-008, v2 FEAT-041b). Fichiers : `function
 
 ## Callables — Documents
 
-### `createDocument` (v2, FEAT-008/FEAT-041b)
-Client invoke.
-- **Params** : `leaseId` (opt/nullable), `propertyId` (opt, contexte FEAT-041b), `expenseId` (opt, FEAT-041b — lien dépense), `category` (`'lease_scan'|'insurance'|'expense_receipt'` NEW`|'other'`), `fileName, fileBase64, mimeType`.
-- **Validations** : auth + ownership ; si `leaseId` → FK + ownership ; si `expenseId` → FK + ownership (FEAT-041b) ; MIME whitelist PDF/JPEG/PNG ; size cap **25 MB**.
-- **Mutations** : upload → Storage `/documents/{landlordId}/{docId}.{ext}` ; **derive `legalHold` from category** (serveur, immuable) : `lease_scan`→true (rétention 3 ans), `insurance`→true (3 ans), `expense_receipt`→false (soft-delete autorisé), `other`→false ; CREATE `documents/{id}` ; si `expense_receipt`+`expenseId` → lien bilatéral.
-- **Retour** : `{documentId, storageUrl}`. **Note** : `legalHold` dérivée immuable empêche soft-delete si true (garde-fou légal). Fichier `documents.ts`.
+### `createDocument` (v2, FEAT-008/FEAT-041b/FEAT-044)
+Client invoke. **⚠️ Section corrigée le 2026-07-21 — l'état décrivait une signature et des catégories qui n'existent pas dans le code.**
+- **Flow réel** : le client **uploade d'abord** dans Storage (SDK Firebase, Storage Rules `uid == landlordId` dans le path), **puis** appelle ce callable avec le `storagePath`. Il n'y a **pas** de transfert base64 par la callable.
+- **Params** : `leaseId` (opt), `propertyId` (opt) — **au moins un des deux requis** ; `category`, `filename`, `storagePath`, `mimeType`, `sizeBytes`. Il n'existe **pas** de param `expenseId` (le lien se fait dans l'autre sens : `expenses.documentId`).
+- **Catégories réelles** : `bail_signe` \| `etat_des_lieux` \| `attestation_assurance` \| `quittance_scannee` \| `expense_receipt` \| `autre`. (L'état listait `lease_scan`/`insurance`/`other` — inexistantes.)
+- **Validations** : auth ; ownership du bail et/ou du bien + non soft-deleted ; si les deux fournis → `lease.propertyId == propertyId` sinon `lease_property_mismatch` ; MIME ∈ {PDF, JPEG, PNG, **WEBP**} ; `sizeBytes` ∈ [1, **10 MiB**] (et non 25 MB) ; `storagePath` doit commencer par `documents/{uid}/` ; **le fichier doit exister dans Storage** sinon `failed-precondition` (empêche l'enregistrement d'un doc fantôme).
+- **Gate free/Pro (FEAT-044, PR #120)** : `assertDocumentQuota` s'exécute **AVANT** tout travail coûteux → `resource-exhausted` / `document_limit_reached`. Plafond de documents **actifs** : anonyme 0 · free **10** · paid illimité. **Comptage live** (`count()` where `deletedAt == null`), pas de compteur dénormalisé — le soft-delete étant universel, il n'y aurait rien à décrémenter. C'est la SOURCE DE VÉRITÉ ; l'UI (`SubscriptionTier.documentLimit`) n'est qu'un miroir. Landlord absent → `not-found` (fail-closed).
+- **`legalHold` dérivé serveur** (immuable) = `category ∈ {bail_signe, etat_des_lieux, expense_receipt}`. ⚠️ **`expense_receipt` EST sous rétention** (10 ans, comptable) — l'état affirmait l'inverse (« soft-delete autorisé ») ; `attestation_assurance` ne l'est **pas** (l'état disait `insurance`→true).
+- **Retour** : `{documentId, legalHold}` (et non `{documentId, storageUrl}`). Fichier `documents.ts`.
 
 ### `getDocumentDownloadUrl` (FEAT-008)
 Client invoke. Génère une **URL signée court-terme (5 min)** pour télécharger le fichier. Ownership check (`landlordId==uid`) + refus si `deletedAt!=null`. **Retour** : `{downloadUrl, downloadUrlExpiresAt}`. Fichier `documents.ts`.

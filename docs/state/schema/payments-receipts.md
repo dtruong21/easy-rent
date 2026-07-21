@@ -29,7 +29,7 @@ Paiement loyer/charges. **CROSS-ENTITY** : leaseId doit appartenir au même land
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete |
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
 - `create/update/delete` : CF exclusive
 
@@ -77,7 +77,7 @@ Quittance loyer (loi 6 juillet 1989 art. L145-40) ou reçu (paiement partiel). *
 | `accountDeletedAt` | timestamp\|null | FEAT-045 : stamp suppression compte (null si actif) — quittance conservée 5 ans post-suppression |
 | `createdAt` | timestamp | immuable |
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) (**pas de filtre isActive** — annulées restent lisibles audit)
 - `create/update/delete` : **if false** (CF-exclusive via `generateReceipt`, `voidReceipt`, `markReceiptAsSent`)
 

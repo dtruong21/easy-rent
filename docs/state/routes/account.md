@@ -6,13 +6,14 @@
 
 | Chemin | Page | Guard | Notes / deep-link |
 |---|---|---|---|
-| `/` | LandingPage | unauth OR anonyme→`/simulator` | carrefour onboarding |
+| `/` | LandingPage | unauth OR anonyme→`/simulator` | carrefour onboarding ; **PR #126** : pied de page = version app + pastille d'environnement (pastille masquée en prod, rien tant que `appInfoProvider` charge) |
 | `/login` | LoginPage | !fullyAuth | email/pwd + Google/Apple |
 | `/signup` | SignupPage | !fullyAuth | inscription + gate RGPD |
 | `/forgot-password` | ForgotPasswordPage | public | reset mot de passe |
 | `/reset-password` | ResetPasswordPage | public | lien email, `?token=…` via `state.uri.queryParameters` |
 | `/privacy` | PrivacyPage | public | politique confid. v1.3 (loi 6 juillet 1989), FEAT-023 |
 | `/terms` | TermsPage | public | CGU v2-2026-07 (FEAT-023) |
+| `/legal` | LegalPage | public | mentions légales (LCEN), liée depuis le hub Profil — **manquait dans l'état** |
 | `/delete-account` | DeleteAccountRequestPage | public (anonyme inclus) | **FEAT-045** — URL Google Play « Account deletion » ; CTA adapté session (login / go profil / suppr essai anonyme) |
 | `/faq` | FaqPage | public (anonyme inclus) | **FEAT-048** — questions fréquentes (ExpansionTiles), aussi via Profil→Aide |
 
@@ -25,6 +26,15 @@
 | `/profile/password` | ChangePasswordPage | write | `reauthenticateWithPassword` + `updatePassword` ; gated `hasPasswordProvider` |
 | `/profile/support` | SupportPage | write | formulaire contact (FEAT-025, collection `support_requests`) |
 | `/profile/delete-account` | DeleteAccountPage | write | **FEAT-045** — re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée |
+
+## ⚠️ Routes attendues par le back-end mais ABSENTES du router (2026-07-21)
+
+| Chemin attendu | Attendu par | État |
+|---|---|---|
+| `/pro/success?session_id=…` | `createCheckoutSession` (`success_url`) | ❌ non déclarée |
+| `/pro/cancel` | `createCheckoutSession` (`cancel_url`) | ❌ non déclarée |
+
+Le volet client du paiement n'est pas encore construit (aucun appel Dart à `createCheckoutSession`, pas de `purchases_flutter` dans `pubspec.yaml`) — cohérent avec « intégration client différée » (PR #114/#117). À déclarer **avant** d'ouvrir le checkout web, sinon un retour de paiement Stripe tombe sur une URL non gérée.
 
 ## Provider
 

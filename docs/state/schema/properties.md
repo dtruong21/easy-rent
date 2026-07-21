@@ -48,7 +48,7 @@ Bien immobilier (appartement, maison, etc). **Création exclusively via callable
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete, isActive filter |
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && (isActive ou sans filtre)
 - `create` : **if false** (CF-exclusive via `createProperty`/FEAT-044)
 - `update` : isFullyAuthed() && isOwner(landlordId) && isActive(rsc) && preservesImmutables()
@@ -89,7 +89,7 @@ Locataire. **Création exclusively via callable `createTenant`** (Admin SDK, imp
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete, isActive filter |
 
-**RLS** :
+**Règles Firestore** :
 - `get/list` : isOwner(landlordId) && (isActive ou sans filtre)
 - `create` : **if false** (CF-exclusive via `createTenant`/FEAT-044)
 - `update` : isFullyAuthed() && isOwner(landlordId) && isActive(rsc) && preservesImmutables() && activeLeaseCount unchanged

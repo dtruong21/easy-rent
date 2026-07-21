@@ -2,7 +2,7 @@
 
 > Source d'état — account. Maintenu par state-keeper.
 
-Auth/provisioning, cycle de vie compte, soft-delete universel, cron anon, support, helpers génériques. Fichiers : `functions/src/callable/{finalize_anonymous_upgrade,delete_account,soft_delete}.ts`, `functions/src/scheduled/cleanup_expired_anon.ts`, `functions/src/utils/callable_helpers.ts`, `functions/src/triggers/set_updated_at.ts`.
+Auth/provisioning, cycle de vie compte, soft-delete universel, crons, **facturation Pro**, support, helpers génériques. Fichiers : `functions/src/callable/{finalize_anonymous_upgrade,delete_account,soft_delete,create_checkout_session}.ts`, `functions/src/http/revenuecat_webhook.ts`, `functions/src/scheduled/{cleanup_expired_anon,reconcile_entitlements}.ts`, `functions/src/utils/callable_helpers.ts`, `functions/src/triggers/set_updated_at.ts`.
 
 ## Auth (ADR 0001 : GCIP désactivé)
 
@@ -26,7 +26,7 @@ Client invoke, **tout compte authentifié y compris anonyme**. Exigence stores :
 - **Purge (ordre)** : 1. `receipts` du landlord **CONSERVÉES** (loi 6/7/1989, 5 ans) — stamp `accountDeletedAt`+`retentionUntil` (purge différée futur cron) ; 2. hard-delete paginé 400/batch `properties, tenants, leases, payments, documents (y c. legalHold — flux client avertit), expenses, investment_scenarios, support_requests` (`where landlordId==uid`) ; 3. singletons `paid_plan_interest/{uid}`+`landlords/{uid}` ; 4. Storage `deleteFiles(documents/{uid}/)` ; 5. **Auth EN DERNIER** `admin.auth().deleteUser(uid)` (idempotent user-not-found).
 - **Invariant** : ordre **inverse** de `cleanupExpiredAnon` — retry porté par l'utilisateur encore connecté, échec en cours laisse Auth vivant pour relancer.
 - **Révocation Apple** : côté **CLIENT** avant l'appel (`revokeTokenWithAuthorizationCode` avec authorizationCode de la re-auth ; iOS/macOS, best-effort ailleurs).
-- **Retour** : `{deleted:true, receiptsRetained:number}`. Fichier `delete_account.ts`. Tests `delete_account.test.ts` (15 tests) + `rules-tests/firestore_rules.test.ts` (28 tests, `npm run test:rules`).
+- **Retour** : `{deleted:true, receiptsRetained:number}`. Fichier `delete_account.ts`. Tests `delete_account.test.ts` + `rules-tests/firestore_rules.test.ts` (**16 cas**, `npm run test:rules` — l'ancien « 28 tests » ne correspondait à aucun décompte du fichier).
 
 ### `softDeleteEntity` (universel)
 Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-delete des `documents` passe par ce callable universel — pas de `softDeleteDocument` dédié (voir expenses-documents).
@@ -35,18 +35,42 @@ Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-
 - **Erreurs** : FAILED_PRECONDITION (legalHold==true / active leases / receipts), NOT_FOUND, PERMISSION_DENIED.
 - **Retour** : `{success:true}`. Fichier `soft_delete.ts`.
 
+### `createCheckoutSession` (FEAT-044 paiement web, PR #117)
+Signature `{plan: 'monthly'|'annual'}` → `{url, sessionId}`. Crée une **Stripe Checkout Session** d'abonnement et renvoie l'URL hostée. Fichier `callable/create_checkout_session.ts`.
+- **N'accorde AUCUN droit** : elle initie le paiement, le déverrouillage reste 100 % serveur via `revenueCatWebhook`.
+- **Lien de compte** : l'App User ID RevenueCat (= UID Firebase) est posé en metadata `rc_app_user_id` sur la **session ET** `subscription_data` (RevenueCat lit les deux) + `client_reference_id` en ceinture-bretelles. ⚠️ La clé DOIT correspondre exactement au champ configuré côté dashboard RevenueCat.
+- **Redirections** : `{WEB_APP_BASE_URL}/pro/success?session_id=…` et `/pro/cancel`. ⚠️ **Ces deux routes n'existent pas encore dans le GoRouter** (voir routes/account) — un paiement web aboutirait aujourd'hui sur une URL non gérée.
+- **Logique pure testée** : `buildCheckoutSessionParams` (5 cas).
+
+## HTTP — `revenueCatWebhook` (FEAT-044, PR #114)
+
+`onRequest`, **1re fonction HTTP du codebase**. Fichier `http/revenuecat_webhook.ts`. Écrit `landlords/{uid}` via Admin SDK (bypass rules ; tier reste client-immuable).
+- **Auth** : header `Authorization` comparé en **temps constant** (`timingSafeEqual`) au secret `REVENUECAT_WEBHOOK_AUTH`. Non signé → 401. Non-POST → 405.
+- **Mapping type → accès** : `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION`/`PRODUCT_CHANGE`/`SUBSCRIPTION_EXTENDED` → `paid` ; `NON_RENEWING_PURCHASE` → `paid` non renouvelable ; `CANCELLATION`/`BILLING_ISSUE` → `paid` tant que non expiré (délai de grâce) ; `EXPIRATION`/`SUBSCRIPTION_PAUSED` → `free` ; `TRANSFER`/inconnu/`TEST` → no-op.
+- **Invariants** : idempotent + **garde d'ordre** `proLastEventAtMs` (un event antérieur au dernier appliqué est ignoré → un RENEWAL retardé n'écrase pas une EXPIRATION) ; ignore les App User ID `$RCAnonymousID:*` et les landlords `isAnonymous` ; ignore les events ne portant pas l'entitlement `pro`.
+- **Réponses** : toujours 2xx après traitement ; **500 uniquement sur panne inattendue** (déclenche le retry RevenueCat).
+- **Essai gratuit 7 j** : déjà géré (`INITIAL_PURCHASE` period_type TRIAL → `paid` ; fin → `EXPIRATION` → `free`). Reste à câbler `trial_period_days` côté prix Stripe.
+
 ## Trigger
 
 `setUpdatedAtLandlords` — `onDocumentWritten(landlords)`. Logique standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts`.
 
 ## Scheduled
 
-`cleanupExpiredAnon` (BAILLAN-M1) — Cloud Scheduler + CF, **Daily 2 AM UTC** (configurable `gcloud`/console).
+### `cleanupExpiredAnon` (BAILLAN-M1)
+Cloud Scheduler + CF, **`0 3 * * *` en `Europe/Paris`** (et non « 2 AM UTC » comme indiqué jusqu'au 2026-07-21).
 1. Query `landlords` where `isAnonymous==true && anonExpiresAt < now()` ;
 2. Batch soft-delete par anonyme expiré : `leases`, `payments`, `receipts`, `properties`, `tenants`, `documents`, `expenses`, `investment_scenarios` ; puis **hard-delete** `landlords/{uid}` (vrai delete — rétention inutile anon) ;
 3. Log count (Cloud Logging) ; idempotent (`deletedAt` check).
 
 Fichier `scheduled/cleanup_expired_anon.ts`. Logs `firebase functions:log`.
+
+### `reconcileEntitlements` (FEAT-044, PR #114)
+`onSchedule` **`30 3 * * *` `Europe/Paris`**, région `europe-west1`, secret `REVENUECAT_API_KEY`. Filet de sécurité des webhooks manqués. Fichier `scheduled/reconcile_entitlements.ts`.
+1. Query `landlords` where `proEntitlementActive == true` (ensemble borné, `limit` 200), **filtre l'échéance dépassée EN MÉMOIRE** → aucun index composite requis ;
+2. Re-vérifie chaque compte via l'API REST RevenueCat v1 (`/subscribers/{uid}`) ;
+3. Corrige : plus d'entitlement → `free` (`downgraded`) ; échéance repoussée → conserve `paid` + met à jour `proExpiresAt` (`renewed`, cas du RENEWAL manqué).
+- **Ne fait jamais d'upgrade** (`free` → `paid` reste du ressort du webhook seul). Fetcher injectable → coeur testable sans réseau.
 
 ## Support & intérêt payant
 

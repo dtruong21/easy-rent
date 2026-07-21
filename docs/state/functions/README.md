@@ -6,10 +6,12 @@ Architecture 3-couches : (1) **Firestore Rules** (`firestore.rules`) — ownersh
 
 Logique standard `setUpdatedAt*` (partagée par les 8 variants, `functions/src/triggers/set_updated_at.ts`) : `onDocumentWritten` (create/update/delete), post-write `change.after`, ignore soft-deleted (`deletedAt==null`), `updatedAt=FieldValue.serverTimestamp()` via Admin SDK, idempotent (clé docId+ts).
 
-## Callables (14 documentés) → shard
+## Callables (17) → shard
 
 | Callable | Feature | Shard |
 |---|---|---|
+| `createProperty` | FEAT-044 (gate 2 biens free) | properties |
+| `createTenant` | FEAT-044 (gate 3 locataires free) | properties |
 | `createLease` | FEAT-005/036/042 | leases |
 | `updateLease` | FEAT-005/036/042 | leases |
 | `createPayment` | FEAT-006/029 | payments-receipts |
@@ -24,6 +26,15 @@ Logique standard `setUpdatedAt*` (partagée par les 8 variants, `functions/src/t
 | `softDeleteEntity` (universel) | — | account |
 | `finalizeAnonymousUpgrade` | BAILLAN-M1/FEAT-019 | account |
 | `deleteAccount` | FEAT-045 | account |
+| `createCheckoutSession` | FEAT-044 paiement web (PR #117) | account |
+
+## HTTP / webhooks (1) → shard
+
+| Fonction | Déclencheur | Shard |
+|---|---|---|
+| `revenueCatWebhook` (`onRequest`) | POST RevenueCat, header `Authorization` vs `REVENUECAT_WEBHOOK_AUTH` | account |
+
+> **1re et seule fonction `onRequest` du codebase** (PR #114). Écrivain autoritaire de `landlords/{uid}.subscriptionTier` via Admin SDK — les règles Firestore restent inchangées (tier client-immuable).
 
 ## Triggers (9 déployés + 1 planned) → shard
 
@@ -40,19 +51,24 @@ Logique standard `setUpdatedAt*` (partagée par les 8 variants, `functions/src/t
 | `recomputeReceiptStale` | payments | payments-receipts |
 | `recomputeChargeRegularization` (📋 PLANNED V1.1) | expenses | leases |
 
-## Scheduled (1) → shard
+## Scheduled (2) → shard
 
 | Scheduled | Cadence | Shard |
 |---|---|---|
-| `cleanupExpiredAnon` (BAILLAN-M1) | Daily 2 AM UTC | account |
+| `cleanupExpiredAnon` (BAILLAN-M1) | `0 3 * * *` **Europe/Paris** | account |
+| `reconcileEntitlements` (FEAT-044, PR #114) | `30 3 * * *` Europe/Paris | account |
 
-> ⚠️ Décompte vérifié dans `functions/src` (grep `onCall`/`onDocument*`/`onSchedule`, 2026-07-09) : **14 callables + 9 triggers déployés (8 `setUpdatedAt` + 1 `recompute` = `recomputeReceiptStale`) + 1 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. L'ancien header INDEX (« 28 callables + 8 triggers ») était erroné. `setUpdatedAtReceipts` n'existe pas (receipts immuables).
+> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-07-21) : **17 callables + 9 triggers déployés (8 `setUpdatedAt` + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables).
+>
+> Corrections de cette passe : la table listait **14** callables et omettait `createProperty`/`createTenant` (livrés en FEAT-044, PR #91) ; `cleanupExpiredAnon` était annoncé « Daily 2 AM UTC » alors que le code dit `0 3 * * *` en `Europe/Paris`.
 
 > FEAT-043 (i18n « 5 ans » / citation loi 6/7/1989) : **no impact** sur les Cloud Functions (sync 2026-07-08).
 
 ## Ops
 
-- **Deploy** : `npm run build && firebase deploy --only functions` (source ~50 KB compilée ; redéploie tous callables + triggers + scheduled).
-- **Tests** : Vitest (`functions/src/__tests__/*.test.ts`). `npm run build` → `npm run test` (one-shot) / `npm run test:watch`. Rules : `npm run test:rules` (28 tests émulateur, `functions/rules-tests/firestore_rules.test.ts`). Couverts : `finalize_anonymous_upgrade.test.ts`, `delete_account.test.ts` (15 tests). TBD : expense/payment/receipt/soft-delete.
+- **Deploy** : `npm run build && firebase deploy --only functions` (redéploie callables + triggers + HTTP + scheduled).
+- **Secrets requis AVANT déploiement** (`firebase functions:secrets:set`) : `STRIPE_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_API_KEY`. Params non secrets : `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`, `WEB_APP_BASE_URL` (défaut `https://baillan.com`).
+- **Tests** : Vitest — **209 cas** dans `functions/src/__tests__/` (13 fichiers), dont `rental_register_free_e2e.test.ts` (chaîne createProperty→createTenant→createLease→createPayment en tier free), `revenuecat_webhook.test.ts`, `reconcile_entitlements.test.ts`, `create_checkout_session.test.ts`. Rules : `npm run test:rules` → **16 cas** (4 `describe`) dans `functions/rules-tests/firestore_rules.test.ts` (l'ancien « 28 tests » ne correspond à aucun décompte retrouvable).
+- **CI** : job `functions` (Node 20, `npm ci` → lint + build + test) depuis PR #115 — la suite n'était validée qu'en local avant.
 - **Logs** : `firebase functions:log` (stream/tail), Cloud Logging console.
 - **Env** : `.env` local (test), Cloud Secret Manager (prod).
