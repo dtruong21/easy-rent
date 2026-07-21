@@ -26,7 +26,10 @@ jobs:
     outputs:
       env_name: ${{ steps.set.outputs.env_name }}
       app_env: ${{ steps.set.outputs.app_env }}
-      firebase_channel: ${{ steps.set.outputs.firebase_channel }}
+      # Cible Hosting multi-site (.firebaserc) : `prod` = site easy-rent-54cd4
+      # (baillan.com), `stage` = site baillan-stage (stage.baillan.com).
+      hosting_target: ${{ steps.set.outputs.hosting_target }}
+      public_url: ${{ steps.set.outputs.public_url }}
     steps:
       - id: set
         run: |
@@ -42,11 +45,13 @@ jobs:
           if [ "$OVERRIDE" = "prod" ] || ([ "$OVERRIDE" = "auto" ] && [ "$BRANCH" = "main" ]); then
             echo "env_name=production" >> $GITHUB_OUTPUT
             echo "app_env=prod" >> $GITHUB_OUTPUT
-            echo "firebase_channel=live" >> $GITHUB_OUTPUT
+            echo "hosting_target=prod" >> $GITHUB_OUTPUT
+            echo "public_url=https://baillan.com" >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
-            echo "firebase_channel=staging" >> $GITHUB_OUTPUT
+            echo "hosting_target=stage" >> $GITHUB_OUTPUT
+            echo "public_url=https://stage.baillan.com" >> $GITHUB_OUTPUT
           fi
 
   build-and-deploy:
@@ -168,7 +173,7 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
+          HOSTING_TARGET: ${{ needs.determine-env.outputs.hosting_target }}
         run: |
           set +e
           # Service account credentials (Google Application Default Credentials).
@@ -178,19 +183,14 @@ jobs:
 
           OUT="$RUNNER_TEMP/firebase-deploy.log"
 
-          # Channel "live" = production (commande différente).
-          if [ "$FIREBASE_CHANNEL" = "live" ]; then
-            npx -y firebase-tools@latest deploy --only hosting \
-              --project "$FIREBASE_PROJECT_ID" \
-              --non-interactive 2>&1 | tee "$OUT"
-            EXIT=${PIPESTATUS[0]}
-          else
-            npx -y firebase-tools@latest hosting:channel:deploy "$FIREBASE_CHANNEL" \
-              --expires 7d \
-              --project "$FIREBASE_PROJECT_ID" \
-              --non-interactive 2>&1 | tee "$OUT"
-            EXIT=${PIPESTATUS[0]}
-          fi
+          # Multi-site : les DEUX environnements déploient sur le canal `live`
+          # de LEUR site (cible .firebaserc), plus de preview channel. Un
+          # preview channel ne peut pas porter de domaine personnalisé — c'est
+          # ce qui imposait le site dédié `baillan-stage` pour stage.baillan.com.
+          npx -y firebase-tools@latest deploy --only "hosting:$HOSTING_TARGET" \
+            --project "$FIREBASE_PROJECT_ID" \
+            --non-interactive 2>&1 | tee "$OUT"
+          EXIT=${PIPESTATUS[0]}
 
           # Cleanup credentials immédiatement (defense in depth).
           rm -f "$SA_FILE"
@@ -209,47 +209,24 @@ jobs:
           echo "::error::Firebase deploy failed for an UNKNOWN reason (not the retry race). See log above."
           exit $EXIT
 
-      # Loggue l'URL du channel après un deploy réussi (ou toléré). La CLI
-      # firebase-tools n'imprime PAS l'URL du channel quand le POST /releases
-      # errore (retry race), donc on la récupère via channel:list — l'URL du
-      # channel est stable dans le temps (hash aléatoire assigné à la
-      # création, jamais rechangé). Le CLI channel:list ne fait qu'un GET
-      # inoffensif, aucun risque même si le déploiement principal a hoqueté.
-      - name: Log Firebase channel URL
+      # Multi-site : chaque environnement a une URL FIXE (domaine personnalisé
+      # attaché au canal live de son site). Plus besoin d'interroger
+      # `hosting:channel:list` pour récupérer une URL de preview à hash
+      # aléatoire — l'ancien code de résolution a donc été supprimé.
+      - name: Log deploy URL
         if: always() && steps.firebase_deploy.outcome != 'skipped'
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
           FIREBASE_ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+          HOSTING_TARGET: ${{ needs.determine-env.outputs.hosting_target }}
+          PUBLIC_URL: ${{ needs.determine-env.outputs.public_url }}
         run: |
-          set +e
-          SA_FILE="$RUNNER_TEMP/firebase-sa-url.json"
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
-          export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
-
-          if [ "$FIREBASE_CHANNEL" = "live" ]; then
-            URL="https://$FIREBASE_PROJECT_ID.web.app"
-          else
-            URL=$(npx -y firebase-tools@latest hosting:channel:list \
-              --project "$FIREBASE_PROJECT_ID" --json 2>/dev/null \
-              | jq -r --arg ch "$FIREBASE_CHANNEL" '.result.channels[] | select(.name | endswith("/channels/" + $ch)) | .url' \
-              | head -n1)
-          fi
-
-          rm -f "$SA_FILE"
-
-          if [ -n "$URL" ] && [ "$URL" != "null" ]; then
-            echo "::notice title=Deploy URL::$FIREBASE_ENV_NAME → $URL"
-            {
-              echo "## Deploy — $FIREBASE_ENV_NAME"
-              echo ""
-              echo "**Channel** : \`$FIREBASE_CHANNEL\`"
-              echo "**URL** : $URL"
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::warning::Could not resolve channel URL for $FIREBASE_CHANNEL — check Firebase Console."
-          fi
+          echo "::notice title=Deploy URL::$FIREBASE_ENV_NAME → $PUBLIC_URL"
+          {
+            echo "## Deploy — $FIREBASE_ENV_NAME"
+            echo ""
+            echo "**Cible Hosting** : \`$HOSTING_TARGET\`"
+            echo "**URL** : $PUBLIC_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Marque la release APRÈS un deploy prod réussi : crée le tag annoté
       # vX.Y.Z (codename gravé) + la GitHub Release. C'est la SEULE écriture git

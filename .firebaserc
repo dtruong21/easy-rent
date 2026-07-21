@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "easy-rent-54cd4"
+  },
+  "targets": {
+    "easy-rent-54cd4": {
+      "hosting": {
+        "prod": [
+          "easy-rent-54cd4"
+        ],
+        "stage": [
+          "baillan-stage"
+        ]
+      }
+    }
   }
 }

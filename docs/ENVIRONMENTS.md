@@ -219,6 +219,20 @@ const resendDomain = schema === 'dev' ? 'sandbox.tondomaine.fr' : 'quittances.to
 | `main` | Build avec `SUPABASE_SCHEMA=public` → Firebase live (confirmation requise) |
 | `feat/*` (PR open) | Preview deploy temporaire sur Firebase staging avec schéma `dev` |
 
+> **Hosting multi-site (2026-07-21)** — deux sites Firebase, chacun déployé sur
+> son canal **live** via une cible `.firebaserc` :
+>
+> | Branche | Cible | Site | URL |
+> |---|---|---|---|
+> | `main` | `prod` | `easy-rent-54cd4` | https://baillan.com |
+> | `develop` | `stage` | `baillan-stage` | https://stage.baillan.com |
+>
+> Pourquoi deux sites plutôt qu'un preview channel : **un preview channel ne peut
+> pas porter de domaine personnalisé** (les domaines s'attachent au canal live
+> d'un site). L'ancienne URL à hash `*--staging-*.web.app` n'est donc plus
+> alimentée. Le `noindex` staging reste appliqué au build `APP_ENV=dev` — d'autant
+> plus nécessaire que `stage.baillan.com` est un domaine réellement crawlable.
+
 ## 🧹 Maintenance périodique
 
 À faire ~1x/mois :
