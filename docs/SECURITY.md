@@ -125,7 +125,9 @@ Depuis FEAT-002, un flag de session custom `app.allow_deleted_at_change` est uti
 
 **Rate limiting** : Supabase built-in 3 tentatives/minute. Pas de throttling custom côté client.
 
-**Session recovery** : PKCE implicit flow via `supabase_flutter` 2.x. Session persiste dans localStorage (survit au refresh navigateur, perdue à fermeture). Acceptable pour MVP ; audit RGPD post-MVP pour conformité « pas de remember me ».
+**Session recovery** (Firebase Auth, pivot FEAT-019) : aucun `setPersistence` n'est appelé dans `lib/` — c'est donc la persistance **par défaut** de `firebase_auth_web` qui s'applique, soit la chaîne de repli `indexedDBLocalPersistence` → `browserLocalPersistence` → `browserSessionPersistence` (cf. `getAuthInstance`, `firebase_auth_web/lib/src/interop/auth.dart`). En pratique le jeton vit dans **IndexedDB** ; localStorage n'est qu'un repli si IndexedDB est indisponible (navigation privée, quota). La session survit au refresh **et à la fermeture du navigateur** — elle ne prend fin que sur `signOut()` explicite ([`auth_repository.dart`](../lib/features/auth/data/auth_repository.dart)), suppression de compte, ou révocation du jeton côté Firebase.
+
+**RGPD — « pas de remember me »** : contrainte **révisée le 2026-05-27**, ce n'est plus une dette. La décision figée (`docs/backlog/001-auth-magic-link.md`) retient la persistance standard après fermeture, sans bascule UI « se souvenir de moi », à charge d'en documenter la base légale dans la politique de confidentialité. C'est fait : §7 « Cookies et traceurs » déclare la session Firebase en IndexedDB / cookies first-party ([`privacy_page.dart`](../lib/features/privacy/presentation/privacy_page.dart)). Aucun audit post-MVP n'est en attente sur ce point.
 
 **Reset password** :
 - Email de reset avec lien signé (token expiry 1h)
