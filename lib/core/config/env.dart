@@ -1,8 +1,15 @@
 /// Variables d'environnement Baillan.
 ///
-/// Post FEAT-019 (migration Firebase) : on conserve uniquement
-/// `APP_ENV` pour distinguer prod / dev (le projet Firebase reste le même,
-/// la séparation se fait via `(default)` vs `dev` Firestore database).
+/// Post FEAT-019 (migration Firebase) : on conserve uniquement `APP_ENV`
+/// pour distinguer prod / dev.
+///
+/// ⚠️ `APP_ENV` ne pilote QUE des comportements applicatifs (SEO `noindex`,
+/// URLs publiques, bandeaux de dev). Il **ne change ni le projet Firebase,
+/// ni la base Firestore, ni le bucket Storage** : staging et prod tournent
+/// tous les deux sur le projet `easy-rent-54cd4` et la base `(default)`.
+/// Autrement dit, **un test sur staging écrit des données de PRODUCTION**.
+/// Le seul environnement isolé est l'émulateur local — voir
+/// [Env.useFirebaseEmulator] et `docs/ENVIRONMENTS.md`.
 ///
 /// Valeurs Firebase (apiKey, projectId, etc.) sont dans
 /// `lib/firebase_options.dart` (publiques par design).
