@@ -19,7 +19,7 @@ $ARGUMENTS
 - **Si l'argument est un FEAT-ID** : lis `docs/backlog/<id>-*.md`
 - **Sinon** : invoque `product-owner` pour créer la user story
 
-- Crée une branche depuis develop : `git checkout develop && git pull && git checkout -b feature/<slug>`
+- Crée une branche depuis develop : `git checkout develop && git pull && git checkout -b feat/<slug>`
 
 ### 2. Design
 - Invoque `architect` avec le chemin de la story

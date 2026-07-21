@@ -217,7 +217,7 @@ const resendDomain = schema === 'dev' ? 'sandbox.tondomaine.fr' : 'quittances.to
 |---|---|
 | `develop` | Build avec `SUPABASE_SCHEMA=dev` → Firebase staging |
 | `main` | Build avec `SUPABASE_SCHEMA=public` → Firebase live (confirmation requise) |
-| `feature/*` (PR open) | Preview deploy temporaire sur Firebase staging avec schéma `dev` |
+| `feat/*` (PR open) | Preview deploy temporaire sur Firebase staging avec schéma `dev` |
 
 ## 🧹 Maintenance périodique
 
