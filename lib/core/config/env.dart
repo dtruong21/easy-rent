@@ -30,9 +30,13 @@ class Env {
   /// builds mobiles iOS/Android (FEAT-024) : les pages /login et
   /// /reset-password restent hébergées par l'app web. Sur le web, l'origin
   /// courant (prod ou channel staging) reste prioritaire.
+  ///
+  /// ⚠️ Ce domaine DOIT figurer dans les **domaines autorisés** de Firebase
+  /// Auth (Console → Authentication → Settings), sinon les liens email
+  /// (vérification, reset password) et les connexions Google/Apple échouent.
   static const String publicAppUrl = String.fromEnvironment(
     'APP_PUBLIC_URL',
-    defaultValue: 'https://easy-rent-54cd4.web.app',
+    defaultValue: 'https://baillan.com',
   );
 
   /// `true` si on tourne en environnement de prod.

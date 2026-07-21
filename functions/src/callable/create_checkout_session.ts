@@ -31,7 +31,7 @@ const priceProMonthly = defineString("STRIPE_PRICE_PRO_MONTHLY");
 const priceProAnnual = defineString("STRIPE_PRICE_PRO_ANNUAL");
 /** Base URL web pour les redirections success/cancel. */
 const webAppBaseUrl = defineString("WEB_APP_BASE_URL", {
-  default: "https://easy-rent-54cd4.web.app",
+  default: "https://baillan.com",
 });
 
 /**
