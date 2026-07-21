@@ -7,10 +7,10 @@ L'app étant une **PWA Flutter Web déployée statiquement sur Firebase Hosting*
 - Toute valeur passée via `--dart-define` au moment du build est **embarquée dans le bundle**
 - → **Aucune clé "secrète" ne doit toucher le code Flutter**, seulement les clés **publishable**
 
-La vraie sécurité repose sur :
-1. **Row Level Security (RLS)** Postgres : chaque user n'accède qu'à ses données
-2. **Edge Functions** : tout traitement nécessitant un secret tourne côté serveur
-3. **Auth JWT** : Supabase vérifie l'identité avant tout accès aux données
+La vraie sécurité repose sur (**backend Firebase depuis FEAT-019** — plus aucune trace de Supabase/Postgres dans le dépôt) :
+1. **Règles Firestore** ([`firestore.rules`](../firestore.rules)) : deny-by-default, `isFullyAuthed()` / `isOwner()` — chaque bailleur n'accède qu'à ses données. C'est **la** frontière d'autorisation, il n'y a pas de RLS Postgres.
+2. **Cloud Functions** ([`functions/src/`](../functions/src)) : tout traitement nécessitant un secret tourne côté serveur (Stripe, RevenueCat), secrets injectés via Secret Manager (`defineSecret`), jamais via `--dart-define`.
+3. **Firebase Auth** : vérifie l'identité ; le contexte d'auth est re-vérifié côté Functions (callables) et côté règles Firestore.
 
 ## 🔑 Classification des clés
 
@@ -18,41 +18,55 @@ La vraie sécurité repose sur :
 
 | Clé | Format | Où | Risque si fuite |
 |---|---|---|---|
-| Supabase Publishable | `sb_publishable_*` | `dart-defines.json`, bundle JS | Aucun direct — RLS protège |
-| Supabase URL | `https://*.supabase.co` | `dart-defines.json`, bundle JS | Aucun |
-| Firebase config (web) | `apiKey`, `projectId`, etc. | bundle JS | Aucun — App Check/règles protègent |
+| Firebase config (web) | `apiKey` (`AIza…`), `projectId`, etc. | `firebase_options.dart`, bundle JS | Aucun **tant que les règles Firestore tiennent** — voir ⚠️ ci-dessous |
+| Config client | `APP_ENV` | `dart-defines.json`, bundle JS | Aucun |
+| Prix Stripe | `STRIPE_PRICE_*` (`defineString`) | Config Functions | Aucun — identifiants de tarif, pas des secrets |
+
+> ⚠️ **App Check n'est PAS activé** (aucun package `firebase_app_check`, aucune activation dans le code — seul un pod interop transitif apparaît dans `ios/Podfile.lock`). La seule protection derrière la config Firebase publique est donc **les règles Firestore**, sans attestation d'app. Rien d'anormal pour ce stade, mais ne pas documenter App Check comme une protection acquise : il ne l'est pas.
 
 ### ❌ Secrètes (NE JAMAIS exposer côté client)
 
+Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) et `.github/workflows/` :
+
 | Clé | Format | Où elle DOIT vivre |
 |---|---|---|
-| Supabase Secret | `sb_secret_*` ou `service_role` | Supabase Edge Functions secrets uniquement |
-| Firebase Admin SDK | service-account.json | GitHub Actions secrets (CI uniquement) |
-| GitHub PAT | `ghp_*` | macOS Keychain / GitHub Actions |
+| `STRIPE_SECRET_KEY` | `sk_live_*` / `sk_test_*` | Secret Manager (`firebase functions:secrets:set`) |
+| `REVENUECAT_API_KEY` | clé secrète RevenueCat | Secret Manager |
+| `REVENUECAT_WEBHOOK_AUTH` | jeton d'auth du webhook entrant | Secret Manager |
+| Firebase Admin SDK | `service-account.json` | GitHub Actions secret `FIREBASE_SERVICE_ACCOUNT` (CI uniquement) |
+| GitHub PAT | `ghp_*` / `github_pat_*` | macOS Keychain / GitHub Actions |
+| Jeton agent Claude Code | — | GitHub Actions secret `CLAUDE_CODE_OAUTH_TOKEN` |
+
+**Note (FEAT-019)** : Supabase est sorti de la stack — plus de dépendance `supabase_flutter`, plus de dossier `supabase/`, plus de migration SQL. Les clés `sb_publishable_*` / `sb_secret_*` / `service_role` **n'existent plus** et n'ont plus à être rotées. Si l'une traîne encore quelque part (dashboard, secret CI résiduel), la révoquer plutôt que la documenter.
 
 **Note (FEAT-008 pivot 2026-06-22)** : `RESEND_API_KEY` a été éliminé. Le partage de quittances utilise Web Share API natif côté client (zéro secret backend email).
 
 **Note (FEAT-011 pivot 2026-06-22)** : Auth magic link (FEAT-001) remplacée par email + password classique. Voir Section "Politique mot de passe" ci-dessous.
 
-**Test simple** : si la clé peut donner un accès admin/bypass-RLS, elle est **secrète**. Sinon elle est **publique**.
+**Test simple** : si la clé permet de contourner les règles Firestore, d'agir au nom d'un autre bailleur, ou d'engager de l'argent chez un prestataire (Stripe, RevenueCat), elle est **secrète**. Sinon elle est **publique**.
 
 ## 📁 Stockage des clés par environnement
 
 ### Développement local
-- `dart-defines.json` (gitignoré) → publishable keys uniquement
+- `dart-defines.json` (gitignoré) → config publique uniquement (`APP_ENV` ; cf. [`dart-defines.example.json`](../dart-defines.example.json))
 - `~/.ssh/id_ed25519` → clé SSH GitHub
-- Pour les secrets : `supabase secrets set <VAR>=<VAL>` (stocké côté Supabase, jamais sur disque)
+- Pour les secrets serveur : `firebase functions:secrets:set <NOM>` (stocké dans **Google Secret Manager**, jamais sur disque, jamais dans le bundle)
 
 ### CI (GitHub Actions)
-- `Settings → Secrets and variables → Actions` :
-  - `SUPABASE_URL_PROD`
-  - `SUPABASE_ANON_KEY_PROD` (publishable)
-  - `FIREBASE_SERVICE_ACCOUNT_PROD` (JSON complet du service account)
-- Le workflow lit ces secrets et les passe à `flutter build` via `--dart-define`
+`Settings → Secrets and variables → Actions` — liste **réelle**, relevée dans `.github/workflows/` :
+
+| Secret | Usage |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | Déploiement Hosting / Functions / rules |
+| `FIREBASE_PROJECT_ID` | Cible du déploiement |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Workflows d'agents (`ticket-agent`, `ticket-done`) |
+| `GITHUB_TOKEN` | Fourni automatiquement par Actions |
+
+> Aucun secret n'est passé à `flutter build` via `--dart-define` : le bundle client ne reçoit que de la config publique. Les secrets serveur ne transitent pas par la CI — ils sont posés directement dans Secret Manager et lus au runtime par les Functions.
 
 ### Production (runtime)
-- Frontend : aucune clé secrète, seulement publishable embarquée au build
-- Edge Functions : `supabase secrets set` côté Supabase (pour services externes si utilisés)
+- **Frontend** : aucune clé secrète — uniquement la config Firebase publique et `APP_ENV`
+- **Cloud Functions** : secrets déclarés par `defineSecret(...)` et résolus depuis Secret Manager à l'exécution (Stripe, RevenueCat)
 
 ## 🔄 Rotation des clés
 
@@ -63,18 +77,23 @@ La vraie sécurité repose sur :
 
 ### Comment rotate ?
 
-**Supabase publishable** (`sb_publishable_*`) :
-1. Dashboard Supabase → Project Settings → API
-2. Clic "Roll publishable key"
-3. Copier la nouvelle clé
-4. Remplacer dans `dart-defines.json` + GitHub Actions secrets
-5. Re-build et re-deploy
+**`STRIPE_SECRET_KEY`** :
+1. Dashboard Stripe → Developers → API keys → « Roll key »
+2. `firebase functions:secrets:set STRIPE_SECRET_KEY` (colle la nouvelle valeur)
+3. Re-déployer les Functions qui la déclarent (`create_checkout_session`) — un secret n'est relu qu'au déploiement d'une nouvelle révision
+4. Stripe laisse une fenêtre de grâce configurable sur l'ancienne clé : surveiller les logs avant de la révoquer définitivement
 
-**Supabase secret** (`sb_secret_*`) :
-1. Même endroit, "Roll secret key"
-2. Mettre à jour Edge Functions secrets : `supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<new>`
-3. Re-deploy les Edge Functions concernées
-4. Surveiller les logs : ancien key continue de fonctionner 1h en grace period
+**`REVENUECAT_API_KEY` / `REVENUECAT_WEBHOOK_AUTH`** :
+1. Dashboard RevenueCat → Project Settings → API keys (ou Webhooks → Authorization header)
+2. `firebase functions:secrets:set <NOM>`
+3. Re-déployer `reconcile_entitlements` (API key) / `revenuecat_webhook` (auth header)
+4. ⚠️ Pour le webhook : mettre à jour la valeur **des deux côtés** (RevenueCat + Secret Manager). Décalage = webhooks rejetés, donc entitlements non synchronisés — panne silencieuse côté facturation, à faire en fenêtre courte.
+
+**Firebase Admin SDK / `FIREBASE_SERVICE_ACCOUNT`** :
+1. Console GCP → IAM → Comptes de service → clé compromise → Supprimer
+2. Créer une nouvelle clé JSON
+3. Remplacer le secret GitHub Actions `FIREBASE_SERVICE_ACCOUNT` (JSON complet)
+4. Re-lancer un déploiement pour valider
 
 
 **Clé SSH GitHub** :
@@ -84,31 +103,27 @@ La vraie sécurité repose sur :
 
 ## 🛡 Garde-fous techniques activés
 
-- **`.gitignore`** : `dart-defines.json`, `.env*`, `*.pem`, `*.key`, `secrets.json`, `supabase/.env`
-- **Pre-commit hook** : `scripts/check-secrets.sh` bloque tout commit contenant un pattern de secret connu
-- **RLS** : activée sur toutes les tables (enforced par `supabase-dev` et `security-auditor`)
-- **JWT verification** : toutes les Edge Functions vérifient le JWT avant action privilégiée
+- **`.gitignore`** : `dart-defines*.json` (sauf `*.example.json`), `.env*`, `*.pem`, `*.key`, `secrets.json`
+- **Pre-commit hook** : [`scripts/check-secrets.sh`](../scripts/check-secrets.sh) bloque tout commit contenant un pattern de secret connu — couvre Stripe `sk_live_`/`rk_live_`, Resend `re_`, GitHub PAT, clés privées PEM, AWS, Google API keys
+- **Règles Firestore** : deny-by-default sur toutes les collections, `isFullyAuthed()` / `isOwner()` (enforced par `security-auditor`) — tests dans [`functions/rules-tests/`](../functions/rules-tests)
+- **Auth côté Functions** : les callables vérifient le contexte d'auth Firebase avant toute action privilégiée ; le webhook RevenueCat s'authentifie par en-tête partagé (`REVENUECAT_WEBHOOK_AUTH`)
+
+**Angles morts connus du hook** (à traiter si le risque monte) :
+- Aucun pattern **RevenueCat** — `REVENUECAT_API_KEY` / `REVENUECAT_WEBHOOK_AUTH` ne seraient pas détectés s'ils étaient collés en clair
+- Aucun pattern `sk_test_` (Stripe test) ni `whsec_` (signature webhook Stripe, non utilisée aujourd'hui)
+- `docs/SECURITY.md` est **exclu du scan** (il cite les patterns) : ne jamais y coller une vraie valeur, le filet ne rattrapera pas
 
 ## ⚠️ Patterns sensibles à connaître
 
-### Flag de session GUC pour bypass contrôlé de trigger (`app.*`)
+### ~~Flag de session GUC pour bypass contrôlé de trigger (`app.*`)~~ — OBSOLÈTE (FEAT-019)
 
-Depuis FEAT-002, un flag de session custom `app.allow_deleted_at_change` est utilisé par les RPC `SECURITY DEFINER` `soft_delete_*` pour neutraliser temporairement le trigger `prevent_protected_columns_change` le temps d'un UPDATE légitime sur `deleted_at`.
+Cette section décrivait un footgun **Postgres/PostgREST** hérité de FEAT-002 : les RPC `SECURITY DEFINER` `soft_delete_*` posaient un flag `app.allow_deleted_at_change` via `set_config()` pour neutraliser un trigger le temps d'un UPDATE, avec le risque qu'une future RPC passe un paramètre user-contrôlé à `set_config()`.
 
-**Comment ça marche** :
-- Chaque RPC pose `set_config('app.allow_deleted_at_change', '1', true)` (true = scope local-transaction)
-- Le trigger lit ce flag via `current_setting('app.allow_deleted_at_change', true)` et autorise l'UPDATE si présent
+**Plus rien de tout cela n'existe** : le pivot FEAT-019 a retiré Postgres du projet (aucune dépendance `supabase_flutter`, aucun dossier `supabase/`, aucune migration SQL dans le dépôt). Pas de RPC, pas de trigger, pas de PostgREST — donc pas de surface d'attaque GUC.
 
-**Risque architectural** : Postgres autorise n'importe quel rôle (y compris `authenticated`) à poser un paramètre GUC custom (préfixe `app.*`) via `SET LOCAL` ou `set_config()`. Aujourd'hui ce risque est mitigé parce que PostgREST n'expose ni `pg_catalog.set_config` ni de fonction `public.*` qui ferait du passthrough. **Mais c'est un footgun** : si demain quelqu'un ajoute une RPC qui prend un paramètre user-controlled et le passe à `set_config()`, le bypass devient possible.
+Le soft-delete est aujourd'hui porté par les règles Firestore et les Cloud Functions. Les garanties à maintenir sont décrites plus haut (**Garde-fous techniques activés**), pas ici.
 
-**Règles à respecter strictement** :
-1. ❌ **JAMAIS** créer une fonction `public.*` (ou exposée à PostgREST) qui accepte un nom de variable ou une valeur GUC en paramètre user-contrôlé.
-2. ❌ **JAMAIS** appeler `set_config(p_var, p_val, ...)` où `p_var` ou `p_val` vient d'un argument de fonction publique.
-3. ✅ Si une RPC doit positionner un flag de session, **les deux arguments doivent être des littéraux hardcodés** dans le corps de la fonction (`set_config('app.x', '1', true)`).
-4. ✅ Les RPC qui posent des flags doivent être `SECURITY DEFINER` + `SET search_path = public` (ou `= dev`) + `REVOKE ALL FROM PUBLIC` + `GRANT EXECUTE TO authenticated`.
-5. ✅ Toute nouvelle RPC qui touche `set_config()` requiert une revue explicite par `security-auditor` avant merge.
-
-**Hardening prévu en P1** : remplacer le flag par un mécanisme intransférable (ex: `pg_trigger_depth() > 0` testé dans une fonction SECURITY DEFINER de niveau supérieur), afin de retirer toute surface d'attaque future. Tracké dans `docs/BACKLOG.md` (dette technique post-FEAT-002).
+> Conservé comme repère pour quiconque retrouverait ces règles dans un doc ou une revue ancienne. Le détail historique reste dans l'historique git et dans `docs/plans/` (archives datées). Le « hardening P1 » associé dans `docs/BACKLOG.md` est sans objet — à fermer si l'entrée y figure encore.
 
 ## 🔐 Politique mot de passe (FEAT-011 pivot 2026-06-22 — backend Firebase depuis FEAT-019)
 
@@ -137,20 +152,21 @@ Depuis FEAT-002, un flag de session custom `app.allow_deleted_at_change` est uti
 - Validation backend : vérification token JWT + création nouvelle session
 - SnackBar confirmation post-reset
 
-**No password change** (MVP) : Utilisateur connecté ne peut pas changer password. À ajouter FEAT-012. Workaround : "Mot de passe oublié?" → reset via email.
+**Changement de mot de passe in-app** : ✅ livré (FEAT-025) — l'ancienne mention « impossible, à ajouter en FEAT-012 » était périmée. Flow : `reauthenticateWithPassword` (Firebase exige une session « récente » pour `updatePassword`) puis `updatePassword`, session conservée ([`change_password_controller.dart`](../lib/features/auth/application/change_password_controller.dart)). Échec de ré-auth → `AuthError.currentPasswordIncorrect` ; session trop ancienne → `requires-recent-login`. Le nouveau mot de passe passe par le même `PasswordValidator` que le signup.
 
 ## ✅ Checklist avant chaque deploy
 
-- [ ] Aucun secret en clair dans le code (run `scripts/check-secrets.sh`)
-- [ ] Toutes les tables nouvelles ont RLS activée
-- [ ] Toutes les Edge Functions valident le JWT
-- [ ] Les secrets de prod sont dans GitHub Actions secrets, PAS dans le repo
+- [ ] Aucun secret en clair dans le code (run `scripts/check-secrets.sh --all`)
+- [ ] Toute nouvelle collection Firestore a une règle explicite (deny-by-default, `isOwner`/`isFullyAuthed`) — et un test dans `functions/rules-tests/`
+- [ ] Toute nouvelle Cloud Function callable vérifie le contexte d'auth avant action privilégiée
+- [ ] Tout nouveau secret serveur passe par `defineSecret` + Secret Manager — jamais par `--dart-define`
+- [ ] Les secrets CI sont dans GitHub Actions secrets, PAS dans le repo
 - [ ] `security-auditor` a donné son OK
 
 ## 📞 En cas d'incident (fuite suspectée)
 
 1. **Rotate immédiatement** la clé concernée
-2. **Audit Supabase logs** : Dashboard → Logs → filtrer par IP suspecte ou requêtes anormales
-3. **Vérifier les données** : aucune extraction massive ? aucune table touchée par RLS bypass ?
+2. **Audit des logs** : Firebase Console → Functions → Logs (Cloud Logging) pour les appels serveur ; Firebase Auth → Users pour les connexions anormales ; côté prestataire selon la clé fuitée (Stripe → Developers → Logs / Events, RevenueCat → Webhooks & API logs)
+3. **Vérifier les données** : aucune lecture ou écriture massive ? aucune collection touchée par un contournement de règle Firestore ? (Cloud Logging + métriques Firestore)
 4. **Documenter** dans `docs/incidents/<date>.md` : quoi, quand, comment, ce qu'on a fait
 5. **Notifier la CNIL** si données personnelles compromises (RGPD : 72h)
