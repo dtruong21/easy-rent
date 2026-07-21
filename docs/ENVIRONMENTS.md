@@ -31,7 +31,7 @@ staging.** Pour ça, il y a l'émulateur local (voir plus bas).
 | **Storage** | ❌ **Non** | Même bucket `easy-rent-54cd4.firebasestorage.app` |
 | **Cloud Functions** | ❌ **Non** | Un seul déploiement, région `europe-west1` |
 | **Rules & indexes** | ❌ **Non** | Un seul `firestore.rules` / `firestore.indexes.json` |
-| **Secrets** | ❌ **Non** | Un seul jeu (Resend, service account…) |
+| **Secrets** | ❌ **Non** | Un seul jeu (service account CI, secrets Functions) |
 
 ## 🌐 Hosting multi-site
 
@@ -156,8 +156,20 @@ optionnel. Le workflow l'applique sur `build/web` juste avant le deploy quand
 Partagés entre les deux environnements (projet unique) :
 
 - Une fuite de clé côté staging expose la prod.
-- Resend envoie de **vrais emails** depuis staging — attention aux scénarios
-  de relance/quittance en test.
+- Les secrets serveur (webhook RevenueCat, clé Stripe…) se posent via
+  `firebase functions:secrets:set` — **une seule fois pour les deux
+  environnements**, puisqu'il n'y a qu'un projet.
+
+> **Aucun envoi d'email serveur aujourd'hui.** `RESEND_API_KEY` a été éliminé
+> au pivot FEAT-008 (2026-06-22) : les quittances sont générées en PDF **côté
+> client** puis partagées via **Web Share natif** (repli `mailto:`), donc via
+> le client mail de l'utilisateur — zéro secret email backend, et rien ne part
+> « tout seul » depuis staging.
+>
+> ⚠️ À rouvrir quand **FEAT-031** (rappels automatiques, encore `📋 planned`
+> faute d'infra email) arrivera : les secrets étant partagés, staging enverra
+> alors de **vrais emails à de vrais locataires**. Prévoir un domaine
+> d'expédition de test — ou couper l'envoi quand `APP_ENV=dev`.
 
 Détail et rotation : [`SECURITY.md`](SECURITY.md).
 
