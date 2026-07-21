@@ -37,14 +37,14 @@ flutter test
 ```
 
 ## 6. Déploiement (⚠️ UN SEUL projet Firebase = easy-rent-54cd4)
-- **Staging (frontend)** : AUTOMATIQUE au push/merge sur `develop` → channel hosting `staging` (workflow `Deploy`).
+- **Staging (frontend)** : AUTOMATIQUE au push/merge sur `develop` → site hosting `baillan-stage`, canal `live` (workflow `Deploy`).
 - **Backend** (functions + rules + indexes) : **MANUEL** (le pipeline ne déploie que le hosting). Comme dev/prod partagent le projet, ceci touche aussi la prod :
   ```bash
   firebase deploy --only functions,firestore:rules,firestore:indexes --project easy-rent-54cd4
   ```
   ⏳ Les index composites Firestore se construisent en asynchrone (console → Firestore → Indexes : attendre « Enabled »).
-- **PROD** : merger `develop` → `main` (déclenche `Deploy` sur le channel `live`) **+** deploy backend manuel. Décision explicite requise.
-  - Prod : `https://easy-rent-54cd4.web.app` · Staging : channel `staging` (URL via `firebase hosting:channel:list`).
+- **PROD** : merger `develop` → `main` (déclenche `Deploy` sur le site `prod`, canal `live`) **+** deploy backend manuel. Décision explicite requise.
+  - Prod : `https://baillan.com` · Staging : `https://stage.baillan.com` (deux **sites** du même projet, données communes).
 - Détails : `docs/ENVIRONMENTS.md`, `docs/GITFLOW.md`.
 
 ## 7. En attente / prochaines étapes

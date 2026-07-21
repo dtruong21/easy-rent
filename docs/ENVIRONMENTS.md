@@ -1,266 +1,218 @@
-# EasyRent — Stratégie multi-environnement (free tier Supabase)
+# Baillan — Stratégie multi-environnement
 
-> Un seul projet Supabase, deux environnements (`dev` et `prod`) isolés au niveau du schéma Postgres et des chemins Storage.
+> **Un seul projet Firebase** (`easy-rent-54cd4`), **deux sites Hosting**
+> (`baillan.com` et `stage.baillan.com`). La séparation est **au niveau du
+> Hosting uniquement** — pas au niveau des données.
 
-## 🎯 Contrainte de base
+## ⚠️ À lire en premier
 
-Le free tier Supabase impose un seul projet utilisable. Donc :
-- ✅ Un seul instance Postgres
-- ✅ Une seule table `auth.users` (partagée)
-- ✅ Un seul Storage
-- ✅ Un seul jeu d'Edge Functions
-- ✅ Un seul jeu de secrets
+**Staging et prod partagent le même plan de données.** Même base Firestore
+`(default)`, même base Auth, même bucket Storage, mêmes Cloud Functions.
 
-→ Il faut **séparer les données au niveau applicatif** sans pouvoir s'appuyer sur l'isolation native.
+Concrètement :
 
-## ✅ Setup checklist (à faire UNE FOIS par projet Supabase)
+- Un compte créé sur `stage.baillan.com` existe aussi pour `baillan.com`.
+- Un bien / bail / quittance créé en test depuis staging est **une donnée de
+  production**.
+- Un déploiement de `firestore.rules` depuis `develop` s'applique **à la prod**.
 
-⚠️ **Étape critique souvent oubliée** : sur Supabase Cloud, seul le schéma `public` est exposé par défaut via l'API PostgREST. Sans config additionnelle, toute requête contre `dev.X` retourne **HTTP 406 — PGRST106 "Invalid schema: dev"**, et l'UI staging affiche "Impossible de charger" sur tous les écrans data (bug rencontré le 2026-06-02, issue #18).
+→ **Ne teste jamais un scénario destructif ou générateur de données sur
+staging.** Pour ça, il y a l'émulateur local (voir plus bas).
 
-**À configurer dans le dashboard Supabase** (lien direct : `https://supabase.com/dashboard/project/<PROJECT_REF>/settings/api`) :
+## 🧭 Ce qui est séparé, ce qui ne l'est pas
 
-1. Section **Data API → Exposed schemas**
-2. Ajoute `dev` à la liste (à côté de `public` et `graphql_public`)
-3. Save — effet immédiat, pas de redéploiement nécessaire
-
-**Vérification** : `./scripts/check-supabase-schemas.sh` — affiche ✅ si les 2 schémas sont exposés, ❌ avec instructions sinon.
-
-À refaire si tu changes de projet Supabase ou si tu ajoutes un nouveau schéma (ex: `staging` un jour pour 3 envs).
-
-## 🗄 Stratégie Postgres : schémas séparés
-
-### Architecture
-
-| Schéma | Rôle | Branche Git mappée |
+| Composant | Séparé dev/prod ? | Détail |
 |---|---|---|
-| `public` | **PROD** | `main` → Firebase live |
-| `dev` | **DEV / staging** | `develop` → Firebase staging |
+| **Hosting** | ✅ Oui | Deux sites : `easy-rent-54cd4` et `baillan-stage` |
+| **Domaine** | ✅ Oui | `baillan.com` vs `stage.baillan.com` |
+| **Indexation SEO** | ✅ Oui | `noindex` + robots bloquant sur staging |
+| **Firestore** | ❌ **Non** | Base `(default)` partagée |
+| **Auth** | ❌ **Non** | Même annuaire d'utilisateurs |
+| **Storage** | ❌ **Non** | Même bucket `easy-rent-54cd4.firebasestorage.app` |
+| **Cloud Functions** | ❌ **Non** | Un seul déploiement, région `europe-west1` |
+| **Rules & indexes** | ❌ **Non** | Un seul `firestore.rules` / `firestore.indexes.json` |
+| **Secrets** | ❌ **Non** | Un seul jeu (service account CI, secrets Functions) |
 
-Les deux schémas contiennent les **mêmes tables avec la même structure**, mais des données isolées. Chaque user vit dans les deux schémas indépendamment (RLS par `auth.uid()`).
+## 🌐 Hosting multi-site
 
-### Convention de migration
+Deux sites Firebase, chacun déployé sur son canal **live** via une cible
+`.firebaserc` :
 
-Chaque migration applique les changements **aux deux schémas en une seule fois**. Pattern recommandé :
+| Branche | Cible | Site | URL |
+|---|---|---|---|
+| `main` | `prod` | `easy-rent-54cd4` | https://baillan.com |
+| `develop` | `stage` | `baillan-stage` | https://stage.baillan.com |
 
-```sql
--- Migration: 20260601_create_landlords.sql
-
--- ============ PROD (public) ============
-CREATE TABLE public.landlords (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email text NOT NULL,
-  display_name text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE public.landlords ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "landlord_owns_self" ON public.landlords
-  FOR ALL USING (id = auth.uid()) WITH CHECK (id = auth.uid());
-CREATE INDEX idx_public_landlords_email ON public.landlords(email);
-
--- ============ DEV (dev) ============
-CREATE TABLE dev.landlords (LIKE public.landlords INCLUDING ALL);
-ALTER TABLE dev.landlords ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "landlord_owns_self" ON dev.landlords
-  FOR ALL USING (id = auth.uid()) WITH CHECK (id = auth.uid());
--- Note: INCLUDING ALL copie les indexes, mais PAS les policies → on les recrée
-```
-
-**Règle d'or** : chaque migration touchant des tables doit éditer les deux schémas. L'agent `supabase-dev` et `security-auditor` vérifient ça.
-
-### Switch côté Flutter
-
-L'app choisit son schéma via `--dart-define=SUPABASE_SCHEMA=dev|public` :
-
-```dart
-// lib/core/config/env.dart
-static const String supabaseSchema = String.fromEnvironment(
-  'SUPABASE_SCHEMA',
-  defaultValue: 'public',  // safer default = prod-like
-);
-```
-
-Et toutes les requêtes passent par un wrapper :
-
-```dart
-// lib/core/db.dart
-class Db {
-  static SupabaseQueryBuilder from(String table) {
-    return Supabase.instance.client.schema(Env.supabaseSchema).from(table);
+```json
+// .firebaserc
+{
+  "projects": { "default": "easy-rent-54cd4" },
+  "targets": {
+    "easy-rent-54cd4": {
+      "hosting": { "prod": ["easy-rent-54cd4"], "stage": ["baillan-stage"] }
+    }
   }
 }
-
-// Usage : Db.from('landlords').select() au lieu de Supabase.instance.client.from(...)
 ```
 
-## 📁 Storage : préfixage par environnement
+Pourquoi deux sites plutôt qu'un preview channel : **un preview channel ne peut
+pas porter de domaine personnalisé** (les domaines s'attachent au canal live
+d'un site). L'ancienne URL à hash `*--staging-*.web.app` n'est donc plus
+alimentée.
 
-Un seul bucket `documents`, paths préfixés :
+> ⚠️ Les *sites* Hosting ne sont pas des *projets*. `baillan-stage` est un site
+> à l'intérieur de `easy-rent-54cd4` — c'est précisément pourquoi les données
+> sont communes.
 
-```
-documents/
-├── prod/
-│   ├── {user_id}/
-│   │   ├── leases/
-│   │   ├── receipts/
-│   │   └── identity/
-├── dev/
-│   ├── {user_id}/
-│   │   └── ...
-```
+## ⚙️ `APP_ENV` — ce qu'il fait réellement
 
-Convention d'upload côté Flutter :
+Le build injecte `--dart-define=APP_ENV=dev|prod`
+([`lib/core/config/env.dart`](../lib/core/config/env.dart)) :
+
 ```dart
-final path = '${Env.storageEnvPrefix}/$userId/leases/$fileName';
-// storageEnvPrefix = 'prod' si schema=public, 'dev' sinon
+static const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: 'dev');
+static bool get isProd => appEnv == 'prod';
 ```
 
-### Politique du bucket (à configurer dans Supabase Studio)
+`APP_ENV` pilote **uniquement des comportements applicatifs** — le SEO
+(`noindex`), les URLs publiques, l'affichage de bandeaux de dev. **Il ne
+change ni le projet, ni la base Firestore, ni le bucket.** Le défaut est `dev`,
+c'est-à-dire le mode le moins exposé.
 
-```sql
--- Un user ne peut accéder qu'à ses propres fichiers dans son env
-CREATE POLICY "user_accesses_own_env_files"
-ON storage.objects FOR ALL
-USING (
-  bucket_id = 'documents'
-  AND auth.uid()::text = (storage.foldername(name))[2]  -- {env}/{user_id}/...
-);
+> 📌 Le commentaire en tête de `env.dart` mentionne une séparation
+> `(default)` vs base Firestore `dev`. **Ce n'est pas implémenté** : les 21
+> points d'accès Firestore de `lib/` utilisent `FirebaseFirestore.instance`
+> (donc `(default)`), et `firebase.json` ne déclare que `(default)`. À traiter
+> si on veut une vraie isolation (voir « Évolution »).
+
+### Fichiers de dart-defines
+
+| Fichier | Usage |
+|---|---|
+| `dart-defines.prod.example.json` | Build prod |
+| `dart-defines.dev.example.json` | Build staging |
+| `dart-defines.emulator.example.json` | Dev local sur émulateurs |
+| `dart-defines.example.json` | Gabarit générique |
+
+Ce sont des **exemples** : copie-les sans le `.example` (les vrais fichiers ne
+sont pas versionnés).
+
+## 🧪 Tester sans risque : l'émulateur local
+
+C'est le **seul** environnement réellement isolé. Toute manipulation de données
+de test (tiers free/Pro, quotas, scénarios de bail) passe par là.
+
+```bash
+# Émulateurs Firestore + Auth + Functions
+npm --prefix functions run serve
+
+# Seed des jeux d'essai (tiers free/Pro)
+node tool/seed/seed_tiers.mjs
+
+# App branchée sur les émulateurs (build DEBUG obligatoire)
+flutter run --dart-define-from-file=dart-defines.emulator.json
 ```
 
-## 👥 Auth : convention email
+Garde-fous côté code :
 
-Comme `auth.users` est partagée, on ne peut pas isoler techniquement les comptes dev des comptes prod.
+- `Env.useFirebaseEmulator` = `kDebugMode && USE_FIREBASE_EMULATOR` — un build
+  release ne peut **jamais** pointer les émulateurs, même si le flag fuit.
+- Hôte par défaut `127.0.0.1` (pas `localhost` : sur le web Chromium résout
+  `localhost` en IPv6 `::1`, que les émulateurs n'écoutent pas — l'app
+  retombait alors silencieusement sur le backend **prod**). Émulateur Android :
+  `--dart-define=FIREBASE_EMULATOR_HOST=10.0.2.2`.
+- Ports alignés `firebase.json` / `env.dart` / `seed_tiers.mjs` : Firestore
+  `8080`, Auth `9099`.
 
-**Convention** :
-- **Comptes dev** : email avec `test+` (Gmail+ alias) → `test+demo1@gmail.com`, `test+dev2@gmail.com`
-- **Comptes prod** : tout le reste
+## 🔒 Rules, indexes et Functions
 
-→ Ce n'est pas une garde technique stricte, mais une discipline d'équipe. Nettoyage périodique recommandé.
+Un seul jeu, partagé. **Un déploiement depuis `develop` impacte la prod.**
 
-### Helper SQL (optionnel, pour les audits)
+| Artefact | Fichier | Portée |
+|---|---|---|
+| Règles Firestore | `firestore.rules` | Projet entier |
+| Index composites | `firestore.indexes.json` | Base `(default)` |
+| Règles Storage | `storage.rules` | Bucket unique |
+| Cloud Functions | `functions/src/` | Projet entier |
 
-```sql
--- Liste les comptes "test" qui se sont créés en prod
-SELECT id, email, created_at
-FROM auth.users
-WHERE email ILIKE 'test+%';
+Tests des règles avant tout déploiement :
+
+```bash
+npm --prefix functions run test:rules   # émulateur, projet demo-easyrent
 ```
 
-### Garde-fou applicatif (recommandé après MVP)
+## 🚫 SEO — noindex sur staging
 
-Quand tu auras le temps, ajoute un trigger Postgres qui empêche les emails `test+` de créer des données dans le schéma `public` :
+`stage.baillan.com` est un domaine réellement crawlable : le `noindex` n'est pas
+optionnel. Le workflow l'applique sur `build/web` juste avant le deploy quand
+`APP_ENV=dev` :
 
-```sql
-CREATE OR REPLACE FUNCTION block_test_emails_in_prod()
-RETURNS trigger AS $$
-DECLARE
-  user_email text;
-BEGIN
-  SELECT email INTO user_email FROM auth.users WHERE id = auth.uid();
-  IF user_email ILIKE 'test+%' THEN
-    RAISE EXCEPTION 'Test accounts cannot create data in prod schema';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+- `web/robots.staging.txt` → `robots.txt` (tout-bloquant)
+- `sitemap.xml` retiré
+- `<meta name="robots" content="noindex">`
 
--- À appliquer sur chaque table public :
-CREATE TRIGGER block_test_emails_landlords
-  BEFORE INSERT OR UPDATE ON public.landlords
-  FOR EACH ROW EXECUTE FUNCTION block_test_emails_in_prod();
-```
+## 🔐 Secrets
 
-## ⚙️ Edge Functions
+Partagés entre les deux environnements (projet unique) :
 
-Une seule version déployée, qui gère les deux schémas via un paramètre :
+- Une fuite de clé côté staging expose la prod.
+- Les secrets serveur (webhook RevenueCat, clé Stripe…) se posent via
+  `firebase functions:secrets:set` — **une seule fois pour les deux
+  environnements**, puisqu'il n'y a qu'un projet.
 
-```typescript
-// supabase/functions/send-receipt/index.ts
-const { receiptId, schema = 'public' } = await req.json();
+> **Aucun envoi d'email serveur aujourd'hui.** `RESEND_API_KEY` a été éliminé
+> au pivot FEAT-008 (2026-06-22) : les quittances sont générées en PDF **côté
+> client** puis partagées via **Web Share natif** (repli `mailto:`), donc via
+> le client mail de l'utilisateur — zéro secret email backend, et rien ne part
+> « tout seul » depuis staging.
+>
+> ⚠️ À rouvrir quand **FEAT-031** (rappels automatiques, encore `📋 planned`
+> faute d'infra email) arrivera : les secrets étant partagés, staging enverra
+> alors de **vrais emails à de vrais locataires**. Prévoir un domaine
+> d'expédition de test — ou couper l'envoi quand `APP_ENV=dev`.
 
-if (!['public', 'dev'].includes(schema)) {
-  return new Response('Invalid schema', { status: 400 });
-}
-
-const { data } = await supabaseAdmin
-  .schema(schema)
-  .from('receipts')
-  .select('*')
-  .eq('id', receiptId)
-  .single();
-```
-
-Le client Flutter passe le schéma en argument :
-```dart
-await Supabase.instance.client.functions.invoke('send-receipt', body: {
-  'receiptId': id,
-  'schema': Env.supabaseSchema,
-});
-```
-
-## 🔐 Secrets et clés
-
-Les secrets Supabase (Resend API, etc.) sont **partagés** entre dev et prod (un seul projet). Conséquences :
-- ✅ Simplicité de config
-- ⚠️ Une fuite de clé en dev affecte aussi la prod
-- ⚠️ Resend envoie de vrais emails depuis dev → utiliser un domaine de test Resend (sandbox)
-
-**Recommandation** : configurer Resend en sandbox mode pour dev, prod mode pour production. À gérer applicativement :
-
-```typescript
-const resendDomain = schema === 'dev' ? 'sandbox.tondomaine.fr' : 'quittances.tondomaine.fr';
-```
+Détail et rotation : [`SECURITY.md`](SECURITY.md).
 
 ## 🚀 Déploiement
 
-| Push sur | Action |
-|---|---|
-| `develop` | Build avec `SUPABASE_SCHEMA=dev` → Firebase staging |
-| `main` | Build avec `SUPABASE_SCHEMA=public` → Firebase live (confirmation requise) |
-| `feat/*` (PR open) | Preview deploy temporaire sur Firebase staging avec schéma `dev` |
+| Push sur | Cible Hosting | `APP_ENV` | Résultat |
+|---|---|---|---|
+| `develop` | `stage` | `dev` | https://stage.baillan.com (noindex) |
+| `main` | `prod` | `prod` | https://baillan.com |
 
-> **Hosting multi-site (2026-07-21)** — deux sites Firebase, chacun déployé sur
-> son canal **live** via une cible `.firebaserc` :
->
-> | Branche | Cible | Site | URL |
-> |---|---|---|---|
-> | `main` | `prod` | `easy-rent-54cd4` | https://baillan.com |
-> | `develop` | `stage` | `baillan-stage` | https://stage.baillan.com |
->
-> Pourquoi deux sites plutôt qu'un preview channel : **un preview channel ne peut
-> pas porter de domaine personnalisé** (les domaines s'attachent au canal live
-> d'un site). L'ancienne URL à hash `*--staging-*.web.app` n'est donc plus
-> alimentée. Le `noindex` staging reste appliqué au build `APP_ENV=dev` — d'autant
-> plus nécessaire que `stage.baillan.com` est un domaine réellement crawlable.
+Le workflow ([`deploy.yml`](../.github/workflows/deploy.yml)) résout la cible
+depuis la branche, ou via `workflow_dispatch` avec l'input `target`. Un seul
+secret `FIREBASE_PROJECT_ID` — seul `--only hosting:<target>` diffère.
+
+> Pas de preview deploy sur les PR : `ci.yml` et `deploy.yml` ne se déclenchent
+> que sur `[main, develop]`.
 
 ## 🧹 Maintenance périodique
 
-À faire ~1x/mois :
-- [ ] Nettoyer les comptes `test+*` qui se seraient créés en prod
-- [ ] Vacuum les tables `dev` (peuvent grossir avec les essais)
-- [ ] Vérifier que les schémas sont synchronisés (mêmes tables/colonnes/policies)
-- [ ] Auditer Storage : volume `dev/` vs `prod/`
+~1×/mois :
 
-Script utile :
-```sql
--- Vérifier la parité des schémas
-SELECT
-  pub.tablename AS public_table,
-  dev.tablename AS dev_table
-FROM pg_tables pub
-FULL OUTER JOIN pg_tables dev
-  ON pub.tablename = dev.tablename AND dev.schemaname = 'dev'
-WHERE pub.schemaname = 'public' OR dev.schemaname = 'dev';
--- Toute ligne avec une cellule NULL = drift à corriger
-```
+- [ ] Purger les comptes de test créés depuis staging (ils sont en prod)
+- [ ] Auditer les données orphelines générées par les tests manuels
+- [ ] Vérifier que `firestore.indexes.json` couvre les queries récentes
+- [ ] Rejouer `npm --prefix functions run test:rules` après tout changement de
+      rules
 
-## ⏭️ Évolution future (quand tu upgradeads Supabase Pro)
+## ⏭️ Évolution — obtenir une vraie isolation
 
-À l'upgrade vers Pro :
-1. Crée un second projet Supabase
-2. Déplace le schéma `dev` vers le nouveau projet
-3. Supprime le schéma `dev` du projet originel (qui devient pur prod)
-4. Update `dart-defines.dev.json` avec la nouvelle URL/key du projet dev
-5. Update `dart-defines.prod.json` reste inchangé
+Deux options, par ordre de coût croissant :
 
-La logique applicative (`Db.from()`, env switching) ne change pas.
+**1. Base Firestore nommée (`dev`) dans le même projet.** Firestore supporte le
+multi-base. Il faut : créer la base, déclarer un second bloc `firestore` dans
+`firebase.json`, déployer rules+indexes sur les deux, et surtout **router les 21
+appels `FirebaseFirestore.instance`** vers
+`FirebaseFirestore.instanceFor(databaseId: …)` selon `APP_ENV` (typiquement via
+un provider Riverpod unique). Auth et Storage resteraient partagés.
+
+**2. Second projet Firebase dédié au dev.** Isolation complète (Firestore, Auth,
+Storage, Functions, secrets). Il faut : un second jeu de `firebase_options`
+sélectionné par `APP_ENV`, des alias `.firebaserc` (`dev`/`prod`), deux secrets
+`FIREBASE_PROJECT_ID` dans le workflow, et un double déploiement
+rules/indexes/functions. C'est la seule option qui protège aussi Auth et
+Storage.
+
+Tant qu'aucune des deux n'est faite : **l'émulateur est le seul bac à sable.**
