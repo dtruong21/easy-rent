@@ -6,7 +6,26 @@
 > [`FEATURES.md`](FEATURES.md) (matrice) ; les détails techniques dans les shards
 > `schema/`, `functions/`, `routes/`.
 
-## Changements (2026-07-03 → 2026-07-17)
+## Changements (2026-07-03 → 2026-07-21)
+
+### PR #128 : `docs/SECURITY.md` réaligné sur la stack Firebase réelle — DOC (2026-07-21)
+- Suite de **PR #127**. Point de départ vérifié : **Supabase a totalement disparu du dépôt** (aucune dépendance `supabase_flutter`, aucun dossier `supabase/`, aucune migration SQL) — la réécriture s'est donc faite sur inventaire, pas par renommage.
+- **La table des secrets était incomplète** — c'est le point le plus sérieux. La section « ❌ Secrètes » listait `sb_secret_*` / `service_role` (inexistants) et **omettait tous les secrets réellement en place** : `STRIPE_SECRET_KEY`, `REVENUECAT_API_KEY`, `REVENUECAT_WEBHOOK_AUTH` (relevés via `defineSecret` dans `functions/src/`). Le document censé recenser les secrets ne mentionnait pas les clés de paiement.
+- **App Check présenté comme une protection active** alors qu'il n'est **pas activé** (aucun package `firebase_app_check`, aucune activation — seul un pod interop transitif dans `ios/Podfile.lock`). Seules les règles Firestore protègent la config Firebase publique.
+- Secrets CI : la liste annoncée (`SUPABASE_URL_PROD`, `SUPABASE_ANON_KEY_PROD`, `FIREBASE_SERVICE_ACCOUNT_PROD`) ne correspondait à aucun secret réel → remplacée par la liste relevée dans `.github/workflows/` (`FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID`, `CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_TOKEN`).
+- Rotation : procédures `supabase secrets set` → Secret Manager (Stripe/RevenueCat) + GCP IAM (service account). Avertissement ajouté : `REVENUECAT_WEBHOOK_AUTH` doit être tourné **des deux côtés**, un décalage rejette les webhooks et désynchronise les entitlements (panne silencieuse côté facturation).
+- Section « flag GUC `app.*` » marquée **obsolète** (footgun PostgREST sur une base qui n'existe plus), conservée comme repère plutôt que supprimée. Le « hardening P1 » associé dans `docs/BACKLOG.md` est sans objet.
+- Corrigé aussi : le doc affirmait que le changement de mot de passe in-app n'existait pas (« à ajouter FEAT-012 ») — il est livré depuis **FEAT-025** (`reauthenticateWithPassword` + `updatePassword`).
+- **Suites ouvertes** : #130 (revue `security-auditor` — confirmer la complétude de l'inventaire côté consoles, invisible depuis le code) et #131 (angles morts de `scripts/check-secrets.sh` : aucun pattern RevenueCat, pas de `sk_test_`/`whsec_`, `SECURITY.md` exclu du scan). Le script **n'a pas été modifié** : changer un filet de sécurité mérite sa propre revue.
+
+### PR #127 : `docs/SECURITY.md` — persistance de session et politique mot de passe (post-FEAT-019) — DOC (2026-07-21)
+- La section « Politique mot de passe » datait d'avant le pivot FEAT-019 et décrivait `supabase_flutter`. Deux affirmations **fausses**, pas seulement périmées :
+  - **Stockage** : pas localStorage. Aucun `setPersistence` dans `lib/` → persistance par défaut de `firebase_auth_web` 5.15.3, chaîne `indexedDBLocalPersistence` → `browserLocalPersistence` → `browserSessionPersistence` (`getAuthInstance`, `interop/auth.dart`). C'est **IndexedDB** ; localStorage n'est qu'un repli.
+  - **Durée de vie** : la session n'est **pas** perdue à la fermeture du navigateur, elle y survit. Fin uniquement sur `signOut()`, suppression de compte, ou révocation de jeton.
+- **Note RGPD « pas de remember me » = engagement fantôme.** La contrainte a été révisée le **2026-05-27** (décision figée, `docs/backlog/001-auth-magic-link.md`) : persistance standard conservée, pas de bascule UI, base légale à documenter dans la politique de confidentialité — obligation **déjà satisfaite** par le §7 « Cookies et traceurs » (`privacy_page.dart`), qui décrit correctement IndexedDB. `SECURITY.md` affichait donc une posture plus stricte que celle réellement tenue.
+- **La règle de mot de passe n'est pas appliquée côté serveur** : les 8 car. + lettre + chiffre vivent dans `PasswordValidator` (`lib/core/utils/password_validator.dart`), **côté client uniquement**. Aucune password policy Firebase/Identity Platform n'est configurée → plancher serveur réel = `weak-password` natif à **6 caractères**, sans contrainte de composition. Documenté en encadré ⚠️ plutôt que masqué par « built-in ».
+- Rate limiting : le « 3 tentatives/minute » était un chiffre Supabase. Firebase ne publie pas ses seuils → **chiffre retiré sans être remplacé**, description du mécanisme réel à la place (`too-many-requests` → `AuthError.tooManyRequests`).
+- Archives `docs/plans/FEAT-*.md` et `docs/backlog/*.md` **non touchées** (mentions Supabase légitimes et datées).
 
 ### PR #106 : Labels système agent absents + garde-fous CI silencieux — FIX (2026-07-17)
 - Les 8 labels système documentés dans [`docs/TICKETING.md`](../TICKETING.md) (§ « Activer les labels système ») n'avaient jamais été créés dans le repo : seul `bug` existait (avec les labels GitHub par défaut). Créés hors PR via `gh label create` (un label n'est pas du code) : `feature-request`, `agent-skip`, `agent-processing`, `agent-needs-info`, `agent-failed`, `agent-done`.
