@@ -15,10 +15,14 @@ develop       ──●─●─●─●──●─●─●─●──●─
 
 ### Branches long-lived
 
-| Branche | Rôle | Cible déploiement | Schéma Supabase |
-|---|---|---|---|
-| `main` | Prod stable | Firebase Hosting **live** | `public` |
-| `develop` | Intégration dev/staging | Firebase Hosting **staging** | `dev` |
+| Branche | Rôle | Cible Hosting | URL | `APP_ENV` |
+|---|---|---|---|---|
+| `main` | Prod stable | `prod` | https://baillan.com | `prod` |
+| `develop` | Intégration dev/staging | `stage` | https://stage.baillan.com | `dev` |
+
+> Les deux cibles vivent dans le **même** projet Firebase et partagent donc
+> Firestore, Auth et Storage — la séparation est purement Hosting. Détail et
+> conséquences : [`ENVIRONMENTS.md`](ENVIRONMENTS.md).
 
 ### Branches éphémères
 
@@ -110,7 +114,7 @@ Scope : `auth`, `properties`, `tenants`, `leases`, `payments`, `pdf`, `ui`, `db`
 Exemples :
 - `feat(quittance): générer PDF avec mentions légales loi 89`
 - `fix(auth): corriger redirect après magic link`
-- `chore(deps): bump supabase_flutter to 2.12.4`
+- `chore(deps): bump firebase_auth to 5.3.1`
 
 ## 🔀 Strategy de merge
 
