@@ -8,7 +8,7 @@ Scénarios d'investissement (`investment_scenarios`). CRUD via Firestore Rules +
 
 | Trigger | Type / collection | Logique |
 |---|---|---|
-| `setUpdatedAtInvestmentScenarios` | `onDocumentWritten(investment_scenarios)` | Standard `setUpdatedAt` (voir README) |
+| `setUpdatedAtInvestmentScenarios` | `onDocumentUpdated(investment_scenarios)` | Standard `setUpdatedAt` (voir README) |
 
 ## Cycle de vie
 

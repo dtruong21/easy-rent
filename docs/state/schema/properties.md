@@ -49,12 +49,13 @@ Bien immobilier (appartement, maison, etc). **Création exclusively via callable
 | `deletedAt` | timestamp\|null | soft-delete, isActive filter |
 
 **Règles Firestore** :
-- `get/list` : isOwner(landlordId) && (isActive ou sans filtre)
+- `get` : isOwner(landlordId) && isActive(rsc)
+- `list` : isOwner(landlordId) — **pas d'`isActive`** (délibéré, audit FEAT-045 : le filtrage soft-delete est un choix de requête du propriétaire, pas un enjeu d'accès)
 - `create` : **if false** (CF-exclusive via `createProperty`/FEAT-044)
-- `update` : isFullyAuthed() && isOwner(landlordId) && isActive(rsc) && preservesImmutables()
-- `delete` : interdit (soft-delete CF exclusive)
+- `update` : isFullyAuthed() && isOwner(landlordId) && isActive(rsc) && preservesImmutables(rsc) && `activeLeaseCount` inchangé (dénorm CF only)
+- `delete` : **if false** (soft-delete CF exclusive)
 
-**Indexes** :
+**Indexes** (2, vérifiés dans `firestore.indexes.json`) :
 - landlordId ↑, deletedAt ↑, name ↑ (list actives)
 - landlordId ↑, deletedAt ↑, createdAt ↓ (recent first)
 
@@ -90,13 +91,16 @@ Locataire. **Création exclusively via callable `createTenant`** (Admin SDK, imp
 | `deletedAt` | timestamp\|null | soft-delete, isActive filter |
 
 **Règles Firestore** :
-- `get/list` : isOwner(landlordId) && (isActive ou sans filtre)
+- `get` : isOwner(landlordId) && isActive(rsc)
+- `list` : isOwner(landlordId) — **pas d'`isActive`** (cf. properties, audit FEAT-045)
 - `create` : **if false** (CF-exclusive via `createTenant`/FEAT-044)
-- `update` : isFullyAuthed() && isOwner(landlordId) && isActive(rsc) && preservesImmutables() && activeLeaseCount unchanged
-- `delete` : interdit
+- `update` : isFullyAuthed() && isOwner(landlordId) && isActive(rsc) && preservesImmutables(rsc) && `activeLeaseCount` inchangé
+- `delete` : **if false**
 
-**Indexes** :
-- landlordId ↑, deletedAt ↑, firstName ↑ (list search)
+**Indexes** (2, vérifiés dans `firestore.indexes.json`) :
 - landlordId ↑, deletedAt ↑, lastName ↑ (list search)
+- landlordId ↑, deletedAt ↑, createdAt ↓ (recent first)
+
+> ⚠️ Il n'existe **pas** d'index `(landlordId, deletedAt, firstName)` — l'état l'annonçait à tort. Un tri par `firstName` échouerait en index manquant.
 
 **Triggers** : setUpdatedAt.

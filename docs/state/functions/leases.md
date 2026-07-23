@@ -43,8 +43,8 @@ Client invoke, isFullyAuthed only.
 
 | Trigger | Type / collection | Logique |
 |---|---|---|
-| `setUpdatedAtLeases` | `onDocumentWritten(leases)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
-| `recomputeChargeRegularization` (FEAT-041c) | `onDocumentWritten(expenses)` — 📋 **PLANNED V1.1** (pas déployé) | Si `expense.category=='recoverable' && expense.leaseId` → query lease ; alimente `lease.chargeRegularizationFeed` subcollection (draft) ; agrège charges mensuelles → provision + avis PDF |
+| `setUpdatedAtLeases` | `onDocumentUpdated(leases)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
+| `recomputeChargeRegularization` (FEAT-041c) | type à déterminer — 📋 **PLANNED V1.1** (pas déployé, aucun code) | Si `expense.category=='recoverable' && expense.leaseId` → query lease ; alimente `lease.chargeRegularizationFeed` subcollection (draft) ; agrège charges mensuelles → provision + avis PDF |
 
 ## Dart repository — getter calculé
 
