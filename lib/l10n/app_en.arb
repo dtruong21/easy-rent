@@ -5052,5 +5052,32 @@
   "deleteAccountErrorGeneric": "Deletion failed. Please try again.",
   "@deleteAccountErrorGeneric": {
     "description": "Generic fallback error for the account-deletion flow (unexpected failures, and default cases of the auth/callable error mappers)."
-  }
+  },
+
+  "proPricingTitle": "Baillan Pro",
+  "proPricingHeadline": "Upgrade to Baillan Pro",
+  "proPricingSubheadline": "Manage your properties without limits",
+  "proPlanMonthly": "Monthly",
+  "proPlanAnnual": "Annual",
+  "proPeriodMonth": "month",
+  "proPeriodYear": "year",
+  "proAnnualSaving": "2 months free",
+  "proSubscribeButton": "Subscribe",
+  "proAlreadySubscribed": "Already subscribed",
+  "proCheckoutError": "Unable to start checkout. Please try again.",
+  "proFeaturesTitle": "Everything in Pro",
+  "proFeatureUnlimitedProperties": "Unlimited properties",
+  "proFeatureUnlimitedLeases": "Unlimited leases",
+  "proFeatureUnlimitedTenants": "Unlimited tenants",
+  "proFeatureUnlimitedDocuments": "Unlimited documents",
+  "proFeatureUnlimitedScenarios": "Unlimited simulator scenarios",
+  "proFeaturePriority": "Priority support",
+  "proSuccessTitle": "Welcome to Baillan Pro!",
+  "proSuccessBody": "Your subscription is active. Enjoy all features without limits.",
+  "proSuccessGoToDashboard": "Go to dashboard",
+  "proCancelTitle": "Payment cancelled",
+  "proCancelBody": "No charges were made. You can try again at any time.",
+  "proCancelBackToDashboard": "Go back",
+  "proCancelRetry": "Try again",
+  "proUpgradeButton": "Upgrade to Pro"
 }

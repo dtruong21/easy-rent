@@ -6,6 +6,9 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../auth/data/landlord_tier_repository.dart';
+import '../../auth/domain/subscription_tier.dart';
+import '../../paid_plan/presentation/pro_badge.dart';
 import '../application/landlord_profile_provider.dart';
 import 'widgets/profile_settings_sections.dart';
 import 'widgets/section_header.dart';
@@ -47,6 +50,8 @@ class ProfilePage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _ProfileHeader(),
+            const SizedBox(height: 16),
+            const _ProUpsellCard(),
             const SizedBox(height: 32),
 
             SectionHeader(title: l10n.profileHubAccountSection),
@@ -163,12 +168,20 @@ class _ProfileHeader extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (fullName != null && fullName.isNotEmpty)
-                Text(
-                  fullName,
-                  key: const Key('txt_profile_header_name'),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fullName,
+                        key: const Key('txt_profile_header_name'),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const ProBadge(),
+                  ],
                 ),
               Text(
                 email,
@@ -181,6 +194,47 @@ class _ProfileHeader extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ProUpsellCard extends ConsumerWidget {
+  const _ProUpsellCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tier = ref.watch(landlordTierProvider).valueOrNull?.tier;
+    if (tier == SubscriptionTier.paid) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.go('/pro'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.star, color: theme.colorScheme.onPrimaryContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.proUpgradeButton,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
