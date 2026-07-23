@@ -13,6 +13,9 @@ import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/expenses/presentation/expense_form_page.dart';
 import '../../features/expenses/presentation/property_expenses_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
+import '../../features/paid_plan/presentation/pro_cancel_page.dart';
+import '../../features/paid_plan/presentation/pro_pricing_page.dart';
+import '../../features/paid_plan/presentation/pro_success_page.dart';
 import '../../features/privacy/presentation/legal_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/privacy/presentation/terms_page.dart';
@@ -213,6 +216,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: const FaqPage(),
           transition: AppTransition.fade,
         ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Baillan Pro — checkout flow (FEAT-044)
+      // Hors shell : fullyAuth requis (le guard global redirige les autres).
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/pro',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ProPricingPage(),
+          transition: AppTransition.standard,
+        ),
+        routes: [
+          GoRoute(
+            path: 'success',
+            pageBuilder: (context, state) => appPage(
+              key: state.pageKey,
+              child: const ProSuccessPage(),
+              transition: AppTransition.fade,
+            ),
+          ),
+          GoRoute(
+            path: 'cancel',
+            pageBuilder: (context, state) => appPage(
+              key: state.pageKey,
+              child: const ProCancelPage(),
+              transition: AppTransition.fade,
+            ),
+          ),
+        ],
       ),
 
       // -----------------------------------------------------------------------
