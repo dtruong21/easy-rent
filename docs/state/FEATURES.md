@@ -59,4 +59,4 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-051 | Baillan Pro — annonces & diffusion multi-portails | 💡 idea | properties | discovery PR #98, docs/backlog/051-annonces-diffusion-pro.md |
 | FEAT-052 | Feature Readiness Score (`/feature-ready`, advisory) | ✅ done | tooling | PR #100 (`tool/feature_ready.dart`) |
 | FEAT-054 | Isolation réelle prod/staging (Firestore, Auth, Storage, Functions) | 📋 planned | account | docs/backlog/054-firestore-prod-staging-isolation.md |
-| FEAT-053 | Comparaison de scénarios de simulation (Pro) | 💡 idea | simulator | docs/backlog/053-scenarios-comparison.md |
+| FEAT-055 | Comparaison de scénarios de simulation (Pro) | 💡 idea | simulator | docs/backlog/055-scenarios-comparison.md |
