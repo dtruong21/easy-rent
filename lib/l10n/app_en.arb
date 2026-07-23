@@ -5079,5 +5079,55 @@
   "proCancelBody": "No charges were made. You can try again at any time.",
   "proCancelBackToDashboard": "Go back",
   "proCancelRetry": "Try again",
-  "proUpgradeButton": "Upgrade to Pro"
+  "proUpgradeButton": "Upgrade to Pro",
+  "simulatorCompareButton": "Compare",
+  "@simulatorCompareButton": {
+    "description": "FEAT-055 — Entry button in the saved-scenarios rail that toggles selection mode to compare 2 or 3 scenarios."
+  },
+  "simulatorCompareValidate": "Compare {count} scenarios",
+  "@simulatorCompareValidate": {
+    "description": "FEAT-055 — Confirmation button shown in selection mode; enabled when 2 or 3 scenarios are ticked. `count` is 2 or 3.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "simulatorCompareSelectionHint": "Pick 2 or 3 scenarios to compare.",
+  "@simulatorCompareSelectionHint": {
+    "description": "FEAT-055 — Hint displayed when the selection mode is active but fewer than 2 scenarios are ticked."
+  },
+  "simulatorCompareTitle": "Compare scenarios",
+  "@simulatorCompareTitle": {
+    "description": "FEAT-055 — AppBar title of the /simulator/compare page."
+  },
+  "simulatorCompareProOnly": "Scenario comparison is reserved for the Pro plan.",
+  "@simulatorCompareProOnly": {
+    "description": "FEAT-055 — Locked-state message when the landlord is not on the paid tier. Mirrors chargeRegularizationProOnly (FEAT-044b)."
+  },
+  "simulatorCompareReferenceChip": "Reference",
+  "@simulatorCompareReferenceChip": {
+    "description": "FEAT-055 — Small chip under the first scenario's name in the comparison table indicating it is the baseline for delta % values."
+  },
+  "simulatorCompareBackToRail": "Back to scenarios",
+  "@simulatorCompareBackToRail": {
+    "description": "FEAT-055 — CTA of the empty-state on the comparison page; navigates back to /simulator."
+  },
+  "simulatorCompareEmptyTooFew": "Select 2 or 3 scenarios to start a comparison.",
+  "@simulatorCompareEmptyTooFew": {
+    "description": "FEAT-055 — Body of the empty-state shown when fewer than 2 valid ids remain after filtering (e.g. all deleted mid-session)."
+  },
+  "simulatorCompareKpiDownPaymentLabel": "Required down payment",
+  "@simulatorCompareKpiDownPaymentLabel": {
+    "description": "FEAT-055 — Label of the 'down payment' KPI row on the comparison table."
+  },
+  "simulatorCompareKpiSavingsEffortLabel": "Savings effort",
+  "@simulatorCompareKpiSavingsEffortLabel": {
+    "description": "FEAT-055 — Label of the 'annual savings effort' KPI row on the comparison table. Formula: max(0, -monthlyCashflow) × 12."
+  },
+  "simulatorCompareEffortPerYearSuffix": "/year",
+  "@simulatorCompareEffortPerYearSuffix": {
+    "description": "FEAT-055 — Suffix appended to the formatted 'savings effort' euro amount to indicate the value is annual."
+  }
 }

@@ -35,6 +35,7 @@ import '../../features/receipts/presentation/lease_receipts_page.dart';
 import '../../features/support/presentation/faq_page.dart';
 import '../../features/support/presentation/support_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
+import '../../features/simulator/presentation/scenario_comparison_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
@@ -263,6 +264,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: const SimulatorPage(),
           transition: AppTransition.standard,
         ),
+      ),
+      // Comparaison de scénarios (FEAT-055, Pro).
+      // ⚠ Doit être déclaré AVANT `/simulator/:id`, sinon go_router matcherait
+      // `:id = "compare"` et l'écran de comparaison serait inatteignable.
+      GoRoute(
+        path: '/simulator/compare',
+        pageBuilder: (context, state) {
+          final raw = state.uri.queryParameters['ids'] ?? '';
+          final ids = raw
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .take(3)
+              .toList(growable: false);
+          return appPage(
+            key: state.pageKey,
+            child: ScenarioComparisonPage(ids: ids),
+            transition: AppTransition.standard,
+          );
+        },
       ),
       GoRoute(
         path: '/simulator/:id',

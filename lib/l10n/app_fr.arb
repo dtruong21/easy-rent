@@ -1193,5 +1193,16 @@
   "proCancelBody": "Aucun montant n'a été débité. Vous pouvez réessayer à tout moment.",
   "proCancelBackToDashboard": "Retour",
   "proCancelRetry": "Réessayer",
-  "proUpgradeButton": "Passer à Pro"
+  "proUpgradeButton": "Passer à Pro",
+  "simulatorCompareButton": "Comparer",
+  "simulatorCompareValidate": "Comparer les {count} scénarios",
+  "simulatorCompareSelectionHint": "Choisissez 2 ou 3 scénarios à comparer.",
+  "simulatorCompareTitle": "Comparer les scénarios",
+  "simulatorCompareProOnly": "La comparaison de scénarios est réservée au Plan Pro.",
+  "simulatorCompareReferenceChip": "Référence",
+  "simulatorCompareBackToRail": "Retour aux scénarios",
+  "simulatorCompareEmptyTooFew": "Sélectionnez 2 ou 3 scénarios pour lancer une comparaison.",
+  "simulatorCompareKpiDownPaymentLabel": "Apport requis",
+  "simulatorCompareKpiSavingsEffortLabel": "Effort d'épargne",
+  "simulatorCompareEffortPerYearSuffix": "/an"
 }

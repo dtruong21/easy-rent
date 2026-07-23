@@ -1,4 +1,4 @@
-# FEAT-053 — Comparaison de scénarios de simulation (Pro)
+# FEAT-055 — Comparaison de scénarios de simulation (Pro)
 
 > **Statut** : 💡 Idea (2026-07-23) — captée pendant la revue FAQ, à prioriser dans BACKLOG.md avant de spec'r plus finement.
 > **Effort estimé** : S (1-2 j) pour une V1 non-persistée. **Dépend de** : FEAT-018 (simulateur + `investment_scenarios`), FEAT-044 (freemium, `SubscriptionTier.paid`), FEAT-044e (checkout client Pro — 📋 planned).
@@ -8,7 +8,7 @@
 
 FEAT-018 permet de sauvegarder plusieurs scénarios de simulation (collection `investment_scenarios`, [`SavedScenariosRow`](../../lib/features/simulator/presentation/widgets/saved_scenarios_row.dart)). Aujourd'hui chaque scénario s'ouvre isolément via `/simulator/:id` — l'utilisateur doit basculer entre les onglets ou tenir un tableau à part pour comparer deux investissements. Un bailleur qui hésite entre deux biens perd du temps sans réponse claire.
 
-FEAT-053 débloque la **comparaison côte-à-côte** de plusieurs scénarios sauvegardés. Fonction premium, cohérente avec le levier « scénarios illimités » du palier Pro (FEAT-044) : le compte free plafonne à 3 scénarios sauvegardés — comparer 2/3 y garde du sens, mais la vraie valeur du feature s'exprime au-delà.
+FEAT-055 débloque la **comparaison côte-à-côte** de plusieurs scénarios sauvegardés. Fonction premium, cohérente avec le levier « scénarios illimités » du palier Pro (FEAT-044) : le compte free plafonne à 3 scénarios sauvegardés — comparer 2/3 y garde du sens, mais la vraie valeur du feature s'exprime au-delà.
 
 ## User story
 
