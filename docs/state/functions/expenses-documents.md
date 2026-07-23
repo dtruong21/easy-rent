@@ -41,5 +41,5 @@ Client invoke, isFullyAuthed only. Validation juridique **décret 87-713**.
 
 | Trigger | Type / collection | Logique |
 |---|---|---|
-| `setUpdatedAtDocuments` | `onDocumentWritten(documents)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
-| `setUpdatedAtExpenses` (FEAT-041a) | `onDocumentWritten(expenses)` | Standard `setUpdatedAt`. Fichier `expenses.ts` (re-exported par `index.ts`) |
+| `setUpdatedAtDocuments` | `onDocumentUpdated(documents)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
+| `setUpdatedAtExpenses` (FEAT-041a) | `onDocumentUpdated(expenses)` | Standard `setUpdatedAt`. Fichier `expenses.ts` (re-exported par `index.ts`) |

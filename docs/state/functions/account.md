@@ -53,7 +53,7 @@ Signature `{plan: 'monthly'|'annual'}` → `{url, sessionId}`. Crée une **Strip
 
 ## Trigger
 
-`setUpdatedAtLandlords` — `onDocumentWritten(landlords)`. Logique standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts`.
+`setUpdatedAtLandlords` — `onDocumentUpdated(landlords)`. Logique standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts`.
 
 ## Scheduled
 

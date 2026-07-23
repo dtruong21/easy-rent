@@ -4,7 +4,11 @@
 
 Architecture 3-couches : (1) **Firestore Rules** (`firestore.rules`) — ownership + soft-delete + immuabilité ; (2) **Cloud Functions** (Node 20 TS ; pivot FEAT-019, 2026-07-02) — mutations cross-entity + soft-delete + denorm + validation juridique ; (3) **Firestore Triggers** — `setUpdatedAt*` + `recompute*`. Région `europe-west1` (override via `runWith({region})`).
 
-Logique standard `setUpdatedAt*` (partagée par les 8 variants, `functions/src/triggers/set_updated_at.ts`) : `onDocumentWritten` (create/update/delete), post-write `change.after`, ignore soft-deleted (`deletedAt==null`), `updatedAt=FieldValue.serverTimestamp()` via Admin SDK, idempotent (clé docId+ts).
+Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/triggers/set_updated_at.ts`) : **`onDocumentUpdated`** — se déclenche **uniquement sur update**, jamais sur create ni delete (à la création, la callable pose déjà `createdAt==updatedAt`). Garde anti-boucle : no-op si le client a déjà avancé `updatedAt` (`after.updatedAt > before.updatedAt`) ; sinon pose `updatedAt=FieldValue.serverTimestamp()` via Admin SDK. **Aucun filtre `deletedAt`** — un soft-delete est un update comme un autre. Région `europe-west1`.
+
+> **8 variants** : 7 dans `set_updated_at.ts` (landlords, properties, tenants, leases, payments, documents, investment_scenarios) + `setUpdatedAtExpenses` dans `callable/expenses.ts` (même fabrique). **Pas** de variant `receipts` (collection immuable, sans champ `updatedAt`).
+>
+> ⚠️ L'état décrivait ces triggers comme `onDocumentWritten (create/update/delete)` et « ignore soft-deleted (`deletedAt==null`) » : **les deux sont faux**. Erreur systémique corrigée dans tous les shards `functions/` (elle subsistait même dans les shards réputés vérifiés au refresh #133).
 
 ## Callables (17) → shard
 
