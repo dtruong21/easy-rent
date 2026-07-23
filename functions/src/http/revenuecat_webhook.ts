@@ -32,7 +32,7 @@ import {onRequest} from "firebase-functions/v2/https";
 const webhookAuth = defineSecret("REVENUECAT_WEBHOOK_AUTH");
 
 /** L'entitlement RevenueCat qui déverrouille Baillan Pro. */
-export const PRO_ENTITLEMENT_ID = "pro";
+export const PRO_ENTITLEMENT_ID = "Bailan Pro";
 
 /** Types d'events RevenueCat qui ACCORDENT l'accès (renouvelable). */
 const GRANTING_RENEWABLE = new Set([
@@ -204,7 +204,25 @@ export const revenueCatWebhook = onRequest(
       res.status(405).send("method not allowed");
       return;
     }
-    if (!isAuthorizedWebhook(req.headers.authorization, webhookAuth.value())) {
+    const secret = webhookAuth.value().trim();
+
+    // Cloud Run v2 can overwrite req.headers.authorization with its own
+    // routing audience URL. Fall back to rawHeaders to recover the real
+    // Authorization value sent by RevenueCat.
+    let authorized = isAuthorizedWebhook(req.headers.authorization, secret);
+    if (!authorized) {
+      const raw = req.rawHeaders;
+      for (let i = 0; i < raw.length; i += 2) {
+        if (raw[i]?.toLowerCase() === "authorization") {
+          if (isAuthorizedWebhook(raw[i + 1], secret)) {
+            authorized = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!authorized) {
       logger.warn("revenueCatWebhook: unauthorized request rejected");
       res.status(401).send("unauthorized");
       return;
