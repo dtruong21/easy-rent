@@ -106,6 +106,10 @@ Widget _buildPage({
         path: '/',
         builder: (context, state) => const Scaffold(body: Text('Landing')),
       ),
+      GoRoute(
+        path: '/pro',
+        builder: (context, state) => const Scaffold(body: Text('Pro')),
+      ),
     ],
   );
 
@@ -190,8 +194,11 @@ void main() {
 
   group('ScenarioLimitReachedModal — tier free', () {
     testWidgets(
-      '3 scénarios déjà sauvegardés + tentative de save → modal M\'avertir CTA',
+      '3 scénarios déjà sauvegardés + tentative de save → modal Passer à Pro CTA',
       (tester) async {
+        // Depuis FEAT-044e (75fcbd3), le CTA free renvoie directement vers le
+        // checkout Stripe (`/pro`, `scenario_limit_upgrade_cta`) — plus de
+        // capture d'intérêt via PaidPlanInterestRepository sur cette modal.
         final paidPlanRepo = _FakePaidPlanInterestRepo();
         await tester.pumpWidget(
           _buildPage(
@@ -214,15 +221,19 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.byKey(const Key('scenario_limit_notify_cta')),
+          find.byKey(const Key('scenario_limit_upgrade_cta')),
           findsOneWidget,
         );
 
-        await tester.tap(find.byKey(const Key('scenario_limit_notify_cta')));
+        await tester.tap(find.byKey(const Key('scenario_limit_upgrade_cta')));
         await tester.pumpAndSettle();
 
-        expect(paidPlanRepo.capturedFeatures, isNotNull);
-        expect(paidPlanRepo.capturedFeatures, isNotEmpty);
+        // Modal fermée + navigation vers /pro (checkout Stripe).
+        expect(
+          find.byKey(const Key('scenario_limit_reached_modal')),
+          findsNothing,
+        );
+        expect(find.text('Pro'), findsOneWidget);
       },
     );
   });

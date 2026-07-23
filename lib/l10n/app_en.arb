@@ -5055,31 +5055,109 @@
   },
 
   "proPricingTitle": "Baillan Pro",
+  "@proPricingTitle": {
+    "description": "FEAT-044e — AppBar title of the Baillan Pro pricing page (/pro)."
+  },
   "proPricingHeadline": "Upgrade to Baillan Pro",
+  "@proPricingHeadline": {
+    "description": "FEAT-044e — Main headline above the pricing card on /pro."
+  },
   "proPricingSubheadline": "Manage your properties without limits",
+  "@proPricingSubheadline": {
+    "description": "FEAT-044e — Sub-headline below the main pricing headline on /pro."
+  },
   "proPlanMonthly": "Monthly",
+  "@proPlanMonthly": {
+    "description": "FEAT-044e — Label for the monthly billing option in the pricing toggle."
+  },
   "proPlanAnnual": "Annual",
+  "@proPlanAnnual": {
+    "description": "FEAT-044e — Label for the annual billing option in the pricing toggle."
+  },
   "proPeriodMonth": "month",
+  "@proPeriodMonth": {
+    "description": "FEAT-044e — Period suffix shown next to the monthly price (e.g. \"7.99 € / month\")."
+  },
   "proPeriodYear": "year",
+  "@proPeriodYear": {
+    "description": "FEAT-044e — Period suffix shown next to the annual price (e.g. \"79 € / year\")."
+  },
   "proAnnualSaving": "2 months free",
+  "@proAnnualSaving": {
+    "description": "FEAT-044e — Small badge shown on the annual plan indicating the built-in discount (2 months free vs. paying monthly)."
+  },
   "proSubscribeButton": "Subscribe",
+  "@proSubscribeButton": {
+    "description": "FEAT-044e — Primary CTA of the pricing card; opens the Stripe Checkout Session."
+  },
   "proAlreadySubscribed": "Already subscribed",
+  "@proAlreadySubscribed": {
+    "description": "FEAT-044e — Disabled button label shown instead of Subscribe when the landlord already has an active Pro tier."
+  },
   "proCheckoutError": "Unable to start checkout. Please try again.",
+  "@proCheckoutError": {
+    "description": "FEAT-044e — Snackbar shown when createCheckoutSession failed to return a valid Stripe hosted URL."
+  },
   "proFeaturesTitle": "Everything in Pro",
+  "@proFeaturesTitle": {
+    "description": "FEAT-044e — Section title above the bullet list of Pro features on /pro."
+  },
   "proFeatureUnlimitedProperties": "Unlimited properties",
+  "@proFeatureUnlimitedProperties": {
+    "description": "FEAT-044e — Pro feature bullet: no more 2-property cap from the free tier (FEAT-044)."
+  },
   "proFeatureUnlimitedLeases": "Unlimited leases",
+  "@proFeatureUnlimitedLeases": {
+    "description": "FEAT-044e — Pro feature bullet: no more 2-active-lease cap from the free tier (FEAT-044)."
+  },
   "proFeatureUnlimitedTenants": "Unlimited tenants",
+  "@proFeatureUnlimitedTenants": {
+    "description": "FEAT-044e — Pro feature bullet: no more 3-active-tenant cap from the free tier (FEAT-044)."
+  },
   "proFeatureUnlimitedDocuments": "Unlimited documents",
+  "@proFeatureUnlimitedDocuments": {
+    "description": "FEAT-044e — Pro feature bullet: no more 10-document cap from the free tier (FEAT-044b)."
+  },
   "proFeatureUnlimitedScenarios": "Unlimited simulator scenarios",
+  "@proFeatureUnlimitedScenarios": {
+    "description": "FEAT-044e — Pro feature bullet: no more 3-scenario cap in the investment simulator (FEAT-044)."
+  },
   "proFeaturePriority": "Priority support",
+  "@proFeaturePriority": {
+    "description": "FEAT-044e — Pro feature bullet: priority handling of support tickets."
+  },
   "proSuccessTitle": "Welcome to Baillan Pro!",
+  "@proSuccessTitle": {
+    "description": "FEAT-044e — Title of the /pro/success page after Stripe redirects back with a successful subscription."
+  },
   "proSuccessBody": "Your subscription is active. Enjoy all features without limits.",
+  "@proSuccessBody": {
+    "description": "FEAT-044e — Body copy of the /pro/success page confirming the subscription is active."
+  },
   "proSuccessGoToDashboard": "Go to dashboard",
+  "@proSuccessGoToDashboard": {
+    "description": "FEAT-044e — Primary CTA on /pro/success; navigates to /dashboard."
+  },
   "proCancelTitle": "Payment cancelled",
+  "@proCancelTitle": {
+    "description": "FEAT-044e — Title of the /pro/cancel page when Stripe redirects back after a cancelled Checkout Session."
+  },
   "proCancelBody": "No charges were made. You can try again at any time.",
+  "@proCancelBody": {
+    "description": "FEAT-044e — Body copy of the /pro/cancel page reassuring the user that no payment was captured."
+  },
   "proCancelBackToDashboard": "Go back",
+  "@proCancelBackToDashboard": {
+    "description": "FEAT-044e — Secondary CTA on /pro/cancel; navigates back to /dashboard."
+  },
   "proCancelRetry": "Try again",
+  "@proCancelRetry": {
+    "description": "FEAT-044e — Primary CTA on /pro/cancel; navigates back to /pro to retry the checkout."
+  },
   "proUpgradeButton": "Upgrade to Pro",
+  "@proUpgradeButton": {
+    "description": "FEAT-044e — Generic upsell CTA used in gated states throughout the app (scenario_limit_upgrade_cta, régularisation section, FEAT-055 comparison page). Navigates to /pro."
+  },
   "simulatorCompareButton": "Compare",
   "@simulatorCompareButton": {
     "description": "FEAT-055 — Entry button in the saved-scenarios rail that toggles selection mode to compare 2 or 3 scenarios."
