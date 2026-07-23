@@ -30,9 +30,9 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
       await launchUrl(Uri.parse(url), webOnlyWindowName: '_self');
     } else {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.proCheckoutError)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.proCheckoutError)));
     }
   }
 
@@ -116,10 +116,7 @@ class _PlanToggle extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Switch.adaptive(
-          value: annual,
-          onChanged: onChanged,
-        ),
+        Switch.adaptive(value: annual, onChanged: onChanged),
         const SizedBox(width: 8),
         Text(
           l10n.proPlanAnnual,
@@ -246,10 +243,7 @@ class _FeaturesList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.proFeaturesTitle,
-          style: theme.textTheme.titleMedium,
-        ),
+        Text(l10n.proFeaturesTitle, style: theme.textTheme.titleMedium),
         const SizedBox(height: 12),
         for (final feature in features)
           Padding(

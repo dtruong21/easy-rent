@@ -94,110 +94,108 @@ Widget _buildRouter({
 
 void main() {
   group('ScenarioComparisonPage', () {
-    testWidgets(
-      'AC #1 — paid + 2 scénarios → 6 labels KPI visibles',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildRouter(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.paid,
-            initialLocation: '/simulator/compare?ids=A,B',
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('AC #1 — paid + 2 scénarios → 6 labels KPI visibles', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildRouter(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.paid,
+          initialLocation: '/simulator/compare?ids=A,B',
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Titre AppBar
-        expect(find.text('Comparer les scénarios'), findsOneWidget);
-        // Noms de scénarios en colonnes
-        expect(find.text('Alpha'), findsWidgets);
-        expect(find.text('Bravo'), findsWidgets);
-        // 6 labels KPI
-        expect(find.text('Rendement brut'), findsOneWidget);
-        expect(find.text('Rendement net'), findsOneWidget);
-        expect(find.text('Cash-flow mensuel'), findsOneWidget);
-        expect(find.text('Coût total crédit'), findsOneWidget);
-        expect(find.text('Apport requis'), findsOneWidget);
-        expect(find.text("Effort d'épargne"), findsOneWidget);
-        // Chip « Référence » sur la colonne 0
-        expect(find.text('Référence'), findsOneWidget);
-        // Pas d'état verrouillé
-        expect(find.byKey(const Key('scenario_comparison_pro_gated')),
-            findsNothing);
-      },
-    );
+      // Titre AppBar
+      expect(find.text('Comparer les scénarios'), findsOneWidget);
+      // Noms de scénarios en colonnes
+      expect(find.text('Alpha'), findsWidgets);
+      expect(find.text('Bravo'), findsWidgets);
+      // 6 labels KPI
+      expect(find.text('Rendement brut'), findsOneWidget);
+      expect(find.text('Rendement net'), findsOneWidget);
+      expect(find.text('Cash-flow mensuel'), findsOneWidget);
+      expect(find.text('Coût total crédit'), findsOneWidget);
+      expect(find.text('Apport requis'), findsOneWidget);
+      expect(find.text("Effort d'épargne"), findsOneWidget);
+      // Chip « Référence » sur la colonne 0
+      expect(find.text('Référence'), findsOneWidget);
+      // Pas d'état verrouillé
+      expect(
+        find.byKey(const Key('scenario_comparison_pro_gated')),
+        findsNothing,
+      );
+    });
 
-    testWidgets(
-      'AC #2 — free tier → écran verrouillé, KPIs absents',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildRouter(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.free,
-            initialLocation: '/simulator/compare?ids=A,B',
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('AC #2 — free tier → écran verrouillé, KPIs absents', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildRouter(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.free,
+          initialLocation: '/simulator/compare?ids=A,B',
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('scenario_comparison_pro_gated')),
-            findsOneWidget);
-        expect(
-          find.text(
-            'La comparaison de scénarios est réservée au Plan Pro.',
-          ),
-          findsOneWidget,
-        );
-        // Aucun KPI rendu
-        expect(find.text('Rendement brut'), findsNothing);
-        expect(find.text('Alpha'), findsNothing);
-      },
-    );
+      expect(
+        find.byKey(const Key('scenario_comparison_pro_gated')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('La comparaison de scénarios est réservée au Plan Pro.'),
+        findsOneWidget,
+      );
+      // Aucun KPI rendu
+      expect(find.text('Rendement brut'), findsNothing);
+      expect(find.text('Alpha'), findsNothing);
+    });
 
-    testWidgets(
-      'AC #2 — anonymous tier → écran verrouillé (fail-closed)',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildRouter(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.anonymous,
-            initialLocation: '/simulator/compare?ids=A,B',
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.byKey(const Key('scenario_comparison_pro_gated')),
-            findsOneWidget);
-      },
-    );
+    testWidgets('AC #2 — anonymous tier → écran verrouillé (fail-closed)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildRouter(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.anonymous,
+          initialLocation: '/simulator/compare?ids=A,B',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('scenario_comparison_pro_gated')),
+        findsOneWidget,
+      );
+    });
 
-    testWidgets(
-      'AC #2 — CTA "Passer à Pro" navigue vers /pro',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildRouter(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.free,
-            initialLocation: '/simulator/compare?ids=A,B',
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('AC #2 — CTA "Passer à Pro" navigue vers /pro', (tester) async {
+      await tester.pumpWidget(
+        _buildRouter(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.free,
+          initialLocation: '/simulator/compare?ids=A,B',
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Passer à Pro'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Passer à Pro'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('pro-stub'), findsOneWidget);
-      },
-    );
+      expect(find.text('pro-stub'), findsOneWidget);
+    });
 
     testWidgets(
       'AC #5 — 3 ids, seuls 2 scénarios présents → 2 colonnes, pas de crash',
@@ -220,7 +218,10 @@ void main() {
         expect(find.text('Bravo'), findsWidgets);
         expect(find.text('Rendement brut'), findsOneWidget);
         // Aucun état vide affiché : 2 ≥ min.
-        expect(find.byKey(const Key('scenario_comparison_empty')), findsNothing);
+        expect(
+          find.byKey(const Key('scenario_comparison_empty')),
+          findsNothing,
+        );
       },
     );
 
@@ -236,8 +237,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('scenario_comparison_empty')),
-            findsOneWidget);
+        expect(
+          find.byKey(const Key('scenario_comparison_empty')),
+          findsOneWidget,
+        );
         expect(
           find.text(
             'Sélectionnez 2 ou 3 scénarios pour lancer une comparaison.',

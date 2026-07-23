@@ -71,18 +71,11 @@ void main() {
     test('reference == 0 → null (division impossible)', () {
       expect(computeSignedDeltaPercent(0, 100), isNull);
     });
-    test('reference négative → sens économique préservé (division par abs)',
-        () {
+    test('reference négative → sens économique préservé (division par abs)', () {
       // Cash-flow -100 € → -50 € : other est meilleur (moins négatif) → delta +50.
-      expect(
-        computeSignedDeltaPercent(-100, -50),
-        closeTo(50, 1e-9),
-      );
+      expect(computeSignedDeltaPercent(-100, -50), closeTo(50, 1e-9));
       // -100 € → -200 € : pire, delta -100.
-      expect(
-        computeSignedDeltaPercent(-100, -200),
-        closeTo(-100, 1e-9),
-      );
+      expect(computeSignedDeltaPercent(-100, -200), closeTo(-100, 1e-9));
     });
     test('seuils exacts ±5 %', () {
       expect(computeSignedDeltaPercent(100, 105), closeTo(5, 1e-9));
@@ -91,45 +84,38 @@ void main() {
   });
 
   group('buildComparisonRows', () {
-    testWidgets('produit 6 lignes, N valeurs par ligne, ordre préservé',
-        (tester) async {
+    testWidgets('produit 6 lignes, N valeurs par ligne, ordre préservé', (
+      tester,
+    ) async {
       final l10n = await _fr();
-      final rows = buildComparisonRows(
-        [
-          _scenario(id: 'A', name: 'Alpha'),
-          _scenario(id: 'B', name: 'Bravo'),
-          _scenario(id: 'C', name: 'Charlie'),
-        ],
-        l10n,
-      );
+      final rows = buildComparisonRows([
+        _scenario(id: 'A', name: 'Alpha'),
+        _scenario(id: 'B', name: 'Bravo'),
+        _scenario(id: 'C', name: 'Charlie'),
+      ], l10n);
 
       expect(rows.length, 6);
       for (final row in rows) {
         expect(row.values.length, 3, reason: 'row ${row.kpi.name}');
       }
-      expect(
-        rows.map((r) => r.kpi).toList(),
-        [
-          ComparisonKpi.grossYield,
-          ComparisonKpi.netYield,
-          ComparisonKpi.monthlyCashflow,
-          ComparisonKpi.totalLoanCost,
-          ComparisonKpi.downPaymentRequired,
-          ComparisonKpi.savingsEffort,
-        ],
-      );
+      expect(rows.map((r) => r.kpi).toList(), [
+        ComparisonKpi.grossYield,
+        ComparisonKpi.netYield,
+        ComparisonKpi.monthlyCashflow,
+        ComparisonKpi.totalLoanCost,
+        ComparisonKpi.downPaymentRequired,
+        ComparisonKpi.savingsEffort,
+      ]);
     });
 
-    testWidgets('scénarios identiques → valeurs égales sur chaque ligne',
-        (tester) async {
+    testWidgets('scénarios identiques → valeurs égales sur chaque ligne', (
+      tester,
+    ) async {
       final l10n = await _fr();
-      final rows = buildComparisonRows(
-        [
-          _scenario(id: 'A', name: 'Alpha'),
-          _scenario(id: 'B', name: 'Bravo'),
-        ],
-        l10n,
-      );
+      final rows = buildComparisonRows([
+        _scenario(id: 'A', name: 'Alpha'),
+        _scenario(id: 'B', name: 'Bravo'),
+      ], l10n);
       for (final row in rows) {
         expect(
           row.values[0].rawNumber,
@@ -139,8 +125,9 @@ void main() {
       }
     });
 
-    testWidgets('effort d\'épargne exposé en centimes/an dans rawNumber',
-        (tester) async {
+    testWidgets('effort d\'épargne exposé en centimes/an dans rawNumber', (
+      tester,
+    ) async {
       final l10n = await _fr();
       // Scénario A : loyer très bas → cashflow négatif → effort > 0
       final scenarioA = _scenario(
@@ -155,8 +142,9 @@ void main() {
         monthlyRentHcCents: 200000, // 2000 €/mois
       );
       final rows = buildComparisonRows([scenarioA, scenarioB], l10n);
-      final effortRow =
-          rows.firstWhere((r) => r.kpi == ComparisonKpi.savingsEffort);
+      final effortRow = rows.firstWhere(
+        (r) => r.kpi == ComparisonKpi.savingsEffort,
+      );
       expect(effortRow.values[0].rawNumber, greaterThan(0));
       expect(effortRow.values[1].rawNumber, 0);
     });

@@ -39,8 +39,7 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
   /// colonne « référence » de la comparaison.
   final Set<String> _selectedIds = <String>{};
 
-  void _enterSelectionMode() =>
-      setState(() => _selectionMode = true);
+  void _enterSelectionMode() => setState(() => _selectionMode = true);
 
   void _exitSelectionMode() => setState(() {
     _selectionMode = false;
@@ -296,44 +295,42 @@ class _ScenarioChip extends StatelessWidget {
       semanticLabel: context.l10n.simulatorLoadScenarioSemanticLabel(
         scenario.name,
       ),
-        header: Row(
-          children: [
-            Expanded(
-              child: Text(
-                scenario.name,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+      header: Row(
+        children: [
+          Expanded(
+            child: Text(
+              scenario.name,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            if (selectionMode)
-              Icon(
-                selected
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                key: Key('chip_select_${scenario.id}'),
+          ),
+          if (selectionMode)
+            Icon(
+              selected ? Icons.check_circle : Icons.radio_button_unchecked,
+              key: Key('chip_select_${scenario.id}'),
+              size: 18,
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            )
+          else
+            IconButton(
+              key: Key('delete_scenario_${scenario.id}'),
+              icon: Icon(
+                Icons.delete_outline,
                 size: 18,
-                color: selected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              )
-            else
-              IconButton(
-                key: Key('delete_scenario_${scenario.id}'),
-                icon: Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                onPressed: onDelete,
-                tooltip: context.l10n.commonDelete,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-          ],
-        ),
+              onPressed: onDelete,
+              tooltip: context.l10n.commonDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+        ],
+      ),
       density: EntityCardDensity.compact,
     );
     return SizedBox(
@@ -342,10 +339,7 @@ class _ScenarioChip extends StatelessWidget {
           ? Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: theme.colorScheme.primary,
-                  width: 2,
-                ),
+                border: Border.all(color: theme.colorScheme.primary, width: 2),
               ),
               child: card,
             )

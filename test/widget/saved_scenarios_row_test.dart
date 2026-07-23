@@ -132,28 +132,27 @@ void main() {
       expect(find.byKey(const Key('compare_toggle_pro_only')), findsNothing);
     });
 
-    testWidgets(
-      'AC #3 — 2 scénarios + free → toggle verrouillé, tap → /pro',
-      (tester) async {
-        await tester.pumpWidget(
-          _mount(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.free,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('AC #3 — 2 scénarios + free → toggle verrouillé, tap → /pro', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _mount(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.free,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('compare_toggle_pro_only')), findsOneWidget);
-        expect(find.byKey(const Key('compare_toggle_button')), findsNothing);
+      expect(find.byKey(const Key('compare_toggle_pro_only')), findsOneWidget);
+      expect(find.byKey(const Key('compare_toggle_button')), findsNothing);
 
-        await tester.tap(find.byKey(const Key('compare_toggle_pro_only')));
-        await tester.pumpAndSettle();
-        expect(lastLocation, '/pro');
-      },
-    );
+      await tester.tap(find.byKey(const Key('compare_toggle_pro_only')));
+      await tester.pumpAndSettle();
+      expect(lastLocation, '/pro');
+    });
 
     testWidgets(
       'AC #3 — 2 scénarios + anonymous → toggle verrouillé (fail-closed)',
@@ -168,7 +167,10 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.byKey(const Key('compare_toggle_pro_only')), findsOneWidget);
+        expect(
+          find.byKey(const Key('compare_toggle_pro_only')),
+          findsOneWidget,
+        );
       },
     );
 
@@ -197,10 +199,7 @@ void main() {
 
         // Validate disabled tant que < 2
         final validateFinder = find.byKey(const Key('compare_toggle_validate'));
-        expect(
-          tester.widget<FilledButton>(validateFinder).onPressed,
-          isNull,
-        );
+        expect(tester.widget<FilledButton>(validateFinder).onPressed, isNull);
 
         // Coche A puis B en tapant sur la carte entière (EntityCard.onTap =
         // toggle en mode sélection). Les tests précédents peuvent basculer
@@ -227,50 +226,46 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Non-régression — hors sélection, tap chip → /simulator/:id',
-      (tester) async {
-        await tester.pumpWidget(
-          _mount(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.paid,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('Non-régression — hors sélection, tap chip → /simulator/:id', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _mount(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.paid,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Tap sur la carte "Alpha" — hors mode sélection.
-        await tester.tap(find.text('Alpha'));
-        await tester.pumpAndSettle();
-        expect(lastLocation, '/simulator/A');
-      },
-    );
+      // Tap sur la carte "Alpha" — hors mode sélection.
+      await tester.tap(find.text('Alpha'));
+      await tester.pumpAndSettle();
+      expect(lastLocation, '/simulator/A');
+    });
 
-    testWidgets(
-      'Cancel sort du mode sélection sans naviguer',
-      (tester) async {
-        await tester.pumpWidget(
-          _mount(
-            scenarios: [
-              _scenario(id: 'A', name: 'Alpha'),
-              _scenario(id: 'B', name: 'Bravo'),
-            ],
-            tier: SubscriptionTier.paid,
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets('Cancel sort du mode sélection sans naviguer', (tester) async {
+      await tester.pumpWidget(
+        _mount(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.paid,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('compare_toggle_button')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('compare_toggle_cancel')));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('compare_toggle_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('compare_toggle_cancel')));
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('compare_toggle_button')), findsOneWidget);
-        expect(find.byKey(const Key('chip_select_A')), findsNothing);
-        expect(lastLocation, isNull);
-      },
-    );
+      expect(find.byKey(const Key('compare_toggle_button')), findsOneWidget);
+      expect(find.byKey(const Key('chip_select_A')), findsNothing);
+      expect(lastLocation, isNull);
+    });
   });
 }
