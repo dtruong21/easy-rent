@@ -58,3 +58,4 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-050 | Site marketing statique crawlable (Option B) | 📋 planned | account | docs/backlog/050-marketing-site-seo.md |
 | FEAT-051 | Baillan Pro — annonces & diffusion multi-portails | 💡 idea | properties | discovery PR #98, docs/backlog/051-annonces-diffusion-pro.md |
 | FEAT-052 | Feature Readiness Score (`/feature-ready`, advisory) | ✅ done | tooling | PR #100 (`tool/feature_ready.dart`) |
+| FEAT-053 | Comparaison de scénarios de simulation (Pro) | 💡 idea | simulator | docs/backlog/053-scenarios-comparison.md |
