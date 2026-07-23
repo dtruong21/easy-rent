@@ -7,22 +7,23 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-21
-- **Commit ref** : `970d73d` (develop, post PR #132)
+- **Dernière mise à jour** : 2026-07-23
+- **Commit ref** : `00ba2f2` (develop, post PR #133) — puis vérification ciblée des 4 shards suspects
 - **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌ non construit** (FEAT-044c/d livrés, 044e planifié) + Growth/SEO ✅ (FEAT-049, domaine `baillan.com` ; FEAT-050 planifié)
 
-### Périmètre réellement re-vérifié le 2026-07-21
+### Périmètre réellement re-vérifié
 
 | Zone | État |
 |---|---|
-| `functions/` (index.ts, callables, HTTP, scheduled) | ✅ relu ligne à ligne |
-| `firestore.indexes.json` (décomptes) · `firestore.rules` (collections) | ✅ relu |
-| `lib/core/router/app_router.dart` (guards, publicRoutes, 36 GoRoute) | ✅ relu |
-| Domaine `account` (schéma/functions/routes), `expenses-documents`, gates `leases` | ✅ re-vérifié contre le code |
-| Shards `properties`, `payments-receipts`, `simulator`, `dashboard` | ⚠️ **NON re-vérifiés champ par champ** — seuls les décomptes transverses et les titres de section l'ont été. Traiter leur contenu détaillé comme daté du **2026-07-08**. |
-| `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** (hors périmètre de cette passe) — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
+| `functions/` (index.ts, callables, HTTP, scheduled) | ✅ relu ligne à ligne (2026-07-21) |
+| `firestore.indexes.json` (décomptes) · `firestore.rules` (collections) | ✅ relu (2026-07-21) |
+| `lib/core/router/app_router.dart` (guards, publicRoutes, 36 GoRoute) | ✅ relu (2026-07-21) |
+| Domaine `account` (schéma/functions/routes), `expenses-documents`, gates `leases` | ✅ re-vérifié contre le code (2026-07-21) |
+| Shards `properties`, `payments-receipts`, `simulator`, `dashboard` (schéma champ par champ, règles, index, triggers, routes) | ✅ **re-vérifiés contre le code le 2026-07-23** — nombreuses corrections (ordre des index, `isActive` sur `list`, triggers `onDocumentUpdated`, auto-génération de quittance inexistante) |
+| Triggers `setUpdatedAt*` (type `onDocumentUpdated`, garde anti-boucle, pas de filtre `deletedAt`) | ✅ **re-vérifiés le 2026-07-23** — erreur systémique `onDocumentWritten` corrigée dans tous les shards `functions/`, y compris ceux réputés vérifiés au refresh #133 |
+| `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
 
-> Vu l'écart accumulé (44 commits), cette passe a priorisé les domaines touchés depuis la PR #94 plutôt qu'un balayage uniforme. Les zones marquées ⚠️ n'ont **pas** gagné en fraîcheur : ne pas s'y fier sans relire le code.
+> La passe #133 a priorisé les domaines touchés depuis la PR #94. La vérification du 2026-07-23 a couvert les 4 shards laissés en suspens : ils sont désormais alignés sur le code. Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.
 
 ## Comment charger l'état (règle tokens)
 

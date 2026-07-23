@@ -29,8 +29,8 @@ Client invoke, isFullyAuthed only.
 
 | Trigger | Type / collection | Logique |
 |---|---|---|
-| `setUpdatedAtProperties` | `onDocumentWritten(properties)` | Standard `setUpdatedAt` (voir README) |
-| `setUpdatedAtTenants` | `onDocumentWritten(tenants)` | Standard `setUpdatedAt` (voir README) |
+| `setUpdatedAtProperties` | `onDocumentUpdated(properties)` | Standard `setUpdatedAt` (voir README) |
+| `setUpdatedAtTenants` | `onDocumentUpdated(tenants)` | Standard `setUpdatedAt` (voir README) |
 
 ## Denorm — Compteurs & `activeLeaseCount`
 

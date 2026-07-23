@@ -10,13 +10,15 @@ Paiements (FEAT-006/029) + quittances (FEAT-007). Fichiers : `functions/src/call
 Client invoke.
 - **Params** : `leaseId, rentAmountCents, chargesAmountCents, paidAt, paymentMethod, periodStart, periodEnd, notes` (FEAT-029 — motif libre, max 500 chars).
 - **Validations** : auth + FK + ownership (via lease) ; `rentAmountCents > 0` or `chargesAmountCents > 0` ; `notes.length <= 500` (FEAT-029) ; periodStart < periodEnd.
-- **Mutations** (transact) : CREATE `payments/{id}` snapshot denorm (propertyId, tenantLastName, etc) ; trigger `recomputeReceiptStale` (flag receipts liées staleness si montants changent).
-- **Retour** : `{paymentId}`. **Post-write async** : `generateReceipt` AUTO-INVOKED sur ce paiement (crée/met à jour quittance associée).
+- **Mutations** (transact) : CREATE `payments/{id}` snapshot denorm (propertyId, tenantLastName, etc).
+- **Retour** : `{paymentId}`.
+
+> ⚠️ **Pas d'auto-génération de quittance.** L'état affirmait « `generateReceipt` AUTO-INVOKED sur ce paiement » — c'est faux : aucun trigger ni post-write n'appelle `generateReceipt`, il n'est invoqué **que** par le client. Un paiement créé n'a donc **pas** de quittance tant que l'utilisateur ne la génère pas explicitement. Vérifié : `generateReceipt` n'apparaît que dans son propre fichier et l'export `index.ts`.
 
 ### `updatePayment` (FEAT-006)
 Client invoke.
 - **Mutable** : `paidAt, paymentMethod, notes, reference` (immutable : leaseId, rentAmountCents, chargesAmountCents, periodStart, periodEnd, createdAt).
-- **Logique** : fetch + ownership + isActive check ; patch cleanPatch (paidAt timestamp-validated) ; update transaction + trigger `recomputeReceiptStale` si montants changeaient (défense — code rejette les mutations quantitatives).
+- **Logique** : fetch + ownership + isActive check ; patch cleanPatch (paidAt timestamp-validated) ; les montants sont immuables (le code rejette toute mutation quantitative), donc une quittance déjà émise reste valide — `recomputeReceiptStale` ne se déclenche **pas** sur un `updatePayment` (il ne réagit qu'au soft-delete, voir schéma).
 - **Retour** : `{updated:true}`.
 
 ## Callables — Receipts
@@ -38,5 +40,5 @@ Fetch receipt (auth + owner check) ; transaction : set `sentAt=now()`, `sentToEm
 
 | Trigger | Type / collection | Logique |
 |---|---|---|
-| `setUpdatedAtPayments` | `onDocumentWritten(payments)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
-| `recomputeReceiptStale` | `onDocumentWritten(payments)` | Create/update/delete payment → query ALL receipts où `leaseId==lease.id && paymentIds.contains(payment.id)` ; si montant (`rentAmountCents`, `chargesAmountCents`) change → flag `isStale=true` sur chaque receipt. Client rejoue `generateReceipt` si reçu stale. Admin SDK batch update. Quittances immuables (jamais update post-create, jamais soft-delete) — flag `isStale` seulement. Fichier `recompute_receipt_stale.ts`. |
+| `setUpdatedAtPayments` | `onDocumentUpdated(payments)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
+| `recomputeReceiptStale` | `onDocumentUpdated(payments)` | **Se déclenche uniquement au changement de `deletedAt`** (soft-delete ou restauration d'un paiement), **pas** au changement de montant. Query les receipts où `paymentIds` array-contains le paiement, relit tous leurs paiements, pose `isStale = (≥ 1 paiement a deletedAt != null)`. Client rejoue `generateReceipt` si stale. Quittances immuables — flag `isStale` seulement. Fichier `recompute_receipt_stale.ts`. |
