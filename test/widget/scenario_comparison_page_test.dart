@@ -44,7 +44,6 @@ Widget _buildRouter({
   required List<InvestmentScenario> scenarios,
   required SubscriptionTier tier,
   required String initialLocation,
-  String? overrideProLocation,
 }) {
   final router = GoRouter(
     initialLocation: initialLocation,
