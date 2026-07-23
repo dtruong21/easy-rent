@@ -20,11 +20,14 @@ Simulateur immobilier. Accessible anonymes + comptes (CRUD direct client).
 | `deletedAt` | timestamp\|null | soft-delete |
 
 **Règles Firestore** :
-- `get/list` : isOwner(landlordId) && isActive(rsc)
-- `create` : isSignedIn() (anon OK) && landlordId==uid
-- `update` : isOwner(landlordId) && preservesImmutables()
-- `delete` : interdit (soft-delete via `softDeleteEntity`)
+- `get` : isOwner(landlordId) && isActive(rsc)
+- `list` : isOwner(landlordId) — **pas d'`isActive`** (cf. properties, audit FEAT-045)
+- `create` : isSignedIn() (anon OK) && landlordId==uid && deletedAt==null && id==docId && `name` string 1–120 chars && `schemaVersion` int > 0 && `scenarioJson` is map — **la validation de payload vit dans les rules**, pas seulement côté client
+- `update` : isOwner(landlordId) && isActive(rsc) && preservesImmutables(rsc)
+- `delete` : **if false** (soft-delete via `softDeleteEntity`)
 
-**Index** : landlordId ↑, deletedAt ↑, createdAt ↓ (scenarios list).
+**Index** (1, vérifié) : landlordId ↑, deletedAt ↑, **updatedAt ↓** (scenarios list).
+
+> ⚠️ L'état annonçait `createdAt ↓` — c'est `updatedAt ↓`. Une liste triée par `createdAt` échouerait en index manquant.
 
 **Triggers** : setUpdatedAt.
