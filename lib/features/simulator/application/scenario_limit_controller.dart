@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/subscription_tier.dart';
@@ -17,7 +17,8 @@ import '../../auth/domain/subscription_tier.dart';
 final scenarioCountProvider = StreamProvider<int>((ref) {
   final user = ref.watch(authStateChangesProvider).valueOrNull;
   if (user == null) return Stream.value(0);
-  return FirebaseFirestore.instance
+  return ref
+      .watch(firestoreProvider)
       .collection('investment_scenarios')
       .where('landlordId', isEqualTo: user.uid)
       .where('deletedAt', isNull: true)

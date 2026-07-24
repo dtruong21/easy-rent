@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/payment.dart';
 import '../domain/payment_method.dart';
@@ -170,7 +171,7 @@ class PaymentNotFoundException implements Exception {
 
 final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
   return FirestorePaymentRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

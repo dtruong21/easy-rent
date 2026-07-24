@@ -29,6 +29,8 @@ import * as admin from "firebase-admin";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {asBag, requireAuthUid} from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 /** Doit rester synchronisé avec `lib/features/auth/data/auth_repository.dart`
  * (`rgpdConsentVersion`) et le test `test/unit/rgpd_consent_test.dart`.
@@ -89,7 +91,7 @@ export const finalizeAnonymousUpgrade = onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const ref = db.doc(`landlords/${uid}`);
 
     return await db.runTransaction(async (tx) => {

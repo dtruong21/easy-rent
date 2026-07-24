@@ -1,23 +1,34 @@
 # Baillan — Stratégie multi-environnement
 
 > **Un seul projet Firebase** (`easy-rent-54cd4`), **deux sites Hosting**
-> (`baillan.com` et `stage.baillan.com`). La séparation est **au niveau du
-> Hosting uniquement** — pas au niveau des données.
+> (`baillan.com` et `stage.baillan.com`). Depuis l'**ADR 0003**, les **données
+> Firestore** sont isolées (base `dev` pour staging) ; **Auth, Storage et le code
+> des Cloud Functions restent partagés**.
 
 ## ⚠️ À lire en premier
 
-**Staging et prod partagent le même plan de données.** Même base Firestore
-`(default)`, même base Auth, même bucket Storage, mêmes Cloud Functions.
+**Depuis l'ADR 0003, les données Firestore de staging sont ISOLÉES** : staging
+écrit dans une base Firestore nommée `dev`, la prod dans `(default)`. En
+revanche **Auth, Storage et les secrets restent partagés**.
 
 Concrètement :
 
-- Un compte créé sur `stage.baillan.com` existe aussi pour `baillan.com`.
-- Un bien / bail / quittance créé en test depuis staging est **une donnée de
-  production**.
-- Un déploiement de `firestore.rules` depuis `develop` s'applique **à la prod**.
+- Un **bien / bail / quittance / entitlement** créé depuis `stage.baillan.com`
+  vit dans la base `dev` — **ce n'est plus une donnée de production.**
+- Un **compte** créé sur staging existe quand même côté prod (**Auth partagée**),
+  mais son doc `landlords/{uid}` et toutes ses données métier sont dans `dev`.
+- Les **fichiers uploadés** (justificatifs, photos) vont dans le **bucket prod**
+  (Storage non isolé) — rester mesuré sur les uploads de test.
+- Le **code** des Cloud Functions déployé depuis `develop` tourne aussi sur la
+  prod ; seul le routage des **writes Firestore** est isolé (par Origin côté
+  callables, par présence du landlord côté webhook).
+- `firestore.rules` / `firestore.indexes.json` sont **identiques** sur les deux
+  bases (déployés ensemble via `firebase deploy --only firestore`).
 
-→ **Ne teste jamais un scénario destructif ou générateur de données sur
-staging.** Pour ça, il y a l'émulateur local (voir plus bas).
+→ Voir [`docs/adr/0003-firestore-prod-staging-isolation.md`](adr/0003-firestore-prod-staging-isolation.md)
+pour le détail, les limitations (crons/triggers sur `(default)`), et la
+discipline de test paiement (compte jamais utilisé en prod). L'émulateur local
+reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 
 ## 🧭 Ce qui est séparé, ce qui ne l'est pas
 
@@ -26,7 +37,7 @@ staging.** Pour ça, il y a l'émulateur local (voir plus bas).
 | **Hosting** | ✅ Oui | Deux sites : `easy-rent-54cd4` et `baillan-stage` |
 | **Domaine** | ✅ Oui | `baillan.com` vs `stage.baillan.com` |
 | **Indexation SEO** | ✅ Oui | `noindex` + robots bloquant sur staging |
-| **Firestore** | ❌ **Non** | Base `(default)` partagée |
+| **Firestore (données)** | ✅ **Oui** | Base `dev` (staging) vs `(default)` (prod) — ADR 0003 |
 | **Auth** | ❌ **Non** | Même annuaire d'utilisateurs |
 | **Storage** | ❌ **Non** | Même bucket `easy-rent-54cd4.firebasestorage.app` |
 | **Cloud Functions** | ❌ **Non** | Un seul déploiement, région `europe-west1` |

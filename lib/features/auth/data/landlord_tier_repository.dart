@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../application/auth_session_provider.dart';
 import '../domain/subscription_tier.dart';
 
@@ -56,7 +57,7 @@ class LandlordTierSnapshot {
 
 /// Contrat testable — wrappe l'accès Firestore brut. Séparé pour permettre
 /// l'injection d'un stream déterministe en test sans dépendre de
-/// `FirebaseFirestore.instance` (qui nécessite `Firebase.initializeApp()`).
+/// [firestoreProvider] (qui nécessite `Firebase.initializeApp()`).
 abstract interface class LandlordTierRepository {
   Stream<LandlordTierSnapshot?> watch(String uid);
 }
@@ -87,7 +88,7 @@ class FirestoreLandlordTierRepository implements LandlordTierRepository {
 }
 
 final landlordTierRepositoryProvider = Provider<LandlordTierRepository>(
-  (ref) => FirestoreLandlordTierRepository(FirebaseFirestore.instance),
+  (ref) => FirestoreLandlordTierRepository(ref.watch(firestoreProvider)),
 );
 
 /// Flux live du tier + expiration du landlord connecté.
