@@ -46,7 +46,7 @@ simulator→simulator · dashboard→dashboard.
    NARROWEST scope — after one feature merges, touch only its domain shard(s) +
    the FEATURES row + one CHANGELOG entry + INDEX freshness.
 
-2. **Gather raw data** (Firebase stack — NOT Supabase):
+2. **Gather raw data** (Firebase stack):
    ```bash
    cat firestore.rules                     # Firestore Rules-equivalent rules (3-couches)
    cat firestore.indexes.json              # composite indexes
@@ -79,7 +79,7 @@ simulator→simulator · dashboard→dashboard.
 - **Terse**. Tables, not paragraphs. Detailed history → CHANGELOG.md only.
 - **Preserve legal/security notes** in shards (laws, decrees, RGPD retention, immutables, cross-tenant guards).
 - **Idempotent**; **never invent state** (write `_(inconnu — input humain requis)_`).
-- Firebase, not Supabase. Backend = Firestore rules + `functions/` (Cloud Functions TS).
+- Backend = Firestore rules + `functions/` (Cloud Functions TS).
 
 ## Output to parent
 

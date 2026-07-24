@@ -37,7 +37,7 @@ FEAT-001 (auth)
 
 - ✅ Navigation principale (drawer + routes)
 - ✅ FEAT-008 — Partager quittance par email (Web Share API native) → `docs/plans/FEAT-008-email-quittance.md`
-- ✅ FEAT-009 — Upload & stockage de documents (Supabase Storage) → `docs/plans/FEAT-009-documents-storage.md`
+- ✅ FEAT-009 — Upload & stockage de documents (Firebase Storage) → `docs/plans/FEAT-009-documents-storage.md`
 - ✅ FEAT-010 — Dashboard + polish PWA + déploiement prod → [`backlog/010-dashboard-pwa-prod-setup.md`](backlog/010-dashboard-pwa-prod-setup.md)
 
 ### Stories détaillées (P0 — à implémenter)
@@ -47,45 +47,43 @@ FEAT-001 (auth)
 | 6 | FEAT-006 | Enregistrer un paiement de loyer | FEAT-005 | ✅ Done |
 | 7 | FEAT-007 | Générer une quittance PDF de loyer (loi 6 juillet 1989) | FEAT-006 | ✅ Done |
 | 8 | FEAT-008 | Partager une quittance par email (Web Share API native) | FEAT-007 | ✅ Done (pivot 2026-06-22) |
-| 9 | FEAT-009 | Upload & stockage de documents (Supabase Storage) | FEAT-005 | ✅ Done |
+| 9 | FEAT-009 | Upload & stockage de documents (Firebase Storage) | FEAT-005 | ✅ Done |
 | 10 | FEAT-010 | Dashboard + PWA polish + Prod setup | FEAT-009 | ✅ Done |
 | 11 | FEAT-011 | Auth email + password (pivot FEAT-001) | — | ✅ Done |
 
 **Post-MVP (FEAT-012+)** :
 - FEAT-012 : Password change endpoint + profil utilisateur
-- FEAT-013 : Email rappels automatiques de paiement (cron Edge Function)
+- FEAT-013 : Email rappels automatiques de paiement (Cloud Function planifiée)
 - FEAT-014 : Export comptable (CSV / FEC)
 
 ## Dette technique / risques identifiés (scout 2026-05-27)
 
 - ✅ ~~`test/` absent~~ → résolu : scaffold `test/unit` + `test/widget` + étape `build_runner` ajoutée à la CI.
-- ✅ ~~Pas de suite de tests RLS~~ → entamé : `supabase/tests/rls_landlords.sql` (à étendre par table au fil de FEAT-002+).
+- ✅ ~~Pas de tests de règles~~ → couvert : `functions/rules-tests/` (émulateur Firestore, `npm run test:rules`), cross-user enforced.
 - **Aucun bucket Storage** configuré → bloque FEAT-009. À provisionner avant.
-- **Aucune Edge Function** (`supabase/functions/` vide) → bloque FEAT-008 (Resend). Choisir le domaine email vérifié avant.
+- ✅ ~~**Aucune Edge Function** → bloque FEAT-008 (Resend)~~ → obsolète : FEAT-008 livré via Web Share API (partage natif), aucun backend email requis. Le backend serverless est aujourd'hui **Cloud Functions** (`functions/src/`).
 - **Pas de `seed.sql`** → données de dev locales manuelles pour l'instant.
 
 ### Setup infra déploiement — staging OK, prod à finir
 - ✅ ~~`firebase.json` / `.firebaserc`~~ → posés (`build/web` + rewrites SPA pour GoRouter).
-- ✅ ~~Secrets staging~~ : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` → posés sur env `staging`.
-- ✅ ~~Provisionnement schéma `dev` pour QA staging~~ → fait via Supabase CLI (`supabase db push`).
+- ✅ ~~Secrets staging~~ → `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` posés sur env `staging`.
+- ✅ ~~Séparation dev/staging~~ → via `APP_ENV` (build `--dart-define`) ; voir [`ENVIRONMENTS.md`](ENVIRONMENTS.md). Plus de schéma Postgres.
 - ✅ ~~Service worker piège-cache sur staging~~ → désactivé via `--pwa-strategy=none` dans `deploy.yml` quand env=staging.
 - 🔧 **Environnement GitHub `production` à créer** (seul `staging` existe).
-- 🔧 **Secrets prod manquants** : dupliquer `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `FIREBASE_SERVICE_ACCOUNT` / `FIREBASE_PROJECT_ID` sur env `production`. Plus ajouter `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` (utilisés par le job `apply-supabase-migrations` qui ne tourne que depuis `main`).
-- 🔧 **Stratégie d'apply migrations à automatiser** : actuellement migrations posées sur dev via CLI manuelle. À terme : soit étendre `deploy.yml` pour appliquer aussi depuis `develop`, soit garder l'approche "1 fois par release depuis `main`". À trancher pendant FEAT-002.
+- ✅ ~~Secrets prod~~ → posés sur env `production` : `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` (les seuls requis par `deploy.yml`). Prod live sur `baillan.com`.
+- 🔧 **Déploiement rules/indexes/functions à automatiser** : `deploy.yml` ne déploie que le Hosting ; les Firestore Rules, indexes et Cloud Functions se déploient encore **manuellement** (`firebase deploy --only firestore:rules,firestore:indexes` / `--only functions`). À terme : étendre `deploy.yml`. Post FEAT-019, plus aucune migration SQL.
 
 ### Gates AVANT mise en PROD (issus de l'audit sécu FEAT-001)
-- ✅ ~~Redirect Allow-List Supabase~~ → configurée (Site URL + 3 variantes de redirect URLs pour staging, à ajouter pour prod plus tard).
+- ✅ ~~Redirect Allow-List~~ → remplacé par les **Authorized domains** Firebase Auth (Console → Authentication → Settings) : `baillan.com`, `stage.baillan.com`, domaines `.web.app`, `localhost`.
 - 🔧 **Compléter `/privacy`** : identité du responsable de traitement, DPO, base légale définitive de la persistance de session (placeholder actuellement).
-- 🔧 **Seuils de rate-limit OTP** Supabase à vérifier en Studio.
-- 🔧 **Reproduire URL Configuration Supabase pour le canal `live`** quand on déploiera en prod (Site URL + Redirect Allow-List).
 
 ### Items résolus par FEAT-002
-- ✅ ~~FK `landlords.id … ON DELETE CASCADE`~~ → remplacé par `ON DELETE NO ACTION` (rétention 5 ans garantie). L'effacement RGPD passera par Edge Function dédiée (P1 ci-dessous).
+- ✅ ~~FK `landlords.id … ON DELETE CASCADE`~~ → remplacé par `ON DELETE NO ACTION` (rétention 5 ans garantie). L'effacement RGPD passe par une Cloud Function dédiée (P1 ci-dessous).
 - ✅ ~~Restriction colonne `deleted_at`~~ → trigger `prevent_protected_columns_change` (BEFORE INSERT OR UPDATE) sur 4 tables × 2 schémas ; soft-delete passe par RPC `soft_delete_*` SECURITY DEFINER.
 
 ### Dette tracée par FEAT-002 (P1)
 - **Hardening flag de session GUC** : `app.allow_deleted_at_change` est aujourd'hui safe (PostgREST n'expose pas `set_config`) mais reste un footgun architectural. Remplacer par un mécanisme intransférable (ex: `pg_trigger_depth()` test, ou wrapping en fonction SECURITY DEFINER de niveau supérieur). Cf section "⚠️ Patterns sensibles" dans `docs/SECURITY.md`.
-- **RGPD self-service** (P1) : export des données + droit à l'effacement (Edge Function qui anonymise plutôt qu'efface, conforme rétention 5 ans + RPC `soft_delete_*` cascade enfants).
+- **RGPD self-service** (P1) : export des données + droit à l'effacement (Cloud Function qui anonymise plutôt qu'efface, conforme rétention 5 ans ; le soft-delete en cascade passe par le callable `softDeleteEntity`). Effacement de compte déjà livré via `deleteAccount` (FEAT-045).
 - **`soft_delete_landlord` ne cascade pas vers properties/tenants/leases** : aujourd'hui un landlord soft-deleted laisse ses enfants visibles (deleted_at=NULL). Conforme RGPD rétention, mais incohérent UX si restauration future. À documenter ou à ajuster en P1.
 
 ## Post-MVP immédiat (P1 — prochaine itération)

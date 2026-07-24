@@ -2,7 +2,7 @@ rules_version = '2';
 
 // EasyRent — Firestore security rules.
 //
-// FEAT-019 — Migration Supabase RLS → Firestore Security Rules.
+// Firestore Security Rules — deny-by-default, ownership, immuabilité (FEAT-019).
 // Référence : docs/plans/FEAT-019-firestore-rules.md
 //
 // Stratégie 3 couches :

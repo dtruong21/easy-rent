@@ -1,7 +1,7 @@
 {
   "name": "easyrent-functions",
   "version": "0.1.0",
-  "description": "Cloud Functions backend for EasyRent (FEAT-019 — migration Supabase → Firebase).",
+  "description": "Cloud Functions backend for EasyRent (Firestore callables, triggers, scheduled jobs).",
   "private": true,
   "main": "lib/index.js",
   "engines": {
