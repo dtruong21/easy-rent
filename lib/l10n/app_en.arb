@@ -5158,6 +5158,73 @@
   "@proUpgradeButton": {
     "description": "FEAT-044e — Generic upsell CTA used in gated states throughout the app (scenario_limit_upgrade_cta, régularisation section, FEAT-055 comparison page). Navigates to /pro."
   },
+  "subscriptionSectionTitle": "Baillan Pro subscription",
+  "@subscriptionSectionTitle": {
+    "description": "FEAT-044f — SectionHeader title of the subscription management block on /profile (self-hides for non-paid tiers)."
+  },
+  "subscriptionActiveRenews": "Active — renews on {date}",
+  "@subscriptionActiveRenews": {
+    "description": "FEAT-044f — Status line shown when the web Pro subscription is renewable (proWillRenew != false). {date} is already formatted DD/MM/YYYY via FrenchDate.format.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionScheduledCancel": "Pro until {date}, then Free",
+  "@subscriptionScheduledCancel": {
+    "description": "FEAT-044f — Status line shown when a cancellation is scheduled (proWillRenew == false): access remains until {date} (proExpiresAt, already formatted DD/MM/YYYY), then the account auto-downgrades to Free.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionCancelButton": "Cancel my subscription",
+  "@subscriptionCancelButton": {
+    "description": "FEAT-044f — Destructive OutlinedButton label opening the cancellation confirmation dialog. Only shown for a renewable web subscription."
+  },
+  "subscriptionReactivateButton": "Reactivate my subscription",
+  "@subscriptionReactivateButton": {
+    "description": "FEAT-044f — OutlinedButton label shown when a cancellation is already scheduled; calls the reactivate action directly (no confirmation dialog needed, symmetrical action)."
+  },
+  "subscriptionCancelDialogTitle": "Cancel your subscription?",
+  "@subscriptionCancelDialogTitle": {
+    "description": "FEAT-044f — Title of the cancellation confirmation dialog (art. L215-1-1 recap requirement)."
+  },
+  "subscriptionCancelDialogBody": "You will keep Baillan Pro access until {date}. After that date, your account automatically switches back to the Free plan. No prorated refund is issued.",
+  "@subscriptionCancelDialogBody": {
+    "description": "FEAT-044f — Body of the cancellation confirmation dialog: end-of-access date, automatic downgrade to Free, no prorated refund (art. L215-1-1 recap requirement, plan §7). {date} is already formatted DD/MM/YYYY via FrenchDate.format.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionCancelConfirm": "Confirm cancellation",
+  "@subscriptionCancelConfirm": {
+    "description": "FEAT-044f — Destructive confirm button of the cancellation dialog; triggers the manageSubscription('cancel') callable."
+  },
+  "subscriptionManageOnStore": "Manage your subscription from the App Store or Google Play.",
+  "@subscriptionManageOnStore": {
+    "description": "FEAT-044f — Info message shown instead of a button when proStore is app_store or play_store (mobile IAP cancellation is out of scope v1, handled by the platform's own subscription management UI)."
+  },
+  "subscriptionCancelSuccess": "Cancellation scheduled. You keep Pro access until the end of the current period.",
+  "@subscriptionCancelSuccess": {
+    "description": "FEAT-044f — Snackbar shown after a successful (or idempotent noop) manageSubscription('cancel') call. Optimistic confirmation — Firestore proWillRenew may take up to ~1 min to reflect via the RevenueCat webhook (plan §R2)."
+  },
+  "subscriptionReactivateSuccess": "Subscription reactivated — automatic renewal resumes.",
+  "@subscriptionReactivateSuccess": {
+    "description": "FEAT-044f — Snackbar shown after a successful (or idempotent noop) manageSubscription('reactivate') call."
+  },
+  "subscriptionErrorNoWebSub": "No active web subscription was found for this account.",
+  "@subscriptionErrorNoWebSub": {
+    "description": "FEAT-044f — Snackbar shown when the callable throws NoActiveWebSubscriptionException (failed-precondition/no_active_web_subscription — rare race, e.g. a mislabelled mobile subscriber or a subscription that just expired)."
+  },
+  "subscriptionErrorGeneric": "Something went wrong. Please try again.",
+  "@subscriptionErrorGeneric": {
+    "description": "FEAT-044f — Snackbar shown for any other manageSubscription failure (unauthenticated, network, unmapped Stripe error)."
+  },
   "simulatorCompareButton": "Compare",
   "@simulatorCompareButton": {
     "description": "FEAT-055 — Entry button in the saved-scenarios rail that toggles selection mode to compare 2 or 3 scenarios."

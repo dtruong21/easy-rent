@@ -242,4 +242,32 @@ describe("FEAT-044 — gating création de biens (rules)", () => {
       asOwnerA().doc("landlords/landlord-a").update({fullName: "Landlord A2"}),
     );
   });
+
+  // FEAT-044f (audit sécurité) : les champs `pro*` (entitlement RevenueCat)
+  // sont écrits EXCLUSIVEMENT par le webhook/reconcile via Admin SDK. Un
+  // propriétaire ne doit pas pouvoir les muter côté client — sinon il neutralise
+  // le backstop `reconcileEntitlements` ou bloque les futurs events du webhook.
+  it("mutation client de proEntitlementActive → refusée (backstop reconcile)", async () => {
+    await assertFails(
+      asOwnerA()
+        .doc("landlords/landlord-a")
+        .update({proEntitlementActive: true}),
+    );
+  });
+
+  it("mutation client de proExpiresAt → refusée (filtre reconcile)", async () => {
+    await assertFails(
+      asOwnerA()
+        .doc("landlords/landlord-a")
+        .update({proExpiresAt: new Date("2099-01-01")}),
+    );
+  });
+
+  it("mutation client de proLastEventAtMs → refusée (garde d'ordre webhook)", async () => {
+    await assertFails(
+      asOwnerA()
+        .doc("landlords/landlord-a")
+        .update({proLastEventAtMs: 9999999999999}),
+    );
+  });
 });
