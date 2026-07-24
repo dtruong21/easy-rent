@@ -76,3 +76,50 @@ jobs:
       - name: Tests
         run: npm test
         working-directory: functions
+
+  firestore-rules:
+    name: Firestore Rules (cross-user)
+    runs-on: ubuntu-latest
+    # Les Firestore Security Rules sont sécurité-critiques (deny-by-default,
+    # scoping cross-user par landlordId, gel de subscriptionTier/compteurs/pro*)
+    # et se déploient TELLES QUELLES en prod (règles partagées prod/staging, cf.
+    # docs/ENVIRONMENTS.md). La suite rules-unit-testing (firestore_rules.test.ts)
+    # n'était jusqu'ici validée qu'en local — ce job la met sous CI (mise en
+    # lumière par FEAT-044f / PR #142 : gel des champs pro* + 3 tests cross-user
+    # non couverts). Répond au Definition of Done : « Règles Firestore testées
+    # (cross-user) ».
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      # `test:rules` épingle `firebase-tools@13` : les CLI >= 14 exigent un
+      # JDK >= 21. On reste sur temurin 17, iso avec la machine de dev (cf.
+      # l'entête de functions/rules-tests/firestore_rules.test.ts).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Évite de re-télécharger le jar de l'émulateur Firestore (~63 Mo) à chaque
+      # run. Clé statique versionnée : firebase-tools est épinglé, donc la
+      # version du jar est stable ; bumper le suffixe pour invalider au besoin.
+      - name: Cache Firestore emulator
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-v1
+
+      - name: Install deps
+        run: npm ci
+        working-directory: functions
+
+      # Wrappe `firebase-tools@13 emulators:exec --only firestore` (projet
+      # demo-* : aucun credential requis) puis lance vitest sur rules-tests/.
+      - name: Test Firestore rules
+        run: npm run test:rules
+        working-directory: functions
