@@ -1,7 +1,7 @@
 /// Tests du contrat [LeaseRepository] via un fake in-memory.
 ///
-/// NOTE : [SupabaseLeaseRepository] utilise [Db.from()] qui dépend de
-/// [Supabase.instance.client] — non initialisé en test unitaire.
+/// NOTE : [FirestoreLeaseRepository] utilise [FirebaseFirestore] qui dépend de
+/// [FirebaseFirestore.instance] — non initialisé en test unitaire.
 /// On teste donc le contrat de l'interface + les invariants du fake.
 /// La vérification du payload SQL (absence de `landlord_id`/`status`/timestamps,
 /// appel RPC `soft_delete_lease`, filtre `status='active'` pour close) est

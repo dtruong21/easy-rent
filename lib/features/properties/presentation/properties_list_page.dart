@@ -18,7 +18,7 @@ import 'widgets/properties_table_view.dart';
 /// Liste des biens immobiliers du landlord courant.
 ///
 /// Critères Gherkin :
-/// - Affiche uniquement les biens avec `deleted_at IS NULL` (géré par RLS).
+/// - Affiche uniquement les biens avec `deleted_at IS NULL` (géré par les Firestore Rules).
 /// - État vide : "Aucun bien enregistré" + bouton "Ajouter un bien".
 /// - Triés par `created_at DESC`.
 /// - Bandeau si la limite de 200 biens est atteinte.

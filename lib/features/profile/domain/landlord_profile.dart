@@ -11,7 +11,7 @@ part 'landlord_profile.g.dart';
 /// pertinentes pour le profil (exclut `deleted_at` qui ne doit jamais être
 /// manipulé côté client).
 ///
-/// [email] et [id] sont immutables : ils viennent de l'auth Supabase et ne
+/// [email] et [id] sont immutables : ils viennent de Firebase Auth et ne
 /// sont jamais modifiables depuis l'UI.
 ///
 /// [fullName] et [address] sont requis pour générer des quittances (loi
@@ -19,7 +19,7 @@ part 'landlord_profile.g.dart';
 @freezed
 class LandlordProfile with _$LandlordProfile {
   const factory LandlordProfile({
-    /// Identifiant Supabase Auth (auth.uid()), immutable.
+    /// Identifiant Firebase Auth (uid), immutable.
     required String id,
 
     /// Adresse email du bailleur, immutable (identifiant d'authentification).

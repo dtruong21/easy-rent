@@ -32,7 +32,7 @@ enum ReceiptActionError {
   /// Génération : bail ou paiements introuvables (not-found).
   leaseOrPaymentsNotFound,
 
-  /// Génération : échec générique (réseau, Edge Function, rendu PDF).
+  /// Génération : échec générique (réseau, Cloud Function, rendu PDF).
   generationFailed,
 
   /// Annulation : quittance introuvable (not-found).

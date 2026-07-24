@@ -53,7 +53,7 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
     );
   }
 
-  /// Recharge le dashboard depuis Supabase.
+  /// Recharge le dashboard depuis Firestore.
   ///
   /// Utilisé par [RefreshIndicator] et le bouton "Réessayer".
   Future<void> refresh() async {

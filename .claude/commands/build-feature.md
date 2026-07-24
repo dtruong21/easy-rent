@@ -28,14 +28,15 @@ $ARGUMENTS
   (en mode workflow automatique : assume les choix par défaut et logue les hypothèses)
 
 ### 3. Implementation (parallel quand possible)
-- Si le plan contient des changements DB → invoque `supabase-dev` en premier
-- Si le plan contient des PDF/email → invoque `pdf-emailer`
+- Si le plan touche le backend (Firestore rules/indexes, Cloud Functions dans
+  `functions/src/`) → traite-le en premier, avant le frontend
+- Si le plan contient des PDF/partage → invoque `pdf-emailer`
 - Invoque `flutter-dev` pour le frontend
 
 ### 4. Qualité (obligatoire)
 - `qa-tester` → tests + acceptance criteria
 - `code-reviewer` → revue qualité
-- `security-auditor` → audit RLS, secrets, RGPD
+- `security-auditor` → audit Firestore Rules, secrets, RGPD
 
 ### 5. PR + lien à l'issue (si applicable)
 - Push la branche

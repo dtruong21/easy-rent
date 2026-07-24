@@ -9,7 +9,7 @@ Tu es l'orchestrateur. Lance une passe QA complète sur la branche courante.
 1. **Invoque `qa-tester`** → lance les tests, produit le rapport QA
 2. **Invoque `bug-hunter`** en parallèle → scan complet du codebase
 3. **Invoque `code-reviewer`** en parallèle → revue de la branche courante vs main
-4. **Invoque `security-auditor`** → audit RLS + secrets + RGPD
+4. **Invoque `security-auditor`** → audit Firestore Rules + secrets + RGPD
 
 ## Output attendu
 

@@ -221,7 +221,7 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
 - **Firestore rules, indexes, Cloud Functions, modèle de données** :
   strictement identiques (même projet, mêmes contrats).
 - **Le web continue de vivre** : une seule base de code, plusieurs cibles.
-  Les gardes-fous (RLS, CGU/RGPD, quittances loi 1989) s'appliquent partout.
+  Les gardes-fous (Firestore Rules, CGU/RGPD, quittances loi 1989) s'appliquent partout.
 - **Versioning** : dérivé de git (tags + nb de commits), pas de `pubspec.yaml`
   — voir [`docs/VERSIONING.md`](VERSIONING.md). `--build-name` alimente
   versionName / CFBundleShortVersionString et `--build-number` alimente

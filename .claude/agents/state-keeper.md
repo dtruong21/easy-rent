@@ -48,7 +48,7 @@ simulator→simulator · dashboard→dashboard.
 
 2. **Gather raw data** (Firebase stack — NOT Supabase):
    ```bash
-   cat firestore.rules                     # RLS-equivalent rules (3-couches)
+   cat firestore.rules                     # Firestore Rules-equivalent rules (3-couches)
    cat firestore.indexes.json              # composite indexes
    ls functions/src/callable functions/src/triggers functions/src/scheduled
    ls lib/features/                        # domains
@@ -60,7 +60,7 @@ simulator→simulator · dashboard→dashboard.
 
 3. **Write compact shards** (tables > prose):
    - Each domain shard: H1 title + `> Source d'état — <domaine>. Maintenu par state-keeper.` then tables.
-   - Schema shard: field tables (champ|type|notes), RLS, indexes, callables/triggers of the domain, cross-entity + legal notes (loi 6/07/1989, décret 87-713, ELAN — NEVER drop these).
+   - Schema shard: field tables (champ|type|notes), Firestore Rules, indexes, callables/triggers of the domain, cross-entity + legal notes (loi 6/07/1989, décret 87-713, ELAN — NEVER drop these).
    - Functions shard: callables (params/invariants), triggers. Cross-cutting patterns (setUpdatedAt, softDeleteEntity, helpers) live in `functions/README.md` and `schema/README.md`, not repeated per shard.
    - Routes shard: chemin | garde d'accès | params | notes.
    - Keep each shard ≤ ~120 lines. If bigger, summarize harder.

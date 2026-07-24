@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 /// Compute engine de rentabilité immobilière — module pur Dart.
 ///
-/// Aucune dépendance Flutter ou Supabase.
+/// Aucune dépendance Flutter ou Firebase.
 /// Toutes les valeurs monétaires sont en centimes (int).
 /// Les taux sont exprimés en basis points (bps) : 100 bps = 1 %.
 

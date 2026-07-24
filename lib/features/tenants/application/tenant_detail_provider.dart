@@ -8,7 +8,7 @@ final _log = Logger('TenantDetailNotifier');
 
 /// Notifier qui charge un locataire par son [id].
 ///
-/// Lance [TenantNotFoundException] si la RLS retourne 0 ligne
+/// Lance [TenantNotFoundException] si les Firestore Rules ne renvoient aucun document
 /// (locataire archivé, non possédé, ou id inconnu — pas de fuite d'information).
 class TenantDetailNotifier extends FamilyAsyncNotifier<Tenant, String> {
   @override
@@ -17,7 +17,7 @@ class TenantDetailNotifier extends FamilyAsyncNotifier<Tenant, String> {
     return ref.read(tenantRepositoryProvider).getById(arg);
   }
 
-  /// Recharge la fiche depuis Supabase.
+  /// Recharge la fiche depuis Firestore.
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(

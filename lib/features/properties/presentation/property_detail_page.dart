@@ -26,7 +26,7 @@ final _log = Logger('PropertyDetailPage');
 /// Section "Baux actifs" : stub V1 (disponible après FEAT-005).
 ///
 /// Critères Gherkin :
-/// - Cross-user : si RLS retourne 0 ligne → "Bien introuvable".
+/// - Cross-user : si les Firestore Rules ne renvoient aucun document → "Bien introuvable".
 /// - Archivage via RPC `soft_delete_property` (jamais UPDATE direct).
 /// - Dialog standard ou renforcé selon présence de bail actif.
 class PropertyDetailPage extends ConsumerWidget {
@@ -417,7 +417,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Page "Bien introuvable" — affichée quand la RLS retourne 0 ligne.
+/// Page "Bien introuvable" — affichée quand les Firestore Rules ne renvoient aucun document.
 class _NotFoundPage extends StatelessWidget {
   const _NotFoundPage({required this.id});
 
