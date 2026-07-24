@@ -1,6 +1,6 @@
 # Features — registre
 
-> Source d'état — features. Maintenu par state-keeper. Dernière sync : 2026-07-21.
+> Source d'état — features. Maintenu par state-keeper. Dernière sync : 2026-07-24.
 
 Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique détaillé → CHANGELOG.md.
 
@@ -51,12 +51,12 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-044b | Gating Pro — quota documents (10 free, serveur) + régularisation charges (client) | ✅ done | expenses-documents, leases | PR #120 |
 | FEAT-044c | Paiement — webhook RevenueCat + réconciliation quotidienne (back-end) | ✅ done | account | PR #114 |
 | FEAT-044d | Paiement — Stripe Checkout Session web (back-end, ADR 0002 approche A) | ✅ done | account | PR #117 |
-| FEAT-044e | Paiement — **intégration client** (UI paywall, routes `/pro/*`, IAP mobile) | 📋 planned | account | docs/plans/FEAT-044-payment-revenuecat-plan.md |
+| FEAT-044e | Paiement — **intégration client** — web ✅ (paywall `/pro/*` + Stripe Checkout, 75fcbd3) / IAP mobile 📋 (pas de `purchases_flutter`) | 🚧 wip | account | 75fcbd3, docs/plans/FEAT-044-payment-revenuecat-plan.md |
 | FEAT-045 | Suppression compte in-app + /delete-account (loi 6/7/1989) | ✅ done | account | PR #69 |
 | FEAT-048 | FAQ produit publique /faq | ✅ done | account | PR #69 |
 | FEAT-049 | SEO du PWA — quick-wins (Option A) + domaine canonique baillan.com | ✅ done | account | PR #73, #121 |
 | FEAT-050 | Site marketing statique crawlable (Option B) | 📋 planned | account | docs/backlog/050-marketing-site-seo.md |
 | FEAT-051 | Baillan Pro — annonces & diffusion multi-portails | 💡 idea | properties | discovery PR #98, docs/backlog/051-annonces-diffusion-pro.md |
 | FEAT-052 | Feature Readiness Score (`/feature-ready`, advisory) | ✅ done | tooling | PR #100 (`tool/feature_ready.dart`) |
-| FEAT-054 | Isolation réelle prod/staging (Firestore, Auth, Storage, Functions) | 📋 planned | account | docs/backlog/054-firestore-prod-staging-isolation.md |
-| FEAT-055 | Comparaison de scénarios de simulation (Pro) | 💡 idea | simulator | docs/backlog/055-scenarios-comparison.md |
+| FEAT-054 | Isolation réelle prod/staging (Firestore, Auth, Storage, Functions) | 📋 planned | account | PR #140, docs/backlog/054-firestore-prod-staging-isolation.md |
+| FEAT-055 | Comparaison de scénarios de simulation (Pro) | 💡 idea | simulator | PR #139, docs/backlog/055-scenarios-comparison.md |
