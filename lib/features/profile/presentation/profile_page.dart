@@ -9,6 +9,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/subscription_tier.dart';
 import '../../paid_plan/presentation/pro_badge.dart';
+import '../../paid_plan/presentation/widgets/subscription_section.dart';
 import '../application/landlord_profile_provider.dart';
 import 'widgets/profile_settings_sections.dart';
 import 'widgets/section_header.dart';
@@ -90,6 +91,13 @@ class ProfilePage extends ConsumerWidget {
               onTap: () => context.push('/profile/delete-account'),
             ),
             const SizedBox(height: 32),
+
+            // Résiliation/réactivation d'abonnement (FEAT-044f, conformité
+            // art. L215-1-1) — le widget s'auto-masque pour les non-abonnés
+            // (porte lui-même son espacement final quand visible, même
+            // convention que ProfileCrashReportingSection), donc aucune
+            // condition ni SizedBox supplémentaire ici.
+            const SubscriptionSection(),
 
             const ProfileAppearanceSection(),
             const SizedBox(height: 32),

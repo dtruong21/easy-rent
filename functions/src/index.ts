@@ -69,6 +69,7 @@ export {
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
 export {createCheckoutSession} from "./callable/create_checkout_session";
+export {manageSubscription} from "./callable/manage_subscription";
 
 // ---------- HTTP (webhooks) ----------
 export {revenueCatWebhook} from "./http/revenuecat_webhook";
