@@ -74,7 +74,9 @@ class SubscriptionSection extends ConsumerWidget {
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
     final expiresAt = ref.read(landlordTierProvider).valueOrNull?.proExpiresAt;
-    final dateLabel = expiresAt != null ? FrenchDate.format(expiresAt) : '';
+    // Fallback '—' (aligné sur les vues de statut) plutôt que '' : évite une
+    // phrase tronquée « jusqu'au , puis… » dans le cas edge proExpiresAt == null.
+    final dateLabel = expiresAt != null ? FrenchDate.format(expiresAt) : '—';
 
     final confirmed = await showSubscriptionCancelDialog(
       context,

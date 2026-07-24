@@ -143,7 +143,21 @@ service cloud.firestore {
         // ne peut jamais le muter (sinon reset → création illimitée).
         && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0)
         && request.resource.data.get('activeTenantsCount', 0) == resource.data.get('activeTenantsCount', 0)
-        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0);
+        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0)
+        // FEAT-044f (audit sécurité) : les champs `pro*` sont écrits
+        // EXCLUSIVEMENT par le webhook RevenueCat / reconcile (Admin SDK, qui
+        // bypasse les rules). Le client ne les LIT que. Les geler empêche : (a)
+        // de neutraliser le backstop `reconcileEntitlements`
+        // (`proEntitlementActive`/`proExpiresAt` pilotent sa query + son filtre),
+        // et (b) de bloquer les futurs events légitimes via le garde d'ordre
+        // `proLastEventAtMs` (`eventTs < lastTs` ⇒ stale) en le stampant très haut.
+        && request.resource.data.get('proEntitlementActive', false) == resource.data.get('proEntitlementActive', false)
+        && request.resource.data.get('proWillRenew', false) == resource.data.get('proWillRenew', false)
+        && request.resource.data.get('proExpiresAt', null) == resource.data.get('proExpiresAt', null)
+        && request.resource.data.get('proStore', '') == resource.data.get('proStore', '')
+        && request.resource.data.get('proProductId', '') == resource.data.get('proProductId', '')
+        && request.resource.data.get('proSince', null) == resource.data.get('proSince', null)
+        && request.resource.data.get('proLastEventAtMs', 0) == resource.data.get('proLastEventAtMs', 0);
 
       // UPDATE (anonyme, BAILLAN-M1) : limité aux champs que le renewer
       // d'expiration et l'app cliente ont besoin de toucher — jamais
@@ -172,7 +186,17 @@ service cloud.firestore {
         // FEAT-044 : compteur de biens jamais muté côté client (CF only).
         && request.resource.data.get('activePropertiesCount', 0) == resource.data.get('activePropertiesCount', 0)
         && request.resource.data.get('activeTenantsCount', 0) == resource.data.get('activeTenantsCount', 0)
-        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0);
+        && request.resource.data.get('activeLeasesCount', 0) == resource.data.get('activeLeasesCount', 0)
+        // FEAT-044f : mêmes champs `pro*` gelés que la rule compte-complet
+        // (webhook/reconcile-only). Un anonyme n'en porte jamais, mais on gèle
+        // par cohérence et défense en profondeur (aucun no-op de sécurité).
+        && request.resource.data.get('proEntitlementActive', false) == resource.data.get('proEntitlementActive', false)
+        && request.resource.data.get('proWillRenew', false) == resource.data.get('proWillRenew', false)
+        && request.resource.data.get('proExpiresAt', null) == resource.data.get('proExpiresAt', null)
+        && request.resource.data.get('proStore', '') == resource.data.get('proStore', '')
+        && request.resource.data.get('proProductId', '') == resource.data.get('proProductId', '')
+        && request.resource.data.get('proSince', null) == resource.data.get('proSince', null)
+        && request.resource.data.get('proLastEventAtMs', 0) == resource.data.get('proLastEventAtMs', 0);
 
       // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
       // anonymes expirés passe par la Cloud Function planifiée

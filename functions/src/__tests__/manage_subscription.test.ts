@@ -1,6 +1,8 @@
 import {describe, expect, it} from "vitest";
 
 import {
+  assertSafeUid,
+  parseAction,
   pickManageableSubscription,
   planSubscriptionUpdate,
   type ManageableSubscriptionLike,
@@ -48,6 +50,39 @@ describe("planSubscriptionUpdate", () => {
       currentCancelAtPeriodEnd: false,
     });
     expect(r.noop).toBe(true);
+  });
+});
+
+describe("parseAction (validation d'entrée)", () => {
+  it("'cancel' et 'reactivate' passent", () => {
+    expect(parseAction("cancel")).toBe("cancel");
+    expect(parseAction("reactivate")).toBe("reactivate");
+  });
+
+  it("action inconnue → invalid-argument", () => {
+    expect(() => parseAction("delete")).toThrowError(/action must be/);
+  });
+
+  it("valeur non-string (absente) → rejetée", () => {
+    expect(() => parseAction(undefined)).toThrow();
+    expect(() => parseAction(42)).toThrow();
+  });
+});
+
+describe("assertSafeUid (garde anti-injection Search)", () => {
+  it("UID alphanumérique/URL-safe → OK", () => {
+    expect(() => assertSafeUid("abc123DEF_-")).not.toThrow();
+  });
+
+  it("UID contenant une apostrophe (casse le littéral Search) → rejeté", () => {
+    expect(() => assertSafeUid("a' OR '1'='1")).toThrowError(/malformed uid/);
+  });
+
+  it("UID vide ou avec métacaractères/espace → rejeté", () => {
+    expect(() => assertSafeUid("")).toThrow();
+    expect(() => assertSafeUid("a b")).toThrow();
+    expect(() => assertSafeUid("a\n")).toThrow();
+    expect(() => assertSafeUid("a:b")).toThrow();
   });
 });
 

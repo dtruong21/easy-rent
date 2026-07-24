@@ -31,6 +31,17 @@ impossible. Aucune nouvelle collection Firestore, **aucune modification des
 règles Firestore** : la callable agit via l'Admin SDK / API Stripe, et le client
 ne fait que **lire** son propre doc `landlords/{uid}` (déjà autorisé au owner).
 
+> **Amendement post-audit sécurité (Medium-1)** — le plan affirmait initialement
+> « aucune modification des règles Firestore ». L'audit a montré que les champs
+> `pro*` (`proEntitlementActive`, `proWillRenew`, `proExpiresAt`, `proStore`,
+> et aussi `proProductId`/`proSince`/`proLastEventAtMs`) n'étaient **pas gelés**
+> dans les rules UPDATE `landlords` : un propriétaire pouvait les écrire et
+> ainsi neutraliser le backstop `reconcileEntitlements`, voire bloquer les
+> futurs events du webhook via le garde d'ordre `proLastEventAtMs`. Ces champs
+> sont désormais **gelés côté client** dans les deux rules UPDATE (compte
+> complet + anonyme) — écriture réservée au webhook/reconcile (Admin SDK). Test
+> rules cross-user ajouté.
+
 ## Décisions de conception (tranchées)
 
 ### 1. Résolution de la subscription Stripe depuis l'UID → **Stripe Search API**
@@ -161,8 +172,10 @@ Conformité Baillan :
 
 ## Data model changes
 
-**Aucune migration, aucune nouvelle collection, aucun index, aucun changement de
-règles.** Les champs consommés (`proEntitlementActive`, `proWillRenew`,
+**Aucune migration, aucune nouvelle collection, aucun index.** Seul changement de
+règles : le **gel côté client des champs `pro*`** dans les rules UPDATE
+`landlords` (défense en profondeur, suite à l'audit sécurité Medium-1 — voir
+l'amendement §Frontière de sécurité). Les champs consommés (`proEntitlementActive`, `proWillRenew`,
 `proExpiresAt`, `proStore`, `subscriptionTier`) sont déjà écrits par
 `revenuecat_webhook.ts` / `reconcile_entitlements.ts` (FEAT-044c). Aucun secret
 nouveau : réutilise `STRIPE_SECRET_KEY` (`defineSecret`).

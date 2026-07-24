@@ -89,7 +89,7 @@ export function planSubscriptionUpdate(args: {
 }
 
 /** Valide l'action reçue du client. */
-function parseAction(value: unknown): SubscriptionAction {
+export function parseAction(value: unknown): SubscriptionAction {
   const raw = requireString(value, "action");
   if (raw !== "cancel" && raw !== "reactivate") {
     throw new HttpsError(
@@ -100,18 +100,26 @@ function parseAction(value: unknown): SubscriptionAction {
   return raw;
 }
 
+/**
+ * Défense en profondeur avant interpolation de l'UID dans la requête Stripe
+ * Search : un UID Firebase est alphanumérique URL-safe, donc ne contient jamais
+ * l'apostrophe qui casserait le littéral `'...'` de la query (seul métacaractère
+ * dangereux). Tout UID hors de cette forme est rejeté — l'interpolation §handler
+ * n'est donc jamais injectable. Fonction pure exportée pour être testée : c'est
+ * la garantie « injection impossible » qui repose dessus.
+ */
+export function assertSafeUid(uid: string): void {
+  if (!/^[A-Za-z0-9_-]+$/.test(uid)) {
+    throw new HttpsError("invalid-argument", "malformed uid");
+  }
+}
+
 export const manageSubscription = onCall(
   {secrets: [stripeSecret]},
   async (request): Promise<ManageSubscriptionResult> => {
     const uid = requireAuthUid(request);
     const action = parseAction(asBag(request.data).action);
-
-    // Défense en profondeur : un UID Firebase est alphanumérique URL-safe, donc
-    // ne contient pas d'apostrophe. On rejette tout UID hors de cette forme
-    // avant de l'interpoler dans la requête Search (aucune injection possible).
-    if (!/^[A-Za-z0-9_-]+$/.test(uid)) {
-      throw new HttpsError("invalid-argument", "malformed uid");
-    }
+    assertSafeUid(uid);
 
     const stripe = new Stripe(stripeSecret.value());
 
