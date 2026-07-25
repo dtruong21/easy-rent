@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../../core/utils/money_format.dart';
 import '../domain/heating_type.dart';
@@ -366,7 +367,7 @@ class PropertyNotFoundException implements Exception {
 /// Provider exposant le repository biens immobiliers.
 final propertyRepositoryProvider = Provider<PropertyRepository>((ref) {
   return FirestorePropertyRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

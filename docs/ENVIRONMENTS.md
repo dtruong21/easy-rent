@@ -1,23 +1,34 @@
 # Baillan — Stratégie multi-environnement
 
 > **Un seul projet Firebase** (`easy-rent-54cd4`), **deux sites Hosting**
-> (`baillan.com` et `stage.baillan.com`). La séparation est **au niveau du
-> Hosting uniquement** — pas au niveau des données.
+> (`baillan.com` et `stage.baillan.com`). Depuis l'**ADR 0003**, les **données
+> Firestore** sont isolées (base `staging`) ; **Auth, Storage et le code
+> des Cloud Functions restent partagés**.
 
 ## ⚠️ À lire en premier
 
-**Staging et prod partagent le même plan de données.** Même base Firestore
-`(default)`, même base Auth, même bucket Storage, mêmes Cloud Functions.
+**Depuis l'ADR 0003, les données Firestore de staging sont ISOLÉES** : staging
+écrit dans une base Firestore nommée `staging`, la prod dans `(default)`. En
+revanche **Auth, Storage et les secrets restent partagés**.
 
 Concrètement :
 
-- Un compte créé sur `stage.baillan.com` existe aussi pour `baillan.com`.
-- Un bien / bail / quittance créé en test depuis staging est **une donnée de
-  production**.
-- Un déploiement de `firestore.rules` depuis `develop` s'applique **à la prod**.
+- Un **bien / bail / quittance / entitlement** créé depuis `stage.baillan.com`
+  vit dans la base `staging` — **ce n'est plus une donnée de production.**
+- Un **compte** créé sur staging existe quand même côté prod (**Auth partagée**),
+  mais son doc `landlords/{uid}` et toutes ses données métier sont dans `staging`.
+- Les **fichiers uploadés** (justificatifs, photos) vont dans le **bucket prod**
+  (Storage non isolé) — rester mesuré sur les uploads de test.
+- Le **code** des Cloud Functions déployé depuis `develop` tourne aussi sur la
+  prod ; seul le routage des **writes Firestore** est isolé (par Origin côté
+  callables, par présence du landlord côté webhook).
+- `firestore.rules` / `firestore.indexes.json` sont **identiques** sur les deux
+  bases (déployés ensemble via `firebase deploy --only firestore`).
 
-→ **Ne teste jamais un scénario destructif ou générateur de données sur
-staging.** Pour ça, il y a l'émulateur local (voir plus bas).
+→ Voir [`docs/adr/0003-firestore-prod-staging-isolation.md`](adr/0003-firestore-prod-staging-isolation.md)
+pour le détail, les limitations (crons/triggers sur `(default)`), et la
+discipline de test paiement (compte jamais utilisé en prod). L'émulateur local
+reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 
 ## 🧭 Ce qui est séparé, ce qui ne l'est pas
 
@@ -26,7 +37,7 @@ staging.** Pour ça, il y a l'émulateur local (voir plus bas).
 | **Hosting** | ✅ Oui | Deux sites : `easy-rent-54cd4` et `baillan-stage` |
 | **Domaine** | ✅ Oui | `baillan.com` vs `stage.baillan.com` |
 | **Indexation SEO** | ✅ Oui | `noindex` + robots bloquant sur staging |
-| **Firestore** | ❌ **Non** | Base `(default)` partagée |
+| **Firestore (données)** | ✅ **Oui** | Base `staging` vs `(default)` (prod) — ADR 0003 |
 | **Auth** | ❌ **Non** | Même annuaire d'utilisateurs |
 | **Storage** | ❌ **Non** | Même bucket `easy-rent-54cd4.firebasestorage.app` |
 | **Cloud Functions** | ❌ **Non** | Un seul déploiement, région `europe-west1` |
@@ -74,16 +85,18 @@ static const String appEnv = String.fromEnvironment('APP_ENV', defaultValue: 'de
 static bool get isProd => appEnv == 'prod';
 ```
 
-`APP_ENV` pilote **uniquement des comportements applicatifs** — le SEO
-(`noindex`), les URLs publiques, l'affichage de bandeaux de dev. **Il ne
-change ni le projet, ni la base Firestore, ni le bucket.** Le défaut est `dev`,
-c'est-à-dire le mode le moins exposé.
+`APP_ENV` pilote des comportements applicatifs (SEO `noindex`, URLs publiques,
+bandeaux de dev) **et, depuis l'ADR 0003, la base Firestore sur le web** : un
+build web `APP_ENV=dev` route vers la base `staging` (via `firestoreProvider`).
+Il ne change en revanche **ni le projet Firebase, ni Auth, ni le bucket
+Storage**. Le défaut est `dev`, c'est-à-dire le mode le moins exposé.
 
-> 📌 Le commentaire en tête de `env.dart` mentionne une séparation
-> `(default)` vs base Firestore `dev`. **Ce n'est pas implémenté** : les 21
-> points d'accès Firestore de `lib/` utilisent `FirebaseFirestore.instance`
-> (donc `(default)`), et `firebase.json` ne déclare que `(default)`. À traiter
-> si on veut une vraie isolation (voir « Évolution »).
+> 📌 **Isolation implémentée (ADR 0003).** Les accès Firestore de `lib/` passent
+> désormais par `firestoreProvider` (`lib/core/config/firestore_provider.dart`),
+> et `firebase.json` déclare les deux bases `(default)` + `staging`. Le routage
+> est **fail-safe vers `(default)`** : seul un build **web** de staging
+> (`kIsWeb && APP_ENV=dev`) vise `staging` ; tout build mobile reste sur
+> `(default)`.
 
 ### Fichiers de dart-defines
 

@@ -3,13 +3,19 @@
 /// Post FEAT-019 (migration Firebase) : on conserve uniquement `APP_ENV`
 /// pour distinguer prod / dev.
 ///
-/// ⚠️ `APP_ENV` ne pilote QUE des comportements applicatifs (SEO `noindex`,
-/// URLs publiques, bandeaux de dev). Il **ne change ni le projet Firebase,
-/// ni la base Firestore, ni le bucket Storage** : staging et prod tournent
-/// tous les deux sur le projet `easy-rent-54cd4` et la base `(default)`.
-/// Autrement dit, **un test sur staging écrit des données de PRODUCTION**.
-/// Le seul environnement isolé est l'émulateur local — voir
-/// [Env.useFirebaseEmulator] et `docs/ENVIRONMENTS.md`.
+/// ⚠️ `APP_ENV` pilote des comportements applicatifs (SEO `noindex`, URLs
+/// publiques, bandeaux de dev) ET, depuis l'**ADR 0003**, la **base Firestore**
+/// utilisée : prod → `(default)`, staging déployé → base nommée `dev`
+/// (isolation des données). Le **projet Firebase** (`easy-rent-54cd4`), l'**Auth**
+/// et le **Storage** restent partagés entre prod et staging.
+///
+/// Le routage de la base ne se fait PAS via `Env.isProd` en dur dans le code
+/// applicatif : il est centralisé dans `firestoreProvider`
+/// ([lib/core/config/firestore_provider.dart]). Ne jamais appeler
+/// `FirebaseFirestore.instance` directement dans un repo/provider.
+///
+/// L'émulateur local reste l'environnement le plus isolé (Firestore + Auth +
+/// Functions locaux) — voir [Env.useFirebaseEmulator] et `docs/ENVIRONMENTS.md`.
 ///
 /// Valeurs Firebase (apiKey, projectId, etc.) sont dans
 /// `lib/firebase_options.dart` (publiques par design).

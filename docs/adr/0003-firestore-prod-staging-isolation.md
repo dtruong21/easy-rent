@@ -1,6 +1,6 @@
 # ADR 0003 — Isolation Firestore prod/staging : base nommée `dev` + routage backend par Origin
 
-- **Statut** : proposé (2026-07-23)
+- **Statut** : **accepté et implémenté (2026-07-24)** — jalons 1-4 livrés (voir Amendement d'implémentation en fin de document). Proposé le 2026-07-23.
 - **Contexte technique** : Flutter Web/mobile + Firebase (Firestore, Auth,
   Storage, Cloud Functions), projet unique `easy-rent-54cd4`
 - **Impacte** : `docs/ENVIRONMENTS.md` § « Évolution », `lib/core/config/env.dart`
@@ -265,3 +265,70 @@ d'abonnement peut basculer un compte prod).
 - [Firebase — Manage multiple Firestore databases](https://firebase.google.com/docs/firestore/manage-databases)
 - [Firebase Admin SDK — `getFirestore(app, databaseId)`](https://firebase.google.com/docs/reference/admin/node/firebase-admin.firestore)
 - [Firebase Callable Functions — reading request headers](https://firebase.google.com/docs/functions/callable#function-handler)
+
+## Amendement d'implémentation (2026-07-24)
+
+> **⚠️ Nom de la base : `staging`, pas `dev`.** Le corps de cet ADR parle
+> partout de « base `dev` », mais Firestore impose un id de base de **4-63
+> caractères** — `dev` (3 car.) est rejeté à la création. L'id réellement
+> utilisé est **`staging`** (dans `firebase.json`, `kStagingDatabaseId` Flutter,
+> `STAGING_DATABASE_ID` backend). Lire « `dev` » comme « `staging` » dans tout ce
+> qui précède.
+
+Implémenté sur la branche `feat/firestore-dev-isolation-adr0003`. Une déviation
+notable par rapport au plan initial, sur la **Réserve principale** (routage du
+webhook).
+
+### Ce qui a été livré tel que prévu
+- **Jalon 1** : base `dev` déclarée dans `firebase.json` (bloc `firestore` en
+  tableau), provider Flutter unique `firestoreProvider`
+  (`lib/core/config/firestore_provider.dart`) routant `(default)` (émulateur +
+  prod) vs `dev` (staging déployé), et refactor des 19 fichiers/21 accès. Note
+  d'implémentation : `FirebaseFirestore.instanceFor(...)` exige `app:` sur
+  `cloud_firestore ^5.6.12` (pas seulement `databaseId:`).
+- **Jalon 2** : helper `dbForRequest(request)` (`functions/src/utils/db_router.ts`)
+  routant par en-tête `Origin`, appliqué aux 8 callables qui écrivent Firestore.
+  Le chemin `(default)` passe par `admin.firestore()` (et non `getFirestore()`)
+  pour préserver le seam de test `vi.mock("firebase-admin")`.
+- **Jalon 4** : garde-fou CI `scripts/check-db-isolation.sh` (interdit
+  `FirebaseFirestore.instance` hors provider/main.dart et
+  `admin.firestore()`/`getFirestore()` dans `callable/`+`http/`).
+
+### Déviation — routage du webhook par présence du landlord, PAS par metadata `env`
+Le plan prévoyait (jalon 3) de propager une metadata `env` sur la Checkout
+Session Stripe, que RevenueCat aurait relayée dans ses events, lue par le
+webhook. **Abandonné** au profit de `dbForLandlordUid(uid)` : le webhook cherche
+le doc `landlords/{uid}` d'abord dans `(default)` (fail-safe prod), puis dans
+`dev`, et écrit dans la base qui le porte.
+
+Raisons :
+- **Fiabilité** : ne dépend d'AUCUNE config RevenueCat/Stripe (la propagation de
+  metadata Stripe → event RC n'est pas garantie/documentée de façon stable).
+  Reste correct même si ce mapping change.
+- **Simplicité** : aucune modification de `create_checkout_session.ts`, pas de
+  nouveau champ metadata à maintenir des deux côtés.
+- **Fail-safe identique** : prod testée en premier → jamais mal-router un vrai
+  compte prod.
+
+Contrainte inchangée (la « Réserve » demeure, sous une autre forme) : un uid ne
+doit exister que dans UNE base. **Pour tester un paiement sur staging, utiliser
+un compte JAMAIS utilisé en prod** — sinon son doc `landlords/{uid}` existe aussi
+en `(default)` et le webhook (qui teste prod d'abord) basculerait le compte prod.
+
+### Limitations assumées
+- **Isolation = staging WEB uniquement.** Le provider Flutter ne route vers
+  `dev` que si `kIsWeb && Env.isDev && !useFirebaseEmulator`. **Tout build
+  mobile → `(default)`** (fail-safe), quel que soit `APP_ENV`. Raison : la
+  commande de release mobile (`docs/MOBILE.md`) ne passe pas `APP_ENV`, qui
+  retombe sur son défaut `'dev'` — sans le garde `kIsWeb`, une release mobile
+  enverrait les vrais utilisateurs vers la base `dev`. Conséquence : pas de bac à
+  sable `dev` pour le mobile (utiliser l'émulateur). Côté callables, un build
+  mobile n'a de toute façon pas d'en-tête `Origin` → `dbForRequest` route aussi
+  vers `(default)` : les deux couches sont **cohérentes** (mobile = prod partout,
+  pas de split-brain).
+- Les crons (`reconcile_entitlements`, `cleanup_expired_anon`) et le trigger
+  `recompute_receipt_stale` restent sur `(default)` — ils ne traitent pas la
+  base `dev`. Conséquence staging : un entitlement expiré en `dev` n'est pas
+  rattrapé par le reconcile (seul l'event webhook `EXPIRATION`/`CANCELLATION`,
+  routé vers `dev`, le gère) ; les triggers de dénormalisation ne se déclenchent
+  pas sur `dev`. Acceptable pour un environnement de preview.

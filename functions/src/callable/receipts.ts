@@ -30,6 +30,8 @@ import {
   requireAuthUid,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 type DocumentType = "quittance" | "recu";
 
@@ -133,7 +135,7 @@ export const generateReceipt = onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
 
     // 1. Load landlord (legal fields fullName + address required)
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
@@ -305,7 +307,7 @@ export const voidReceipt = onCall(
     const receiptId = requireString(data.receiptId, "receiptId");
     const reason = requireString(data.reason, "reason");
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const ref = db.doc(`receipts/${receiptId}`);
 
     await db.runTransaction(async (tx) => {
@@ -339,7 +341,7 @@ export const markReceiptAsSent = onCall(
     const receiptId = requireString(data.receiptId, "receiptId");
     const email = optionalString(data.email, "email");
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const ref = db.doc(`receipts/${receiptId}`);
 
     await db.runTransaction(async (tx) => {

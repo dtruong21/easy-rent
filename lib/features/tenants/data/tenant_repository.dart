@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../../core/utils/french_date.dart';
 import '../domain/tenant.dart';
@@ -329,7 +330,7 @@ class TenantNotFoundException implements Exception {
 
 final tenantRepositoryProvider = Provider<TenantRepository>((ref) {
   return FirestoreTenantRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

@@ -46,6 +46,9 @@ jobs:
       - name: Detect secrets in repo
         run: bash scripts/check-secrets.sh --all
 
+      - name: Check Firestore isolation (ADR 0003)
+        run: bash scripts/check-db-isolation.sh
+
   functions:
     name: Functions (lint · build · test)
     runs-on: ubuntu-latest

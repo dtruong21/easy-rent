@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/investment_scenario.dart';
 
@@ -231,7 +232,7 @@ class InvestmentScenarioNotFoundException implements Exception {
 final investmentScenarioRepositoryProvider =
     Provider<InvestmentScenarioRepository>(
       (ref) => FirestoreInvestmentScenarioRepository(
-        FirebaseFirestore.instance,
+        ref.watch(firestoreProvider),
         FirebaseAuth.instance,
         FirebaseFunctions.instanceFor(region: 'europe-west1'),
       ),

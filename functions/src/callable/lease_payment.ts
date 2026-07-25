@@ -32,6 +32,8 @@ import {
   requireString,
   toTimestamp,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 const LEASE_TYPES = new Set([
   "unfurnished",
@@ -198,7 +200,7 @@ export const createLease = onCall(
       "entryInventoryDone",
     );
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const leaseRef = db.collection("leases").doc();
     const propertyRef = db.doc(`properties/${propertyId}`);
     const tenantRef = db.doc(`tenants/${tenantId}`);
@@ -385,7 +387,7 @@ export const updateLease = onCall(
       }
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const leaseRef = db.doc(`leases/${id}`);
 
     // FEAT-044 : fail-closed sur activeLeasesCount absent (compte legacy) —
@@ -581,7 +583,7 @@ export const createPayment = onCall(
     const notes = optionalString(data.notes, "notes");
     const reference = optionalString(data.reference, "reference");
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const leaseRef = db.doc(`leases/${leaseId}`);
     const paymentRef = db.collection("payments").doc();
 
@@ -656,7 +658,7 @@ export const updatePayment = onCall(
       }
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const ref = db.doc(`payments/${id}`);
     const snap = await ref.get();
     const p = dataOrFail(snap, "payment not found");

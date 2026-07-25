@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/landlord_profile.dart';
 
@@ -95,7 +96,7 @@ class ProfileNotFoundException implements Exception {
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return FirestoreProfileRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
   );
 });

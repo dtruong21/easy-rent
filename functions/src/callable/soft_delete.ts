@@ -36,6 +36,8 @@ import {
   requireAuthUid,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 const SOFT_DELETABLE: ReadonlySet<string> = new Set([
   "properties",
@@ -62,7 +64,7 @@ export const softDeleteEntity = onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const ref = db.doc(`${collection}/${id}`);
 
     return await db.runTransaction(async (tx) => {

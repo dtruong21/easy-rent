@@ -38,6 +38,8 @@ import {
   requireInt,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 const ALLOWED_CATEGORIES = new Set([
   "bail_signe",
@@ -164,7 +166,7 @@ export const createDocument = onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
 
     // Gating free/Pro AVANT tout travail coûteux (lookups cross-entity + accès
     // Storage) : un compte au plafond est refusé immédiatement.
@@ -252,7 +254,7 @@ export const getDocumentDownloadUrl = onCall(
     const data = asBag(request.data);
     const documentId = requireString(data.documentId, "documentId");
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const snap = await db.doc(`documents/${documentId}`).get();
     const doc = dataOrFail(snap, "document not found");
     if (doc.landlordId !== uid) {

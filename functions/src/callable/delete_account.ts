@@ -44,6 +44,8 @@ import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {requireAuthUid} from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 /** Fraîcheur maximale de l'authentification pour un compte non-anonyme. */
 const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
@@ -114,7 +116,7 @@ export const deleteAccount = onCall(
       }
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
 
     try {
       // (a) Quittances : rétention légale — stamp, jamais delete.

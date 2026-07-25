@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/document.dart';
 import '../domain/document_category.dart';
@@ -342,7 +343,7 @@ class DocumentUploadException implements Exception {
 
 final documentsRepositoryProvider = Provider<DocumentsRepository>((ref) {
   return FirestoreDocumentsRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseStorage.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),

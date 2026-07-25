@@ -36,6 +36,8 @@ import {
   requireBool,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 // Miroir de `PropertyType.sqlValue` (Dart) + de la rule `properties/create`.
 const PROPERTY_TYPES = new Set(["appartement", "maison", "studio", "autre"]);
@@ -184,7 +186,7 @@ export const createProperty = onCall(
       {min: 0},
     );
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const propertyRef = db.collection("properties").doc();
 
@@ -319,7 +321,7 @@ export const createTenant = onCall(
     const guarantorEmail = optionalString(data.guarantorEmail, "guarantorEmail");
     const guarantorPhone = optionalString(data.guarantorPhone, "guarantorPhone");
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const tenantRef = db.collection("tenants").doc();
 

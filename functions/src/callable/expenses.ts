@@ -24,6 +24,7 @@
 import * as admin from "firebase-admin";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+
 import {makeSetUpdatedAt} from "../triggers/set_updated_at";
 import {
   asBag,
@@ -37,6 +38,7 @@ import {
   requireString,
   toTimestamp,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
 
 export type ExpenseCategory = "recoverable" | "non_recoverable";
 
@@ -197,7 +199,7 @@ export const createExpense = onCall(
       throw new HttpsError("invalid-argument", "notes must be <= 2000 chars");
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const propertyRef = db.doc(`properties/${propertyId}`);
     const leaseRef = leaseId ? db.doc(`leases/${leaseId}`) : null;
     const documentRef = documentId ? db.doc(`documents/${documentId}`) : null;
@@ -297,7 +299,7 @@ export const updateExpense = onCall(
       }
     }
 
-    const db = admin.firestore();
+    const db = dbForRequest(request);
     const expenseRef = db.doc(`expenses/${id}`);
 
     return await db.runTransaction(async (tx) => {

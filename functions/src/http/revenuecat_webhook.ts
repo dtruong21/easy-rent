@@ -28,6 +28,8 @@ import {defineSecret} from "firebase-functions/params";
 import {logger} from "firebase-functions/v2";
 import {onRequest} from "firebase-functions/v2/https";
 
+import {dbForLandlordUid} from "../utils/db_router";
+
 /** Secret partagé du header Authorization du webhook RevenueCat. */
 const webhookAuth = defineSecret("REVENUECAT_WEBHOOK_AUTH");
 
@@ -236,11 +238,12 @@ export const revenueCatWebhook = onRequest(
     }
 
     try {
-      const outcome = await applyRevenueCatEvent(
-        admin.firestore(),
-        event,
-        Date.now(),
-      );
+      // ADR 0003 : le webhook n'a pas d'Origin (server-to-server). On route vers
+      // la base qui contient réellement le doc landlord (prod d'abord, puis dev)
+      // — un abonnement de test créé depuis staging bascule alors le tier dans
+      // `dev`, pas en prod.
+      const db = await dbForLandlordUid(event.app_user_id ?? "");
+      const outcome = await applyRevenueCatEvent(db, event, Date.now());
       logger.info(
         `revenueCatWebhook: ${event.type} app_user_id=${event.app_user_id} ` +
           `→ ${outcome}`,
