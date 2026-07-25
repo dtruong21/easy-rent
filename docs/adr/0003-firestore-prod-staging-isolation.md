@@ -308,7 +308,17 @@ doit exister que dans UNE base. **Pour tester un paiement sur staging, utiliser
 un compte JAMAIS utilisé en prod** — sinon son doc `landlords/{uid}` existe aussi
 en `(default)` et le webhook (qui teste prod d'abord) basculerait le compte prod.
 
-### Limitations assumées (inchangées vs plan)
+### Limitations assumées
+- **Isolation = staging WEB uniquement.** Le provider Flutter ne route vers
+  `dev` que si `kIsWeb && Env.isDev && !useFirebaseEmulator`. **Tout build
+  mobile → `(default)`** (fail-safe), quel que soit `APP_ENV`. Raison : la
+  commande de release mobile (`docs/MOBILE.md`) ne passe pas `APP_ENV`, qui
+  retombe sur son défaut `'dev'` — sans le garde `kIsWeb`, une release mobile
+  enverrait les vrais utilisateurs vers la base `dev`. Conséquence : pas de bac à
+  sable `dev` pour le mobile (utiliser l'émulateur). Côté callables, un build
+  mobile n'a de toute façon pas d'en-tête `Origin` → `dbForRequest` route aussi
+  vers `(default)` : les deux couches sont **cohérentes** (mobile = prod partout,
+  pas de split-brain).
 - Les crons (`reconcile_entitlements`, `cleanup_expired_anon`) et le trigger
   `recompute_receipt_stale` restent sur `(default)` — ils ne traitent pas la
   base `dev`. Conséquence staging : un entitlement expiré en `dev` n'est pas
