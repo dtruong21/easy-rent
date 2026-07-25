@@ -24,7 +24,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-016 | RGPD consent persistence | ✅ done | account | — |
 | FEAT-017 | Rentabilité portfolio (rendement, cash-flow) | ✅ done | properties | — |
 | FEAT-018 | Simulateur investissement | ✅ done | simulator | — |
-| FEAT-019 | Migration Supabase → Firebase | ✅ done | account | — |
+| FEAT-019 | Migration backend → Firebase (Firestore) | ✅ done | account | — |
 | FEAT-020 | Rebrand EasyRent → Baillan | ✅ done | account | — |
 | FEAT-021 | Vérification email post-signup | ✅ done | account | — |
 | FEAT-022 | Redesign login « La Page du Registre » | ✅ done | account | — |

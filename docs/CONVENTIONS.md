@@ -14,7 +14,7 @@
 
 ## Firestore
 
-> Pivot FEAT-019 (2026-06-30) : Supabase Postgres → Firestore. État détaillé et
+> Pivot FEAT-019 (2026-06-30) : migration du backend vers Firestore. État détaillé et
 > faisant autorité : [`docs/state/schema/`](state/schema/README.md).
 
 - Champs en **camelCase**. Montants en **centimes** (`*Cents`, int). Dates =

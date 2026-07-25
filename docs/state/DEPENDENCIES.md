@@ -38,9 +38,9 @@
 | `web` | `^1.1.0` | JS interop (install prompt, Web Share API) | FEAT-010, FEAT-008 | — |
 | **`package_info_plus`** | **^9.0.1** | **Version app (version.json web, manifest natif)** | **FEAT-023** | — |
 
-**Removed (Supabase pivot → Firebase)** :
-- `supabase_flutter` (2.12.4) — remplacée firebase_*
-- `supabase` (Deno) — remplacée Cloud Functions
+**Removed (migration Firebase, FEAT-019)** :
+- ancien client backend (Dart) — remplacé par `firebase_core` / `firebase_auth` / `cloud_firestore` / `firebase_storage`
+- functions serverless (Deno) — remplacées par Cloud Functions (Node 20 / TS)
 
 ### Dépendances dev (8 packages)
 
