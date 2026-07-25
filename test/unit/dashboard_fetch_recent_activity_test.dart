@@ -15,7 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 // ---------------------------------------------------------------------------
 
 /// Fake repository qui expose séparément les 3 sources d'activité pour
-/// pouvoir tester la logique de fusion (tri + take) indépendamment de Supabase.
+/// pouvoir tester la logique de fusion (tri + take) indépendamment de Firestore.
 class _FakeMultiSourceRepository implements DashboardRepository {
   final List<ActivityItem> payments;
   final List<ActivityItem> receipts;
@@ -29,7 +29,7 @@ class _FakeMultiSourceRepository implements DashboardRepository {
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async {
-    // Reproduit exactement la logique de SupabaseDashboardRepository :
+    // Reproduit exactement la logique de FirestoreDashboardRepository :
     // fetch 3 sources en parallèle → combine → tri → take.
     final results = await Future.wait([
       Future.value(payments),

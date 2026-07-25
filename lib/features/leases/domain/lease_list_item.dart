@@ -22,7 +22,7 @@ class LeaseListItem {
 
   /// Nom du bien immobilier (de `properties.name`).
   ///
-  /// Placeholder si le bien a été archivé entre-temps (RLS filtre `deleted_at IS NULL`
+  /// Placeholder si le bien a été archivé entre-temps (les Rules filtrent `deletedAt == null`
   /// sur la jointure → renvoi `null`).
   final String propertyName;
 

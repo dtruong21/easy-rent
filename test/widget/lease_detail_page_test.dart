@@ -549,7 +549,7 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Cross-user / "Bail introuvable" (RLS 0 ligne)
+    // Cross-user / "Bail introuvable" (Firestore Rules : aucun document)
     // -----------------------------------------------------------------------
     testWidgets('cross-user — affiche "Bail introuvable"', (tester) async {
       await tester.pumpWidget(

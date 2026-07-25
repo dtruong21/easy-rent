@@ -20,7 +20,7 @@ import 'widgets/leases_table_view.dart';
 /// Liste des baux du landlord courant.
 ///
 /// Critères Gherkin :
-/// - Affiche uniquement les baux avec `deleted_at IS NULL` (géré par RLS).
+/// - Affiche uniquement les baux avec `deleted_at IS NULL` (géré par les Firestore Rules).
 /// - État vide : "Aucun bail enregistré" + bouton "Créer un bail".
 /// - Triés par `status ASC` (actif d'abord) puis `start_date DESC`.
 /// - Bandeau si la limite de 200 baux est atteinte.

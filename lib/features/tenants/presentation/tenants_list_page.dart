@@ -18,7 +18,7 @@ import 'widgets/tenants_table_view.dart';
 /// Liste des locataires du landlord courant.
 ///
 /// Critères Gherkin :
-/// - Affiche uniquement les locataires avec `deleted_at IS NULL` (géré par RLS).
+/// - Affiche uniquement les locataires avec `deleted_at IS NULL` (géré par les Firestore Rules).
 /// - État vide : "Aucun locataire enregistré" + bouton "Ajouter un locataire".
 /// - Triés par `last_name ASC, first_name ASC`.
 /// - Bandeau si la limite de 200 locataires est atteinte.

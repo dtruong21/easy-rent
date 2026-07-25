@@ -18,7 +18,7 @@ class LeaseReceiptsNotifier extends FamilyAsyncNotifier<List<Receipt>, String> {
     return ref.read(receiptsRepositoryProvider).listForLease(arg);
   }
 
-  /// Recharge la liste depuis Supabase.
+  /// Recharge la liste depuis Firestore.
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(

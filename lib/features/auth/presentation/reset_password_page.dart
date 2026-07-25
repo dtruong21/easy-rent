@@ -11,10 +11,10 @@ import 'widgets/reset_password_form.dart';
 /// Accessible via le lien envoyé par email Firebase :
 ///   `https://.../reset-password?mode=resetPassword&oobCode=<code>`
 ///
-/// Contrairement à Supabase, Firebase ne crée pas de session "recovery"
-/// quand l'utilisateur clique le lien — il fournit juste un `oobCode`
-/// (one-time code) qu'on valide via [verifyPasswordResetCode] avant de
-/// poser le nouveau password via [confirmPasswordReset].
+/// Firebase ne crée pas de session "recovery" quand l'utilisateur clique le
+/// lien — il fournit juste un `oobCode` (one-time code) qu'on valide via
+/// [verifyPasswordResetCode] avant de poser le nouveau password via
+/// [confirmPasswordReset].
 class ResetPasswordPage extends ConsumerStatefulWidget {
   const ResetPasswordPage({super.key});
 

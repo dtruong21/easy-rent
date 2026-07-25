@@ -18,7 +18,7 @@ $ARGUMENTS (défaut : `all`)
 ## Quand l'utilisateur doit-il lancer ça ?
 
 - **Après un sprint** : `/refresh-state all` pour repartir propre
-- **Après une migration** : `/refresh-state schema`
+- **Après un changement de rules/indexes** : `/refresh-state schema`
 - **Après ajout de routes** : `/refresh-state routes`
 - **Si un agent flag un état périmé** : refresh ce qu'il demande
 - **Jamais** à chaque session — c'est justement ce qu'on veut éviter

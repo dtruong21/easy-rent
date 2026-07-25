@@ -4,9 +4,9 @@
 
 ### Semaine 1 — Fondations
 - [x] Setup Flutter Web + PWA (manifest, icônes, service worker)
-- [x] Setup Supabase projet (dev + prod)
-- [x] ~~Auth Supabase (magic link)~~ → **Auth email + password (FEAT-011 pivot 2026-06-22)**
-- [x] Schéma DB initial (landlords, properties, tenants, leases) + RLS
+- [x] Setup projet Firebase (Firestore, Auth, Storage, Functions)
+- [x] ~~Auth magic link~~ → **Auth email + password (FEAT-011 pivot 2026-06-22)**
+- [x] Modèle Firestore initial (landlords, properties, tenants, leases) + rules
 - [x] Repo GitHub + CI minimal
 
 ### Semaine 2 — CRUD core
@@ -22,7 +22,7 @@
 - [x] Historique des quittances partagées
 
 ### Semaine 4 — Documents + dashboard + livraison
-- [x] Upload et stockage de documents (Supabase Storage)
+- [x] Upload et stockage de documents (Firebase Storage)
 - [x] Dashboard (loyers du mois, retards, prochains baux à renouveler)
 - [x] Polish PWA (offline shell, icônes, install prompt)
 - [x] Déploiement prod Firebase Hosting (workflows + checklist + runbook)

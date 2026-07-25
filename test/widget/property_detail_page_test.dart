@@ -205,7 +205,7 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Bien introuvable (RLS renvoie 0 ligne ou PropertyNotFoundException)
+    // Bien introuvable (les Firestore Rules ne renvoient aucun document ou PropertyNotFoundException)
     // -----------------------------------------------------------------------
     testWidgets('cross-user / archivé — affiche "Bien introuvable"', (
       tester,

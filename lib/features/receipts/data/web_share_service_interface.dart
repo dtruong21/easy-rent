@@ -34,7 +34,7 @@ abstract interface class WebShareService {
 
   /// Télécharge les bytes d'une URL (GET) et les retourne.
   ///
-  /// Utilisé pour récupérer le PDF depuis une URL signée Supabase Storage.
+  /// Utilisé pour récupérer le PDF depuis une URL signée Firebase Storage.
   /// Lance [ShareReceiptException] en cas d'échec réseau ou HTTP != 200.
   Future<List<int>> fetchBytes(String url);
 }

@@ -15,9 +15,9 @@ final _log = Logger('DashboardRepository');
 
 /// Repository dashboard — toutes les méthodes sont des SELECT (lecture seule).
 ///
-/// Contrairement à Supabase RLS où le filtre `landlord_id = auth.uid()` était
-/// implicite, ici on doit le passer explicitement dans chaque `where()`. Le
-/// rules Firestore les enforce, mais sans le filtre client la query throw.
+/// Le filtre d'ownership `landlordId == auth.uid` doit être passé
+/// explicitement dans chaque `where()` : les Firestore Rules l'exigent (elles
+/// ne sont pas un filtre), donc sans ce `where()` côté client la query throw.
 abstract interface class DashboardRepository {
   Future<LoyersMoisKpi> fetchLoyersMois();
   Future<RetardsKpi> fetchRetards();

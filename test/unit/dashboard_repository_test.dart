@@ -1,7 +1,7 @@
 /// Tests du contrat [DashboardRepository] via un fake in-memory.
 ///
-/// NOTE : [SupabaseDashboardRepository] utilise [Db.from()] qui dépend de
-/// [Supabase.instance.client] — non initialisé en test unitaire.
+/// NOTE : [FirestoreDashboardRepository] utilise [FirebaseFirestore] qui dépend de
+/// [FirebaseFirestore.instance] — non initialisé en test unitaire.
 /// On teste donc le contrat de l'interface + les invariants du fake.
 library;
 

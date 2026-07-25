@@ -6,9 +6,7 @@ set -e
 
 # Liste des patterns suspects (regex étendues)
 PATTERNS=(
-  # Supabase secret keys (nouveau format)
-  'sb_secret_[A-Za-z0-9_-]{20,}'
-  # Supabase service role (ancien format JWT — commence souvent par eyJ et contient "service_role")
+  # JWT (3 segments base64url) — attrape tout token type service account / session
   'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
   # Resend API key
   're_[A-Za-z0-9]{20,}'
@@ -49,7 +47,7 @@ for file in $FILES; do
 
   # Skip les fichiers de doc qui peuvent légitimement mentionner les patterns
   # + configs Firebase clientes : les apiKey Firebase (AIza…) y sont PUBLIQUES
-  #   par design (équivalent du anon key Supabase) ; sécurité via Rules +
+  #   par design (comme toute clé client Firebase) ; sécurité via Rules +
   #   App Check. Couvre le web (firebase_options.dart) et les apps natives
   #   FEAT-024 (google-services.json Android, GoogleService-Info.plist iOS).
   case "$file" in

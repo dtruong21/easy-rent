@@ -288,7 +288,7 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Cross-user / "Locataire introuvable" (RLS 0 ligne)
+    // Cross-user / "Locataire introuvable" (Firestore Rules : aucun document)
     // -----------------------------------------------------------------------
     testWidgets('cross-user — affiche "Locataire introuvable"', (tester) async {
       await tester.pumpWidget(

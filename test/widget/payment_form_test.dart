@@ -523,7 +523,7 @@ Widget _buildFormPage({
       paymentRepositoryProvider.overrideWithValue(paymentRepo),
       // Utilise le vrai PaymentFormController avec Ref — on pilote son état
       // directement via container.read(...).state = ... (sans passer par
-      // _submit qui accède à Supabase.instance).
+      // _submit qui accède à FirebaseFirestore.instance).
       paymentFormControllerProvider.overrideWith(PaymentFormController.new),
     ],
     child: MaterialApp.router(
@@ -636,7 +636,7 @@ void _gap003Tests() {
       await tester.pumpAndSettle();
 
       // Déclencher manuellement le state success sur le contrôleur réel
-      // sans passer par _submit (qui appelle Supabase.instance en test).
+      // sans passer par _submit (qui appelle FirebaseFirestore.instance en test).
       // On vérifie que le ref.listen de PaymentFormPage réagit correctement.
       final container = ProviderScope.containerOf(
         tester.element(find.byType(PaymentFormPage)),

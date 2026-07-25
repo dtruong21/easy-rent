@@ -20,10 +20,10 @@ String? _heatingToJson(HeatingType? v) => v?.sqlValue;
 ///
 /// Mappé directement sur la table `properties` (public + dev).
 /// Les colonnes `created_at`, `updated_at` et `deleted_at` sont gérées
-/// par les triggers Supabase — ne jamais les inclure dans un payload INSERT/UPDATE.
+/// par les triggers Cloud Functions — ne jamais les inclure dans un payload de création/mise à jour.
 ///
 /// [landlordId] : FK vers `landlords.id`. Ne pas l'envoyer dans un INSERT
-/// depuis le client — la RLS (`properties_insert_own`) vérifie `= auth.uid()`.
+/// depuis le client — les Firestore Rules vérifient `landlordId == request.auth.uid`.
 @freezed
 class Property with _$Property {
   const factory Property({

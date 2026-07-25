@@ -707,7 +707,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Page "Bail introuvable" — affichée quand la RLS retourne 0 ligne.
+/// Page "Bail introuvable" — affichée quand les Firestore Rules ne renvoient aucun document.
 class _NotFoundPage extends StatelessWidget {
   const _NotFoundPage();
 

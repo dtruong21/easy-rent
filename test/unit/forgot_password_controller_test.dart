@@ -227,7 +227,7 @@ void main() {
           final repo = _FakeAuthRepository()
             ..sendError = FirebaseAuthException(
               code: 'unknown',
-              message: 'some supabase error',
+              message: 'some firebase error',
             );
           final ctrl = _makeController(repo);
           await ctrl.sendResetEmail('user@exemple.fr');

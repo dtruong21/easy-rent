@@ -8,7 +8,7 @@ final _log = Logger('LeaseDetailNotifier');
 
 /// Notifier qui charge un bail par son [id].
 ///
-/// Lance [LeaseNotFoundException] si la RLS retourne 0 ligne
+/// Lance [LeaseNotFoundException] si les Firestore Rules ne renvoient aucun document
 /// (bail archivé, non possédé, ou id inconnu — pas de fuite d'information).
 class LeaseDetailNotifier extends FamilyAsyncNotifier<Lease, String> {
   @override
@@ -17,7 +17,7 @@ class LeaseDetailNotifier extends FamilyAsyncNotifier<Lease, String> {
     return ref.read(leaseRepositoryProvider).getById(arg);
   }
 
-  /// Recharge la fiche depuis Supabase.
+  /// Recharge la fiche depuis Firestore.
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(

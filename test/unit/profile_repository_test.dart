@@ -1,7 +1,7 @@
 /// Tests du contrat [ProfileRepository] via un fake in-memory.
 ///
-/// NOTE : [SupabaseProfileRepository] utilise [Db.from()] qui dépend de
-/// [Supabase.instance.client] — non initialisé en test unitaire.
+/// NOTE : [FirestoreProfileRepository] utilise [FirebaseFirestore] qui dépend de
+/// [FirebaseFirestore.instance] — non initialisé en test unitaire.
 /// On teste donc le contrat de l'interface + les invariants du fake.
 ///
 /// Vérifications couvertes :
@@ -47,7 +47,7 @@ class _InMemoryProfileRepository implements ProfileRepository {
 
     final p = _profile;
     if (p == null) throw const ProfileNotFoundException();
-    // Simule le comportement Supabase : retourne le profil mis à jour.
+    // Simule le comportement Firestore : retourne le profil mis à jour.
     final updated = p.copyWith(
       fullName: fullName,
       phone: phone,

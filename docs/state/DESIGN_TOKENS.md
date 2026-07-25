@@ -68,7 +68,7 @@ Ces alias **portent la voix éditoriale Baillan jusqu'au code**. Préférer ces 
 | Mention "Loi du 6 juillet 1989" | `consigne` | Mise en avant légale obligatoire sur PDF |
 | Notification système neutre (export prêt, sync OK) | `consigne` | Pas un succès, pas une alerte |
 | Confirmation d'action utilisateur (snackbar "Quittance envoyée") | `acquitte` | Feedback positif d'action |
-| Erreur réseau / erreur Supabase | `oxblood` | Erreur technique (différent de l'erreur métier) |
+| Erreur réseau / erreur backend | `oxblood` | Erreur technique (différent de l'erreur métier) |
 | Section "Historique des quittances" | `archive` | Surface, pas un texte |
 | Section "Documents conservés" | `archive` | Surface |
 | Champ formulaire désactivé | `stone` | Pas la même couleur qu'un caption |
