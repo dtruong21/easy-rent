@@ -24,13 +24,13 @@ import {setGlobalOptions} from "firebase-functions/v2";
 // Init Admin SDK une seule fois pour tous les modules.
 admin.initializeApp();
 
-// Garde-fou coût : pas plus de 5 conteneurs concurrents par défaut (baissé de
-// 10 → 5 le 2026-07-25 pour rester sous le quota CPU Cloud Run du projet sur
-// europe-west1 ; 5 × ~80 req/conteneur reste très au-dessus du volume actuel).
-// Sur-ajuster par fonction si workload nécessite (en runWith).
+// Garde-fou coût : pas plus de 2 conteneurs concurrents par défaut (baissé de
+// 10 → 2 le 2026-07-25 pour rester sous le quota « Total CPU allocation » de
+// Cloud Run sur europe-west1 ; 2 × ~80 req/conteneur reste très au-dessus du
+// volume actuel). Sur-ajuster par fonction si workload nécessite (en runWith).
 setGlobalOptions({
   region: "europe-west1",
-  maxInstances: 5,
+  maxInstances: 2,
 });
 
 // ---------- Triggers ----------
