@@ -2,7 +2,7 @@
 
 > Source d'état — README (transverse). Maintenu par `state-keeper`.
 
-**Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-21 (FEAT-044 paiement : champs `pro*` sur `landlords` ; quota documents free). **Pivot** : FEAT-019 (2026-06-30) — Supabase Postgres → Firestore camelCase (le backend Postgres/RLS n'existe plus ; les sections de garde s'appellent désormais « Règles Firestore »).
+**Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-21 (FEAT-044 paiement : champs `pro*` sur `landlords` ; quota documents free). **Pivot** : FEAT-019 (2026-06-30) — migration du backend vers Firestore camelCase (plus de backend SQL ; les sections de garde s'appellent désormais « Règles Firestore »).
 
 ## 11 collections → shard
 

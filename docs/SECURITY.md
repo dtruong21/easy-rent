@@ -7,7 +7,7 @@ L'app étant une **PWA Flutter Web déployée statiquement sur Firebase Hosting*
 - Toute valeur passée via `--dart-define` au moment du build est **embarquée dans le bundle**
 - → **Aucune clé "secrète" ne doit toucher le code Flutter**, seulement les clés **publishable**
 
-La vraie sécurité repose sur (**backend Firebase depuis FEAT-019** — plus aucune trace de Supabase/Postgres dans le dépôt) :
+La vraie sécurité repose sur (**backend 100 % Firebase depuis FEAT-019** — aucun backend SQL/Postgres externe dans le dépôt) :
 1. **Règles Firestore** ([`firestore.rules`](../firestore.rules)) : deny-by-default, `isFullyAuthed()` / `isOwner()` — chaque bailleur n'accède qu'à ses données. C'est **la** frontière d'autorisation, il n'y a pas de RLS Postgres.
 2. **Cloud Functions** ([`functions/src/`](../functions/src)) : tout traitement nécessitant un secret tourne côté serveur (Stripe, RevenueCat), secrets injectés via Secret Manager (`defineSecret`), jamais via `--dart-define`.
 3. **Firebase Auth** : vérifie l'identité ; le contexte d'auth est re-vérifié côté Functions (callables) et côté règles Firestore.
@@ -37,7 +37,7 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 | GitHub PAT | `ghp_*` / `github_pat_*` | macOS Keychain / GitHub Actions |
 | Jeton agent Claude Code | — | GitHub Actions secret `CLAUDE_CODE_OAUTH_TOKEN` |
 
-**Note (FEAT-019)** : Supabase est sorti de la stack — plus de dépendance `supabase_flutter`, plus de dossier `supabase/`, plus de migration SQL. Les clés `sb_publishable_*` / `sb_secret_*` / `service_role` **n'existent plus** et n'ont plus à être rotées. Si l'une traîne encore quelque part (dashboard, secret CI résiduel), la révoquer plutôt que la documenter.
+**Note (FEAT-019)** : aucun backend SQL externe dans la stack — pas de client backend tiers, pas de migration SQL. Aucune clé de service serveur type `service_role` à gérer. Le seul secret backend est `FIREBASE_SERVICE_ACCOUNT` (CI, environnements GitHub) ; les clés Firebase Web sont **publiques par design** (sécurité via Firestore Rules + App Check).
 
 **Note (FEAT-008 pivot 2026-06-22)** : `RESEND_API_KEY` a été éliminé. Le partage de quittances utilise Web Share API natif côté client (zéro secret backend email).
 
@@ -119,7 +119,7 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 
 Cette section décrivait un footgun **Postgres/PostgREST** hérité de FEAT-002 : les RPC `SECURITY DEFINER` `soft_delete_*` posaient un flag `app.allow_deleted_at_change` via `set_config()` pour neutraliser un trigger le temps d'un UPDATE, avec le risque qu'une future RPC passe un paramètre user-contrôlé à `set_config()`.
 
-**Plus rien de tout cela n'existe** : le pivot FEAT-019 a retiré Postgres du projet (aucune dépendance `supabase_flutter`, aucun dossier `supabase/`, aucune migration SQL dans le dépôt). Pas de RPC, pas de trigger, pas de PostgREST — donc pas de surface d'attaque GUC.
+**Plus rien de tout cela n'existe** : le pivot FEAT-019 a retiré tout backend SQL/Postgres du projet (aucun client backend tiers, aucune migration SQL dans le dépôt). Pas de RPC, pas de trigger SQL, pas de PostgREST — donc pas de surface d'attaque GUC.
 
 Le soft-delete est aujourd'hui porté par les règles Firestore et les Cloud Functions. Les garanties à maintenir sont décrites plus haut (**Garde-fous techniques activés**), pas ici.
 
@@ -127,7 +127,7 @@ Le soft-delete est aujourd'hui porté par les règles Firestore et les Cloud Fun
 
 ## 🔐 Politique mot de passe (FEAT-011 pivot 2026-06-22 — backend Firebase depuis FEAT-019)
 
-**Authentification** : Email + password classique (remplace magic link FEAT-001). Backend **Firebase Auth** — cette section décrivait Supabase jusqu'au pivot FEAT-019 ; toute mention résiduelle de Supabase ici serait un reliquat, pas une description valide.
+**Authentification** : Email + password classique (remplace magic link FEAT-001). Backend **Firebase Auth** (email/password, Google, Apple, anonyme).
 
 **Hachage** : délégué à **Firebase Auth**, côté serveur (scrypt modifié, implémentation Google — non configurable côté projet). L'app ne voit le mot de passe qu'en mémoire, le temps de l'appel SDK : aucune écriture en localStorage / SharedPreferences (vérifié — aucune persistance de credential dans `lib/`), aucun log.
 

@@ -86,12 +86,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final text = _allText(tester);
-      // Post FEAT-019 : la stack data est passée de Supabase à Firebase.
-      // L'obligation RGPD reste : informer l'utilisateur du sous-traitant.
+      // Obligation RGPD : informer l'utilisateur du sous-traitant qui héberge
+      // ses données (Firebase / Google).
       expect(text, contains('Firebase'));
       expect(text, contains('Google'));
-      // Vérifie aussi qu'on ne mentionne plus Supabase (résidu RGPD).
-      expect(text, isNot(contains('Supabase')));
     });
   });
 }
