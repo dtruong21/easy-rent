@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/env.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/auth_session_provider.dart';
@@ -206,11 +207,19 @@ class _ProfileHeader extends ConsumerWidget {
   }
 }
 
+/// Bannière « Passer à Pro » — masquée tant que [Env.subscriptionsEnabled]
+/// vaut `false` (freemium MVP, juillet 2026) : inutile de faire la publicité
+/// d'un abonnement impossible à souscrire (le checkout Stripe est lui-même
+/// masqué sur `/pro`, cf. `ProPricingPage`). Les gates fonctionnels (limite
+/// de scénarios, comparaison) restent inchangés — eux expliquent une
+/// limitation réelle, pas une simple incitation commerciale.
 class _ProUpsellCard extends ConsumerWidget {
   const _ProUpsellCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!Env.subscriptionsEnabled) return const SizedBox.shrink();
+
     final tier = ref.watch(landlordTierProvider).valueOrNull?.tier;
     if (tier == SubscriptionTier.paid) return const SizedBox.shrink();
 

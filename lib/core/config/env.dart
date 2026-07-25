@@ -85,4 +85,24 @@ class Env {
   /// firebase-tools) et sur `tool/seed/seed_tiers.mjs`.
   static const int firestoreEmulatorPort = 8080;
   static const int authEmulatorPort = 9099;
+
+  /// `true` si le checkout Stripe / les CTA « S'abonner » à Baillan Pro
+  /// sont activés. **Défaut `false`** : MVP freemium web (~1 mois de test,
+  /// juillet 2026) — le fondateur n'a pas encore de micro-entreprise pour
+  /// encaisser via Stripe.
+  ///
+  /// Ce flag NE supprime AUCUN code paid-plan (checkout, gestion
+  /// d'abonnement, repos Stripe/RevenueCat) : il gate uniquement l'UI qui
+  /// mène au paiement (`ProPricingPage`, upsell `/profile`). La page `/pro`
+  /// reste atteignable à `false` mais affiche un état « bientôt disponible »
+  /// + capture d'intérêt (`paid_plan_interest`) au lieu du bouton Stripe —
+  /// jamais d'impasse.
+  ///
+  /// **Réactivation au lancement Pro** : passer `--dart-define=SUBSCRIPTIONS_ENABLED=true`
+  /// au build (CI : ajouter la clé à `dart-defines.json` prod). Aucun
+  /// changement de code requis.
+  static const bool subscriptionsEnabled = bool.fromEnvironment(
+    'SUBSCRIPTIONS_ENABLED',
+    defaultValue: false,
+  );
 }

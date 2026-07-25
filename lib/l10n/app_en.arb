@@ -5158,6 +5158,26 @@
   "@proUpgradeButton": {
     "description": "FEAT-044e — Generic upsell CTA used in gated states throughout the app (scenario_limit_upgrade_cta, régularisation section, FEAT-055 comparison page). Navigates to /pro."
   },
+  "proComingSoonBadge": "Coming soon",
+  "@proComingSoonBadge": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — small badge shown on /pro instead of the Stripe checkout button while subscriptions are not yet open for sale."
+  },
+  "proSubscriptionsPausedNotice": "Subscriptions aren't open yet — leave your details and we'll let you know as soon as Baillan Pro launches.",
+  "@proSubscriptionsPausedNotice": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — explanatory copy shown on /pro above the notify-me button while Stripe checkout is disabled."
+  },
+  "proNotifyMeButton": "Notify me at launch",
+  "@proNotifyMeButton": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — CTA on /pro replacing the Stripe checkout button; records interest via paid_plan_interest."
+  },
+  "proNotifiedButtonLabel": "You'll be notified at launch",
+  "@proNotifiedButtonLabel": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — disabled state of the notify-me button on /pro after a successful interest submission."
+  },
+  "proInterestSaveErrorSnackbar": "Unable to save your interest right now. Please try again.",
+  "@proInterestSaveErrorSnackbar": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — snackbar shown on /pro when markInterest fails (paid_plan_interest write error)."
+  },
   "subscriptionSectionTitle": "Baillan Pro subscription",
   "@subscriptionSectionTitle": {
     "description": "FEAT-044f — SectionHeader title of the subscription management block on /profile (self-hides for non-paid tiers)."
