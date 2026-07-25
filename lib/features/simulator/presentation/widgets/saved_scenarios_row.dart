@@ -15,12 +15,23 @@ import '../../domain/investment_scenario.dart';
 /// pour la comparaison Pro (FEAT-055).
 ///
 /// Comportements :
-/// - Hors mode sélection : tap sur une carte → charge le scénario ; icône
-///   corbeille pour supprimer après confirmation.
-/// - En mode sélection : tap → toggle la sélection (0-3 max), icône corbeille
-///   masquée, un CTA « Comparer les N » navigue vers `/simulator/compare?ids=…`.
-/// - Bouton « Comparer » masqué si < 2 scénarios ; verrouillé (upsell Pro) si
-///   le landlord n'est pas au palier `paid`.
+/// - Hors mode sélection : la carte « + Nouvelle simulation » (toujours en
+///   premier) ramène vers un formulaire vierge (`/simulator`) — c'est la
+///   seule affordance de retour pour un compte complet en mode édition, le
+///   bouton retour AppBar visant le dashboard (`SimulatorPage.fallbackRoute`).
+///   Tap sur une carte de scénario → charge le scénario ; icône corbeille
+///   pour supprimer après confirmation.
+/// - En mode sélection : la carte « + Nouvelle simulation » est masquée ;
+///   tap sur une carte de scénario → toggle la sélection (0-3 max), icône
+///   corbeille masquée, un CTA « Comparer les N » navigue vers
+///   `/simulator/compare?ids=…`.
+/// - L'entrée « Comparer » est affichée sous la rangée de scénarios (pas
+///   dans le titre, pour lui donner plus de poids visuel) avec une légende
+///   explicative. Masquée si < 2 scénarios ; verrouillée (upsell Pro) si le
+///   landlord n'est pas au palier `paid` ; état neutre (désactivé, sans
+///   upsell) tant que `landlordTierProvider` n'a pas résolu — évite
+///   d'afficher furtivement le cadenas à un abonné Pro pendant le
+///   chargement (ou en cas d'erreur réseau transitoire).
 class SavedScenariosRow extends ConsumerStatefulWidget {
   const SavedScenariosRow({super.key});
 
@@ -66,9 +77,13 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
   @override
   Widget build(BuildContext context) {
     final asyncScenarios = ref.watch(investmentScenariosListProvider);
-    final isPaid =
-        ref.watch(landlordTierProvider).valueOrNull?.tier ==
-        SubscriptionTier.paid;
+    final tierAsync = ref.watch(landlordTierProvider);
+    // `hasValue` reste false tant qu'aucune donnée n'est jamais arrivée
+    // (loading initial OU erreur avant la 1ère émission) — c'est le signal
+    // fiable de "tier pas encore résolu", contrairement à `valueOrNull` qui
+    // est `null` dans ces deux cas ET afficherait à tort l'état verrouillé.
+    final tierResolved = tierAsync.hasValue;
+    final isPaid = tierAsync.valueOrNull?.tier == SubscriptionTier.paid;
 
     return asyncScenarios.when(
       loading: () => const SizedBox(height: 80, child: _LoadingSkeleton()),
@@ -86,50 +101,32 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
         }
         final theme = Theme.of(context);
         final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
+        // Carte « + Nouvelle simulation » toujours en premier item, sauf en
+        // mode sélection (où elle n'a pas de sens : on choisit parmi des
+        // scénarios existants).
+        final showNewScenarioCard = !_selectionMode;
+        final itemCount = scenarios.length + (showNewScenarioCard ? 1 : 0);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    context.l10n.simulatorSavedScenariosTitle,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                _CompareScenariosToggle(
-                  scenariosCount: scenarios.length,
-                  isPaid: isPaid,
-                  selectionMode: _selectionMode,
-                  selectedCount: _selectedIds.length,
-                  onEnterSelection: _enterSelectionMode,
-                  onCancelSelection: _exitSelectionMode,
-                  onValidate: _openComparison,
-                ),
-              ],
-            ),
-            if (_selectionMode &&
-                _selectedIds.length < SavedScenariosRow._minSelection)
-              Padding(
-                padding: EdgeInsets.only(top: spacing.xs),
-                child: Text(
-                  context.l10n.simulatorCompareSelectionHint,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
+            Text(
+              context.l10n.simulatorSavedScenariosTitle,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
+            ),
             SizedBox(height: spacing.sm),
             SizedBox(
               height: 88,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: scenarios.length,
+                itemCount: itemCount,
                 separatorBuilder: (_, _) => SizedBox(width: spacing.sm),
                 itemBuilder: (context, index) {
-                  final s = scenarios[index];
+                  if (showNewScenarioCard && index == 0) {
+                    return const _NewScenarioCard();
+                  }
+                  final s = scenarios[showNewScenarioCard ? index - 1 : index];
                   return _ScenarioChip(
                     scenario: s,
                     selectionMode: _selectionMode,
@@ -147,6 +144,29 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
                 },
               ),
             ),
+            SizedBox(height: spacing.sm),
+            _CompareScenariosToggle(
+              scenariosCount: scenarios.length,
+              tierResolved: tierResolved,
+              isPaid: isPaid,
+              selectionMode: _selectionMode,
+              selectedCount: _selectedIds.length,
+              captionSpacing: spacing.xs,
+              onEnterSelection: _enterSelectionMode,
+              onCancelSelection: _exitSelectionMode,
+              onValidate: _openComparison,
+            ),
+            if (_selectionMode &&
+                _selectedIds.length < SavedScenariosRow._minSelection)
+              Padding(
+                padding: EdgeInsets.only(top: spacing.xs),
+                child: Text(
+                  context.l10n.simulatorCompareSelectionHint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
             SizedBox(height: spacing.lg),
           ],
         );
@@ -180,25 +200,37 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
   }
 }
 
-/// Bouton d'entrée dans le mode comparaison + boutons de validation/annulation
-/// une fois en sélection. Gate Pro miroir de `chargeRegularizationProOnly`
-/// (FEAT-044b) : `paid` → actif ; free/anon → grisé + upsell ; < 2 scénarios
-/// → masqué (rien à comparer, pas d'upsell trompeur).
+/// Entrée du mode comparaison (sous la rangée de scénarios, avec légende) +
+/// boutons de validation/annulation une fois en sélection.
+///
+/// États (hors sélection) :
+/// - `< 2` scénarios → masqué (rien à comparer, pas d'upsell trompeur).
+/// - Tier pas encore résolu (`!tierResolved`, cf. `landlordTierProvider`) →
+///   neutre : bouton désactivé, ni cadenas ni upsell (évite le flash
+///   "verrouillé" pour un abonné Pro pendant le chargement).
+/// - Tier résolu, `paid` → actif, plus contrasté qu'un simple `TextButton`
+///   (`OutlinedButton.icon`) pour lui donner du poids visuel.
+/// - Tier résolu, non `paid` → grisé + upsell vers `/pro`. Gate miroir de
+///   `chargeRegularizationProOnly` (FEAT-044b).
 class _CompareScenariosToggle extends StatelessWidget {
   const _CompareScenariosToggle({
     required this.scenariosCount,
+    required this.tierResolved,
     required this.isPaid,
     required this.selectionMode,
     required this.selectedCount,
+    required this.captionSpacing,
     required this.onEnterSelection,
     required this.onCancelSelection,
     required this.onValidate,
   });
 
   final int scenariosCount;
+  final bool tierResolved;
   final bool isPaid;
   final bool selectionMode;
   final int selectedCount;
+  final double captionSpacing;
   final VoidCallback onEnterSelection;
   final VoidCallback onCancelSelection;
   final VoidCallback onValidate;
@@ -233,39 +265,125 @@ class _CompareScenariosToggle extends StatelessWidget {
       );
     }
 
-    if (!isPaid) {
-      return InkWell(
-        key: const Key('compare_toggle_pro_only'),
-        onTap: () => context.go('/pro'),
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.lock_outline,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                l10n.simulatorCompareButton,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
+    final caption = Padding(
+      padding: EdgeInsets.only(top: captionSpacing),
+      child: Text(
+        l10n.simulatorCompareCaption,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
         ),
+      ),
+    );
+
+    if (!tierResolved) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          OutlinedButton.icon(
+            key: const Key('compare_toggle_resolving'),
+            onPressed: null,
+            icon: const Icon(Icons.compare_arrows, size: 18),
+            label: Text(l10n.simulatorCompareButton),
+          ),
+          caption,
+        ],
       );
     }
 
-    return TextButton.icon(
-      key: const Key('compare_toggle_button'),
-      onPressed: onEnterSelection,
-      icon: const Icon(Icons.compare_arrows, size: 18),
-      label: Text(l10n.simulatorCompareButton),
+    if (!isPaid) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            key: const Key('compare_toggle_pro_only'),
+            onTap: () => context.go('/pro'),
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.lock_outline,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    l10n.simulatorCompareButton,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          caption,
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        OutlinedButton.icon(
+          key: const Key('compare_toggle_button'),
+          onPressed: onEnterSelection,
+          icon: const Icon(Icons.compare_arrows, size: 18),
+          label: Text(l10n.simulatorCompareButton),
+        ),
+        caption,
+      ],
+    );
+  }
+}
+
+/// Carte « + Nouvelle simulation », toujours en premier item de la rangée
+/// (hors mode sélection). Ramène vers un formulaire vierge : `/simulator`
+/// et `/simulator/:id` sont deux `GoRoute` distincts, donc la navigation
+/// reconstruit `SimulatorPage` avec un nouveau `State` — pas de reset manuel
+/// du formulaire à coder ici.
+class _NewScenarioCard extends StatelessWidget {
+  const _NewScenarioCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 180,
+      child: EntityCard(
+        key: const Key('scenario_new_card'),
+        onTap: () => context.go('/simulator'),
+        semanticLabel: context.l10n.simulatorNewScenarioCardLabel,
+        density: EntityCardDensity.compact,
+        header: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_circle_outline,
+              size: 18,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                context.l10n.simulatorNewScenarioCardLabel,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.primary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

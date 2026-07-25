@@ -4635,6 +4635,10 @@
   "@simulatorSavedScenariosTitle": {
     "description": "Section header above the horizontal list of saved scenarios on the simulator page."
   },
+  "simulatorNewScenarioCardLabel": "New simulation",
+  "@simulatorNewScenarioCardLabel": {
+    "description": "Label of the '+ New simulation' card, always the first item of the saved-scenarios rail (hidden in comparison selection mode). Navigates to /simulator (blank form) — the only way back to a fresh form when editing an existing scenario, since the AppBar back button targets the dashboard for full accounts."
+  },
   "simulatorDeleteScenarioDialogTitle": "Delete this scenario?",
   "@simulatorDeleteScenarioDialogTitle": {
     "description": "AlertDialog title of the confirmation dialog shown before deleting a saved scenario."
@@ -5248,6 +5252,10 @@
   "simulatorCompareButton": "Compare",
   "@simulatorCompareButton": {
     "description": "FEAT-055 — Entry button in the saved-scenarios rail that toggles selection mode to compare 2 or 3 scenarios."
+  },
+  "simulatorCompareCaption": "Compare 2 or 3 scenarios side by side.",
+  "@simulatorCompareCaption": {
+    "description": "Short caption displayed under the compare entry button (below the saved-scenarios rail, in every state — active, locked, or resolving) explaining what the feature does."
   },
   "simulatorCompareValidate": "Compare {count} scenarios",
   "@simulatorCompareValidate": {
