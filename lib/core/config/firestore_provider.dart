@@ -8,7 +8,10 @@ import 'env.dart';
 /// Identifiant de la base Firestore nommée utilisée par l'environnement de
 /// staging déployé (ADR 0003 — isolation prod/staging). Voir `firebase.json`
 /// (bloc `firestore`) où cette base est déclarée à côté de `(default)`.
-const String kDevDatabaseId = 'dev';
+///
+/// Nom `staging` (et non `dev`) : Firestore impose un id de base de **4-63
+/// caractères** — `dev` (3 car.) est rejeté à la création.
+const String kStagingDatabaseId = 'staging';
 
 /// Instance Firestore à utiliser dans TOUT le code applicatif (ADR 0003).
 ///
@@ -26,7 +29,7 @@ const String kDevDatabaseId = 'dev';
 ///   retombe sur son défaut `'dev'` — sans ce garde, une release mobile
 ///   enverrait les vrais utilisateurs vers la base `dev` de staging.
 /// - **Staging web déployé** (`stage.baillan.com`, `APP_ENV=dev`, non-émulateur)
-///   → base nommée [`dev`](kDevDatabaseId), séparée de la prod.
+///   → base nommée [`staging`](kStagingDatabaseId), séparée de la prod.
 ///
 /// Conséquence assumée : il n'existe pas d'isolation `dev` pour le **mobile**
 /// (mobile → toujours `(default)`). L'ADR 0003 cible le staging web ; l'émulateur
@@ -41,6 +44,6 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
   }
   return FirebaseFirestore.instanceFor(
     app: Firebase.app(),
-    databaseId: kDevDatabaseId,
+    databaseId: kStagingDatabaseId,
   );
 });

@@ -268,6 +268,13 @@ d'abonnement peut basculer un compte prod).
 
 ## Amendement d'implémentation (2026-07-24)
 
+> **⚠️ Nom de la base : `staging`, pas `dev`.** Le corps de cet ADR parle
+> partout de « base `dev` », mais Firestore impose un id de base de **4-63
+> caractères** — `dev` (3 car.) est rejeté à la création. L'id réellement
+> utilisé est **`staging`** (dans `firebase.json`, `kStagingDatabaseId` Flutter,
+> `STAGING_DATABASE_ID` backend). Lire « `dev` » comme « `staging` » dans tout ce
+> qui précède.
+
 Implémenté sur la branche `feat/firestore-dev-isolation-adr0003`. Une déviation
 notable par rapport au plan initial, sur la **Réserve principale** (routage du
 webhook).

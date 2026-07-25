@@ -24,10 +24,11 @@ import type {CallableRequest} from "firebase-functions/v2/https";
 
 /**
  * Identifiant de la base Firestore nommée du staging. DOIT correspondre à
- * `firebase.json` (bloc `firestore`) et au `kDevDatabaseId` Flutter
- * (`lib/core/config/firestore_provider.dart`).
+ * `firebase.json` (bloc `firestore`) et au `kStagingDatabaseId` Flutter
+ * (`lib/core/config/firestore_provider.dart`). Nom `staging` (et non `dev`) :
+ * Firestore impose un id de base de 4-63 caractères.
  */
-export const DEV_DATABASE_ID = "dev";
+export const STAGING_DATABASE_ID = "staging";
 
 /** Origin du site staging — la SEULE origine routée vers la base `dev`. */
 export const STAGING_ORIGIN = "https://stage.baillan.com";
@@ -42,7 +43,7 @@ export const STAGING_ORIGIN = "https://stage.baillan.com";
  * d'où `getFirestore(id)`.
  */
 export function firestoreForEnv(isDev: boolean): Firestore {
-  return isDev ? getFirestore(DEV_DATABASE_ID) : admin.firestore();
+  return isDev ? getFirestore(STAGING_DATABASE_ID) : admin.firestore();
 }
 
 /**
