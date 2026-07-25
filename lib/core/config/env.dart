@@ -98,9 +98,20 @@ class Env {
   /// + capture d'intérêt (`paid_plan_interest`) au lieu du bouton Stripe —
   /// jamais d'impasse.
   ///
-  /// **Réactivation au lancement Pro** : passer `--dart-define=SUBSCRIPTIONS_ENABLED=true`
-  /// au build (CI : ajouter la clé à `dart-defines.json` prod). Aucun
-  /// changement de code requis.
+  /// **Politique par environnement** (pilotée par `.github/workflows/deploy.yml`,
+  /// sortie `subscriptions_enabled` de `determine-env`) :
+  /// - **staging** (`develop` → stage.baillan.com) : `true` — le parcours
+  ///   d'abonnement reste ouvert pour poursuivre le développement.
+  /// - **production** (`main` → baillan.com) : `false` — fermé pendant la beta
+  ///   v1 freemium, ouverture prévue ~2026-08-25.
+  ///
+  /// Le `defaultValue: false` ci-dessous est le **mode d'échec sûr** : un build
+  /// sans dart-define (tests, build local, CI amputée de la sortie) reste
+  /// fermé. La prod ne peut donc pas s'ouvrir par oubli, seulement par choix
+  /// explicite.
+  ///
+  /// **Ouverture du Pro en prod** : passer la ligne `subscriptions_enabled=false`
+  /// de la branche prod de `deploy.yml` à `true`. Aucun changement de code Dart.
   static const bool subscriptionsEnabled = bool.fromEnvironment(
     'SUBSCRIPTIONS_ENABLED',
     defaultValue: false,
