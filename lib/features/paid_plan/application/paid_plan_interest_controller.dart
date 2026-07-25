@@ -11,6 +11,12 @@ final _log = Logger('PaidPlanInterestController');
 /// même doc que les features Plan Pro (merge côté repository).
 const String fundingInterestKey = 'soutien_investisseur';
 
+/// Clé enregistrée quand l'utilisateur clique « Me prévenir du lancement »
+/// directement depuis la page `/pro` (`ProPricingPage`) — checkout Stripe
+/// masqué tant que [Env.subscriptionsEnabled] (freemium MVP, cf.
+/// `lib/core/config/env.dart`) vaut `false`.
+const String proPricingInterestKey = 'pro_pricing_page';
+
 /// Gère le clic « M'avertir du lancement » (footer simulateur + modal limite
 /// atteinte tier FREE) et le signal d'intérêt de financement.
 /// `AsyncValue<void>` — `data` = succès, `error` = échec affichable en

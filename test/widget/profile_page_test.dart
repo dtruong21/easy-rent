@@ -646,6 +646,24 @@ void main() {
     );
   });
 
+  group(
+    'ProfilePage — upsell Pro (freemium MVP, subscriptionsEnabled=false)',
+    () {
+      testWidgets(
+        'bannière « Passer à Pro » masquée par défaut (Env.subscriptionsEnabled '
+        'est un bool.fromEnvironment figé à la compilation, même pattern que '
+        'Env.isProd testé ci-dessus)',
+        (tester) async {
+          final repo = _FakeProfileRepository()..seed(_makeProfile());
+          await tester.pumpWidget(_buildPage(repo: repo));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Passer à Pro'), findsNothing);
+        },
+      );
+    },
+  );
+
   group('ProfilePage — ordre des groupes (décision 2026-07-07)', () {
     testWidgets('Compte → Apparence → Aide → À propos → Session', (
       tester,
