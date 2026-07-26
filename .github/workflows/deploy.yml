@@ -30,6 +30,12 @@ jobs:
       # (baillan.com), `stage` = site baillan-stage (stage.baillan.com).
       hosting_target: ${{ steps.set.outputs.hosting_target }}
       public_url: ${{ steps.set.outputs.public_url }}
+      # Gate UI du checkout Stripe (Env.subscriptionsEnabled, défaut false).
+      # `true` sur STAGING uniquement : permet la QA du parcours abonnement /
+      # résiliation (FEAT-044f) sans exposer le paiement en prod, où Pro n'est
+      # pas encore lancé. Sûr depuis l'ADR 0003 : les abonnements de test
+      # écrivent dans la base Firestore `staging`, jamais en prod.
+      subscriptions_enabled: ${{ steps.set.outputs.subscriptions_enabled }}
     steps:
       - id: set
         run: |
@@ -47,11 +53,17 @@ jobs:
             echo "app_env=prod" >> $GITHUB_OUTPUT
             echo "hosting_target=prod" >> $GITHUB_OUTPUT
             echo "public_url=https://baillan.com" >> $GITHUB_OUTPUT
+            # PROD : checkout Stripe TOUJOURS coupé tant que Pro n'est pas
+            # lancé (cf. Env.subscriptionsEnabled). Ne passer à true qu'au
+            # lancement commercial, décision explicite.
+            echo "subscriptions_enabled=false" >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
             echo "hosting_target=stage" >> $GITHUB_OUTPUT
             echo "public_url=https://stage.baillan.com" >> $GITHUB_OUTPUT
+            # STAGING : checkout activé pour la QA abonnement/résiliation.
+            echo "subscriptions_enabled=true" >> $GITHUB_OUTPUT
           fi
 
   build-and-deploy:
@@ -125,6 +137,7 @@ jobs:
           flutter build web --release \
             --pwa-strategy=none \
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
+            --dart-define=SUBSCRIPTIONS_ENABLED=${{ needs.determine-env.outputs.subscriptions_enabled }} \
             --build-name=${{ steps.ver.outputs.name }} \
             --build-number=${{ steps.ver.outputs.code }}
 
