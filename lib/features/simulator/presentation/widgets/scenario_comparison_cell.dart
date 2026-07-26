@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/theme/app_colors.dart';
 import '../../domain/scenario_comparison_view_model.dart';
 
-/// Cellule atomique de la table de comparaison (FEAT-055).
+/// Cellule atomique de la comparaison de scénarios (FEAT-055).
 ///
 /// Rend la valeur formatée + éventuel delta % signé, coloré selon le sens
 /// favorable du KPI et le seuil ± 5 % (décision par défaut D5 du plan).
-/// Les tokens couleur sont ceux déjà utilisés dans [ScenarioResultsCard] —
-/// pas de nouveau design token.
+/// Couleurs pilotées par le thème Baillan (aucune couleur en dur) : le delta
+/// favorable reprend `AppColors.success.solid` — même token que le KPI
+/// « loyers » du dashboard pour une sémantique identique (valeur au-dessus
+/// vs en-dessous d'une référence) — le delta défavorable reprend
+/// `colorScheme.error`, déjà utilisé ici. Les deux sont déclinés light/dark.
 class ScenarioComparisonCell extends StatelessWidget {
   const ScenarioComparisonCell({
     super.key,
@@ -15,6 +19,7 @@ class ScenarioComparisonCell extends StatelessWidget {
     required this.deltaPercent,
     required this.higherIsBetter,
     this.isReference = false,
+    this.crossAxisAlignment = CrossAxisAlignment.start,
   });
 
   final ComparisonValue value;
@@ -30,13 +35,18 @@ class ScenarioComparisonCell extends StatelessWidget {
 
   final bool isReference;
 
+  /// Alignement horizontal du bloc valeur/delta. `start` (défaut, table
+  /// desktop) ou `end` (cartes mobile [ScenarioComparisonCards], montants
+  /// alignés à droite en bout de ligne).
+  final CrossAxisAlignment crossAxisAlignment;
+
   static const double _signalThreshold = 5.0;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: crossAxisAlignment,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -66,7 +76,10 @@ class ScenarioComparisonCell extends StatelessWidget {
       return theme.colorScheme.onSurfaceVariant;
     }
     final isFavorable = higherIsBetter ? delta > 0 : delta < 0;
-    return isFavorable ? Colors.green.shade700 : theme.colorScheme.error;
+    if (isFavorable) {
+      return theme.extension<AppColors>()!.success.solid;
+    }
+    return theme.colorScheme.error;
   }
 
   String _formatDelta(double delta) {

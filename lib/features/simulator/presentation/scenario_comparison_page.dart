@@ -10,7 +10,7 @@ import '../../auth/domain/subscription_tier.dart';
 import '../data/investment_scenario_repository.dart';
 import '../domain/investment_scenario.dart';
 import '../domain/scenario_comparison_view_model.dart';
-import 'widgets/scenario_comparison_accordion.dart';
+import 'widgets/scenario_comparison_cards.dart';
 import 'widgets/scenario_comparison_table.dart';
 
 /// Écran `/simulator/compare` — comparaison côte-à-côte de 2-3 scénarios
@@ -23,8 +23,6 @@ class ScenarioComparisonPage extends ConsumerWidget {
   const ScenarioComparisonPage({super.key, required this.ids});
 
   final List<String> ids;
-
-  static const _desktopBreakpoint = 720.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -134,11 +132,17 @@ class _ComparisonContent extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide =
-            constraints.maxWidth >= ScenarioComparisonPage._desktopBreakpoint;
-        final content = wide
+        // Zone de contenu réelle (hors padding horizontal appliqué plus bas)
+        // — c'est cette largeur, pas celle de la page, qui doit accueillir
+        // les colonnes de la table sans scroll horizontal.
+        final contentWidth = constraints.maxWidth - spacing.lg * 2;
+        final fitsTable = ScenarioComparisonTable.fitsWidth(
+          contentWidth,
+          scenarios.length,
+        );
+        final content = fitsTable
             ? ScenarioComparisonTable(scenarios: scenarios, rows: rows)
-            : ScenarioComparisonAccordion(scenarios: scenarios, rows: rows);
+            : ScenarioComparisonCards(scenarios: scenarios, rows: rows);
         return SingleChildScrollView(
           padding: EdgeInsets.all(spacing.lg),
           child: Column(

@@ -253,4 +253,107 @@ void main() {
       },
     );
   });
+
+  group('ScenarioComparisonPage — responsive mobile (cartes, 2026-07-26)', () {
+    testWidgets(
+      'téléphone 390 px — toutes les valeurs des 2 scénarios visibles '
+      'sans interaction (pas de dépliage)',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 1600);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          _buildRouter(
+            scenarios: [
+              _scenario(id: 'A', name: 'Alpha'),
+              _scenario(id: 'B', name: 'Bravo'),
+            ],
+            tier: SubscriptionTier.paid,
+            initialLocation: '/simulator/compare?ids=A,B',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Plus aucun ExpansionTile : rien à déplier pour voir les valeurs.
+        expect(find.byType(ExpansionTile), findsNothing);
+
+        // Une Card par KPI (6), chacune listant les 2 scénarios d'emblée.
+        expect(find.byType(Card), findsNWidgets(6));
+
+        // Les 6 libellés KPI sont visibles sans interaction.
+        for (final label in const [
+          'Rendement brut',
+          'Rendement net',
+          'Cash-flow mensuel',
+          'Coût total crédit',
+          'Apport requis',
+          "Effort d'épargne",
+        ]) {
+          expect(find.text(label), findsOneWidget);
+        }
+
+        // Le nom de chaque scénario apparaît une fois par carte KPI (6),
+        // « Bravo » apparaît en plus une fois dans la rangée de chips
+        // d'en-tête (nom seul, pas de scénario de référence) : 6 + 1 = 7.
+        // « Alpha » (référence) porte le suffixe « · Référence » dans la
+        // chip d'en-tête (chaîne composée, ne matche pas 'Alpha' seul) : 6.
+        expect(find.text('Alpha'), findsNWidgets(6));
+        expect(find.text('Bravo'), findsNWidgets(7));
+
+        // Puce de référence (rangée de chips d'en-tête) toujours visible
+        // sans interaction — « Alpha · Référence ».
+        expect(find.textContaining('Référence'), findsOneWidget);
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    for (final width in const [360.0, 390.0, 768.0, 1280.0]) {
+      for (final scenarioCount in const [2, 3]) {
+        testWidgets(
+          'largeur ${width.toInt()} px, $scenarioCount scénarios → aucun '
+          'scroll horizontal ni overflow',
+          (tester) async {
+            tester.view.physicalSize = Size(width, 1400);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            final scenarios = [
+              _scenario(id: 'A', name: 'Alpha'),
+              _scenario(id: 'B', name: 'Bravo'),
+              if (scenarioCount == 3) _scenario(id: 'C', name: 'Charlie'),
+            ];
+            final ids = scenarios.map((s) => s.id).join(',');
+
+            await tester.pumpWidget(
+              _buildRouter(
+                scenarios: scenarios,
+                tier: SubscriptionTier.paid,
+                initialLocation: '/simulator/compare?ids=$ids',
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            // Aucune exception de rendu (débordement RenderFlex, etc.).
+            expect(tester.takeException(), isNull);
+
+            // Aucun scroll horizontal résiduel (le scroll vertical de la
+            // page reste normal, seul scrollDirection == Axis.horizontal
+            // est prohibé).
+            expect(
+              find.byWidgetPredicate(
+                (w) =>
+                    w is SingleChildScrollView &&
+                    w.scrollDirection == Axis.horizontal,
+              ),
+              findsNothing,
+            );
+          },
+        );
+      }
+    }
+  });
 }
