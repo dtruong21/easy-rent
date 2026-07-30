@@ -23,7 +23,9 @@ Concrètement :
   prod ; seul le routage des **writes Firestore** est isolé (par Origin côté
   callables, par présence du landlord côté webhook).
 - `firestore.rules` / `firestore.indexes.json` sont **identiques** sur les deux
-  bases (déployés ensemble via `firebase deploy --only firestore`).
+  bases (même fichier source), mais la CI les déploie **base par base** :
+  `develop` → `staging`, `main` → `(default)`. La prod ne bouge donc que sur un
+  push `main`.
 
 → Voir [`docs/adr/0003-firestore-prod-staging-isolation.md`](adr/0003-firestore-prod-staging-isolation.md)
 pour le détail, les limitations (crons/triggers sur `(default)`), et la
@@ -41,7 +43,7 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 | **Auth** | ❌ **Non** | Même annuaire d'utilisateurs |
 | **Storage** | ❌ **Non** | Même bucket `easy-rent-54cd4.firebasestorage.app` |
 | **Cloud Functions** | ❌ **Non** | Un seul déploiement, région `europe-west1` |
-| **Rules & indexes** | ❌ **Non** | Un seul `firestore.rules` / `firestore.indexes.json` |
+| **Rules & indexes** | ⚠️ **Partiel** | Même fichier source, mais déploiement CI ciblé par base (`develop`→`staging`, `main`→`(default)`) |
 | **Secrets** | ❌ **Non** | Un seul jeu (service account CI, secrets Functions) |
 
 ## 🌐 Hosting multi-site
@@ -139,14 +141,27 @@ Garde-fous côté code :
 
 ## 🔒 Rules, indexes et Functions
 
-Un seul jeu, partagé. **Un déploiement depuis `develop` impacte la prod.**
+Un seul jeu de **fichiers**, mais depuis la CI le déploiement est **ciblé par
+environnement** (voir « Déploiement ») :
 
-| Artefact | Fichier | Portée |
-|---|---|---|
-| Règles Firestore | `firestore.rules` | Projet entier |
-| Index composites | `firestore.indexes.json` | Base `(default)` |
-| Règles Storage | `storage.rules` | Bucket unique |
-| Cloud Functions | `functions/src/` | Projet entier |
+| Artefact | Fichier | Portée | Déployé par la CI depuis |
+|---|---|---|---|
+| Règles Firestore | `firestore.rules` | Par base | `develop` → base `staging` ; `main` → `(default)` |
+| Index composites | `firestore.indexes.json` | Par base | idem |
+| Règles Storage | `storage.rules` | Bucket unique (partagé) | `main` uniquement |
+| Cloud Functions | `functions/src/` | Projet entier (partagé) | **personne — déploiement manuel** |
+
+> ⚠️ **Les Cloud Functions restent le point non isolé.** Un seul déploiement
+> sert staging ET prod : `firebase deploy --only functions` depuis `develop`
+> pousse du code non relu en production. C'est volontairement **hors CI** pour
+> qu'aucun push ne le déclenche par accident (ADR 0003, « Limitations
+> assumées »). Déployer les Functions est un geste manuel et délibéré, depuis
+> `main` de préférence.
+
+> ⚠️ **Ne JAMAIS lancer `firebase deploy` sans `--only`.** Sans filtre, la CLI
+> déploie les rules sur **les deux bases** (donc la prod) et les Functions —
+> depuis n'importe quelle branche. Toujours cibler : `--only
+> "firestore:staging"`, `--only "firestore:(default)"`, etc.
 
 Tests des règles avant tout déploiement :
 
@@ -188,14 +203,21 @@ Détail et rotation : [`SECURITY.md`](SECURITY.md).
 
 ## 🚀 Déploiement
 
-| Push sur | Cible Hosting | `APP_ENV` | Résultat |
+| Push sur | Cibles `--only` | `APP_ENV` | Résultat |
 |---|---|---|---|
-| `develop` | `stage` | `dev` | https://stage.baillan.com (noindex) |
-| `main` | `prod` | `prod` | https://baillan.com |
+| `develop` | `hosting:stage,firestore:staging` | `dev` | https://stage.baillan.com (noindex) |
+| `main` | `hosting:prod,firestore:(default),storage` | `prod` | https://baillan.com |
 
-Le workflow ([`deploy.yml`](../.github/workflows/deploy.yml)) résout la cible
-depuis la branche, ou via `workflow_dispatch` avec l'input `target`. Un seul
-secret `FIREBASE_PROJECT_ID` — seul `--only hosting:<target>` diffère.
+Le workflow ([`deploy.yml`](../.github/workflows/deploy.yml)) résout les cibles
+depuis la branche (sortie `deploy_targets` du job `determine-env`), ou via
+`workflow_dispatch` avec l'input `target`. Un seul secret
+`FIREBASE_PROJECT_ID` — seules les cibles `--only` diffèrent.
+
+**Le ciblage par base est ce qui protège la prod** : `firestore:staging` ne
+touche que la base `staging`, `firestore:(default)` que la prod. Un push sur
+`develop` ne peut donc plus modifier les rules de production. Si
+`deploy_targets` était vide, la step échoue au lieu de lancer un `deploy` sans
+filtre (qui viserait les deux bases).
 
 > Pas de preview deploy sur les PR : `ci.yml` et `deploy.yml` ne se déclenchent
 > que sur `[main, develop]`.
