@@ -7,23 +7,24 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-07-23
-- **Commit ref** : `00ba2f2` (develop, post PR #133) — puis vérification ciblée des 4 shards suspects
-- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌ non construit** (FEAT-044c/d livrés, 044e planifié) + Growth/SEO ✅ (FEAT-049, domaine `baillan.com` ; FEAT-050 planifié)
+- **Dernière mise à jour** : 2026-07-30
+- **Commit ref** : `367b5e7` (develop, post PR #152 — CI rules+indexes par base)
+- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌ non construit** (FEAT-044c/d livrés, 044e planifié) + Growth/SEO ✅ (FEAT-049, domaine `baillan.com` ; FEAT-050 planifié) + **Isolation prod/staging ✅ (ADR 0003, PR #145)** + **Comparaison scénarios ✅ (FEAT-055, PR #148-151)**
 
 ### Périmètre réellement re-vérifié
 
 | Zone | État |
 |---|---|
-| `functions/` (index.ts, callables, HTTP, scheduled) | ✅ relu ligne à ligne (2026-07-21) |
+| `functions/` (index.ts, callables, HTTP, scheduled) | ✅ relu ligne à ligne (2026-07-21) + ADR 0003 helpers `dbForRequest`/`dbForLandlordUid` vérifiés (2026-07-30) |
 | `firestore.indexes.json` (décomptes) · `firestore.rules` (collections) | ✅ relu (2026-07-21) |
-| `lib/core/router/app_router.dart` (guards, publicRoutes, 36 GoRoute) | ✅ relu (2026-07-21) |
-| Domaine `account` (schéma/functions/routes), `expenses-documents`, gates `leases` | ✅ re-vérifié contre le code (2026-07-21) |
-| Shards `properties`, `payments-receipts`, `simulator`, `dashboard` (schéma champ par champ, règles, index, triggers, routes) | ✅ **re-vérifiés contre le code le 2026-07-23** — nombreuses corrections (ordre des index, `isActive` sur `list`, triggers `onDocumentUpdated`, auto-génération de quittance inexistante) |
+| `lib/core/router/app_router.dart` (guards, publicRoutes, 36 GoRoute) | ✅ relu (2026-07-21) + route `/simulator/compare` vérifiée (2026-07-30) |
+| `lib/core/config/firestore_provider.dart` (ADR 0003 Flutter routing) | ✅ **lu et vérifié** (2026-07-30) — `firestoreProvider`, base `staging`, fail-safe `(default)`, garde `kIsWeb` |
+| Domaine `account` (schéma/functions/routes), `expenses-documents`, gates `leases` | ✅ re-vérifié contre le code (2026-07-21) + callables/webhook routing ADR 0003 (2026-07-30) |
+| Shards `properties`, `payments-receipts`, `simulator`, `dashboard` (schéma champ par champ, règles, index, triggers, routes) | ✅ **re-vérifiés contre le code le 2026-07-23** — nombreuses corrections (ordre des index, `isActive` sur `list`, triggers `onDocumentUpdated`, auto-génération de quittance inexistante) + route comparaison simulator (2026-07-30) |
 | Triggers `setUpdatedAt*` (type `onDocumentUpdated`, garde anti-boucle, pas de filtre `deletedAt`) | ✅ **re-vérifiés le 2026-07-23** — erreur systémique `onDocumentWritten` corrigée dans tous les shards `functions/`, y compris ceux réputés vérifiés au refresh #133 |
 | `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
 
-> La passe #133 a priorisé les domaines touchés depuis la PR #94. La vérification du 2026-07-23 a couvert les 4 shards laissés en suspens : ils sont désormais alignés sur le code. Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.
+> La passe #133 a priorisé les domaines touchés depuis la PR #94. La vérification du 2026-07-23 a couvert les 4 shards laissés en suspens. Le rattrapage 2026-07-30 a intégré ADR 0003 (routage Firestore prod/staging) et FEAT-055 (comparaison simulateur). Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.
 
 ## Comment charger l'état (règle tokens)
 
@@ -52,7 +53,8 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 | Besoin | Fichier |
 |---|---|
 | Statut des features (matrice) | [`FEATURES.md`](FEATURES.md) |
-| Historique détaillé des changements | [`CHANGELOG.md`](CHANGELOG.md) |
+| Changements récents (période courante, ~1k tokens) | [`CHANGELOG.md`](CHANGELOG.md) |
+| Historique ancien (archives mensuelles figées, ~10k tokens — n'ouvrir que si nécessaire) | [`changelog/`](changelog/) |
 | Thème Baillan papier/encre/olive (FEAT-020) + dark mode + `themeMode` | [`THEME.md`](THEME.md) |
 | Design tokens (couleurs, spacing) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) |
 | Dépendances (pubspec + functions) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |

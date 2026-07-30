@@ -6,6 +6,8 @@ Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c). Fichier call
 
 ## Callables
 
+**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+
 ### `createLease` (FEAT-042)
 Client invoke, isFullyAuthed only.
 - **Params** : `propertyId, tenantId, rentAmountCents, chargesAmountCents, nonRecoverableChargesCents` (FEAT-036), `chargeMode` (FEAT-042, optionnel, résolu/enforced serveur), `startDate, endDate, status, leaseType, paymentDay, paymentMethod, depositAmountCents, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone`.
