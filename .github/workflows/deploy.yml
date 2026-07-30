@@ -36,6 +36,13 @@ jobs:
       # Le défaut côté Dart est `false` : si cette sortie disparaissait, la prod
       # resterait bloquée (mode d'échec sûr).
       subscriptions_enabled: ${{ steps.set.outputs.subscriptions_enabled }}
+      # Cibles `firebase deploy --only` de CET environnement, base Firestore
+      # COMPRISE (ADR 0003). Le ciblage par base est ce qui empêche un push sur
+      # `develop` de pousser des rules en production : `firestore:staging` ne
+      # touche que la base `staging`, `firestore:(default)` que la prod.
+      # ⚠️ Ne JAMAIS remplacer par `firestore` tout court — sans filtre, la CLI
+      # déploie sur les DEUX bases déclarées dans firebase.json.
+      deploy_targets: ${{ steps.set.outputs.deploy_targets }}
     steps:
       - id: set
         run: |
@@ -55,6 +62,10 @@ jobs:
             echo "public_url=https://baillan.com" >> $GITHUB_OUTPUT
             # PROD : abonnement Pro FERMÉ pendant la beta v1 (ouverture ~2026-08-25).
             echo "subscriptions_enabled=false" >> $GITHUB_OUTPUT
+            # Rules + indexes sur la base de PROD uniquement, plus les rules
+            # Storage : le bucket est unique (partagé avec staging), donc il ne
+            # se déploie que depuis `main` — jamais depuis `develop`.
+            echo 'deploy_targets=hosting:prod,firestore:(default),storage' >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
@@ -62,6 +73,11 @@ jobs:
             echo "public_url=https://stage.baillan.com" >> $GITHUB_OUTPUT
             # STAGING : abonnement Pro OUVERT pour poursuivre le développement.
             echo "subscriptions_enabled=true" >> $GITHUB_OUTPUT
+            # Rules + indexes sur la base `staging` UNIQUEMENT. Ni `storage`
+            # (bucket partagé) ni `functions` (déploiement unique servant aussi
+            # la prod) — les ajouter ici ferait fuir du code non relu en prod à
+            # chaque push sur `develop`. Cf. ADR 0003, « Limitations assumées ».
+            echo "deploy_targets=hosting:stage,firestore:staging" >> $GITHUB_OUTPUT
           fi
 
   build-and-deploy:
@@ -179,12 +195,12 @@ jobs:
       #
       # À retirer / simplifier dès que firebase-tools patche son retry —
       # suivre https://github.com/firebase/firebase-tools/issues
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase (hosting + Firestore rules/indexes)
         id: firebase_deploy
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          HOSTING_TARGET: ${{ needs.determine-env.outputs.hosting_target }}
+          DEPLOY_TARGETS: ${{ needs.determine-env.outputs.deploy_targets }}
         run: |
           set +e
           # Service account credentials (Google Application Default Credentials).
@@ -198,7 +214,19 @@ jobs:
           # de LEUR site (cible .firebaserc), plus de preview channel. Un
           # preview channel ne peut pas porter de domaine personnalisé — c'est
           # ce qui imposait le site dédié `baillan-stage` pour stage.baillan.com.
-          npx -y firebase-tools@latest deploy --only "hosting:$HOSTING_TARGET" \
+          #
+          # $DEPLOY_TARGETS embarque AUSSI la base Firestore de l'environnement
+          # (`firestore:staging` ou `firestore:(default)`) : avant, rules et
+          # indexes n'étaient poussés qu'à la main, donc l'app pouvait tourner
+          # sur des rules plus vieilles que le code déployé à côté.
+          # Garde-fou : si la sortie deploy_targets manquait, on n'improvise pas
+          # un `deploy` sans filtre (qui viserait les deux bases) — on échoue.
+          if [ -z "$DEPLOY_TARGETS" ]; then
+            echo "::error::deploy_targets vide — refus de déployer sans filtre --only (risque de pousser sur la base de prod)."
+            exit 1
+          fi
+
+          npx -y firebase-tools@latest deploy --only "$DEPLOY_TARGETS" \
             --project "$FIREBASE_PROJECT_ID" \
             --non-interactive 2>&1 | tee "$OUT"
           EXIT=${PIPESTATUS[0]}
@@ -211,9 +239,24 @@ jobs:
           fi
 
           # Exit non-zero : on regarde si c'est le retry race connu.
-          if grep -qF "is the current active version" "$OUT"; then
-            echo "::warning::Firebase retry-race detected (FAILED_PRECONDITION 'current active version'). Content WAS deployed — the first POST succeeded server-side; only the retry POST failed. Treating job as success."
+          #
+          # ⚠️ Ce bypass ne doit couvrir QUE la race Hosting. Depuis qu'on
+          # déploie aussi firestore/storage dans la MÊME commande, un échec de
+          # rules serait masqué si la race Hosting survenait en même temps — on
+          # publierait alors une CI verte avec des rules non déployées, soit
+          # exactement le mode de panne silencieux que ce workflow doit éliminer.
+          # On n'accepte donc le bypass que si TOUTES les erreurs du log sont
+          # cette race (et jamais s'il n'y en a aucune de reconnue).
+          ERR_TOTAL=$(grep -c "Error:" "$OUT" || true)
+          ERR_RACE=$(grep "Error:" "$OUT" | grep -c "is the current active version" || true)
+          if [ "${ERR_TOTAL:-0}" -gt 0 ] && [ "${ERR_TOTAL:-0}" -eq "${ERR_RACE:-0}" ]; then
+            echo "::warning::Firebase retry-race detected (FAILED_PRECONDITION 'current active version'), and it is the ONLY error in the log. Content WAS deployed — the first POST succeeded server-side; only the retry POST failed. Treating job as success."
             exit 0
+          fi
+
+          if [ "${ERR_RACE:-0}" -gt 0 ]; then
+            echo "::error::Retry-race Hosting détectée MAIS d'autres erreurs sont présentes ($ERR_TOTAL erreurs, dont $ERR_RACE races) — probable échec du déploiement firestore/storage. On échoue volontairement plutôt que de masquer des rules non déployées."
+            exit $EXIT
           fi
 
           # Toute autre erreur propage.
