@@ -20,7 +20,8 @@ shards back into big files.**
 docs/state/
   INDEX.md          # ROUTER only (pointer table + freshness + stack summary). Keep ~<120 lines.
   FEATURES.md       # terse matrix: 1 line per FEAT (FEAT-ID | Nom | Statut | Domaine | Réf).
-  CHANGELOG.md      # detailed history, append-only-ish. Rarely read. New feature → new entry here.
+  CHANGELOG.md      # CURRENT period only + archive index. New entry → prepend here. Keep ~<70 lines.
+  changelog/<AAAA-MM>.md  # FROZEN monthly archives. Never rewrite. Never append.
   schema/README.md      + schema/<domaine>.md      # Firestore collections per domain
   functions/README.md   + functions/<domaine>.md   # Cloud Functions callables/triggers per domain
   routes/README.md      + routes/<domaine>.md       # GoRouter routes per domain
@@ -67,6 +68,20 @@ simulator→simulator · dashboard→dashboard.
 
 4. **FEATURES.md**: one terse row per FEAT. **CHANGELOG.md**: prepend a dated
    entry for the new/changed feature (this is where verbose "what changed" goes).
+
+   **CHANGELOG.md holds the CURRENT period only.** It reached ~10k tokens by pure
+   accumulation before being archived (2026-07-30). Apply the rolling rule stated
+   at the top of the file: when the current section exceeds ~10 entries **or** a
+   month closes, move those entries into `docs/state/changelog/<AAAA-MM>.md`, add
+   a row to the archive table, and leave a fresh empty current section.
+   Archives are **frozen** — never rewrite them, never append to them.
+
+   `###` is reserved for changelog entries (so `grep -c '^### '` counts entries);
+   use `####` for anything else you add.
+
+   Do NOT stack a new `## Changements (date → date)` section next to the existing
+   one — that is exactly how the file ended up with three overlapping ranges all
+   starting `2026-07-03`. Prepend inside the current section.
 
 5. **INDEX.md**: update `Dernière mise à jour` (date), commit ref
    (`git rev-parse --short HEAD`), branch. Keep it a router — do NOT paste a

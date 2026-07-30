@@ -34,7 +34,8 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 | Cloud Functions (par domaine) | [`docs/state/functions/`](docs/state/functions/README.md) |
 | Routes Flutter (par domaine) | [`docs/state/routes/`](docs/state/routes/README.md) |
 | Features (matrice de statut) | [`docs/state/FEATURES.md`](docs/state/FEATURES.md) |
-| Historique détaillé des changements | [`docs/state/CHANGELOG.md`](docs/state/CHANGELOG.md) |
+| Changements récents (période courante, ~1k tokens) | [`docs/state/CHANGELOG.md`](docs/state/CHANGELOG.md) |
+| Historique ancien (archives mensuelles, ~10k tokens — n'ouvrir qu'en dernier recours) | [`docs/state/changelog/`](docs/state/changelog/) |
 
 ## Definition of Done (essentiel)
 

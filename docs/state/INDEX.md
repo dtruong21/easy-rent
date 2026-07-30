@@ -53,7 +53,8 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 | Besoin | Fichier |
 |---|---|
 | Statut des features (matrice) | [`FEATURES.md`](FEATURES.md) |
-| Historique détaillé des changements | [`CHANGELOG.md`](CHANGELOG.md) |
+| Changements récents (période courante, ~1k tokens) | [`CHANGELOG.md`](CHANGELOG.md) |
+| Historique ancien (archives mensuelles figées, ~10k tokens — n'ouvrir que si nécessaire) | [`changelog/`](changelog/) |
 | Thème Baillan papier/encre/olive (FEAT-020) + dark mode + `themeMode` | [`THEME.md`](THEME.md) |
 | Design tokens (couleurs, spacing) | [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) |
 | Dépendances (pubspec + functions) | [`DEPENDENCIES.md`](DEPENDENCIES.md) |
