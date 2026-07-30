@@ -6,6 +6,8 @@ Patrimoine (properties + tenants). **Création CF-exclusive** via callables (FEA
 
 ## Callables — FEAT-044
 
+**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+
 ### `createProperty` (FEAT-044)
 Client invoke, isFullyAuthed only.
 - **Params** : `name, address, type` (immuable) + champs optionnels (city, postalCode, surfaceM2, rooms, bedrooms, floor, hasElevator, furnished, heatingType, dpeLetter, dpeValueKwhM2Year, gesLetter, constructionYear) + FEAT-017 (purchasePriceCents, purchaseDate, notaryFeesCents, isNewProperty, propertyTaxAnnualCents, insurancePnoAnnualCents, condoFeesNonRecoverableCents, loanPrincipalCents, loanRateBps, loanInsuranceBps, loanDurationMonths, loanStartDate, loanMonthlyPaymentOverrideCents).

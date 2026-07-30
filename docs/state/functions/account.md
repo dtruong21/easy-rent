@@ -37,6 +37,7 @@ Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-
 
 ### `createCheckoutSession` (FEAT-044 paiement web, PR #117)
 Signature `{plan: 'monthly'|'annual'}` → `{url, sessionId}`. Crée une **Stripe Checkout Session** d'abonnement et renvoie l'URL hostée. Fichier `callable/create_checkout_session.ts`.
+- **Routage Firestore** (ADR 0003) : utilise `dbForRequest(request)` → écrit la base prod ou staging selon l'Origin.
 - **N'accorde AUCUN droit** : elle initie le paiement, le déverrouillage reste 100 % serveur via `revenueCatWebhook`.
 - **Lien de compte** : l'App User ID RevenueCat (= UID Firebase) est posé en metadata `rc_app_user_id` sur la **session ET** `subscription_data` (RevenueCat lit les deux) + `client_reference_id` en ceinture-bretelles. ⚠️ La clé DOIT correspondre exactement au champ configuré côté dashboard RevenueCat.
 - **Redirections** : `{WEB_APP_BASE_URL}/pro/success?session_id=…` et `/pro/cancel`. ⚠️ **Ces deux routes n'existent pas encore dans le GoRouter** (voir routes/account) — un paiement web aboutirait aujourd'hui sur une URL non gérée.
@@ -45,6 +46,7 @@ Signature `{plan: 'monthly'|'annual'}` → `{url, sessionId}`. Crée une **Strip
 ## HTTP — `revenueCatWebhook` (FEAT-044, PR #114)
 
 `onRequest`, **1re fonction HTTP du codebase**. Fichier `http/revenuecat_webhook.ts`. Écrit `landlords/{uid}` via Admin SDK (bypass rules ; tier reste client-immuable).
+- **Routage Firestore** (ADR 0003) : utilise `dbForLandlordUid(uid)` qui cherche le doc landlord en **prod d'abord** (fail-safe), puis staging. Ce pattern évite de dépendre d'une metadata Stripe/RevenueCat qui pourrait dériver — le webhook reste correct même si la propagation metadata change. **Discipline** : pour tester un paiement staging, utiliser un uid **jamais utilisé en prod** (sinon le webhook routerait vers la mauvaise base).
 - **Auth** : header `Authorization` comparé en **temps constant** (`timingSafeEqual`) au secret `REVENUECAT_WEBHOOK_AUTH`. Non signé → 401. Non-POST → 405.
 - **Mapping type → accès** : `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION`/`PRODUCT_CHANGE`/`SUBSCRIPTION_EXTENDED` → `paid` ; `NON_RENEWING_PURCHASE` → `paid` non renouvelable ; `CANCELLATION`/`BILLING_ISSUE` → `paid` tant que non expiré (délai de grâce) ; `EXPIRATION`/`SUBSCRIPTION_PAUSED` → `free` ; `TRANSFER`/inconnu/`TEST` → no-op.
 - **Invariants** : idempotent + **garde d'ordre** `proLastEventAtMs` (un event antérieur au dernier appliqué est ignoré → un RENEWAL retardé n'écrase pas une EXPIRATION) ; ignore les App User ID `$RCAnonymousID:*` et les landlords `isAnonymous` ; ignore les events ne portant pas l'entitlement `pro`.

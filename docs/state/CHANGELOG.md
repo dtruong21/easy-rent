@@ -6,6 +6,26 @@
 > [`FEATURES.md`](FEATURES.md) (matrice) ; les détails techniques dans les shards
 > `schema/`, `functions/`, `routes/`.
 
+## Changements (2026-07-23 → 2026-07-30)
+
+### PR #145 : FEAT-054 — ADR 0003 — isolation Firestore prod/staging implémentée (2026-07-25)
+- Base Firestore nommée `staging` déclarée (`firebase.json`), séparée de `(default)` prod.
+- Flutter : `firestoreProvider` (`lib/core/config/firestore_provider.dart`) route vers `staging` (web staging uniquement) vs `(default)` (fail-safe pour émulateur + prod + mobile).
+- Backend : helper `dbForRequest(request)` route par en-tête `Origin` (callables), `dbForLandlordUid(uid)` route webhook RevenueCat par présence du doc landlord (fail-safe prod d'abord).
+- CI check `scripts/check-db-isolation.sh` : interdit `FirebaseFirestore.instance` hors provider/main.dart, et `admin.firestore()`/`getFirestore()` hors du routing.
+- État : ✅ les shards `functions/account.md` et `functions/README.md` mis à jour pour documenter les patterns ADR 0003.
+
+### PR #148, #151 : FEAT-055 — Comparaison de scénarios de simulation, entrée visible + responsive (2026-07-24, 2026-07-27)
+- Route `/simulator/compare` (query param `ids=`), page `ScenarioComparisonPage`.
+- Responsive mobile (cartes) + desktop (table fluide).
+- Feature gate : logique Pro intégrée dans la page, route pas encore gâtée (✅ ticket d'audit : FEAT-055 à terminer côté gate).
+- État : ✅ statut FEATURES.md passé de `💡 idea` → `✅ done` ; route documentée dans `routes/simulator.md`.
+
+### PR #152 : CI — déploiement de rules+indexes par base Firestore (2026-07-30)
+- `firebase deploy --only firestore` déploie maintenant les deux bases `(default)` et `staging` correctement.
+- Cloud Functions restent hors CI (déploiement manuel délibéré).
+- Impact code : zéro ; pur workflow.
+
 ## Changements (2026-07-03 → 2026-07-21)
 
 ### PR #128 : `docs/SECURITY.md` réaligné sur la stack Firebase réelle — DOC (2026-07-21)

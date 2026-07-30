@@ -28,6 +28,8 @@
 
 **Immutables** (jamais changés client, `preservesImmutables()`) : `landlordId`, `createdAt`, `deletedAt`. Par collection : voir shard.
 
+**Accès Firestore côté Flutter (ADR 0003)** : **via `firestoreProvider`** (`lib/core/config/firestore_provider.dart`) **uniquement**. `FirebaseFirestore.instance` interdit hors `main.dart` — un check CI (`scripts/check-db-isolation.sh`) l'impose. La règle sépare prod (base `(default)`) de staging web (base `staging`).
+
 **Helper functions (Firestore rules, Couche 1)** — default deny + allowlist :
 - `isOwner(uid)` : `auth.uid == document.landlordId`
 - `isActive(rsc)` : `resource.data.deletedAt == null`

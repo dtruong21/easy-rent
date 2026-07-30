@@ -25,5 +25,19 @@
       "Bash(git reset:*)",
       "Bash(firebase deploy:*)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/check-state-drift.sh\" --hook 2>/dev/null || true",
+            "timeout": 15,
+            "statusMessage": "Fraîcheur de docs/state..."
+          }
+        ]
+      }
+    ]
   }
 }

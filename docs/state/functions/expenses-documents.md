@@ -6,6 +6,8 @@ Dépenses (FEAT-041a) + documents (FEAT-008, v2 FEAT-041b). Fichiers : `function
 
 ## Callables — Documents
 
+**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+
 ### `createDocument` (v2, FEAT-008/FEAT-041b/FEAT-044)
 Client invoke. **⚠️ Section corrigée le 2026-07-21 — l'état décrivait une signature et des catégories qui n'existent pas dans le code.**
 - **Flow réel** : le client **uploade d'abord** dans Storage (SDK Firebase, Storage Rules `uid == landlordId` dans le path), **puis** appelle ce callable avec le `storagePath`. Il n'y a **pas** de transfert base64 par la callable.

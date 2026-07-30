@@ -38,6 +38,18 @@ $ARGUMENTS
 - `code-reviewer` → revue qualité
 - `security-auditor` → audit Firestore Rules, secrets, RGPD
 
+### 4bis. Mise à jour de l'état (obligatoire, avant la PR)
+- `state-keeper` **sur les shards du/des domaine(s) touché(s) uniquement** —
+  jamais une passe complète sur les 28 shards (ça coûte cher pour rien).
+- Pourquoi c'est une étape et pas une option : un shard périmé est **pire**
+  qu'un shard absent. La session suivante lui fait confiance, écrit du code
+  faux, se fait bloquer par un garde-fou, et refait le travail. C'est le
+  premier poste de gaspillage de tokens du projet.
+- Vérifie ensuite avec `bash scripts/check-state-drift.sh` (coût zéro) : les
+  lignes « existe mais absent des shards » doivent avoir disparu.
+- Ne fais confiance ni à une date écrite dans l'en-tête d'un shard, ni à
+  l'auto-évaluation d'un agent : la vérité est `git log -1 -- <fichier>`.
+
 ### 5. PR + lien à l'issue (si applicable)
 - Push la branche
 - Crée la PR avec :
