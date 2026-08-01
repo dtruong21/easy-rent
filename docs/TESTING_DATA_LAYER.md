@@ -80,12 +80,20 @@ même coût — pas d'émulateur, pas de réseau, tourne dans la CI existante.
 ### Niveau 3 — Émulateur, pour l'application réelle des règles (ciblé)
 
 `npm run test:rules` dans `functions/` (émulateur Firestore + vitest) est le seul
-endroit où les règles sont réellement évaluées. La suite actuelle est courte
-(245 lignes, 4 `describe`) et **ne couvre pas du tout `investment_scenarios`**.
+endroit où les règles sont réellement évaluées. `investment_scenarios` y était
+couvert pour le **list-scoping** seulement (via `LANDLORD_SCOPED_COLLECTIONS`) ;
+ses écritures ne l'étaient pas — c'est ajouté par ce ticket (cf. §4).
 
 À réserver aux invariants de sécurité (isolation cross-user, immuabilité de
 `landlordId`, refus des écritures serveur-only) — pas au mapping de payload, trop
 lent pour ça.
+
+> ⚠️ **Cette suite ne tourne PAS en CI.** Le job `functions` de
+> `.github/workflows/ci.yml` exécute `npm test`, dont la config vitest n'inclut
+> que `src/**/*.test.ts` ; `test:rules` n'est référencé nulle part dans
+> `.github/`. Les tests de règles — les 33 préexistants comme les 25 ajoutés ici
+> — sont donc un filet **local uniquement** tant que la CI ne les câble pas
+> (étape dédiée avec émulateur + JDK).
 
 > Recommandation de séquencement : niveaux 1 + 2 d'abord (gratuits, attrapent la
 > régression de FEAT-056), niveau 3 ensuite pour `investment_scenarios` et les
@@ -114,12 +122,28 @@ avec un message actionnable, pendant que `scenario_limit_controller_test` et les
 tests de dépôt du niveau 1 restent verts — ce qui démontre à la fois la
 régression et la raison pour laquelle le niveau 1 seul ne suffit pas.
 
+### `functions/rules-tests/firestore_rules.test.ts` (+25 tests, 33 → 58)
+
+Le niveau 3 pour `investment_scenarios` : `create` (payload valide, compte
+anonyme autorisé, non-authentifié refusé, création pour autrui, `id` ≠ docId,
+`deletedAt` pré-rempli, nom vide / > 120, `schemaVersion` non-int / ≤ 0,
+`scenarioJson` non-map), `update` (immuabilité `landlordId`/`createdAt`,
+soft-delete client refusé, doc déjà soft-deleted), `delete` (refus systématique),
+`get` (non-régression).
+
+Chaque test d'écriture **négatif** utilise son propre doc jetable : avec un doc
+partagé, une régression de rule laisse la mutation passer et corrompt le doc, ce
+qui fait cascader les tests suivants en faux négatifs et désigne le mauvais
+coupable. Vérifié par mutation (ouverture de `delete` + retrait de
+`preservesImmutables` → exactement 4 échecs, sans cascade).
+
 ## 5. Reste à faire
 
 - Niveau 1 pour `payments`, `documents`, `expenses`, `receipts` (chemins
   callables), `profile`, `landlord_tier`, `paid_plan_interest`.
-- Niveau 3 : ajouter `investment_scenarios` à `functions/rules-tests/`
-  (create owner-scoped, refus cross-user, `delete` toujours refusé).
+- **Câbler `test:rules` en CI** — aujourd'hui la suite de règles ne tourne qu'en
+  local (cf. encadré §3). C'est le prérequis pour que le niveau 3 protège
+  réellement les merges.
 - Étendre la matrice `_clientDirectWrites` si de nouvelles collections
   apparaissent — le test `chaque collection déclarée a un bloc de règles et un
   dépôt` échoue si une entrée pointe dans le vide, mais une collection **jamais
