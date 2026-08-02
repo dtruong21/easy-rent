@@ -201,12 +201,14 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
         'sizeBytes': bytes.length,
       });
     } catch (e, st) {
+      // Le rollback Storage est fait PAR LE SERVEUR : `createDocument` purge
+      // l'objet sur tous ses motifs de refus. Le tenter ici serait un no-op —
+      // `storage.rules` interdit le `delete` client sur `documents/**`.
       _log.severe(
-        'createDocument callable failed, rolling back storage',
+        'createDocument callable failed (rollback storage côté serveur)',
         e,
         st,
       );
-      await _removeStorageObject(storagePath);
       rethrow;
     }
 
@@ -237,7 +239,8 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
   ) async {
     _log.info('softDelete(id=$id)');
 
-    // Lit le doc avant pour récupérer storagePath et legalHold.
+    // Lit le doc avant pour récupérer storagePath (remonté à l'UI) et
+    // vérifier l'ownership. Le verdict legalHold, lui, vient du serveur.
     final snap = await _col.doc(id).get();
     if (!snap.exists) throw DocumentNotFoundException(id);
     final data = snap.data()!;
@@ -245,10 +248,10 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
       throw DocumentNotFoundException(id);
     }
     final storagePath = data['storagePath'] as String?;
-    final legalHold = data['legalHold'] == true;
 
+    final HttpsCallableResult<dynamic> res;
     try {
-      await _callable(
+      res = await _callable(
         'softDeleteEntity',
       ).call(<String, dynamic>{'collection': 'documents', 'id': id});
     } on FirebaseFunctionsException catch (e) {
@@ -259,14 +262,17 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
       rethrow;
     }
 
-    // Soft-delete OK. Si pas de legalHold, nettoie le fichier Storage.
-    if (!legalHold && storagePath != null) {
-      _log.info('hard-deleting storage object path=$storagePath');
-      await _removeStorageObject(storagePath);
-      return (storagePath: storagePath, hardDeleted: true);
-    }
-    _log.info('legal_hold ON — storage object conservé');
-    return (storagePath: storagePath, hardDeleted: false);
+    // La suppression du fichier Storage est faite PAR LE SERVEUR, dans le
+    // callable : `storage.rules` pose `allow delete: if false` sur
+    // `documents/{landlordId}/**`, donc un delete depuis le client est
+    // toujours refusé. Le tenter ici échouait silencieusement et laissait le
+    // fichier dans le bucket à chaque suppression (coût + droit à l'effacement
+    // RGPD non honoré). On se contente désormais de rapporter le verdict du
+    // serveur. `storageDeleted=false` couvre deux cas : legalHold (fichier
+    // conservé volontairement) ou échec de purge (logué `[orphan-document]`).
+    final hardDeleted = (res.data as Map?)?['storageDeleted'] == true;
+    _log.info('softDelete OK id=$id storageDeleted=$hardDeleted');
+    return (storagePath: storagePath, hardDeleted: hardDeleted);
   }
 
   @override
@@ -311,19 +317,6 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
       if (size is int) total += size;
     }
     return DocumentsQuota(totalBytes: total);
-  }
-
-  Future<void> _removeStorageObject(String path) async {
-    try {
-      await _storage.ref(path).delete();
-      _log.fine('storage remove OK path=$path');
-    } catch (e, st) {
-      _log.severe(
-        '[orphan-document] path=$path — storage delete failed',
-        e,
-        st,
-      );
-    }
   }
 }
 
