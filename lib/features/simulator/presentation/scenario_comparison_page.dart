@@ -6,7 +6,7 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
 import '../../auth/data/landlord_tier_repository.dart';
-import '../../auth/domain/subscription_tier.dart';
+import '../../auth/domain/plan_matrix.g.dart';
 import '../data/investment_scenario_repository.dart';
 import '../domain/investment_scenario.dart';
 import '../domain/scenario_comparison_view_model.dart';
@@ -27,9 +27,9 @@ class ScenarioComparisonPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final isPaid =
-        ref.watch(landlordTierProvider).valueOrNull?.tier ==
-        SubscriptionTier.paid;
+    final hasComparison = ref.watch(
+      hasFeatureProvider(PlanFeature.scenarioComparison),
+    );
 
     return Scaffold(
       appBar: AppAppBar(
@@ -37,7 +37,7 @@ class ScenarioComparisonPage extends ConsumerWidget {
         fallbackRoute: '/simulator',
       ),
       body: SafeArea(
-        child: !isPaid
+        child: !hasComparison
             ? const _ProGatedComparisonBody()
             : _ComparisonBody(ids: ids),
       ),

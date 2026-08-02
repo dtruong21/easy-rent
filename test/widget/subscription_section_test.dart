@@ -40,6 +40,14 @@ class _FakeSubscriptionRepository implements SubscriptionRepository {
     reactivateCallCount++;
     if (reactivateException != null) throw reactivateException!;
   }
+
+  @override
+  Future<void> changePlan({
+    required String level,
+    required String period,
+  }) async {
+    throw UnimplementedError('not exercised by these tests');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -176,6 +184,115 @@ void main() {
 
       expect(find.byKey(const Key('btn_subscription_cancel')), findsOneWidget);
     });
+  });
+
+  group('SubscriptionSection — palier réel (FEAT-056)', () {
+    testWidgets('planLevel=max → titre "Abonnement Max"', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          snapshot: LandlordTierSnapshot(
+            tier: SubscriptionTier.paid,
+            planLevel: 'max',
+            proWillRenew: true,
+            proExpiresAt: DateTime(2026, 8, 15),
+            proStore: 'web',
+          ),
+          repo: _FakeSubscriptionRepository(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abonnement Max'), findsOneWidget);
+      expect(find.text('Abonnement Baillan Pro'), findsNothing);
+    });
+
+    testWidgets(
+      'planLevel absent (legacy) → grandfathering I3, titre "Abonnement Pro"',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              proWillRenew: true,
+              proExpiresAt: DateTime(2026, 8, 15),
+              proStore: 'web',
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abonnement Pro'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'planLevel=max, résiliation programmée → "Max jusqu\'au …, puis Gratuit" (jamais "Pro")',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              planLevel: 'max',
+              proWillRenew: false,
+              proExpiresAt: DateTime(2026, 9, 1),
+              proStore: 'web',
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Max jusqu\'au'), findsOneWidget);
+        expect(find.textContaining('Pro jusqu\'au'), findsNothing);
+      },
+    );
+
+    testWidgets('abonné web → bouton "Changer d\'offre" présent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          snapshot: LandlordTierSnapshot(
+            tier: SubscriptionTier.paid,
+            planLevel: 'pro',
+            proWillRenew: true,
+            proExpiresAt: DateTime(2026, 8, 15),
+            proStore: 'web',
+          ),
+          repo: _FakeSubscriptionRepository(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('btn_subscription_change_plan')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'abonné store mobile → bouton "Changer d\'offre" masqué (self-service web uniquement)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              planLevel: 'pro',
+              proWillRenew: true,
+              proStore: 'app_store',
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_subscription_change_plan')),
+          findsNothing,
+        );
+      },
+    );
   });
 
   group('SubscriptionSection — paid + store mobile', () {

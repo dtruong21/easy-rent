@@ -6,6 +6,8 @@ import 'package:mime/mime.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/byte_format.dart';
+import '../../../auth/data/landlord_tier_repository.dart';
+import '../../../auth/domain/plan_matrix.g.dart';
 import '../../application/documents_quota_provider.dart';
 import '../../application/upload_documents_controller.dart';
 import '../../domain/document_category.dart';
@@ -34,6 +36,10 @@ class UploadDocumentsDropZone extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final uploadState = ref.watch(uploadDocumentsControllerProvider);
     final asyncQuota = ref.watch(documentsQuotaProvider);
+    // FEAT-056 : plafond de taille par fichier, différencié par palier.
+    final maxFileSizeBytes =
+        ref.watch(quotaLimitProvider(PlanQuota.documentMaxBytes)) ??
+        kMaxFileSizeBytes;
 
     final uploading = uploadState is Uploading ? uploadState : null;
     final completed = uploadState is UploadCompleted ? uploadState : null;
@@ -45,6 +51,7 @@ class UploadDocumentsDropZone extends ConsumerWidget {
         // Zone visuelle drag & drop (bouton toujours visible)
         _DropZoneArea(
           isUploading: isUploading,
+          maxFileSizeBytes: maxFileSizeBytes,
           onPickFiles: () => _pickFiles(context, ref),
         ),
 
@@ -53,6 +60,7 @@ class UploadDocumentsDropZone extends ConsumerWidget {
           const SizedBox(height: 8),
           UploadProgressList(
             files: uploading?.files ?? completed?.files ?? const [],
+            maxFileSizeBytes: maxFileSizeBytes,
           ),
         ],
 
@@ -155,9 +163,14 @@ class UploadDocumentsDropZone extends ConsumerWidget {
 }
 
 class _DropZoneArea extends StatelessWidget {
-  const _DropZoneArea({required this.isUploading, required this.onPickFiles});
+  const _DropZoneArea({
+    required this.isUploading,
+    required this.maxFileSizeBytes,
+    required this.onPickFiles,
+  });
 
   final bool isUploading;
+  final int maxFileSizeBytes;
   final VoidCallback onPickFiles;
 
   @override
@@ -190,7 +203,9 @@ class _DropZoneArea extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Text(
-            context.l10n.documentsUploadFormatsHint,
+            context.l10n.documentsUploadFormatsHint(
+              ByteFormat.format(maxFileSizeBytes),
+            ),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
             ),

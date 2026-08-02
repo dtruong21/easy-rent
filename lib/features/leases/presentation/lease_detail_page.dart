@@ -12,7 +12,7 @@ import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../auth/data/landlord_tier_repository.dart';
-import '../../auth/domain/subscription_tier.dart';
+import '../../auth/domain/plan_matrix.g.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
@@ -167,12 +167,12 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Gate PRO (FEAT-044) en plus du gate légal : ce chemin deep-link
     // (`?openRegularization=1`) contourne la section, il doit donc appliquer la
     // même restriction — sinon un compte free atteindrait le dialog par URL.
-    final isPaidForRegularization =
-        ref.watch(landlordTierProvider).valueOrNull?.tier ==
-        SubscriptionTier.paid;
+    final hasChargeRegularizationForDeepLink = ref.watch(
+      hasFeatureProvider(PlanFeature.chargeRegularization),
+    );
     if (widget.openRegularizationOnLoad &&
         !_regularizationDialogOpened &&
-        isPaidForRegularization &&
+        hasChargeRegularizationForDeepLink &&
         lease.canRegularizeCharges) {
       _regularizationDialogOpened = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {

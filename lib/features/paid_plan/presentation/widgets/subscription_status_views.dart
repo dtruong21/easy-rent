@@ -62,11 +62,16 @@ class ScheduledCancelView extends StatelessWidget {
     required this.expiresAt,
     required this.isBusy,
     required this.onReactivate,
+    required this.levelLabel,
   });
 
   final DateTime? expiresAt;
   final bool isBusy;
   final VoidCallback onReactivate;
+
+  /// Palier réel (FEAT-056 — « Pro »/« Max »/« Ultra ») : le message ne doit
+  /// jamais dire « Pro » à un abonné Max/Ultra.
+  final String levelLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +83,7 @@ class ScheduledCancelView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.subscriptionScheduledCancel(dateLabel),
+          l10n.subscriptionScheduledCancel(levelLabel, dateLabel),
           key: const Key('txt_subscription_status'),
           style: theme.textTheme.bodyMedium,
         ),

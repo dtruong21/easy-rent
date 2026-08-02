@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/firestore_provider.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/landlord_tier_repository.dart';
-import '../../auth/domain/subscription_tier.dart';
+import '../../auth/domain/plan_matrix.g.dart';
 
 /// Nombre live de scénarios sauvegardés par le landlord connecté.
 ///
@@ -26,16 +26,18 @@ final scenarioCountProvider = StreamProvider<int>((ref) {
       .map((snap) => snap.size);
 });
 
-/// Limite de scénarios sauvegardables pour le tier courant. `null` = illimité.
+/// Limite de scénarios sauvegardables pour le compte courant. `null` =
+/// illimité. Délègue à [quotaLimitProvider] (FEAT-056 §2, table générée) —
+/// pas de seconde source de vérité.
 ///
-/// Tant que le tier n'est pas encore résolu (chargement initial), on
-/// retombe sur la limite la plus restrictive ([SubscriptionTier.anonymous])
-/// — fail-safe : mieux vaut bloquer temporairement un save à tort que
-/// laisser un anonyme dépasser sa limite pendant un instant de chargement.
+/// Tant que le tier n'est pas encore résolu (chargement initial),
+/// [planEntitlementProvider] retombe sur la limite la plus restrictive
+/// (anonyme) — fail-safe : mieux vaut bloquer temporairement un save à tort
+/// que laisser un anonyme dépasser sa limite pendant un instant de
+/// chargement.
+@Deprecated('Utiliser quotaLimitProvider(PlanQuota.scenarios).')
 final scenarioLimitForTierProvider = Provider<int?>((ref) {
-  final asyncTier = ref.watch(landlordTierProvider);
-  final tier = asyncTier.valueOrNull?.tier ?? SubscriptionTier.anonymous;
-  return tier.scenarioLimit;
+  return ref.watch(quotaLimitProvider(PlanQuota.scenarios));
 });
 
 /// `true` si le landlord connecté peut encore sauvegarder un nouveau
@@ -46,8 +48,8 @@ final scenarioLimitForTierProvider = Provider<int?>((ref) {
 /// (évite un flash de bouton disabled) — le vrai contrôle a lieu au moment
 /// du clic dans `SimulatorPage._saveScenario` via une relecture synchrone.
 final canSaveAnotherScenarioProvider = Provider<bool>((ref) {
-  final limit = ref.watch(scenarioLimitForTierProvider);
-  if (limit == null) return true; // illimité (paid)
+  final limit = ref.watch(quotaLimitProvider(PlanQuota.scenarios));
+  if (limit == null) return true; // illimité (au moins Pro)
   final count = ref.watch(scenarioCountProvider).valueOrNull;
   if (count == null) return true;
   return count < limit;

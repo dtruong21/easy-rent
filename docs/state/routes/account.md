@@ -27,14 +27,13 @@
 | `/profile/support` | SupportPage | write | formulaire contact (FEAT-025, collection `support_requests`) |
 | `/profile/delete-account` | DeleteAccountPage | write | **FEAT-045** — re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée |
 
-## ⚠️ Routes attendues par le back-end mais ABSENTES du router (2026-07-21)
+## Pro/Abonnements (shell branche 3, fullyAuth, FEAT-044e/FEAT-056 intégration client web)
 
-| Chemin attendu | Attendu par | État |
-|---|---|---|
-| `/pro/success?session_id=…` | `createCheckoutSession` (`success_url`) | ❌ non déclarée |
-| `/pro/cancel` | `createCheckoutSession` (`cancel_url`) | ❌ non déclarée |
-
-Le volet client du paiement n'est pas encore construit (aucun appel Dart à `createCheckoutSession`, pas de `purchases_flutter` dans `pubspec.yaml`) — cohérent avec « intégration client différée » (PR #114/#117). À déclarer **avant** d'ouvrir le checkout web, sinon un retour de paiement Stripe tombe sur une URL non gérée.
+| Chemin | Page | Type | Notes |
+|---|---|---|---|
+| `/pro` | ProPricingPage | read | **FEAT-056** : cartes 3 paliers (Pro achetable, Max/Ultra démonstration) + FAQ, CTA menant à checkout |
+| `/pro/success` | ProSuccessPage | read | **FEAT-044e/056** : redirection Stripe Checkout post-paiement réussi ; extract `session_id` de query param ; confirmation + CTA retour dashboard |
+| `/pro/cancel` | ProCancelPage | read | **FEAT-044e/056** : redirection Stripe Checkout post-annulation ; invite à réessayer ou revenir |
 
 ## Provider
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -348,10 +349,10 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     // le cas où le compte a évolué depuis le dernier rebuild.
     final isCreating = _loadedScenario == null;
     if (isCreating && !ref.read(canSaveAnotherScenarioProvider)) {
-      final tier =
-          ref.read(landlordTierProvider).valueOrNull?.tier ??
-          SubscriptionTier.anonymous;
-      await showScenarioLimitReachedModal(context, tier: tier);
+      await showScenarioLimitReachedModal(
+        context,
+        plan: ref.read(planEntitlementProvider),
+      );
       return;
     }
 
@@ -431,6 +432,26 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
         if (widget.scenarioId == null) {
           context.go('/simulator');
         }
+      }
+    } on FirebaseFunctionsException catch (e) {
+      // FEAT-056 : createScenario (callable) refuse désormais aussi en
+      // course — le pré-check client (canSaveAnotherScenarioProvider) peut
+      // être obsolète d'un instant (autre onglet, palier rétrogradé) — ce
+      // n'est plus réservé au free/anonyme depuis que Pro/Max sont
+      // plafonnés (seul Ultra reste illimité).
+      _log.warning('Erreur sauvegarde scénario (callable): $e');
+      if (e.code == 'resource-exhausted' &&
+          (e.message?.contains('scenario_limit_reached') ?? false)) {
+        if (mounted) {
+          await showScenarioLimitReachedModal(
+            context,
+            plan: ref.read(planEntitlementProvider),
+          );
+        }
+      } else if (mounted) {
+        setState(() {
+          _errorMessage = context.l10n.simulatorSaveErrorMessage;
+        });
       }
     } catch (e) {
       _log.warning('Erreur sauvegarde scénario: $e');

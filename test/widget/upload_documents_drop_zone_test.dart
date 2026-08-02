@@ -6,6 +6,8 @@ library;
 import 'dart:typed_data';
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
@@ -68,11 +70,24 @@ class _FakeRepo implements DocumentsRepository {
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _buildDropZone({int quotaBytes = 0}) {
+Widget _buildDropZone({
+  int quotaBytes = 0,
+  SubscriptionTier tier = SubscriptionTier.free,
+  String? planLevel,
+}) {
   return ProviderScope(
     overrides: [
       documentsRepositoryProvider.overrideWithValue(
         _FakeRepo(quotaBytes: quotaBytes),
+      ),
+      // FEAT-056 : le plafond de taille par fichier (hint + validation) est
+      // désormais différencié par palier — le widget lit
+      // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+      // `landlordTierProvider` (même convention que `pro_pricing_page_test.dart`).
+      landlordTierProvider.overrideWith(
+        (ref) => Stream.value(
+          LandlordTierSnapshot(tier: tier, planLevel: planLevel),
+        ),
       ),
     ],
     child: const MaterialApp(
@@ -105,6 +120,33 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Cliquez pour sélectionner'), findsOneWidget);
     });
+
+    group(
+      'FEAT-056 — plafond de taille par fichier différencié par palier',
+      () {
+        testWidgets('gratuit/Pro → hint "10 Mo"', (tester) async {
+          await tester.pumpWidget(_buildDropZone());
+          await tester.pumpAndSettle();
+          expect(find.textContaining('10 Mo'), findsOneWidget);
+        });
+
+        testWidgets('Max → hint "25 Mo"', (tester) async {
+          await tester.pumpWidget(
+            _buildDropZone(tier: SubscriptionTier.paid, planLevel: 'max'),
+          );
+          await tester.pumpAndSettle();
+          expect(find.textContaining('25 Mo'), findsOneWidget);
+        });
+
+        testWidgets('Ultra → hint "50 Mo"', (tester) async {
+          await tester.pumpWidget(
+            _buildDropZone(tier: SubscriptionTier.paid, planLevel: 'ultra'),
+          );
+          await tester.pumpAndSettle();
+          expect(find.textContaining('50 Mo'), findsOneWidget);
+        });
+      },
+    );
 
     testWidgets('quota indicator affiché', (tester) async {
       await tester.pumpWidget(_buildDropZone(quotaBytes: 5 * 1024 * 1024));

@@ -30,7 +30,16 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-07-23 → 2026-07-30)
+## Changements (2026-07-23 → 2026-08-02)
+
+### FEAT-056 : Abonnements multi-paliers Pro/Max/Ultra — implémentation back-end + client partiel (2026-08-02, branche `feat/056-multi-tier-subscriptions`)
+- Modèle de données : `planLevel ∈ {pro, max, ultra | null}` + `entitlements` map additifs sur `landlords/{uid}` (gelés client, écrit Admin SDK seul).
+- Quotas différenciés par palier effectif (3 tiers × 2 périodicités), définis dans source canonique `config/entitlements.json` (Dart/TS générés).
+- **Back-end** ✅ : callables `createCheckoutSession` (3 paliers), `manageSubscription` (cancel/reactivate/change_plan), `createScenario` (quota enforce). Webhook + cron multi-paliers.
+- **Quotas appliqués** : properties (0/2/5/15/∞), tenants (0/3/8/20/∞), activeLeases (0/2/5/15/∞), documents (0/10/50/150/∞), scenarios (1/3/15/30/∞), documentMaxBytes (0/10M/10M/25M/50M).
+- **Paliers vendables** : Pro seul (`purchasable:true`) ; Max/Ultra démo UI (`purchasable:false`, erreur `level_not_purchasable`). RevenueCat/Stripe inactifs pour max/ultra.
+- **Changement structural** : `investment_scenarios/create` passé à `if false`, création CF-exclusive (callable `createScenario`). Gating derniers quotas par serveur.
+- État : ✅ toutes les fonctions implémentées, non mergé. UI Pro UI non construite (FEAT-044e). État docs (`docs/state/`) mis à jour.
 
 ### PR #145 : FEAT-054 — ADR 0003 — isolation Firestore prod/staging implémentée (2026-07-25)
 - Base Firestore nommée `staging` déclarée (`firebase.json`), séparée de `(default)` prod.

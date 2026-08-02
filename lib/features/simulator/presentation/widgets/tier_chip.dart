@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/landlord_tier_repository.dart';
+import '../../../auth/domain/plan_entitlement.dart';
+import '../../../auth/domain/plan_level.dart';
 import '../../../auth/domain/subscription_tier.dart';
 import '../../application/scenario_limit_controller.dart';
 
@@ -21,11 +23,10 @@ class TierChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncTier = ref.watch(landlordTierProvider);
-    final tier = asyncTier.valueOrNull?.tier ?? SubscriptionTier.anonymous;
+    final plan = ref.watch(planEntitlementProvider);
     final count = ref.watch(scenarioCountProvider).valueOrNull;
 
-    final label = _labelFor(context, tier, count);
+    final label = _labelFor(context, plan, count);
 
     // Dark mode fix : les couleurs olive hardcodées disparaissent sur
     // fond ink. On pioche olive vs oliveSoft selon la brightness du thème
@@ -61,16 +62,16 @@ class TierChip extends ConsumerWidget {
     );
   }
 
-  String _labelFor(BuildContext context, SubscriptionTier tier, int? count) {
+  // Un seul libellé « PLAN PRO » pour tout compte payant (Pro/Max/Ultra) —
+  // la différenciation visuelle par palier est un lot séparé (FEAT-056 PR-6).
+  // `atLeast` reste le seul comparateur autorisé, jamais `tier ==
+  // SubscriptionTier.paid` ni le rang d'un enum Dart.
+  String _labelFor(BuildContext context, PlanEntitlement plan, int? count) {
     final l10n = context.l10n;
-    switch (tier) {
-      case SubscriptionTier.anonymous:
-        return l10n.simulatorTierChipAnonymous;
-      case SubscriptionTier.free:
-        final c = count ?? 0;
-        return l10n.simulatorTierChipFree(c);
-      case SubscriptionTier.paid:
-        return l10n.simulatorTierChipPaid;
+    if (plan.atLeast(PlanLevel.pro)) return l10n.simulatorTierChipPaid;
+    if (plan.tier == SubscriptionTier.free) {
+      return l10n.simulatorTierChipFree(count ?? 0);
     }
+    return l10n.simulatorTierChipAnonymous;
   }
 }

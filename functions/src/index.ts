@@ -68,6 +68,7 @@ export {
   updateExpense,
   setUpdatedAtExpenses,
 } from "./callable/expenses";
+export {createScenario} from "./callable/scenarios";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
 export {createCheckoutSession} from "./callable/create_checkout_session";

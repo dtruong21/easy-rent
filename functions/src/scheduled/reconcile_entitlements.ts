@@ -1,21 +1,35 @@
 /**
  * reconcileEntitlements — filet de sécurité des events webhook manqués
- * (FEAT-044, ADR 0002).
+ * (FEAT-044, ADR 0002 ; étendu multi-paliers par FEAT-056 §7).
  *
  * Un webhook RevenueCat peut être perdu (panne, 5xx non retenté à temps). Sans
- * réconciliation, un compte resterait `paid` après une expiration (ou `free`
- * après un renouvellement) manquée. Ce cron quotidien re-vérifie auprès de
- * l'API REST RevenueCat les comptes **actifs dont l'échéance est dépassée** et
- * corrige le tier :
- *   - RevenueCat confirme l'expiration → `free` ;
- *   - RevenueCat montre un renouvellement (échéance future) → on met à jour
- *     `proExpiresAt` et on conserve `paid` (le webhook de RENEWAL a été manqué).
+ * réconciliation, un compte resterait `paid` après une expiration, `free` après
+ * un renouvellement — ou, depuis FEAT-056, **servi au mauvais palier** après un
+ * `PRODUCT_CHANGE` manqué. Ce dernier cas est le plus coûteux : l'échéance
+ * reste dans le futur, donc rien ne signale l'anomalie, et on peut facturer
+ * Ultra en servant Pro pendant des semaines.
  *
- * On requête `proEntitlementActive == true` (ensemble borné = utilisateurs
- * payants) puis on filtre l'échéance dépassée EN MÉMOIRE — pas de requête de
- * plage, donc **aucun index composite requis**. Le coeur
- * (`reconcileExpiredEntitlements`) prend un *fetcher* injectable → testable sans
- * appel réseau. La clé secrète v2 (`REVENUECAT_API_KEY`) n'est lue qu'en prod.
+ * Ce cron quotidien re-interroge l'API REST RevenueCat pour TOUS les comptes
+ * `proEntitlementActive == true` et recalcule le palier effectif avec la MÊME
+ * `deriveEffectivePlan` que le webhook — une seule définition du palier servi,
+ * donc aucun désaccord possible entre le temps réel et le filet.
+ *
+ * Invariant de sécurité (révisé par FEAT-056) : le cron ne fait **jamais**
+ * passer `free → paid` (`if (!wasActive) return "unchanged"` reste la première
+ * branche). Il peut en revanche CORRIGER le palier d'un compte déjà payant,
+ * dans les deux sens : c'est une correction appuyée sur la source de vérité
+ * (API RC authentifiée), pas un octroi d'accès. Refuser cette correction
+ * laisserait durablement sous-servi un client qui paie.
+ *
+ * On requête `proEntitlementActive == true` (ensemble borné = base d'abonnés)
+ * → **aucun index composite requis**. Le coeur (`reconcileExpiredEntitlements`)
+ * prend un *fetcher* injectable → testable sans appel réseau. La clé secrète v2
+ * (`REVENUECAT_API_KEY`) n'est lue qu'en prod.
+ *
+ * ⚠️ ADR 0003 : ce cron tourne sur `(default)` (exception documentée de
+ * `scripts/check-db-isolation.sh`) — un abonnement de test staging n'est donc
+ * PAS réconcilié automatiquement. Comportement assumé, à vérifier à la main
+ * pendant la recette.
  */
 
 import * as admin from "firebase-admin";
@@ -23,86 +37,173 @@ import {defineSecret} from "firebase-functions/params";
 import {logger} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
-import {PRO_ENTITLEMENT_ID} from "../http/revenuecat_webhook";
+import {
+  type EntitlementState,
+  type EntitlementStates,
+  type LevelId,
+  deriveEffectivePlan,
+  parseEntitlementStates,
+  rcEntitlementIdFor,
+  resolvePlan,
+  tsToMillis,
+} from "../entitlements/plan";
+import {LEVELS} from "../entitlements/plan_matrix.generated";
 
 /** Clé secrète v2 de l'API REST RevenueCat (serveur uniquement). */
 const revenueCatApiKey = defineSecret("REVENUECAT_API_KEY");
 
+// DETTE EXPLICITE : au-delà de ce lot, la réconciliation ne couvre plus toute
+// la base. Ajouter alors une pagination par curseur `__name__` persistée dans
+// un doc de contrôle (`_ops/reconcileCursor`). Inutile au volume actuel.
 const BATCH_SIZE = 200;
 
 /**
- * Récupère l'échéance (ms epoch) de l'entitlement `pro` d'un abonné, ou `null`
- * si aucun entitlement `pro` actif. `uid` = App User ID RevenueCat = UID Firebase.
+ * État des entitlements d'un abonné vu par RevenueCat, re-clé vers NOS ids de
+ * palier. Un palier absent de la map = non accordé par RevenueCat.
  */
-export type ProExpiryFetcher = (uid: string) => Promise<number | null>;
+export type EntitlementStatesFetcher = (
+  uid: string,
+) => Promise<Partial<Record<LevelId, {expiresMs: number | null}>>>;
 
 /** Issue de la réconciliation d'un compte (pour log/tests). */
-export type ReconcileOutcome = "downgraded" | "renewed" | "unchanged";
+export type ReconcileOutcome =
+  | "unchanged"
+  | "renewed"
+  | "level_changed"
+  | "downgraded_free";
 
-/** Millisecondes epoch d'un champ Firestore Timestamp OU Date OU null. */
-function tsToMillis(value: unknown): number | null {
-  if (value == null) return null;
-  if (value instanceof Date) return value.getTime();
-  const maybe = value as {toMillis?: () => number; toDate?: () => Date};
-  if (typeof maybe.toMillis === "function") return maybe.toMillis();
-  if (typeof maybe.toDate === "function") return maybe.toDate().getTime();
-  return null;
+/** Sérialise la map d'état pour Firestore (échéances → Timestamp). */
+function toFirestoreStates(
+  states: EntitlementStates,
+): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const [levelId, state] of Object.entries(states)) {
+    if (!state) continue;
+    out[levelId] = {
+      active: state.active,
+      expiresAt:
+        state.expiresAtMs === null ?
+          null :
+          admin.firestore.Timestamp.fromMillis(state.expiresAtMs),
+      willRenew: state.willRenew,
+      productId: state.productId,
+      store: state.store,
+      lastEventAtMs: state.lastEventAtMs,
+    };
+  }
+  return out;
 }
 
 /**
- * Corrige un compte d'après l'échéance rapportée par RevenueCat. Pur/testable.
- * `rcExpiryMs === null` ⇒ plus d'entitlement `pro` actif → `free`.
+ * Recompose la map d'état à partir de ce que rapporte RevenueCat, en
+ * CONSERVANT les métadonnées que l'API REST ne porte pas (`productId`,
+ * `store`, `lastEventAtMs` — écrites par le webhook). RevenueCat fait foi sur
+ * l'activité et l'échéance ; un palier qu'il ne rapporte plus devient inactif.
+ */
+export function reconcileStates(
+  current: EntitlementStates,
+  rc: Partial<Record<LevelId, {expiresMs: number | null}>>,
+  nowMs: number,
+): EntitlementStates {
+  const next: EntitlementStates = {};
+  for (const level of LEVELS) {
+    const cur = current[level.id];
+    const reported = rc[level.id];
+    if (cur === undefined && reported === undefined) continue;
+    const active =
+      reported !== undefined &&
+      reported.expiresMs !== null &&
+      reported.expiresMs > nowMs;
+    const state: EntitlementState = {
+      active,
+      expiresAtMs:
+        reported !== undefined ? reported.expiresMs : cur?.expiresAtMs ?? null,
+      willRenew: active,
+      productId: cur?.productId ?? null,
+      store: cur?.store ?? null,
+      lastEventAtMs: cur?.lastEventAtMs ?? 0,
+    };
+    next[level.id] = state;
+  }
+  return next;
+}
+
+/**
+ * Corrige un compte d'après l'état rapporté par RevenueCat.
+ *
+ * Première branche inchangée et non négociable : un compte non actif n'est
+ * JAMAIS promu ici — seul le webhook accorde un accès payant.
  */
 export async function reconcileLandlord(
   db: admin.firestore.Firestore,
   uid: string,
-  rcExpiryMs: number | null,
+  rcStates: Partial<Record<LevelId, {expiresMs: number | null}>>,
   nowMs: number,
 ): Promise<ReconcileOutcome> {
   const ref = db.doc(`landlords/${uid}`);
   const snap = await ref.get();
   const data = snap.data() ?? {};
   const wasActive = data.proEntitlementActive === true;
+  if (!wasActive) return "unchanged"; // upgrade = ressort du webhook, pas d'ici
 
-  // Le `!== null` narrow rcExpiryMs en `number` dans les branches (pas d'assertion).
-  if (rcExpiryMs !== null && rcExpiryMs > nowMs) {
-    if (!wasActive) return "unchanged"; // upgrade = ressort du webhook, pas d'ici
-    // Toujours actif mais l'échéance a bougé (renouvellement webhook manqué).
-    await ref.update({
-      proExpiresAt: admin.firestore.Timestamp.fromMillis(rcExpiryMs),
-      proWillRenew: true,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    return "renewed";
+  const previousLevel = resolvePlan(data).levelId;
+  const previousExpiryMs = tsToMillis(data.proExpiresAt);
+
+  const states = reconcileStates(parseEntitlementStates(data), rcStates, nowMs);
+  const eff = deriveEffectivePlan(states, nowMs);
+
+  // Échéance à refléter dans `proExpiresAt` : celle du palier effectif ; à
+  // défaut celle du palier précédent (qui vient d'expirer) ; à défaut on
+  // conserve la valeur existante plutôt que d'effacer une info d'audit.
+  const fallbackExpiryMs =
+    previousLevel !== null ? states[previousLevel]?.expiresAtMs ?? null : null;
+  const effExpiryMs = eff.state?.expiresAtMs ?? fallbackExpiryMs;
+
+  const patch: Record<string, unknown> = {
+    entitlements: toFirestoreStates(states),
+    subscriptionTier: eff.active ? "paid" : "free",
+    planLevel: eff.levelId,
+    proEntitlementActive: eff.active,
+    proWillRenew: eff.state?.willRenew ?? false,
+    proExpiresAt:
+      effExpiryMs !== null ?
+        admin.firestore.Timestamp.fromMillis(effExpiryMs) :
+        (data.proExpiresAt ?? null),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  await ref.update(patch);
+
+  if (!eff.active) return "downgraded_free";
+  if (eff.levelId !== previousLevel) {
+    // Toute correction de palier par le cron signale un webhook manqué : c'est
+    // un problème d'intégration à investiguer, pas une routine.
+    logger.warn(
+      `reconcileEntitlements: level_changed ${previousLevel ?? "?"}→` +
+        `${eff.levelId ?? "?"} uid=${uid} (webhook PRODUCT_CHANGE manqué ?)`,
+    );
+    return "level_changed";
   }
-
-  if (wasActive) {
-    await ref.update({
-      subscriptionTier: "free",
-      proEntitlementActive: false,
-      proWillRenew: false,
-      proExpiresAt:
-        rcExpiryMs !== null
-          ? admin.firestore.Timestamp.fromMillis(rcExpiryMs)
-          : (data.proExpiresAt ?? null),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    return "downgraded";
-  }
-
+  if (effExpiryMs !== null && effExpiryMs !== previousExpiryMs) return "renewed";
   return "unchanged";
 }
 
 /**
- * Coeur du cron : re-vérifie les comptes actifs à échéance dépassée. Testable
- * via `fetchProExpiry` injecté.
+ * Coeur du cron : re-vérifie TOUS les comptes actifs (plus seulement ceux dont
+ * l'échéance est dépassée — un `PRODUCT_CHANGE` manqué laisse une échéance
+ * future et serait invisible autrement). Testable via `fetchStates` injecté.
  */
 export async function reconcileExpiredEntitlements(
   db: admin.firestore.Firestore,
-  fetchProExpiry: ProExpiryFetcher,
+  fetchStates: EntitlementStatesFetcher,
   nowMs: number,
   limit = BATCH_SIZE,
-): Promise<{checked: number; downgraded: number; renewed: number; failed: number}> {
+): Promise<{
+  checked: number;
+  downgradedFree: number;
+  levelChanged: number;
+  renewed: number;
+  failed: number;
+}> {
   const snap = await db
     .collection("landlords")
     .where("proEntitlementActive", "==", true)
@@ -110,21 +211,19 @@ export async function reconcileExpiredEntitlements(
     .get();
 
   let checked = 0;
-  let downgraded = 0;
+  let downgradedFree = 0;
+  let levelChanged = 0;
   let renewed = 0;
   let failed = 0;
 
   for (const doc of snap.docs) {
-    // Filtre EN MÉMOIRE : ne réconcilier que les échéances dépassées.
-    const expMs = tsToMillis(doc.data().proExpiresAt);
-    if (expMs !== null && expMs > nowMs) continue;
-
     checked++;
     const uid = doc.id;
     try {
-      const rcExpiryMs = await fetchProExpiry(uid);
-      const outcome = await reconcileLandlord(db, uid, rcExpiryMs, nowMs);
-      if (outcome === "downgraded") downgraded++;
+      const rcStates = await fetchStates(uid);
+      const outcome = await reconcileLandlord(db, uid, rcStates, nowMs);
+      if (outcome === "downgraded_free") downgradedFree++;
+      else if (outcome === "level_changed") levelChanged++;
       else if (outcome === "renewed") renewed++;
     } catch (err) {
       failed++;
@@ -132,11 +231,19 @@ export async function reconcileExpiredEntitlements(
     }
   }
 
-  return {checked, downgraded, renewed, failed};
+  return {checked, downgradedFree, levelChanged, renewed, failed};
 }
 
-/** Fetcher de production : API REST RevenueCat v1 (subscriber). */
-function makeRevenueCatFetcher(apiKey: string): ProExpiryFetcher {
+/**
+ * Fetcher de production : API REST RevenueCat v1 (subscriber).
+ *
+ * Ne retient que les entitlements déclarés dans la table, re-clés vers nos ids
+ * de palier — un entitlement étranger n'accorde jamais rien (W5). Un
+ * entitlement sans `expires_date` (accès à vie) est traité comme non actif :
+ * comportement conservé à l'identique d'avant FEAT-056, le produit ne vend
+ * aucun accès à vie.
+ */
+function makeRevenueCatFetcher(apiKey: string): EntitlementStatesFetcher {
   return async (uid) => {
     const resp = await fetch(
       `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(uid)}`,
@@ -148,10 +255,17 @@ function makeRevenueCatFetcher(apiKey: string): ProExpiryFetcher {
         entitlements?: Record<string, {expires_date?: string | null}>;
       };
     };
-    const ent = body.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
-    if (!ent || !ent.expires_date) return null;
-    const ms = Date.parse(ent.expires_date);
-    return Number.isNaN(ms) ? null : ms;
+    const entitlements = body.subscriber?.entitlements ?? {};
+    const states: Partial<Record<LevelId, {expiresMs: number | null}>> = {};
+    for (const level of LEVELS) {
+      const rcId = rcEntitlementIdFor(level.id);
+      if (rcId === null) continue; // palier sans entitlement RC créé
+      const ent = entitlements[rcId];
+      if (!ent || !ent.expires_date) continue;
+      const ms = Date.parse(ent.expires_date);
+      states[level.id] = {expiresMs: Number.isNaN(ms) ? null : ms};
+    }
+    return states;
   };
 }
 
@@ -168,7 +282,8 @@ export const reconcileEntitlements = onSchedule(
     const res = await reconcileExpiredEntitlements(db, fetcher, Date.now());
     logger.info(
       `reconcileEntitlements: checked=${res.checked} ` +
-        `downgraded=${res.downgraded} renewed=${res.renewed} failed=${res.failed}`,
+        `downgradedFree=${res.downgradedFree} levelChanged=${res.levelChanged} ` +
+        `renewed=${res.renewed} failed=${res.failed}`,
     );
   },
 );

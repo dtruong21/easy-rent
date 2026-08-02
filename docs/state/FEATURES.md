@@ -60,3 +60,4 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-052 | Feature Readiness Score (`/feature-ready`, advisory) | ✅ done | tooling | PR #100 (`tool/feature_ready.dart`) |
 | FEAT-054 | Isolation prod/staging — base Firestore `staging` (web ; Auth/Storage/Functions restent partagés) | ✅ done | account | PR #145 (impl.), PR #140 (cadrage), ADR 0003 |
 | FEAT-055 | Comparaison de scénarios de simulation (Pro) | ✅ done | simulator | PR #139 (cadrage), PR #148-#151 (impl. + responsive, 2026-07-24+27) |
+| FEAT-056 | Abonnements Pro/Max/Ultra — 3 paliers payants (grille quotas) | 🚧 wip | account, properties, leases, expenses-documents, simulator | branche `feat/056-multi-tier-subscriptions` (2026-08-02) — implem. ✅ non mergé ⏳ |

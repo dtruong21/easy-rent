@@ -727,5 +727,11 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "landlords",
+      "fieldPath": "entitlements",
+      "indexes": []
+    }
+  ]
 }

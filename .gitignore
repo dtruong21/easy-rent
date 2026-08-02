@@ -89,6 +89,12 @@ skills-lock.json
 
 # Generated Dart code
 **/*.g.dart
+# Exception (FEAT-056) : ce miroir n'est PAS produit par build_runner mais par
+# tool/gen_entitlements.dart, qui n'est pas câblé dans l'étape « Generate code »
+# de la CI. Ignoré, il serait absent d'un clone neuf et
+# scripts/check-entitlements-parity.sh échouerait avant `flutter analyze`.
+# Le committer rend en prime les changements de quotas visibles en revue de PR.
+!lib/features/auth/domain/plan_matrix.g.dart
 **/*.freezed.dart
 **/*.gr.dart
 **/*.config.dart

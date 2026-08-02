@@ -1,25 +1,24 @@
-/// Tests widget de [ProPricingPage] (`/pro`).
+/// Tests widget de [ProPricingPage] (`/pro`, FEAT-056 PR-6 — 4 offres).
 ///
 /// `Env.subscriptionsEnabled` est un `bool.fromEnvironment` (même pattern
-/// que `Env.isProd`, cf. `test/widget/profile_page_test.dart` — « APP_ENV
-/// absent en test → défaut 'dev' ») : sa valeur est figée à la compilation
-/// et ne peut pas être basculée à l'exécution dans un même run de tests.
-/// Ce fichier couvre donc l'état **par défaut `false`** (freemium MVP,
-/// juillet 2026 — cf. `lib/core/config/env.dart`), qui est celui exercé par
-/// `flutter test` en CI : checkout Stripe masqué, capture d'intérêt
-/// affichée à la place. Le chemin `true` (bouton « S'abonner » → Stripe,
-/// inchangé depuis FEAT-044e) redevient actif dès que le flag est activé au
-/// build (`--dart-define=SUBSCRIPTIONS_ENABLED=true`) — pas de nouvelle
-/// branche de code, seule cette condition en dépend
-/// (`lib/features/paid_plan/presentation/pro_pricing_page.dart`).
+/// que `Env.isProd`) : sa valeur est figée à la compilation et ne peut pas
+/// être basculée à l'exécution dans un même run de tests. Ce fichier couvre
+/// donc l'état **par défaut `false`** (freemium MVP), qui est celui exercé
+/// par `flutter test` en CI : les 3 offres payantes (Pro compris) affichent
+/// « Bientôt disponible » + capture d'intérêt au lieu d'un bouton de
+/// paiement. Le chemin `true` (Pro achetable) est couvert séparément par les
+/// tests de non-purchasabilité de Max/Ultra, qui restent vrais quel que soit
+/// `subscriptionsEnabled` (gate par palier, indépendant du gate global) —
+/// voir le groupe « Max/Ultra jamais achetables ».
 library;
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/ui/breakpoints.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
-import 'package:easyrent/features/paid_plan/application/paid_plan_interest_controller.dart';
 import 'package:easyrent/features/paid_plan/data/paid_plan_interest_repository.dart';
 import 'package:easyrent/features/paid_plan/presentation/pro_pricing_page.dart';
+import 'package:easyrent/features/paid_plan/presentation/widgets/plan_comparison_table.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,13 +40,17 @@ class _FakePaidPlanInterestRepo implements PaidPlanInterestRepository {
 
 Widget _buildPage({
   required SubscriptionTier tier,
-  required PaidPlanInterestRepository paidPlanRepo,
+  String? planLevel,
+  PaidPlanInterestRepository? paidPlanRepo,
 }) => ProviderScope(
   overrides: [
     landlordTierProvider.overrideWith(
-      (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
+      (ref) =>
+          Stream.value(LandlordTierSnapshot(tier: tier, planLevel: planLevel)),
     ),
-    paidPlanInterestRepositoryProvider.overrideWithValue(paidPlanRepo),
+    paidPlanInterestRepositoryProvider.overrideWithValue(
+      paidPlanRepo ?? _FakePaidPlanInterestRepo(),
+    ),
   ],
   child: MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -57,92 +60,256 @@ Widget _buildPage({
   ),
 );
 
+/// Fixe la taille de la fenêtre de test (patron `scenario_comparison_page_test.dart`,
+/// FEAT-055) — une largeur généreuse en hauteur pour que les 4 cartes soient
+/// visibles sans avoir à faire défiler dans les tests d'interaction (le
+/// défilement lui-même est couvert par le groupe « responsive »).
+void _setWindowSize(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 void main() {
-  group('ProPricingPage — subscriptionsEnabled=false (défaut freemium)', () {
-    testWidgets(
-      'tier free — pas de bouton Stripe, badge + notify-me affichés',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildPage(
-            tier: SubscriptionTier.free,
-            paidPlanRepo: _FakePaidPlanInterestRepo(),
-          ),
-        );
+  group('ProPricingPage — 4 cartes toujours rendues', () {
+    testWidgets('Gratuit, Pro, Max, Ultra présentes', (tester) async {
+      _setWindowSize(tester, const Size(1280, 2200));
+      await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('plan_card_free')), findsOneWidget);
+      expect(find.byKey(const Key('plan_card_pro')), findsOneWidget);
+      expect(find.byKey(const Key('plan_card_max')), findsOneWidget);
+      expect(find.byKey(const Key('plan_card_ultra')), findsOneWidget);
+      expect(find.text('Gratuit'), findsWidgets);
+      expect(find.text('Pro'), findsWidgets);
+      expect(find.text('Max'), findsWidgets);
+      expect(find.text('Ultra'), findsWidgets);
+    });
+  });
+
+  group(
+    'ProPricingPage — Max/Ultra jamais achetables (critère testable, plan §2.3-b)',
+    () {
+      testWidgets(
+        'aucun bouton de checkout ni de changement de palier pour Max/Ultra, quel que soit le tier',
+        (tester) async {
+          _setWindowSize(tester, const Size(1280, 2200));
+          for (final tier in [SubscriptionTier.free, SubscriptionTier.paid]) {
+            await tester.pumpWidget(
+              _buildPage(
+                tier: tier,
+                planLevel: tier == SubscriptionTier.paid ? 'pro' : null,
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            for (final level in ['max', 'ultra']) {
+              expect(
+                find.byKey(Key('btn_plan_subscribe_$level')),
+                findsNothing,
+                reason: 'level=$level, tier=$tier',
+              );
+              expect(
+                find.byKey(Key('btn_plan_change_$level')),
+                findsNothing,
+                reason: 'level=$level, tier=$tier',
+              );
+              expect(
+                find.byKey(Key('btn_plan_notify_$level')),
+                findsOneWidget,
+                reason: 'level=$level, tier=$tier',
+              );
+            }
+          }
+        },
+      );
+
+      testWidgets('badge « Bientôt disponible » sur Max et Ultra', (
+        tester,
+      ) async {
+        _setWindowSize(tester, const Size(1280, 2200));
+        await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('btn_pro_subscribe')), findsNothing);
-        expect(find.text('S\'abonner'), findsNothing);
         expect(
-          find.byKey(const Key('txt_pro_coming_soon_badge')),
+          find.byKey(const Key('badge_plan_coming_soon_max')),
           findsOneWidget,
         );
-        expect(find.text('Bientôt disponible'), findsOneWidget);
-        expect(find.byKey(const Key('btn_pro_notify_me')), findsOneWidget);
-        expect(find.text('Me prévenir du lancement'), findsOneWidget);
-      },
-    );
+        expect(
+          find.byKey(const Key('badge_plan_coming_soon_ultra')),
+          findsOneWidget,
+        );
+        expect(find.text('Bientôt disponible'), findsNWidgets(3));
+      });
 
-    testWidgets(
-      'tap notify-me → markInterest(pro_pricing_page) + bouton verrouillé',
-      (tester) async {
-        final repo = _FakePaidPlanInterestRepo();
+      testWidgets('prix marqué indicatif sur Max et Ultra', (tester) async {
+        _setWindowSize(tester, const Size(1280, 2200));
+        await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
+        await tester.pumpAndSettle();
+
+        expect(find.text('(indicatif)'), findsNWidgets(2));
+      });
+    },
+  );
+
+  group(
+    'ProPricingPage — subscriptionsEnabled=false (gate global, défaut freemium)',
+    () {
+      testWidgets(
+        'tier free — aucun bouton Stripe sur les 3 offres payantes, notify-me partout',
+        (tester) async {
+          _setWindowSize(tester, const Size(1280, 2200));
+          await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
+          await tester.pumpAndSettle();
+
+          for (final level in ['pro', 'max', 'ultra']) {
+            expect(find.byKey(Key('btn_plan_subscribe_$level')), findsNothing);
+            expect(find.byKey(Key('btn_plan_notify_$level')), findsOneWidget);
+          }
+          expect(find.text('Bientôt disponible'), findsNWidgets(3));
+        },
+      );
+
+      testWidgets(
+        'tap notify-me sur Pro → markInterest(pro_pricing_pro) + bouton verrouillé',
+        (tester) async {
+          _setWindowSize(tester, const Size(1280, 2200));
+          final repo = _FakePaidPlanInterestRepo();
+          await tester.pumpWidget(
+            _buildPage(tier: SubscriptionTier.free, paidPlanRepo: repo),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.ensureVisible(
+            find.byKey(const Key('btn_plan_notify_pro')),
+          );
+          await tester.tap(find.byKey(const Key('btn_plan_notify_pro')));
+          await tester.pumpAndSettle();
+
+          expect(repo.capturedFeatures, ['pro_pricing_pro']);
+
+          final btn = tester.widget<FilledButton>(
+            find.byKey(const Key('btn_plan_notify_pro')),
+          );
+          expect(btn.onPressed, isNull);
+        },
+      );
+
+      testWidgets('erreur repo → pas de faux succès, bouton retentable', (
+        tester,
+      ) async {
+        _setWindowSize(tester, const Size(1280, 2200));
+        final repo = _FakePaidPlanInterestRepo()
+          ..error = Exception('permission-denied');
         await tester.pumpWidget(
           _buildPage(tier: SubscriptionTier.free, paidPlanRepo: repo),
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('btn_pro_notify_me')));
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_plan_notify_max')),
+        );
+        await tester.tap(find.byKey(const Key('btn_plan_notify_max')));
         await tester.pumpAndSettle();
 
-        expect(repo.capturedFeatures, [proPricingInterestKey]);
-        expect(find.text('Vous serez prévenu au lancement'), findsOneWidget);
-
         final btn = tester.widget<FilledButton>(
-          find.byKey(const Key('btn_pro_notify_me')),
+          find.byKey(const Key('btn_plan_notify_max')),
         );
-        expect(btn.onPressed, isNull);
-      },
-    );
+        expect(btn.onPressed, isNotNull);
+      });
 
-    testWidgets('erreur repo → pas de faux succès, bouton retentable', (
+      testWidgets(
+        'tier paid Pro — « Votre offre actuelle » sur la carte Pro, jamais de bouton Stripe',
+        (tester) async {
+          _setWindowSize(tester, const Size(1280, 2200));
+          await tester.pumpWidget(
+            _buildPage(tier: SubscriptionTier.paid, planLevel: 'pro'),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const Key('btn_plan_current_pro')), findsOneWidget);
+          expect(find.text('Votre offre actuelle'), findsOneWidget);
+          expect(find.byKey(const Key('btn_plan_subscribe_pro')), findsNothing);
+          expect(find.byKey(const Key('btn_plan_notify_pro')), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'tier paid Max — carte Max affiche l\'offre actuelle même si Max est '
+        'non purchasable (un abonné voit toujours son propre palier)',
+        (tester) async {
+          _setWindowSize(tester, const Size(1280, 2200));
+          await tester.pumpWidget(
+            _buildPage(tier: SubscriptionTier.paid, planLevel: 'max'),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const Key('btn_plan_current_max')), findsOneWidget);
+          expect(
+            find.byKey(const Key('badge_plan_coming_soon_max')),
+            findsNothing,
+          );
+        },
+      );
+    },
+  );
+
+  group('ProPricingPage — toggle mensuel/annuel', () {
+    testWidgets('bascule sur annuel → prix annuel + badge économie affichés', (
       tester,
     ) async {
-      final repo = _FakePaidPlanInterestRepo()
-        ..error = Exception('permission-denied');
-      await tester.pumpWidget(
-        _buildPage(tier: SubscriptionTier.free, paidPlanRepo: repo),
-      );
+      _setWindowSize(tester, const Size(1280, 2200));
+      await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('btn_pro_notify_me')));
+      expect(find.text('7,99 €'), findsOneWidget);
+      expect(find.text('79 €'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('switch_plan_period')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Me prévenir du lancement'), findsOneWidget);
-      expect(
-        find.textContaining('Impossible d\'enregistrer votre intérêt'),
-        findsOneWidget,
-      );
+      expect(find.text('79 €'), findsOneWidget);
+      expect(find.text('7,99 €'), findsNothing);
+      expect(find.text('2 mois offerts'), findsWidgets);
+    });
+  });
 
-      final btn = tester.widget<FilledButton>(
-        find.byKey(const Key('btn_pro_notify_me')),
-      );
-      expect(btn.onPressed, isNotNull);
+  group('ProPricingPage — responsive (FEAT-056 §8.1, patron FEAT-055)', () {
+    testWidgets('mobile (< 600px) — cartes empilées, pas de tableau', (
+      tester,
+    ) async {
+      _setWindowSize(tester, const Size(390, 3600));
+      await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PlanComparisonTable), findsNothing);
+      expect(find.byKey(const Key('plan_card_pro')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tablette (600–1024px) — cartes en grille, pas de tableau', (
+      tester,
+    ) async {
+      _setWindowSize(tester, const Size(800, 3600));
+      await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PlanComparisonTable), findsNothing);
+      expect(find.byKey(const Key('plan_card_ultra')), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets(
-      'tier paid — « Abonnement actif », ni bouton Stripe ni notify-me',
+      'desktop (>= ${Breakpoints.tablet}px) — 4 cartes en ligne + tableau comparatif',
       (tester) async {
-        await tester.pumpWidget(
-          _buildPage(
-            tier: SubscriptionTier.paid,
-            paidPlanRepo: _FakePaidPlanInterestRepo(),
-          ),
-        );
+        _setWindowSize(tester, const Size(1280, 2200));
+        await tester.pumpWidget(_buildPage(tier: SubscriptionTier.free));
         await tester.pumpAndSettle();
 
-        expect(find.text('Abonnement actif'), findsOneWidget);
-        expect(find.byKey(const Key('btn_pro_subscribe')), findsNothing);
-        expect(find.byKey(const Key('btn_pro_notify_me')), findsNothing);
+        expect(find.byType(PlanComparisonTable), findsOneWidget);
+        expect(tester.takeException(), isNull);
       },
     );
   });

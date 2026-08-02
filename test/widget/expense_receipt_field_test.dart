@@ -8,6 +8,8 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
@@ -101,6 +103,15 @@ void main() {
           documentsRepositoryProvider.overrideWithValue(
             _FakeDocumentsRepository(),
           ),
+          // FEAT-056 : le plafond de taille du justificatif est désormais
+          // différencié par palier — `ExpenseReceiptField` lit
+          // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+          // `landlordTierProvider`.
+          landlordTierProvider.overrideWith(
+            (ref) => Stream.value(
+              const LandlordTierSnapshot(tier: SubscriptionTier.free),
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -120,6 +131,11 @@ void main() {
             documentsRepositoryProvider.overrideWithValue(
               _FakeDocumentsRepository(),
             ),
+            landlordTierProvider.overrideWith(
+              (ref) => Stream.value(
+                const LandlordTierSnapshot(tier: SubscriptionTier.free),
+              ),
+            ),
           ],
         );
         addTearDown(container.dispose);
@@ -138,6 +154,11 @@ void main() {
           overrides: [
             documentsRepositoryProvider.overrideWithValue(
               _FakeDocumentsRepository(),
+            ),
+            landlordTierProvider.overrideWith(
+              (ref) => Stream.value(
+                const LandlordTierSnapshot(tier: SubscriptionTier.free),
+              ),
             ),
           ],
         );
@@ -163,6 +184,15 @@ void main() {
         overrides: [
           documentsRepositoryProvider.overrideWithValue(
             _FakeDocumentsRepository(),
+          ),
+          // FEAT-056 : le plafond de taille du justificatif est désormais
+          // différencié par palier — `ExpenseReceiptField` lit
+          // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+          // `landlordTierProvider`.
+          landlordTierProvider.overrideWith(
+            (ref) => Stream.value(
+              const LandlordTierSnapshot(tier: SubscriptionTier.free),
+            ),
           ),
         ],
       );
@@ -194,6 +224,11 @@ void main() {
             documentsRepositoryProvider.overrideWithValue(
               _FakeDocumentsRepository(),
             ),
+            landlordTierProvider.overrideWith(
+              (ref) => Stream.value(
+                const LandlordTierSnapshot(tier: SubscriptionTier.free),
+              ),
+            ),
           ],
         );
         addTearDown(container.dispose);
@@ -221,6 +256,15 @@ void main() {
         overrides: [
           documentsRepositoryProvider.overrideWithValue(
             _FakeDocumentsRepository(),
+          ),
+          // FEAT-056 : le plafond de taille du justificatif est désormais
+          // différencié par palier — `ExpenseReceiptField` lit
+          // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+          // `landlordTierProvider`.
+          landlordTierProvider.overrideWith(
+            (ref) => Stream.value(
+              const LandlordTierSnapshot(tier: SubscriptionTier.free),
+            ),
           ),
         ],
       );
@@ -256,6 +300,15 @@ void main() {
           documentsRepositoryProvider.overrideWithValue(
             _FakeDocumentsRepository(),
           ),
+          // FEAT-056 : le plafond de taille du justificatif est désormais
+          // différencié par palier — `ExpenseReceiptField` lit
+          // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+          // `landlordTierProvider`.
+          landlordTierProvider.overrideWith(
+            (ref) => Stream.value(
+              const LandlordTierSnapshot(tier: SubscriptionTier.free),
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -288,6 +341,11 @@ void main() {
           overrides: [
             documentsRepositoryProvider.overrideWithValue(
               _FakeDocumentsRepository(),
+            ),
+            landlordTierProvider.overrideWith(
+              (ref) => Stream.value(
+                const LandlordTierSnapshot(tier: SubscriptionTier.free),
+              ),
             ),
           ],
         );
@@ -332,6 +390,11 @@ void main() {
             documentsRepositoryProvider.overrideWithValue(
               _FakeDocumentsRepository(),
             ),
+            landlordTierProvider.overrideWith(
+              (ref) => Stream.value(
+                const LandlordTierSnapshot(tier: SubscriptionTier.free),
+              ),
+            ),
           ],
         );
         addTearDown(container.dispose);
@@ -357,6 +420,15 @@ void main() {
         overrides: [
           documentsRepositoryProvider.overrideWithValue(
             _FakeDocumentsRepository(),
+          ),
+          // FEAT-056 : le plafond de taille du justificatif est désormais
+          // différencié par palier — `ExpenseReceiptField` lit
+          // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+          // `landlordTierProvider`.
+          landlordTierProvider.overrideWith(
+            (ref) => Stream.value(
+              const LandlordTierSnapshot(tier: SubscriptionTier.free),
+            ),
           ),
         ],
       );

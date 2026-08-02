@@ -8,20 +8,20 @@ Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c). Fichier call
 
 **ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
 
-### `createLease` (FEAT-042)
+### `createLease` (FEAT-042, étendu multi-paliers FEAT-056)
 Client invoke, isFullyAuthed only.
 - **Params** : `propertyId, tenantId, rentAmountCents, chargesAmountCents, nonRecoverableChargesCents` (FEAT-036), `chargeMode` (FEAT-042, optionnel, résolu/enforced serveur), `startDate, endDate, status, leaseType, paymentDay, paymentMethod, depositAmountCents, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone`.
-- **Validations** : auth uid présent ; FK GET `properties/{propertyId}` + `tenants/{tenantId}` ; ownership `properties.landlordId==tenants.landlordId==uid` ; FEAT-036 `nonRecoverableChargesCents ≥ 0` (pas de total constraint) ; **FEAT-042** `resolveChargeMode(leaseType, chargeMode)` → canonique (coerce type↔mode, rejette incompatible) ; **Forfait** → force `nonRecoverableChargesCents=0` (ventilation interdite) ; `startDate <= endDate` ; status inference `active|terminated|archived`.
-- **Mutations** (transact) : CREATE `leases/{id}` snapshot denorm (`propertyName, tenantFirstName/LastName`…) ; persiste `chargesAmountCents` (récupérable) + `nonRecoverableChargesCents` (≥0 ou forcé 0 si forfait) ; persiste `chargeMode` résolu ; si `active` → INCREMENT `properties.activeLeaseCount` + `tenants.activeLeaseCount`.
-- **Retour** : `{leaseId}`. **Erreurs** : PERMISSION_DENIED, NOT_FOUND, INVALID_ARGUMENT, FAILED_PRECONDITION (type↔mode conflict).
+- **Validations** : auth uid présent ; FK GET `properties/{propertyId}` + `tenants/{tenantId}` ; ownership `properties.landlordId==tenants.landlordId==uid` ; FEAT-036 `nonRecoverableChargesCents ≥ 0` (pas de total constraint) ; **FEAT-042** `resolveChargeMode(leaseType, chargeMode)` → canonique (coerce type↔mode, rejette incompatible) ; **Forfait** → force `nonRecoverableChargesCents=0` (ventilation interdite) ; `startDate <= endDate` ; status inference `active|terminated|archived` ; **FEAT-056** si `active` → vérifier quota `activeLeases` du plan effectif avant increment.
+- **Mutations** (transact) : CREATE `leases/{id}` snapshot denorm (`propertyName, tenantFirstName/LastName`…) ; persiste `chargesAmountCents` (récupérable) + `nonRecoverableChargesCents` (≥0 ou forcé 0 si forfait) ; persiste `chargeMode` résolu ; si `active` → INCREMENT `properties.activeLeaseCount` + `tenants.activeLeaseCount` + `landlords.activeLeasesCount`.
+- **Retour** : `{leaseId}`. **Erreurs** : PERMISSION_DENIED, NOT_FOUND, INVALID_ARGUMENT, FAILED_PRECONDITION (type↔mode conflict), RESOURCE_EXHAUSTED (`lease_limit_reached` si FEAT-056 quota saturé).
 
-### `updateLease` (FEAT-042, PR #94)
+### `updateLease` (FEAT-042, PR #94 ; étendu FEAT-056)
 - **Mutable** : `rentAmountCents, chargesAmountCents, nonRecoverableChargesCents` (FEAT-036), `endDate, status, leaseType, chargeMode` (FEAT-042), `depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone`.
 - **Logique** : fetch + ownership ; `nonRecoverableChargesCents` borné (≥0) + re-validation charges cross-entity ; **FEAT-042 (inconditionnel)** `resolveChargeMode(finalLeaseType, requestedChargeMode)` même si patch n'y touche pas (baux legacy appliquent le forçage) — si `leaseType` inchangé → `requested` du patch ou ancien persisté si omis ; si `leaseType` change → `requested` du patch seul (ancien ignoré) ; **backfill lazy** persiste toujours le mode résolu (matérialise legacy à la 1ère mutation) ; **Forfait** → force `nonRecoverableChargesCents=0` (inclus baux legacy mobilité).
 - **Réactivation (PR #94, 2026-07-10)** : Transition `active` (nouvelle status) depuis `terminated|archived` verrouille :
   - Le bien (propertyId) et locataire (tenantId) doivent exister + ne pas être soft-deleted (failed-precondition sinon) — prévient la résurrection de baux pointant vers entités supprimées.
   - Recompte fail-closed du plafond `landlords.activeLeasesCount` si compteur absent (legacy).
-  - Vérification atomique du plafond free-tier dans la transaction → RESOURCE_EXHAUSTED (lease_limit_reached) si saturé.
+  - **FEAT-056** : vérification atomique du quota `activeLeases` du plan effectif dans la transaction → RESOURCE_EXHAUSTED (`lease_limit_reached`) si saturé.
 - **Compteurs (FEAT-044)** : si `active→terminated` ou `terminated→active` (delta ≠ 0) → DECREMENT/INCREMENT `activeLeaseCount` sur properties/tenants et `activeLeasesCount` sur landlords.
 - **Retour** : `{updated:true}`.
 
@@ -36,10 +36,9 @@ Client invoke, isFullyAuthed only.
 
 **`resolveChargeMode`** : `unfurnished` → forcé `'provisions'` (art. 23 loi 6/7/1989 ; rejette forfait explicite) ; `mobility` → forcé `'forfait'` (loi ELAN art. 25-18 ; rejette provisions explicite) ; `furnished`|`student` → libre, défaut `'provisions'` si omis.
 
-**Plafonds FEAT-044** (par tier) :
-- **free** : 2 baux actifs (+ 2 biens, 3 locataires)
-- **paid** : illimité
-- **anonymous/autres** : 0 (defense-in-depth)
+**Quotas** (FEAT-056, source `config/entitlements.json`) :
+- **activeLeases** : anonymous=0 · free=2 · pro=5 · max=15 · ultra=null (illimité)
+Effective plan déduit de `(subscriptionTier, planLevel)` par `resolvePlan()` (null planLevel sur `paid` → pro).
 
 ## Triggers
 

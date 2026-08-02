@@ -1,6 +1,12 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'checkout_repository.dart'
+    show LevelNotPurchasableException, PriceNotConfiguredException;
+
+export 'checkout_repository.dart'
+    show LevelNotPurchasableException, PriceNotConfiguredException;
+
 /// Contrat testable de gestion de l'abonnement Baillan Pro (FEAT-044f) —
 /// wrappe la callable `manageSubscription(action)` (europe-west1). Calque
 /// exact de [CheckoutRepository] (`checkout_repository.dart`) : interface
@@ -16,6 +22,24 @@ abstract interface class SubscriptionRepository {
   /// Annule une résiliation programmée (`cancel_at_period_end=false`).
   /// Idempotent côté serveur (noop si déjà renouvelable).
   Future<void> reactivate();
+
+  /// Change de palier en libre-service (FEAT-056 §4.4) — `action:
+  /// 'change_plan'` de la même callable `manageSubscription`.
+  ///
+  /// Le client n'envoie **jamais** d'identifiant Stripe : le serveur résout
+  /// l'abonnement à modifier via `metadata['rc_app_user_id'] == uid`
+  /// (`pickManageableSubscription`, déjà IDOR-proof). Le changement est
+  /// **immédiat et proraté** (montée facturée au prorata, descente créditée
+  /// sur la facture suivante — jamais de remboursement) : l'UI appelante doit
+  /// l'annoncer explicitement **avant** de confirmer (dialog dédié côté
+  /// présentation, pas ici). N'applique rien côté Firestore elle-même — le
+  /// palier reste accordé par le seul webhook RevenueCat (`PRODUCT_CHANGE`),
+  /// même règle que `cancel`/`reactivate` (ADR 0002).
+  ///
+  /// Idempotent côté serveur : `status: 'noop'` si le price cible est déjà
+  /// celui en cours (aucun appel Stripe, aucun event RC parasite) — ne lève
+  /// rien dans ce cas.
+  Future<void> changePlan({required String level, required String period});
 }
 
 class FirebaseSubscriptionRepository implements SubscriptionRepository {
@@ -29,13 +53,21 @@ class FirebaseSubscriptionRepository implements SubscriptionRepository {
   @override
   Future<void> reactivate() => _call('reactivate');
 
-  Future<void> _call(String action) async {
+  @override
+  Future<void> changePlan({required String level, required String period}) =>
+      _call('change_plan', level: level, period: period);
+
+  Future<void> _call(String action, {String? level, String? period}) async {
     final callable = _functions.httpsCallable(
       'manageSubscription',
       options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
     );
     try {
-      await callable.call<Map<String, dynamic>>({'action': action});
+      await callable.call<Map<String, dynamic>>({
+        'action': action,
+        'level': ?level,
+        'period': ?period,
+      });
     } on FirebaseFunctionsException catch (e) {
       throw _mapError(e);
     }
@@ -46,9 +78,18 @@ class FirebaseSubscriptionRepository implements SubscriptionRepository {
   /// ([FirebaseFunctionsException]) ne doit jamais fuiter au-delà de cette
   /// couche (même discipline que `FirestoreReceiptsRepository.generate`).
   Exception _mapError(FirebaseFunctionsException e) {
+    final message = e.message ?? '';
     if (e.code == 'failed-precondition' &&
-        (e.message?.contains('no_active_web_subscription') ?? false)) {
+        message.contains('no_active_web_subscription')) {
       return const NoActiveWebSubscriptionException();
+    }
+    if (e.code == 'failed-precondition' &&
+        message.contains('price_not_configured')) {
+      return const PriceNotConfiguredException();
+    }
+    if (e.code == 'failed-precondition' &&
+        message.contains('level_not_purchasable')) {
+      return const LevelNotPurchasableException();
     }
     if (e.code == 'unauthenticated') {
       return const SubscriptionUnauthenticatedException();
@@ -84,6 +125,13 @@ class SubscriptionUnauthenticatedException implements Exception {
   @override
   String toString() => 'SubscriptionUnauthenticatedException';
 }
+
+/// [PriceNotConfiguredException] et [LevelNotPurchasableException] —
+/// réutilisées telles quelles depuis `checkout_repository.dart` (`show`
+/// ci-dessus) : `change_plan` et `createCheckoutSession` peuvent renvoyer
+/// exactement les mêmes codes `failed-precondition`, une seule paire de
+/// classes domaine suffit (sinon `pro_pricing_page.dart`, qui importe les
+/// deux repositories, aurait un import ambigu).
 
 /// Erreur générique (réseau, panne Stripe, code non mappé...).
 class SubscriptionException implements Exception {

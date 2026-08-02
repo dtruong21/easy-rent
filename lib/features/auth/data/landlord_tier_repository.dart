@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/firestore_provider.dart';
 import '../application/auth_session_provider.dart';
+import '../domain/plan_entitlement.dart';
+import '../domain/plan_matrix.g.dart';
 import '../domain/subscription_tier.dart';
 
 /// Snapshot minimal des champs `landlords/{uid}` pertinents pour le tier et
@@ -15,6 +17,7 @@ import '../domain/subscription_tier.dart';
 class LandlordTierSnapshot {
   const LandlordTierSnapshot({
     required this.tier,
+    this.planLevel,
     this.anonExpiresAt,
     this.proWillRenew,
     this.proExpiresAt,
@@ -23,6 +26,14 @@ class LandlordTierSnapshot {
   });
 
   final SubscriptionTier tier;
+
+  /// FEAT-056 — valeur brute de `landlords/{uid}.planLevel` (`'pro'` |
+  /// `'max'` | `'ultra'` | `null`), écrite par le webhook RevenueCat / le
+  /// cron de réconciliation, jamais par le client. Ne PAS lire directement :
+  /// passer par [plan], qui applique le grandfathering (I3) et le fail-UP
+  /// (I4) — un compte `paid` antérieur à FEAT-056 ou un palier inconnu de
+  /// cette build doivent rester lus comme au moins Pro.
+  final String? planLevel;
 
   /// `null` pour un compte non-anonyme. Pour un anonyme, date d'expiration
   /// glissante (14 jours depuis la dernière activité).
@@ -53,6 +64,12 @@ class LandlordTierSnapshot {
   /// vérité pour le gating — ce champ n'est exposé que pour un usage futur
   /// diagnostique/affichage, non consommé par [SubscriptionSection] v1.
   final bool? proEntitlementActive;
+
+  /// Droits effectifs (classe d'accès + palier commercial), dérivés selon
+  /// [PlanLevel.fromRaw] (FEAT-056 §1.4, invariants I1/I3/I4) — c'est le seul
+  /// point de lecture du palier à utiliser côté UI.
+  PlanEntitlement get plan =>
+      PlanEntitlement.fromRaw(tier: tier, rawPlanLevel: planLevel);
 }
 
 /// Contrat testable — wrappe l'accès Firestore brut. Séparé pour permettre
@@ -77,6 +94,7 @@ class FirestoreLandlordTierRepository implements LandlordTierRepository {
       final proExpiresAtTs = data['proExpiresAt'] as Timestamp?;
       return LandlordTierSnapshot(
         tier: SubscriptionTier.fromRaw(rawTier),
+        planLevel: data['planLevel'] as String?,
         anonExpiresAt: anonExpiresAtTs?.toDate(),
         proWillRenew: data['proWillRenew'] as bool?,
         proExpiresAt: proExpiresAtTs?.toDate(),
@@ -103,4 +121,29 @@ final landlordTierProvider = StreamProvider<LandlordTierSnapshot?>((ref) {
   final uid = asyncUser.valueOrNull?.uid;
   if (uid == null) return Stream.value(null);
   return ref.watch(landlordTierRepositoryProvider).watch(uid);
+});
+
+/// Droits effectifs du landlord connecté (FEAT-056 §1.5/§8.6).
+///
+/// Fail-safe : tant que [landlordTierProvider] n'a pas résolu (chargement
+/// initial, déconnecté, erreur réseau), retombe sur [SubscriptionTier.anonymous]
+/// — même convention que les lectures directes de `.valueOrNull?.tier ?? …`
+/// historiquement dispersées dans les widgets. Un widget qui doit distinguer
+/// « pas encore résolu » de « non payant » (ex. `SavedScenariosRow`, pour ne
+/// pas flasher un cadenas à un abonné Pro pendant le chargement) continue de
+/// lire [landlordTierProvider] directement via son `AsyncValue`.
+const _anonymousPlan = PlanEntitlement(tier: SubscriptionTier.anonymous);
+
+final planEntitlementProvider = Provider<PlanEntitlement>((ref) {
+  return ref.watch(landlordTierProvider).valueOrNull?.plan ?? _anonymousPlan;
+});
+
+/// Plafond du quota [quota] pour le compte connecté. `null` = illimité.
+final quotaLimitProvider = Provider.family<int?, PlanQuota>((ref, quota) {
+  return ref.watch(planEntitlementProvider).quota(quota);
+});
+
+/// Le compte connecté a-t-il droit à [feature] ?
+final hasFeatureProvider = Provider.family<bool, PlanFeature>((ref, feature) {
+  return ref.watch(planEntitlementProvider).has(feature);
 });

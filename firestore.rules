@@ -97,7 +97,14 @@ service cloud.firestore {
         // empêche d'initialiser un compteur négatif pour contourner le gate.
         && request.resource.data.get('activePropertiesCount', 0) == 0
         && request.resource.data.get('activeTenantsCount', 0) == 0
-        && request.resource.data.get('activeLeasesCount', 0) == 0;
+        && request.resource.data.get('activeLeasesCount', 0) == 0
+        // FEAT-056 : le provisioning est 100 % client — on ferme la porte à la
+        // CRÉATION, pas seulement à la mise à jour. `subscriptionTier` est déjà
+        // contraint à 'free' ci-dessus, mais un doc provisionné avec
+        // `planLevel: 'ultra'` serait une bombe à retardement le jour où un
+        // chemin de lecture ferait confiance au palier seul.
+        && request.resource.data.get('planLevel', null) == null
+        && !request.resource.data.keys().hasAny(['entitlements']);
 
       // CREATE (anonyme, BAILLAN-M1) : defense-in-depth — en pratique le
       // doc est provisionné par la Cloud Function `handleNewUser`
@@ -119,7 +126,11 @@ service cloud.firestore {
         // FEAT-044 : idem — compteur de biens honnête (0 ou absent) à la création.
         && request.resource.data.get('activePropertiesCount', 0) == 0
         && request.resource.data.get('activeTenantsCount', 0) == 0
-        && request.resource.data.get('activeLeasesCount', 0) == 0;
+        && request.resource.data.get('activeLeasesCount', 0) == 0
+        // FEAT-056 : un anonyme ne peut de toute façon pas être payant (le
+        // webhook l'ignore), mais la défense en profondeur coûte deux lignes.
+        && request.resource.data.get('planLevel', null) == null
+        && !request.resource.data.keys().hasAny(['entitlements']);
 
       // UPDATE (compte complet) : profil propre. RGPD consent versionné,
       // identifiants et `subscriptionTier`/`isAnonymous` immuables côté
@@ -157,7 +168,17 @@ service cloud.firestore {
         && request.resource.data.get('proStore', '') == resource.data.get('proStore', '')
         && request.resource.data.get('proProductId', '') == resource.data.get('proProductId', '')
         && request.resource.data.get('proSince', null) == resource.data.get('proSince', null)
-        && request.resource.data.get('proLastEventAtMs', 0) == resource.data.get('proLastEventAtMs', 0);
+        && request.resource.data.get('proLastEventAtMs', 0) == resource.data.get('proLastEventAtMs', 0)
+        // FEAT-056 : le palier commercial et l'état des entitlements sont
+        // écrits EXCLUSIVEMENT par revenueCatWebhook / reconcileEntitlements
+        // (Admin SDK, qui bypasse les rules). Même raisonnement que les champs
+        // pro*, avec un enjeu PLUS élevé : hier forcer `subscriptionTier:
+        // 'paid'` était le seul gain possible ; demain `planLevel: 'ultra'` est
+        // un gain gradué, donc une cible plus attractive. Le client n'a JAMAIS
+        // besoin d'écrire son palier — pas même pour l'affichage optimiste
+        // post-checkout, qui doit attendre le webhook.
+        && request.resource.data.get('planLevel', null) == resource.data.get('planLevel', null)
+        && request.resource.data.get('entitlements', {}) == resource.data.get('entitlements', {});
 
       // UPDATE (anonyme, BAILLAN-M1) : limité aux champs que le renewer
       // d'expiration et l'app cliente ont besoin de toucher — jamais
@@ -196,7 +217,17 @@ service cloud.firestore {
         && request.resource.data.get('proStore', '') == resource.data.get('proStore', '')
         && request.resource.data.get('proProductId', '') == resource.data.get('proProductId', '')
         && request.resource.data.get('proSince', null) == resource.data.get('proSince', null)
-        && request.resource.data.get('proLastEventAtMs', 0) == resource.data.get('proLastEventAtMs', 0);
+        && request.resource.data.get('proLastEventAtMs', 0) == resource.data.get('proLastEventAtMs', 0)
+        // FEAT-056 : le palier commercial et l'état des entitlements sont
+        // écrits EXCLUSIVEMENT par revenueCatWebhook / reconcileEntitlements
+        // (Admin SDK, qui bypasse les rules). Même raisonnement que les champs
+        // pro*, avec un enjeu PLUS élevé : hier forcer `subscriptionTier:
+        // 'paid'` était le seul gain possible ; demain `planLevel: 'ultra'` est
+        // un gain gradué, donc une cible plus attractive. Le client n'a JAMAIS
+        // besoin d'écrire son palier — pas même pour l'affichage optimiste
+        // post-checkout, qui doit attendre le webhook.
+        && request.resource.data.get('planLevel', null) == resource.data.get('planLevel', null)
+        && request.resource.data.get('entitlements', {}) == resource.data.get('entitlements', {});
 
       // Soft-delete via Callable `softDeleteLandlord`. La purge des comptes
       // anonymes expirés passe par la Cloud Function planifiée
@@ -337,23 +368,23 @@ service cloud.firestore {
     }
 
     // ====================================================================
-    // investment_scenarios/{id}   — CRUD direct (pas de cross-entity)
+    // investment_scenarios/{id}   — création CF-exclusive, update direct
     // ====================================================================
     match /investment_scenarios/{id} {
       allow get: if isOwner(resource.data.landlordId) && isActive(resource);
       // Cf. commentaire properties (audit FEAT-045) : list owner-scoped.
       allow list: if isOwner(resource.data.landlordId);
 
-      allow create: if isSignedIn()
-        && request.resource.data.landlordId == request.auth.uid
-        && request.resource.data.deletedAt == null
-        && request.resource.data.id == id
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 120
-        && request.resource.data.schemaVersion is int
-        && request.resource.data.schemaVersion > 0
-        && request.resource.data.scenarioJson is map;
+      // FEAT-056 (PR-2b) : création CF-exclusive via la Callable
+      // `createScenario` (Admin SDK, bypasse les rules) — elle impose le
+      // plafond de scénarios du palier (`quotaLimit(plan, 'scenarios')`).
+      // C'était le DERNIER quota appliqué par le client seul : le nombre de
+      // scénarios devenant un différenciateur commercial entre Pro, Max et
+      // Ultra, un plafond non vérifié serveur serait contournable en écrivant
+      // le document soi-même. Les rules ne savent ni compter ni agréger, d'où
+      // la callable. La validation de forme que faisait cette rule vit
+      // désormais dans `parseScenarioInputs` (functions/src/callable/scenarios.ts).
+      allow create: if false;
 
       allow update: if isOwner(resource.data.landlordId)
         && isActive(resource)

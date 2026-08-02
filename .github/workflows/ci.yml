@@ -34,6 +34,17 @@ jobs:
       - name: Generate code (freezed / json_serializable)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      # FEAT-056 — la grille de droits (quotas/features par palier) a une
+      # SOURCE CANONIQUE UNIQUE, config/entitlements.json, d'où sont générés le
+      # miroir Dart et le miroir TypeScript. Sans cette garde, client et
+      # serveur peuvent diverger silencieusement sur un plafond (risque R1 du
+      # plan : l'UI autorise ce que la Cloud Function refuse). Le script
+      # relance les DEUX générateurs (dart + node, tous deux présents sur ce
+      # runner) et échoue si un miroir est périmé, édité à la main, ou si les
+      # deux sourceSha divergent.
+      - name: Check entitlements parity (FEAT-056)
+        run: bash scripts/check-entitlements-parity.sh
+
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
 

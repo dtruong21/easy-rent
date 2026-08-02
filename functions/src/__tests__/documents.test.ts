@@ -40,10 +40,11 @@ const baseInput = {
 };
 
 /**
- * Landlord propriétaire des documents. Semé en **`paid`** (illimité) par défaut
- * → le gating de quota (FEAT-044) n'interfère PAS avec les tests de validation
- * ci-dessous. Même convention que `lease_payment.test.ts`. Les tests de quota
- * re-sèment explicitement le tier voulu.
+ * Landlord propriétaire des documents. Semé en **`paid`** par défaut (dérivé en
+ * `pro` : 50 documents, 10 Mio par fichier) → le gating de quota (FEAT-044)
+ * n'interfère PAS avec les tests de validation ci-dessous, qui ne sèment aucun
+ * document et restent sous la taille max. Même convention que
+ * `lease_payment.test.ts`. Les tests de quota re-sèment le tier voulu.
  */
 function seedLandlord(
   tier = "paid",
@@ -372,11 +373,22 @@ describe("createDocument — gating quota documents (FEAT-044)", () => {
     });
   });
 
-  it("paid → illimité (crée même bien au-delà de 10)", async () => {
+  it("paid (→ pro) : crée au-delà de 10, mais reste borné à 50", async () => {
+    // PR-7 : les paliers payants ne sont plus illimités. Un doc `paid` sans
+    // `planLevel` se dérive en `pro` → plafond 50 documents.
     seedLandlord("paid");
-    seedDocuments(50);
+    seedDocuments(49);
     const result = await callCreate();
     expect(result.documentId).toBeTruthy();
+  });
+
+  it("paid (→ pro) AU plafond (50/50) → refus resource-exhausted", async () => {
+    seedLandlord("paid");
+    seedDocuments(50);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
   });
 
   it("anonymous → refus même à 0 document (registre réservé aux comptes)", async () => {
@@ -422,5 +434,263 @@ describe("createDocument — gating quota documents (FEAT-044)", () => {
         }),
       ),
     ).rejects.toMatchObject({code: "not-found"});
+  });
+});
+
+// ==========================================================================
+// FEAT-056 — quota documentaire résolu sur le PALIER EFFECTIF. Additif : les
+// cas free/paid/anonymous ci-dessus restent la référence de non-régression.
+// ==========================================================================
+describe("createDocument — palier effectif (FEAT-056)", () => {
+  /** Landlord payant avec un palier commercial explicite. */
+  function seedPlan(tier: string, planLevel: string | null) {
+    const data: Record<string, unknown> = {
+      id: LANDLORD_A,
+      landlordId: LANDLORD_A,
+      subscriptionTier: tier,
+      deletedAt: null,
+    };
+    if (planLevel !== null) data.planLevel = planLevel;
+    fakeDb.seed(`landlords/${LANDLORD_A}`, data);
+  }
+
+  function callCreate() {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+    return createDocument.run(
+      makeRequest(LANDLORD_A, {
+        ...baseInput,
+        leaseId: "lease-1",
+        category: "bail_signe",
+      }),
+    );
+  }
+
+  it("paid SANS planLevel (abonné d'avant FEAT-056) → servi aux plafonds pro", async () => {
+    // I3 : dérivation en `pro`, donc 50 documents — plus illimité depuis PR-7.
+    seedPlan("paid", null);
+    seedDocuments(49);
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", null);
+    seedDocuments(50);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
+  });
+
+  it("chaque palier payant est servi par SA propre clé de table", async () => {
+    // Plafonds différenciés (50 / 150 / illimité) : à 50 documents, pro refuse
+    // et max accepte. Un gating indexé sur la classe d'accès `paid` rendrait
+    // les trois paliers indiscernables — ce test le détecte.
+    const documentLimits: Array<[string, number | null]> = [
+      ["pro", 50],
+      ["max", 150],
+      ["ultra", null],
+    ];
+    for (const [level, limit] of documentLimits) {
+      // Juste SOUS le plafond (ou très haut si illimité) → passe.
+      fakeDb = new FakeFirestore();
+      fakeAdminFirestoreHolder.db = fakeDb;
+      seedPlan("paid", level);
+      seedDocuments(limit === null ? 400 : limit - 1);
+      const result = await callCreate();
+      expect(result.documentId).toBeTruthy();
+
+      if (limit === null) continue; // ultra : aucun plafond à franchir
+      // AU plafond → refus.
+      fakeDb = new FakeFirestore();
+      fakeAdminFirestoreHolder.db = fakeDb;
+      seedPlan("paid", level);
+      seedDocuments(limit);
+      await expect(callCreate()).rejects.toMatchObject({
+        code: "resource-exhausted",
+        message: "document_limit_reached",
+      });
+    }
+  });
+
+  it("planLevel inconnu sur un compte payant → servi comme pro (I4)", async () => {
+    seedPlan("paid", "quantum");
+    seedDocuments(49);
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", "quantum");
+    seedDocuments(50);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
+  });
+
+  it("planLevel posé sur un compte FREE ne débloque rien", async () => {
+    seedPlan("free", "ultra");
+    seedDocuments(10);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
+  });
+});
+
+// ==========================================================================
+// PR-7b — `documentMaxBytes` câblé sur la table. Quota de TAILLE (unit
+// `bytes`), à ne jamais confondre avec le compteur `documents` ci-dessus : ces
+// tests ne sèment AUCUN document et ne jouent que sur `sizeBytes`.
+// ==========================================================================
+describe("createDocument — taille max par fichier (PR-7b)", () => {
+  const MIB = 1024 * 1024;
+
+  function seedPlan(tier: string, planLevel: string | null) {
+    const data: Record<string, unknown> = {
+      id: LANDLORD_A,
+      landlordId: LANDLORD_A,
+      subscriptionTier: tier,
+      deletedAt: null,
+    };
+    if (planLevel !== null) data.planLevel = planLevel;
+    fakeDb.seed(`landlords/${LANDLORD_A}`, data);
+  }
+
+  /** Nombre de docs Firestore écrits sous `documents/` (aucun seed ici). */
+  function writtenDocumentCount(): number {
+    return [...fakeDb.store.keys()].filter((k) => k.startsWith("documents/"))
+      .length;
+  }
+
+  /** Upload d'un fichier de [sizeBytes] octets par LANDLORD_A. */
+  function callCreate(sizeBytes: number) {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+    return createDocument.run(
+      makeRequest(LANDLORD_A, {
+        ...baseInput,
+        sizeBytes,
+        leaseId: "lease-1",
+        category: "bail_signe",
+      }),
+    );
+  }
+
+  // Les trois régimes de la grille : 10 Mio (free & pro), 25 Mio (max),
+  // 50 Mio (ultra). Chaque palier accepte PILE son plafond et refuse un octet
+  // de plus — c'est la borne exacte qui prouve que la table est bien lue.
+  const regimes: Array<[string, string | null, number]> = [
+    ["free", null, 10 * MIB],
+    ["paid", "pro", 10 * MIB],
+    ["paid", "max", 25 * MIB],
+    ["paid", "ultra", 50 * MIB],
+  ];
+
+  for (const [tier, planLevel, limitBytes] of regimes) {
+    const label = planLevel ?? tier;
+    const mib = limitBytes / MIB;
+
+    it(`${label} : un fichier de PILE ${mib} Mio passe`, async () => {
+      seedPlan(tier, planLevel);
+      const result = await callCreate(limitBytes);
+      expect(result.documentId).toBeTruthy();
+    });
+
+    it(`${label} : un octet au-dessus de ${mib} Mio → file_too_large`, async () => {
+      seedPlan(tier, planLevel);
+      await expect(callCreate(limitBytes + 1)).rejects.toMatchObject({
+        code: "resource-exhausted",
+        message: "file_too_large",
+      });
+      // Aucun document Firestore ne doit avoir été écrit.
+      expect(writtenDocumentCount()).toBe(0);
+    });
+  }
+
+  it("le refus porte le plafond APPLICABLE À L'APPELANT, pas un plafond global", async () => {
+    // C'est la donnée dont le client a besoin pour écrire « votre palier
+    // accepte N Mo » sans redupliquer la grille côté Dart.
+    // 20 Mio : trop gros pour Pro (10), accepté par Max (25) → upsell Max.
+    seedPlan("paid", "pro");
+    await expect(callCreate(20 * MIB)).rejects.toMatchObject({
+      message: "file_too_large",
+      details: {limitBytes: 10 * MIB, sizeBytes: 20 * MIB, upgradeTo: "max"},
+    });
+
+    // 30 Mio : Max (25) ne suffit plus non plus → le plus petit palier
+    // suffisant est Ultra, jamais un palier qui ne débloquerait rien.
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", "max");
+    await expect(callCreate(30 * MIB)).rejects.toMatchObject({
+      message: "file_too_large",
+      details: {limitBytes: 25 * MIB, sizeBytes: 30 * MIB, upgradeTo: "ultra"},
+    });
+  });
+
+  it("aucun palier ne suffit → upgradeTo null (ne jamais vendre un palier inutile)", async () => {
+    seedPlan("paid", "pro");
+    await expect(callCreate(80 * MIB)).rejects.toMatchObject({
+      message: "file_too_large",
+      details: {limitBytes: 10 * MIB, upgradeTo: null},
+    });
+  });
+
+  it("un abonné legacy (paid sans planLevel) est borné à 10 Mio, comme pro", async () => {
+    seedPlan("paid", null);
+    const ok = await callCreate(10 * MIB);
+    expect(ok.documentId).toBeTruthy();
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", null);
+    await expect(callCreate(10 * MIB + 1)).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "file_too_large",
+    });
+  });
+
+  it("le plafond de NOMBRE est évalué avant celui de TAILLE", async () => {
+    // Un free saturé qui envoie un fichier trop gros doit s'entendre dire que
+    // son quota de documents est atteint — motif actionnable (supprimer ou
+    // passer payant) — plutôt que « fichier trop volumineux ».
+    seedPlan("free", null);
+    seedDocuments(10);
+    await expect(callCreate(50 * MIB)).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
+  });
+
+  it("anonymous : refusé sur le NOMBRE, pas sur la taille", async () => {
+    // `documentMaxBytes` vaut 0 pour anonymous : sans l'ordre ci-dessus, un
+    // compte anonyme s'entendrait répondre « fichier trop volumineux » pour un
+    // fichier de 1 Ko, alors que le vrai motif est que le registre est réservé
+    // aux comptes.
+    seedPlan("anonymous", null);
+    await expect(callCreate(1024)).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "document_limit_reached",
+    });
+  });
+
+  it("sizeBytes non entier ou nul reste un invalid-argument (validation de forme)", async () => {
+    seedPlan("paid", "ultra");
+    await expect(callCreate(0)).rejects.toMatchObject({
+      code: "invalid-argument",
+    });
+    seedPlan("paid", "ultra");
+    await expect(
+      createDocument.run(
+        makeRequest(LANDLORD_A, {
+          ...baseInput,
+          sizeBytes: "beaucoup",
+          leaseId: "lease-1",
+          category: "bail_signe",
+        }),
+      ),
+    ).rejects.toMatchObject({code: "invalid-argument"});
   });
 });

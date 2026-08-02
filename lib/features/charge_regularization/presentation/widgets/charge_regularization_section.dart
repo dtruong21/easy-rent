@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../auth/data/landlord_tier_repository.dart';
-import '../../../auth/domain/subscription_tier.dart';
+import '../../../auth/domain/plan_matrix.g.dart';
 import '../../../leases/domain/lease.dart';
 import 'charge_regularization_dialog.dart';
 
@@ -58,11 +58,11 @@ class ChargeRegularizationSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final canRegularize = lease.canRegularizeCharges;
     // Fail-closed pendant le chargement du tier (même convention que
-    // `scenarioLimitForTierProvider`) : on n'affiche pas le bouton par défaut,
-    // ce qui évite un flash « action dispo » avant de le retirer.
-    final isPaid =
-        ref.watch(landlordTierProvider).valueOrNull?.tier ==
-        SubscriptionTier.paid;
+    // `quotaLimitProvider`) : on n'affiche pas le bouton par défaut, ce qui
+    // évite un flash « action dispo » avant de le retirer.
+    final hasChargeRegularization = ref.watch(
+      hasFeatureProvider(PlanFeature.chargeRegularization),
+    );
 
     return Card(
       child: Padding(
@@ -75,7 +75,7 @@ class ChargeRegularizationSection extends ConsumerWidget {
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            if (canRegularize && isPaid)
+            if (canRegularize && hasChargeRegularization)
               OutlinedButton.icon(
                 key: const Key('btn_charge_regularization'),
                 icon: const Icon(Icons.receipt_long_outlined, size: 18),

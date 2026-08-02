@@ -74,15 +74,23 @@ void main() {
       expect(container.read(scenarioLimitForTierProvider), 3);
     });
 
-    test('paid → null (illimité)', () async {
-      final container = _makeContainer(
-        scenarioCount: 0,
-        tier: SubscriptionTier.paid,
-      );
-      addTearDown(container.dispose);
-      await container.read(landlordTierProvider.future);
-      expect(container.read(scenarioLimitForTierProvider), isNull);
-    });
+    // Grille resserrée FEAT-056 §2 : un compte `paid` sans `planLevel` (doc
+    // legacy antérieur à FEAT-056) est grandfathered en Pro (I3), dont le
+    // plafond de scénarios est désormais 15 — plus « illimité » comme avant
+    // la différenciation des paliers. Seul Ultra reste illimité (cf.
+    // `plan_entitlement_test.dart`).
+    test(
+      'paid sans planLevel (legacy, grandfathering I3) → 15 (plafond Pro)',
+      () async {
+        final container = _makeContainer(
+          scenarioCount: 0,
+          tier: SubscriptionTier.paid,
+        );
+        addTearDown(container.dispose);
+        await container.read(landlordTierProvider.future);
+        expect(container.read(scenarioLimitForTierProvider), 15);
+      },
+    );
   });
 
   group('canSaveAnotherScenarioProvider', () {
@@ -134,17 +142,22 @@ void main() {
       expect(container.read(canSaveAnotherScenarioProvider), isFalse);
     });
 
-    test('paid, count=999 → true (illimité)', () async {
-      final container = _makeContainer(
-        scenarioCount: 999,
-        tier: SubscriptionTier.paid,
-      );
-      addTearDown(container.dispose);
-      await container.read(landlordTierProvider.future);
-      await container.read(investmentScenariosListProvider.future);
-      await container.read(scenarioCountProvider.future);
-      expect(container.read(canSaveAnotherScenarioProvider), isTrue);
-    });
+    // Idem : `paid` sans `planLevel` → Pro (grandfathering I3), plafonné à 15
+    // scénarios — 999 dépasse largement ce plafond.
+    test(
+      'paid sans planLevel (legacy, plafond Pro 15), count=999 → false (limite atteinte)',
+      () async {
+        final container = _makeContainer(
+          scenarioCount: 999,
+          tier: SubscriptionTier.paid,
+        );
+        addTearDown(container.dispose);
+        await container.read(landlordTierProvider.future);
+        await container.read(investmentScenariosListProvider.future);
+        await container.read(scenarioCountProvider.future);
+        expect(container.read(canSaveAnotherScenarioProvider), isFalse);
+      },
+    );
   });
 
   group('scenarioCountProvider', () {

@@ -8,7 +8,7 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/data/landlord_tier_repository.dart';
-import '../../auth/domain/subscription_tier.dart';
+import '../../auth/domain/plan_level.dart';
 import '../../paid_plan/presentation/pro_badge.dart';
 import '../../paid_plan/presentation/widgets/subscription_section.dart';
 import '../application/landlord_profile_provider.dart';
@@ -220,8 +220,8 @@ class _ProUpsellCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (!Env.subscriptionsEnabled) return const SizedBox.shrink();
 
-    final tier = ref.watch(landlordTierProvider).valueOrNull?.tier;
-    if (tier == SubscriptionTier.paid) return const SizedBox.shrink();
+    final isPaid = ref.watch(planEntitlementProvider).atLeast(PlanLevel.pro);
+    if (isPaid) return const SizedBox.shrink();
 
     final l10n = context.l10n;
     final theme = Theme.of(context);

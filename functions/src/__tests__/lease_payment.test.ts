@@ -219,8 +219,9 @@ const baseCreateLeaseData = {
 };
 
 // FEAT-044 : createLease exige désormais un doc landlord (gate + compteur).
-// Seedé en 'paid' (illimité) par défaut → le gate n'interfère PAS avec les
-// tests existants ; les tests de gating dédiés surchargent en 'free'.
+// Seedé en 'paid' (dérivé en 'pro' : 5 baux actifs) avec un compteur à 0 par
+// défaut → le gate n'interfère PAS avec les tests existants ; les tests de
+// gating dédiés surchargent le tier et le compteur.
 function seedLandlord(overrides: FakeDoc = {}) {
   store.set(`landlords/${LANDLORD_UID}`, {
     id: LANDLORD_UID,
@@ -854,7 +855,7 @@ describe("createLease / updateLease — plafond de baux actifs (FEAT-044)", () =
   });
 
   it("réactivation refusée si le bien est soft-deleted", async () => {
-    // Tier paid (illimité) pour isoler la garde bien/locataire du plafond.
+    // Tier paid, compteur à 0 : isole la garde bien/locataire du plafond.
     store.set("properties/prop-1", {
       ...store.get("properties/prop-1"),
       deletedAt: "2026-07-01T00:00:00.000Z",
@@ -915,5 +916,107 @@ describe("createLease / updateLease — plafond de baux actifs (FEAT-044)", () =
     )) as {updated: boolean};
     expect(res.updated).toBe(true);
     expect(store.get("leases/lease-1")?.status).toBe("terminated");
+  });
+});
+
+// ============================================================================
+// FEAT-056 — plafond de baux actifs résolu sur le PALIER EFFECTIF. Additif :
+// les cas free ci-dessus restent la référence de non-régression du freemium.
+// ============================================================================
+describe("createLease / updateLease — palier effectif (FEAT-056)", () => {
+  /** Repart d'un store propre avec un bien + un locataire disponibles. */
+  function reseed(landlord: FakeDoc) {
+    store.clear();
+    seedProperty("prop-1");
+    seedTenant("tenant-1");
+    seedLandlord(landlord);
+  }
+
+  it("paid SANS planLevel (abonné d'avant FEAT-056) → servi aux plafonds pro", async () => {
+    // I3 : dérivation en `pro`, donc 5 baux actifs — plus illimité depuis PR-7.
+    reseed({subscriptionTier: "paid", activeLeasesCount: 4});
+    const res = (await createLease.run(
+      callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+    )) as {leaseId: string};
+    expect(res.leaseId).toBeTruthy();
+
+    reseed({subscriptionTier: "paid", activeLeasesCount: 5});
+    await expect(
+      createLease.run(callableRequest(LANDLORD_UID, {...baseCreateLeaseData})),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "lease_limit_reached",
+    });
+  });
+
+  it("chaque palier payant est servi par SA propre clé de table", async () => {
+    // Plafonds différenciés (5 / 15 / illimité) : à 5 baux actifs, pro refuse
+    // et max accepte. Un gating indexé sur la classe d'accès `paid` donnerait
+    // le même verdict aux trois paliers — ce test le détecte.
+    const leaseLimits: Array<[string, number | null]> = [
+      ["pro", 5],
+      ["max", 15],
+      ["ultra", null],
+    ];
+    for (const [planLevel, limit] of leaseLimits) {
+      // Juste SOUS le plafond du palier (ou très haut si illimité) → passe.
+      reseed({
+        subscriptionTier: "paid",
+        planLevel,
+        activeLeasesCount: limit === null ? 99 : limit - 1,
+      });
+      const res = (await createLease.run(
+        callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+      )) as {leaseId: string};
+      expect(res.leaseId).toBeTruthy();
+
+      if (limit === null) continue; // ultra : aucun plafond à franchir
+      // AU plafond du palier → refus.
+      reseed({subscriptionTier: "paid", planLevel, activeLeasesCount: limit});
+      await expect(
+        createLease.run(callableRequest(LANDLORD_UID, {...baseCreateLeaseData})),
+      ).rejects.toMatchObject({
+        code: "resource-exhausted",
+        message: "lease_limit_reached",
+      });
+    }
+  });
+
+  it("planLevel inconnu sur un compte payant → servi comme pro (I4)", async () => {
+    reseed({
+      subscriptionTier: "paid",
+      planLevel: "quantum",
+      activeLeasesCount: 4,
+    });
+    const res = (await createLease.run(
+      callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+    )) as {leaseId: string};
+    expect(res.leaseId).toBeTruthy();
+
+    reseed({
+      subscriptionTier: "paid",
+      planLevel: "quantum",
+      activeLeasesCount: 5,
+    });
+    await expect(
+      createLease.run(callableRequest(LANDLORD_UID, {...baseCreateLeaseData})),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "lease_limit_reached",
+    });
+  });
+
+  it("planLevel posé sur un compte FREE ne débloque rien", async () => {
+    seedLandlord({
+      subscriptionTier: "free",
+      planLevel: "ultra",
+      activeLeasesCount: 2,
+    });
+    await expect(
+      createLease.run(callableRequest(LANDLORD_UID, {...baseCreateLeaseData})),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "lease_limit_reached",
+    });
   });
 });

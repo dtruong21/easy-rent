@@ -30,6 +30,8 @@ import * as admin from "firebase-admin";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
+import {minLevelForQuota} from "../entitlements/plan_matrix.generated";
 import {
   asBag,
   dataOrFail,
@@ -65,61 +67,74 @@ const ALLOWED_MIME = new Set([
   "image/webp",
 ]);
 
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
 const DOWNLOAD_URL_EXPIRY_SECONDS = 5 * 60;
 
-// Plafond de documents ACTIFS en free — miroir de
-// `SubscriptionTier.documentLimit` (lib/features/auth/domain/subscription_tier.dart).
-const FREE_DOCUMENT_LIMIT = 10;
-
 /**
- * Plafond du tier. `null` = illimité (paid). Tier inconnu/anonyme → 0
- * (le registre documentaire est réservé aux comptes complets).
- * Miroir de `limitForTier` dans property_tenant.ts.
- */
-function limitForTier(tier: string, freeLimit: number): number | null {
-  switch (tier) {
-    case "paid":
-      return null;
-    case "free":
-      return freeLimit;
-    default:
-      return 0;
-  }
-}
-
-/**
- * Gating free/Pro du stockage documentaire (matrice free/Pro 2026-07-20) — le
- * stockage a un coût réel, donc le volume est plafonné en free.
+ * Gating du stockage documentaire par palier — le stockage a un coût réel,
+ * donc le volume est plafonné hors paliers payants.
  *
- * **Comptage live** (pas de compteur dénormalisé comme properties/tenants) :
- * le volume est borné (10 en free) et surtout le soft-delete est universel
- * (`softDeleteEntity`) — sans compteur, il n'y a rien à décrémenter donc
- * aucune dérive possible. L'UI empêche déjà l'upload au plafond ; ce gate est
- * la defense-in-depth et la SOURCE DE VÉRITÉ.
+ * DEUX quotas indépendants sont appliqués ici, sur un SEUL read du doc
+ * landlord :
+ *   1. `documents` — NOMBRE de documents actifs (unit `count`) ;
+ *   2. `documentMaxBytes` — TAILLE du fichier courant (unit `bytes`).
+ * Les deux familles ne se comparent ni ne s'additionnent jamais (cf. `unit`
+ * dans la table) : 50 documents et 10 Mio sont des grandeurs sans rapport.
+ *
+ * **Comptage live** pour le quota n°1 (pas de compteur dénormalisé comme
+ * properties/tenants) : le volume est borné et surtout le soft-delete est
+ * universel (`softDeleteEntity`) — sans compteur, il n'y a rien à décrémenter
+ * donc aucune dérive possible. L'UI empêche déjà l'upload au plafond ; ce gate
+ * est la defense-in-depth et la SOURCE DE VÉRITÉ.
+ *
+ * ORDRE des deux refus : le nombre d'abord. Un compte `anonymous` est plafonné
+ * à 0 sur les DEUX quotas ; le refuser sur la taille lui répondrait
+ * « fichier trop volumineux » là où le vrai motif est que le registre est
+ * réservé aux comptes. Le motif le plus explicable prime sur la requête
+ * d'agrégation économisée.
+ *
+ * FEAT-056 : les deux plafonds viennent de la table générée, résolus sur le
+ * palier effectif (subscriptionTier + planLevel), plus d'une constante locale.
  */
 async function assertDocumentQuota(
   db: admin.firestore.Firestore,
   uid: string,
+  sizeBytes: number,
 ): Promise<void> {
   const landlordSnap = await db.doc(`landlords/${uid}`).get();
   if (!landlordSnap.exists) {
     throw new HttpsError("not-found", "landlord not found");
   }
   const landlord = (landlordSnap.data() ?? {}) as Record<string, unknown>;
-  const raw = landlord.subscriptionTier;
-  const tier = typeof raw === "string" ? raw : "anonymous";
-  const limit = limitForTier(tier, FREE_DOCUMENT_LIMIT);
-  if (limit === null) return; // paid → illimité
+  const plan = resolvePlan(landlord);
 
-  const agg = await db
-    .collection("documents")
-    .where("landlordId", "==", uid)
-    .where("deletedAt", "==", null)
-    .count()
-    .get();
-  if (agg.data().count >= limit) {
-    throw new HttpsError("resource-exhausted", "document_limit_reached");
+  // 1. Nombre de documents actifs.
+  const countLimit = quotaLimit(plan, "documents");
+  if (countLimit !== null) {
+    const agg = await db
+      .collection("documents")
+      .where("landlordId", "==", uid)
+      .where("deletedAt", "==", null)
+      .count()
+      .get();
+    if (agg.data().count >= countLimit) {
+      throw new HttpsError("resource-exhausted", errorCodeFor("documents"));
+    }
+  }
+
+  // 2. Taille du fichier — PR-7b. `details` porte le plafond APPLICABLE À
+  // L'APPELANT (et le plus petit palier qui accepterait ce fichier) pour que
+  // le client compose un message utile sans dupliquer la grille.
+  const byteLimit = quotaLimit(plan, "documentMaxBytes");
+  if (byteLimit !== null && sizeBytes > byteLimit) {
+    throw new HttpsError(
+      "resource-exhausted",
+      errorCodeFor("documentMaxBytes"),
+      {
+        limitBytes: byteLimit,
+        sizeBytes,
+        upgradeTo: minLevelForQuota("documentMaxBytes", sizeBytes),
+      },
+    );
   }
 }
 
@@ -155,7 +170,12 @@ export const createDocument = onCall(
     if (!ALLOWED_MIME.has(mimeType)) {
       throw new HttpsError("invalid-argument", `invalid mimeType: ${mimeType}`);
     }
-    const sizeBytes = requireInt(data.sizeBytes, "sizeBytes", {min: 1, max: MAX_BYTES});
+    // Pas de plafond STATIQUE ici : la taille max dépend du palier de
+    // l'appelant (`documentMaxBytes`), donc elle ne peut être tranchée qu'après
+    // le read du doc landlord, dans `assertDocumentQuota`. Ce `requireInt` ne
+    // valide plus que la forme (entier strictement positif) ; le refus métier
+    // porte le code contractuel `file_too_large`, pas `invalid-argument`.
+    const sizeBytes = requireInt(data.sizeBytes, "sizeBytes", {min: 1});
 
     // Path doit commencer par documents/{uid}/ pour matcher les Storage Rules.
     const expectedPrefix = `documents/${uid}/`;
@@ -168,9 +188,10 @@ export const createDocument = onCall(
 
     const db = dbForRequest(request);
 
-    // Gating free/Pro AVANT tout travail coûteux (lookups cross-entity + accès
-    // Storage) : un compte au plafond est refusé immédiatement.
-    await assertDocumentQuota(db, uid);
+    // Gating par palier AVANT tout travail coûteux (lookups cross-entity +
+    // accès Storage) : un compte au plafond, ou un fichier trop volumineux pour
+    // son palier, est refusé immédiatement.
+    await assertDocumentQuota(db, uid, sizeBytes);
 
     // Validate lease ownership (cross-entity) — inchangé si leaseId fourni.
     if (leaseId !== null) {

@@ -7,7 +7,7 @@ import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../auth/data/landlord_tier_repository.dart';
-import '../../../auth/domain/subscription_tier.dart';
+import '../../../auth/domain/plan_matrix.g.dart';
 import '../../data/investment_scenario_repository.dart';
 import '../../domain/investment_scenario.dart';
 
@@ -83,7 +83,9 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
     // fiable de "tier pas encore résolu", contrairement à `valueOrNull` qui
     // est `null` dans ces deux cas ET afficherait à tort l'état verrouillé.
     final tierResolved = tierAsync.hasValue;
-    final isPaid = tierAsync.valueOrNull?.tier == SubscriptionTier.paid;
+    final hasComparison =
+        tierAsync.valueOrNull?.plan.has(PlanFeature.scenarioComparison) ??
+        false;
 
     return asyncScenarios.when(
       loading: () => const SizedBox(height: 80, child: _LoadingSkeleton()),
@@ -148,7 +150,7 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
             _CompareScenariosToggle(
               scenariosCount: scenarios.length,
               tierResolved: tierResolved,
-              isPaid: isPaid,
+              hasComparison: hasComparison,
               selectionMode: _selectionMode,
               selectedCount: _selectedIds.length,
               captionSpacing: spacing.xs,
@@ -208,15 +210,16 @@ class _SavedScenariosRowState extends ConsumerState<SavedScenariosRow> {
 /// - Tier pas encore résolu (`!tierResolved`, cf. `landlordTierProvider`) →
 ///   neutre : bouton désactivé, ni cadenas ni upsell (évite le flash
 ///   "verrouillé" pour un abonné Pro pendant le chargement).
-/// - Tier résolu, `paid` → actif, plus contrasté qu'un simple `TextButton`
-///   (`OutlinedButton.icon`) pour lui donner du poids visuel.
-/// - Tier résolu, non `paid` → grisé + upsell vers `/pro`. Gate miroir de
-///   `chargeRegularizationProOnly` (FEAT-044b).
+/// - Tier résolu, feature `scenarioComparison` accordée → actif, plus
+///   contrasté qu'un simple `TextButton` (`OutlinedButton.icon`) pour lui
+///   donner du poids visuel.
+/// - Tier résolu, feature non accordée → grisé + upsell vers `/pro`. Gate
+///   miroir de `chargeRegularizationProOnly` (FEAT-044b).
 class _CompareScenariosToggle extends StatelessWidget {
   const _CompareScenariosToggle({
     required this.scenariosCount,
     required this.tierResolved,
-    required this.isPaid,
+    required this.hasComparison,
     required this.selectionMode,
     required this.selectedCount,
     required this.captionSpacing,
@@ -227,7 +230,7 @@ class _CompareScenariosToggle extends StatelessWidget {
 
   final int scenariosCount;
   final bool tierResolved;
-  final bool isPaid;
+  final bool hasComparison;
   final bool selectionMode;
   final int selectedCount;
   final double captionSpacing;
@@ -291,7 +294,7 @@ class _CompareScenariosToggle extends StatelessWidget {
       );
     }
 
-    if (!isPaid) {
+    if (!hasComparison) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

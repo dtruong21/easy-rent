@@ -3780,9 +3780,14 @@
   "@documentsUploadPromptText": {
     "description": "Prompt text inviting the landlord to pick files — shared verbatim between the upload drop zone and the second line of the documents empty-state."
   },
-  "documentsUploadFormatsHint": "PDF, JPG, PNG, WEBP · Max 10 MB per file · Max 10 files",
+  "documentsUploadFormatsHint": "PDF, JPG, PNG, WEBP · Max {maxSizeLabel} per file · Max 10 files",
   "@documentsUploadFormatsHint": {
-    "description": "Hint line under the upload prompt in the drop zone, listing accepted formats and the size/count limits (mirrors the kMaxFileSizeBytes/kMaxFilesPerBatch constants as static text, not dynamically interpolated — same as the original French copy)."
+    "description": "FEAT-056 — Hint line under the upload prompt in the drop zone, listing accepted formats and the size/count limits. {maxSizeLabel} is the current plan's per-file byte cap (PlanQuota.documentMaxBytes), already formatted (ByteFormat.format) — differentiated by tier (10 MiB free/Pro, 25 MiB Max, 50 MiB Ultra); the file count cap stays static (not tier-differentiated).",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      }
+    }
   },
   "documentsUploadPickFilesButton": "Select files",
   "@documentsUploadPickFilesButton": {
@@ -3935,9 +3940,26 @@
   "@documentsErrorConnection": {
     "description": "Shared connection-error message for the documents module, used whenever a FirebaseException occurs during delete, category-update or per-file upload (DeleteDocumentErrorReason.connectionError, UpdateCategoryErrorReason.connectionError, UploadFileErrorReason.connectionError). Same wording as the already-existing leasesErrorConnection/propertiesListErrorConnection keys; kept module-scoped rather than promoted to a new common* key, consistent with how those two modules did not converge on a shared key either — flagging in case a future pass wants to consolidate."
   },
-  "documentsUploadErrorFileTooLarge": "The file exceeds 10 MB.",
+  "documentsUploadErrorFileTooLarge": "The file exceeds {maxSizeLabel}.",
   "@documentsUploadErrorFileTooLarge": {
-    "description": "Per-file upload error shown when a picked file is larger than the 10 MB client-side limit (UploadFileErrorReason.fileTooLarge, kMaxFileSizeBytes)."
+    "description": "FEAT-056 — Per-file upload error shown when a picked file is larger than the current plan's per-file cap (UploadFileErrorReason.fileTooLarge, PlanQuota.documentMaxBytes — differentiated by tier). {maxSizeLabel} is already formatted (ByteFormat.format). Used when no server-side upgrade target is known (client-side pre-check, or a server race with an empty `upgradeTo`) — see documentsUploadErrorFileTooLargeWithUpgrade for the variant naming the tier that would unblock the file.",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsUploadErrorFileTooLargeWithUpgrade": "The file exceeds {maxSizeLabel}. Upgrade to {levelLabel} to send larger files.",
+  "@documentsUploadErrorFileTooLargeWithUpgrade": {
+    "description": "FEAT-056 — Per-file upload error variant used when the server rejects `createDocument` in `resource-exhausted`/`file_too_large` (race with a stale client-side cap) AND its `details.upgradeTo` names a tier that would accept the file. {maxSizeLabel} is `details.limitBytes` already formatted; {levelLabel} is the named tier's display label (PlanLevelLabel). Never shown when `upgradeTo` is null (no tier would help) — the plain documentsUploadErrorFileTooLarge is used instead in that case.",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      },
+      "levelLabel": {
+        "type": "String"
+      }
+    }
   },
   "documentsUploadErrorUnsupportedFormat": "Unsupported format. Accepted formats: PDF, JPG, PNG, WEBP.",
   "@documentsUploadErrorUnsupportedFormat": {
@@ -4258,9 +4280,14 @@
   "@expensesReceiptErrorConnection": {
     "description": "ExpenseReceiptUploadErrorReason.connectionError message — generic Firebase error (not Storage) while uploading an expense receipt."
   },
-  "expensesReceiptErrorFileTooLarge": "The file exceeds 10 MB.",
+  "expensesReceiptErrorFileTooLarge": "The file exceeds {maxSizeLabel}.",
   "@expensesReceiptErrorFileTooLarge": {
-    "description": "ExpenseReceiptUploadErrorReason.fileTooLarge message — client-side pre-upload validation of the expense receipt file size."
+    "description": "FEAT-056 — ExpenseReceiptUploadErrorReason.fileTooLarge message — client-side pre-upload validation of the expense receipt file size against the current plan's per-file cap (PlanQuota.documentMaxBytes, differentiated by tier). {maxSizeLabel} is already formatted (ByteFormat.format).",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      }
+    }
   },
   "expensesReceiptErrorStorage": "Error while uploading. Please try again.",
   "@expensesReceiptErrorStorage": {
@@ -4669,13 +4696,29 @@
   "@simulatorLimitReachedTitleFree": {
     "description": "Title of the scenario-limit-reached modal when shown to a free-tier account."
   },
+  "simulatorLimitReachedTitlePaid": "Scenario limit reached",
+  "@simulatorLimitReachedTitlePaid": {
+    "description": "FEAT-056 — Title of the scenario-limit-reached modal when shown to a paid account that hit its OWN tier bound (Pro at 15, Max at 30 — only Ultra is unlimited). Distinct from simulatorLimitReachedTitleFree since the CTA here upsells to the next paid tier, not to Pro."
+  },
   "simulatorLimitReachedContentAnonymous": "Demo mode lets you save a single scenario. Create an account to keep up to 3.",
   "@simulatorLimitReachedContentAnonymous": {
     "description": "Body text of the scenario-limit-reached modal when shown to an anonymous (demo) session."
   },
-  "simulatorLimitReachedContentFree": "Your free account lets you save up to 3 scenarios. Upgrade to the Pro plan for unlimited scenarios.",
+  "simulatorLimitReachedContentFree": "Your free account lets you save up to 3 scenarios. Upgrade to Pro to save up to 15.",
   "@simulatorLimitReachedContentFree": {
-    "description": "Body text of the scenario-limit-reached modal when shown to a free-tier account."
+    "description": "FEAT-056 — Body text of the scenario-limit-reached modal when shown to a free-tier account. Updated from the old 'unlimited scenarios' claim: Pro is now bounded at 15 (tightened entitlements grid), only Ultra remains unlimited."
+  },
+  "simulatorLimitReachedContentPaid": "You've reached the scenario limit of your {currentLevel} plan. Upgrade to {nextLevel} to save more.",
+  "@simulatorLimitReachedContentPaid": {
+    "description": "FEAT-056 — Body text of the scenario-limit-reached modal when shown to a paid account (Pro or Max) that hit its own tier bound. {currentLevel} and {nextLevel} are display labels (planLevelPro/Max/Ultra) — nextLevel is derived from PlanLevel rank order, never hardcoded.",
+    "placeholders": {
+      "currentLevel": {
+        "type": "String"
+      },
+      "nextLevel": {
+        "type": "String"
+      }
+    }
   },
   "simulatorLimitReachedLaterButton": "Later",
   "@simulatorLimitReachedLaterButton": {
@@ -5058,17 +5101,17 @@
     "description": "Generic fallback error for the account-deletion flow (unexpected failures, and default cases of the auth/callable error mappers)."
   },
 
-  "proPricingTitle": "Baillan Pro",
+  "proPricingTitle": "Baillan Pro, Max & Ultra",
   "@proPricingTitle": {
-    "description": "FEAT-044e — AppBar title of the Baillan Pro pricing page (/pro)."
+    "description": "FEAT-056 — AppBar title of the 4-plan pricing page (/pro): Free, Pro, Max, Ultra."
   },
-  "proPricingHeadline": "Upgrade to Baillan Pro",
+  "proPricingHeadline": "Find the plan that matches your portfolio",
   "@proPricingHeadline": {
-    "description": "FEAT-044e — Main headline above the pricing card on /pro."
+    "description": "FEAT-056 — Main headline above the 4 plan cards on /pro."
   },
-  "proPricingSubheadline": "Manage your properties without limits",
+  "proPricingSubheadline": "Pro is available right now. Max and Ultra are coming soon — sign up to be notified at launch. No commitment, cancel anytime in 3 clicks.",
   "@proPricingSubheadline": {
-    "description": "FEAT-044e — Sub-headline below the main pricing headline on /pro."
+    "description": "FEAT-056 — Sub-headline below the main pricing headline on /pro."
   },
   "proPlanMonthly": "Monthly",
   "@proPlanMonthly": {
@@ -5078,57 +5121,29 @@
   "@proPlanAnnual": {
     "description": "FEAT-044e — Label for the annual billing option in the pricing toggle."
   },
-  "proPeriodMonth": "month",
-  "@proPeriodMonth": {
-    "description": "FEAT-044e — Period suffix shown next to the monthly price (e.g. \"7.99 € / month\")."
-  },
-  "proPeriodYear": "year",
-  "@proPeriodYear": {
-    "description": "FEAT-044e — Period suffix shown next to the annual price (e.g. \"79 € / year\")."
-  },
   "proAnnualSaving": "2 months free",
   "@proAnnualSaving": {
-    "description": "FEAT-044e — Small badge shown on the annual plan indicating the built-in discount (2 months free vs. paying monthly)."
+    "description": "FEAT-044e — Small badge shown on a paid plan card when annual is toggled, indicating the built-in discount (~2 months free vs. paying monthly)."
   },
-  "proSubscribeButton": "Subscribe",
+  "proSubscribeButton": "Upgrade to Pro",
   "@proSubscribeButton": {
-    "description": "FEAT-044e — Primary CTA of the pricing card; opens the Stripe Checkout Session."
+    "description": "FEAT-056 — Primary CTA of the Pro card specifically (backlog copy, docs/backlog/056-abonnements-pro-max-ultra.md §5) — opens the Stripe Checkout Session for level='pro'. Other purchasable levels (once opened) use proUpgradeToLevel instead."
   },
-  "proAlreadySubscribed": "Already subscribed",
-  "@proAlreadySubscribed": {
-    "description": "FEAT-044e — Disabled button label shown instead of Subscribe when the landlord already has an active Pro tier."
+  "proCurrentPlanLabel": "Your current plan",
+  "@proCurrentPlanLabel": {
+    "description": "FEAT-056 — Disabled button label shown on the card matching the landlord's current plan (Free or a paid level) — replaces the old proAlreadySubscribed, now level-agnostic across the 4 cards."
   },
   "proCheckoutError": "Unable to start checkout. Please try again.",
   "@proCheckoutError": {
-    "description": "FEAT-044e — Snackbar shown when createCheckoutSession failed to return a valid Stripe hosted URL."
+    "description": "FEAT-044e — Snackbar shown when createCheckoutSession failed to return a valid Stripe hosted URL, or for any checkout error not specifically mapped (CheckoutException)."
   },
-  "proFeaturesTitle": "Everything in Pro",
-  "@proFeaturesTitle": {
-    "description": "FEAT-044e — Section title above the bullet list of Pro features on /pro."
+  "proCheckoutErrorAlreadySubscribed": "You already have an active subscription. Use “Change plan” to switch to a different tier.",
+  "@proCheckoutErrorAlreadySubscribed": {
+    "description": "FEAT-056 — Snackbar shown when createCheckoutSession throws AlreadySubscribedException (failed-precondition/already_subscribed_use_change_plan) — defense in depth, the UI should already never offer Subscribe to an active subscriber."
   },
-  "proFeatureUnlimitedProperties": "Unlimited properties",
-  "@proFeatureUnlimitedProperties": {
-    "description": "FEAT-044e — Pro feature bullet: no more 2-property cap from the free tier (FEAT-044)."
-  },
-  "proFeatureUnlimitedLeases": "Unlimited leases",
-  "@proFeatureUnlimitedLeases": {
-    "description": "FEAT-044e — Pro feature bullet: no more 2-active-lease cap from the free tier (FEAT-044)."
-  },
-  "proFeatureUnlimitedTenants": "Unlimited tenants",
-  "@proFeatureUnlimitedTenants": {
-    "description": "FEAT-044e — Pro feature bullet: no more 3-active-tenant cap from the free tier (FEAT-044)."
-  },
-  "proFeatureUnlimitedDocuments": "Unlimited documents",
-  "@proFeatureUnlimitedDocuments": {
-    "description": "FEAT-044e — Pro feature bullet: no more 10-document cap from the free tier (FEAT-044b)."
-  },
-  "proFeatureUnlimitedScenarios": "Unlimited simulator scenarios",
-  "@proFeatureUnlimitedScenarios": {
-    "description": "FEAT-044e — Pro feature bullet: no more 3-scenario cap in the investment simulator (FEAT-044)."
-  },
-  "proFeaturePriority": "Priority support",
-  "@proFeaturePriority": {
-    "description": "FEAT-044e — Pro feature bullet: priority handling of support tickets."
+  "proPlanNotAvailableError": "This plan isn't available yet.",
+  "@proPlanNotAvailableError": {
+    "description": "FEAT-056 — Snackbar shown when a checkout or change-plan call throws LevelNotPurchasableException or PriceNotConfiguredException — defense in depth, the UI should already never offer a payment path for a non-purchasable level."
   },
   "proSuccessTitle": "Welcome to Baillan Pro!",
   "@proSuccessTitle": {
@@ -5160,7 +5175,25 @@
   },
   "proUpgradeButton": "Upgrade to Pro",
   "@proUpgradeButton": {
-    "description": "FEAT-044e — Generic upsell CTA used in gated states throughout the app (scenario_limit_upgrade_cta, régularisation section, FEAT-055 comparison page). Navigates to /pro."
+    "description": "FEAT-044e — Generic upsell CTA used in gated states throughout the app (scenario_limit_upgrade_cta, régularisation section, FEAT-055 comparison page) when the target level is unknown/Pro. Navigates to /pro."
+  },
+  "proUpgradeToLevel": "Upgrade to {level}",
+  "@proUpgradeToLevel": {
+    "description": "FEAT-056 — CTA on a plan card of higher rank than the landlord's current paid level (or the Free landlord's target level on a purchasable card other than Pro); triggers change_plan (already paid) or checkout (not yet paid). Also used as the CTA in the scenario-limit-reached modal when a paid tier (Pro/Max) hits its own bound. {level} is the target level's display label (planLevelPro/Max/Ultra).",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "proDowngradeToLevel": "Switch back to {level}",
+  "@proDowngradeToLevel": {
+    "description": "FEAT-056 — CTA on a plan card of lower rank than the landlord's current paid level; triggers change_plan (self-service downgrade, prorated credit, never a refund). {level} is the target level's display label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
   },
   "proComingSoonBadge": "Coming soon",
   "@proComingSoonBadge": {
@@ -5182,9 +5215,238 @@
   "@proInterestSaveErrorSnackbar": {
     "description": "Freemium gating (Env.subscriptionsEnabled = false) — snackbar shown on /pro when markInterest fails (paid_plan_interest write error)."
   },
-  "subscriptionSectionTitle": "Baillan Pro subscription",
+  "planLevelFree": "Free",
+  "@planLevelFree": {
+    "description": "FEAT-056 — Display label and /pro column header for the free tier."
+  },
+  "planLevelPro": "Pro",
+  "@planLevelPro": {
+    "description": "FEAT-056 — Display label of the Pro paid level (PlanLevel.pro) — sole source of truth for the string 'Pro' across ProBadge, /pro, the subscription section and upsell messages."
+  },
+  "planLevelMax": "Max",
+  "@planLevelMax": {
+    "description": "FEAT-056 — Display label of the Max paid level (PlanLevel.max)."
+  },
+  "planLevelUltra": "Ultra",
+  "@planLevelUltra": {
+    "description": "FEAT-056 — Display label of the Ultra paid level (PlanLevel.ultra)."
+  },
+  "planRecommendedBadge": "Recommended",
+  "@planRecommendedBadge": {
+    "description": "FEAT-056 — Small badge shown on the plan card flagged `recommended: true` in the entitlements table (currently Max) — read from config, never hardcoded to a specific level."
+  },
+  "proPricingCompareTitle": "Compare plans",
+  "@proPricingCompareTitle": {
+    "description": "FEAT-056 — Title above the desktop-only (>= Breakpoints.tablet) quota comparison table below the 4 plan cards."
+  },
+  "proPricingIndicativeSuffix": "(indicative)",
+  "@proPricingIndicativeSuffix": {
+    "description": "FEAT-056 — Suffix shown after a plan card's price when PlanLevelSpec.priceIndicative is true (Max/Ultra before they open for sale) — the price is a placeholder, not a firm committed tariff, per docs/backlog/056 §4/§5."
+  },
+  "proQuotaUnlimited": "Unlimited",
+  "@proQuotaUnlimited": {
+    "description": "FEAT-056 — Cell value in the plan comparison table for a quota whose PlanMatrix.quotaLimit is null (currently only Ultra, on every counting quota)."
+  },
+  "proPricingRowProperties": "Active properties",
+  "@proPricingRowProperties": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.properties."
+  },
+  "proPricingRowTenants": "Active tenants",
+  "@proPricingRowTenants": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.tenants."
+  },
+  "proPricingRowLeases": "Active leases",
+  "@proPricingRowLeases": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.activeLeases."
+  },
+  "proPricingRowDocuments": "Active documents",
+  "@proPricingRowDocuments": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.documents (count)."
+  },
+  "proPricingRowDocumentSize": "Max size per document",
+  "@proPricingRowDocumentSize": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.documentMaxBytes (formatted via ByteFormat, never confused with the document count row above)."
+  },
+  "proPricingRowScenarios": "Saved scenarios",
+  "@proPricingRowScenarios": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.scenarios."
+  },
+  "proPricingFreeTagline": "Discover Baillan on your first property",
+  "@proPricingFreeTagline": {
+    "description": "FEAT-056 — Tagline of the Free card on /pro (backlog copy, docs/backlog/056 §5)."
+  },
+  "proPricingFreeCta": "Start for free",
+  "@proPricingFreeCta": {
+    "description": "FEAT-056 — CTA of the Free card (backlog copy) — disabled in practice, /pro is only reachable by an already fully-authenticated landlord (never a fresh anonymous visitor)."
+  },
+  "proPricingProTagline": "For the multi-property landlord, flat-rate — never billed per property",
+  "@proPricingProTagline": {
+    "description": "FEAT-056 — Tagline of the Pro card on /pro (backlog copy)."
+  },
+  "proPricingMaxTagline": "For hands-on, day-to-day rental management",
+  "@proPricingMaxTagline": {
+    "description": "FEAT-056 — Tagline of the Max card on /pro (backlog copy)."
+  },
+  "proPricingUltraTagline": "For shared ownership structures (SCI, joint ownership), no volume limits",
+  "@proPricingUltraTagline": {
+    "description": "FEAT-056 — Tagline of the Ultra card on /pro (backlog copy)."
+  },
+  "proPricingBulletCoreQuota": "Up to {properties} properties, {tenants} tenants, {leases} active leases",
+  "@proPricingBulletCoreQuota": {
+    "description": "FEAT-056 — Shared bullet for Free/Pro/Max cards — the 3 core volume caps, read from PlanMatrix.quotaLimit (properties/tenants/activeLeases), never hardcoded.",
+    "placeholders": {
+      "properties": {
+        "type": "int"
+      },
+      "tenants": {
+        "type": "int"
+      },
+      "leases": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletDocuments": "{count} stored documents",
+  "@proPricingBulletDocuments": {
+    "description": "FEAT-056 — Bullet for Free/Pro cards (Max uses proPricingBulletDocumentsWithSize instead, which also names the per-file size cap). {count} is PlanMatrix.quotaLimit(level, PlanQuota.documents).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletDocumentsWithSize": "{count} stored documents (up to {sizeMb} MiB per file)",
+  "@proPricingBulletDocumentsWithSize": {
+    "description": "FEAT-056 — Bullet for the Max card, combining the document count cap and the per-file size cap in one line (backlog copy). {count} is PlanQuota.documents, {sizeMb} is PlanQuota.documentMaxBytes converted to MiB.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "sizeMb": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletScenarios": "{count} saved simulator scenarios",
+  "@proPricingBulletScenarios": {
+    "description": "FEAT-056 — Bullet for Free/Pro/Max cards — PlanMatrix.quotaLimit(level, PlanQuota.scenarios).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletUnlimitedCore": "Unlimited properties, tenants, leases, documents and scenarios",
+  "@proPricingBulletUnlimitedCore": {
+    "description": "FEAT-056 — Ultra card's single bullet replacing the 3 counting bullets above — Ultra is the only level with every counting quota unbounded (PlanMatrix.quotaLimit returns null on all 5)."
+  },
+  "proPricingBulletDocumentSizeOnly": "Documents up to {sizeMb} MiB",
+  "@proPricingBulletDocumentSizeOnly": {
+    "description": "FEAT-056 — Ultra card's document-size bullet (Ultra's document count is unlimited so it's folded into proPricingBulletUnlimitedCore — only the byte cap, which is never null even for Ultra, gets its own line). {sizeMb} is PlanQuota.documentMaxBytes converted to MiB.",
+    "placeholders": {
+      "sizeMb": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletReceipts": "Rent receipts compliant with French law (6 July 1989)",
+  "@proPricingBulletReceipts": {
+    "description": "FEAT-056 — Free card bullet (backlog copy) — feature already included at every tier, shown once on the Free card as a baseline."
+  },
+  "proPricingBulletPaymentsExpensesDashboard": "Payments, expenses, dashboard",
+  "@proPricingBulletPaymentsExpensesDashboard": {
+    "description": "FEAT-056 — Free card bullet (backlog copy) — baseline features included at every tier."
+  },
+  "proPricingBulletChargeRegularization": "Annual charges reconciliation",
+  "@proPricingBulletChargeRegularization": {
+    "description": "FEAT-056 — Pro card bullet — PlanFeature.chargeRegularization, minLevel pro, shipped."
+  },
+  "proPricingBulletScenarioComparison": "Investment scenario comparison",
+  "@proPricingBulletScenarioComparison": {
+    "description": "FEAT-056 — Pro card bullet — PlanFeature.scenarioComparison (FEAT-055), minLevel pro, shipped."
+  },
+  "proPricingBulletSupportStandard": "Standard support",
+  "@proPricingBulletSupportStandard": {
+    "description": "FEAT-056 — Pro/Free card bullet — qualitative only, no numeric SLA (support capacity not validated, cf. docs/backlog/056 §5 internal note)."
+  },
+  "proPricingBulletPaymentReminders": "Automatic payment reminders",
+  "@proPricingBulletPaymentReminders": {
+    "description": "FEAT-056 — Max card bullet — PlanFeature.paymentReminders (FEAT-031), minLevel max, status planned (not yet built — the card still shows the bullet as an announced benefit, per plan §2.3-c)."
+  },
+  "proPricingBulletListings": "Reusable listings & multi-portal syndication",
+  "@proPricingBulletListings": {
+    "description": "FEAT-056 — Max card bullet — PlanFeature.listings (FEAT-051), minLevel max, status planned."
+  },
+  "proPricingBulletSupportPriority": "Priority support",
+  "@proPricingBulletSupportPriority": {
+    "description": "FEAT-056 — Max card bullet — PlanFeature.prioritySupport, qualitative only, no numeric SLA (never publish the internal 24h-business-hours target — not validated by support capacity)."
+  },
+  "proPricingBulletAccountingExport": "One-click annual accounting export",
+  "@proPricingBulletAccountingExport": {
+    "description": "FEAT-056 — Ultra card bullet — PlanFeature.accountingExport (FEAT-032), minLevel ultra, status planned."
+  },
+  "proPricingBulletCollaborators": "Up to 3 invited collaborators (accountant, co-owner, managing agent)",
+  "@proPricingBulletCollaborators": {
+    "description": "FEAT-056 — Ultra card bullet — PlanFeature.collaborators (FEAT-034), minLevel ultra, status planned."
+  },
+  "proPricingBulletSupportDedicated": "Dedicated support",
+  "@proPricingBulletSupportDedicated": {
+    "description": "FEAT-056 — Ultra card bullet — qualitative only, no numeric SLA (never publish the internal 12h-business-hours target — not validated by support capacity)."
+  },
+  "proPricingNotifyAtLaunchButton": "Notify me at launch",
+  "@proPricingNotifyAtLaunchButton": {
+    "description": "FEAT-056 — CTA on a plan card whose level is not yet purchasable (Max/Ultra) — records interest via paid_plan_interest, tagged per level (proPricingInterestKeyFor). Distinct from proNotifyMeButton, which is the pre-existing copy for the global Env.subscriptionsEnabled gate."
+  },
+  "proPricingNotifiedAtLaunchLabel": "You'll be notified at launch",
+  "@proPricingNotifiedAtLaunchLabel": {
+    "description": "FEAT-056 — Disabled state of proPricingNotifyAtLaunchButton after a successful interest submission."
+  },
+  "proPricingFooter": "Prices include VAT. Pro: cancel anytime in 3 clicks, no commitment. Max and Ultra: indicative pricing, subject to launch (the displayed caps, however, are already final).",
+  "@proPricingFooter": {
+    "description": "FEAT-056 — Footer disclaimer at the bottom of /pro (backlog copy)."
+  },
+  "planChangeDialogTitle": "Change your plan?",
+  "@planChangeDialogTitle": {
+    "description": "FEAT-056 — Title of the plan-change confirmation dialog (self-service upgrade/downgrade between paid levels, manageSubscription('change_plan'))."
+  },
+  "planChangeUpgradeBody": "Switching to {level} takes effect immediately. The difference is calculated pro rata and added to your next invoice.",
+  "@planChangeUpgradeBody": {
+    "description": "FEAT-056 — Body of the plan-change dialog for an upgrade (higher-rank target) — must be shown BEFORE confirmation: the change is immediate and prorated, billed on the next invoice. {level} is the target level's display label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "planChangeDowngradeBody": "Switching to {level} takes effect immediately. The difference is calculated pro rata and credited to your future invoices — no refund is issued.",
+  "@planChangeDowngradeBody": {
+    "description": "FEAT-056 — Body of the plan-change dialog for a downgrade (lower-rank target) — must be shown BEFORE confirmation: the change is immediate, the price difference becomes a credit on future invoices, never a refund. {level} is the target level's display label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "planChangeConfirm": "Confirm the change",
+  "@planChangeConfirm": {
+    "description": "FEAT-056 — Confirm button of the plan-change dialog; triggers manageSubscription('change_plan')."
+  },
+  "planChangeSuccess": "Your plan is being updated…",
+  "@planChangeSuccess": {
+    "description": "FEAT-056 — Snackbar shown after a successful (or idempotent noop) change_plan call. Optimistic confirmation — the displayed level lags until the RevenueCat webhook (PRODUCT_CHANGE) updates Firestore, same caveat as subscriptionCancelSuccess."
+  },
+  "subscriptionSectionTitle": "{level} subscription",
   "@subscriptionSectionTitle": {
-    "description": "FEAT-044f — SectionHeader title of the subscription management block on /profile (self-hides for non-paid tiers)."
+    "description": "FEAT-056 — SectionHeader title of the subscription management block on /profile (self-hides for non-paid tiers). {level} is the landlord's real current paid level display label (planLevelPro/Max/Ultra) — replaces the old hardcoded 'Baillan Pro subscription'.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionChangePlanButton": "Change plan",
+  "@subscriptionChangePlanButton": {
+    "description": "FEAT-056 — TextButton in the subscription section of /profile navigating to /pro to change plan — hidden for proStore in {app_store, play_store} (self-service change_plan is web-only)."
   },
   "subscriptionActiveRenews": "Active — renews on {date}",
   "@subscriptionActiveRenews": {
@@ -5195,10 +5457,13 @@
       }
     }
   },
-  "subscriptionScheduledCancel": "Pro until {date}, then Free",
+  "subscriptionScheduledCancel": "{level} until {date}, then Free",
   "@subscriptionScheduledCancel": {
-    "description": "FEAT-044f — Status line shown when a cancellation is scheduled (proWillRenew == false): access remains until {date} (proExpiresAt, already formatted DD/MM/YYYY), then the account auto-downgrades to Free.",
+    "description": "FEAT-044f/FEAT-056 — Status line shown when a cancellation is scheduled (proWillRenew == false): access remains until {date} (proExpiresAt, already formatted DD/MM/YYYY), then the account auto-downgrades to Free. {level} is the real current paid level display label — must never say 'Pro' to a Max/Ultra subscriber.",
     "placeholders": {
+      "level": {
+        "type": "String"
+      },
       "date": {
         "type": "String"
       }
@@ -5216,10 +5481,13 @@
   "@subscriptionCancelDialogTitle": {
     "description": "FEAT-044f — Title of the cancellation confirmation dialog (art. L215-1-1 recap requirement)."
   },
-  "subscriptionCancelDialogBody": "You will keep Baillan Pro access until {date}. After that date, your account automatically switches back to the Free plan. No prorated refund is issued.",
+  "subscriptionCancelDialogBody": "You will keep Baillan {level} access until {date}. After that date, your account automatically switches back to the Free plan. No prorated refund is issued.",
   "@subscriptionCancelDialogBody": {
-    "description": "FEAT-044f — Body of the cancellation confirmation dialog: end-of-access date, automatic downgrade to Free, no prorated refund (art. L215-1-1 recap requirement, plan §7). {date} is already formatted DD/MM/YYYY via FrenchDate.format.",
+    "description": "FEAT-044f/FEAT-056 — Body of the cancellation confirmation dialog: end-of-access date, automatic downgrade to Free, no prorated refund (art. L215-1-1 recap requirement, plan §7). {level} is the real current paid level display label; {date} is already formatted DD/MM/YYYY via FrenchDate.format.",
     "placeholders": {
+      "level": {
+        "type": "String"
+      },
       "date": {
         "type": "String"
       }

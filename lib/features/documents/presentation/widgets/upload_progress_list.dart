@@ -8,9 +8,19 @@ import '../upload_file_error_reason_l10n.dart';
 /// Affichée dans une Card ou en bas de la drop zone.
 /// Chaque fichier montre son nom + icône de statut (en cours, succès, erreur).
 class UploadProgressList extends StatelessWidget {
-  const UploadProgressList({super.key, required this.files});
+  const UploadProgressList({
+    super.key,
+    required this.files,
+    required this.maxFileSizeBytes,
+  });
 
   final List<UploadFileStatus> files;
+
+  /// Plafond de taille par fichier du palier courant (FEAT-056,
+  /// `quotaLimitProvider(PlanQuota.documentMaxBytes)`) — utilisé pour
+  /// formater le message [UploadFileErrorReason.fileTooLarge] tant qu'aucun
+  /// détail serveur n'est disponible sur le statut d'erreur lui-même.
+  final int maxFileSizeBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +28,21 @@ class UploadProgressList extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: files.map((f) => _UploadFileRow(status: f)).toList(),
+      children: files
+          .map(
+            (f) =>
+                _UploadFileRow(status: f, maxFileSizeBytes: maxFileSizeBytes),
+          )
+          .toList(),
     );
   }
 }
 
 class _UploadFileRow extends StatelessWidget {
-  const _UploadFileRow({required this.status});
+  const _UploadFileRow({required this.status, required this.maxFileSizeBytes});
 
   final UploadFileStatus status;
+  final int maxFileSizeBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -57,27 +73,38 @@ class _UploadFileRow extends StatelessWidget {
         filename: filename,
         trailing: null,
       ),
-      FileError(:final filename, :final reason) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildRow(
-            context,
-            icon: Icons.error_outline,
-            iconColor: theme.colorScheme.error,
-            filename: filename,
-            trailing: null,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 40, bottom: 4),
-            child: Text(
-              reason.message(context),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
+      FileError(
+        :final filename,
+        :final reason,
+        :final serverLimitBytes,
+        :final serverUpgradeToLevelId,
+      ) =>
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildRow(
+              context,
+              icon: Icons.error_outline,
+              iconColor: theme.colorScheme.error,
+              filename: filename,
+              trailing: null,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 40, bottom: 4),
+              child: Text(
+                reason.message(
+                  context,
+                  maxFileSizeBytes: maxFileSizeBytes,
+                  serverLimitBytes: serverLimitBytes,
+                  serverUpgradeToLevelId: serverUpgradeToLevelId,
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
     };
   }
 

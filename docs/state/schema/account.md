@@ -16,7 +16,9 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 | `email` | string\|null | null (anon) / email (compte) | ✅ |
 | `fullName` | string | '' (anon) / nom complet | ✅ |
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ |
-| `subscriptionTier` | string | 'anonymous' \| 'free' \| 'paid' | ✅ |
+| `subscriptionTier` | string | 'anonymous' \| 'free' \| 'paid' (classe d'accès, inchangée) | ✅ |
+| `planLevel` | string\|null | **FEAT-056** : 'pro' \| 'max' \| 'ultra' \| null (anonymous/free/anonyme sans upgrade) ; gelé client (immuable règles) | ✅ client |
+| `entitlements` | map[string] | **FEAT-056** : état par palier (ex: `{pro: {active, expiresAt}, max: ...}`), gelé client | ✅ client |
 | `anonExpiresAt` | timestamp | expiration essai (14j) | — |
 | `phone` | string\|null | téléphone (optionnel) | — |
 | `address` | string\|null | adresse postale (requis pour quittances) | — |
@@ -45,10 +47,10 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 
 **Règles Firestore** :
 - `get` : isOwner(uid) && (resource==null \|\| isActive(rsc))
-- `create` compte : isFullyAuthed() + RGPD consent v2-2026-07
-- `create` anon : isAnonymous() + anonExpiresAt <= now+15j
-- `update` compte : isFullyAuthed() && preservesImmutables()
-- `update` anon : isAnonymous() && anonExpiresAt valide
+- `create` compte : isFullyAuthed() + RGPD consent v2-2026-07 ; planLevel/entitlements gelés à null/absent (FEAT-056)
+- `create` anon : isAnonymous() + anonExpiresAt <= now+15j ; planLevel/entitlements gelés à null/absent (FEAT-056)
+- `update` compte : isFullyAuthed() && preservesImmutables() && planLevel/entitlements immuables client (FEAT-056)
+- `update` anon : isAnonymous() && anonExpiresAt valide && planLevel/entitlements immuables (FEAT-056)
 - `delete` : interdit (soft-delete CF)
 
 **Index** : `isAnonymous ↑, anonExpiresAt ↑` (expiration cleanup). Le cron d'entitlements interroge `proEntitlementActive == true` (égalité simple + filtre d'échéance en mémoire) → **aucun index composite requis**.
@@ -60,12 +62,17 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 - `revenueCatWebhook` (HTTP) : `free` ⇄ `paid` selon l'entitlement. **Seul chemin vers `paid`.**
 - `reconcileEntitlements` (scheduled) : filet de sécurité, corrige `paid` → `free` sur webhook manqué.
 
+**Écrivains du `planLevel` et `entitlements`** (écrits UNIQUEMENT via Admin SDK, jamais client) :
+- `revenueCatWebhook` (HTTP) : écrit `planLevel` et `entitlements` selon le produit reçu du webhook. **Source autoritaire unique.**
+- `reconcileEntitlements` (scheduled) : met à jour `entitlements` lors du downgrade (expiration).
+- **Jamais le client** : champs gelés par les règles Firestore à la création ET en update (`preservesImmutables`).
+
 **Callables** :
 - `softDeleteEntity` : soft-delete compte (nom réel de la callable universelle)
-- `cleanupExpiredAnon` (scheduled) : purge anonymes expirés (hard-delete)
 - `finalizeAnonymousUpgrade` : transition anon → compte (met à jour subscriptionTier)
 - `deleteAccount` : suppression RGPD (FEAT-045)
-- `createCheckoutSession` : initie le paiement web — **n'accorde aucun droit**
+- `createCheckoutSession` : initie le paiement web multi-paliers — **n'accorde aucun droit** (FEAT-056)
+- `manageSubscription` : gère subscription Stripe web (cancel/reactivate/change_plan) — **n'écrit pas Firestore** (FEAT-056)
 
 ---
 

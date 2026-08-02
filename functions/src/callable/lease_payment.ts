@@ -18,6 +18,7 @@
 import * as admin from "firebase-admin";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
 import {
   asBag,
   assertOwnedAndActive,
@@ -97,20 +98,9 @@ export function resolveChargeMode(
   return requested;
 }
 
-// FEAT-044 : plafond de baux ACTIFS par tier — miroir de
-// SubscriptionTier.activeLeaseLimit. `null` = illimité (paid) ; tier inconnu /
-// anonyme → 0 (defense-in-depth ; les baux sont réservés aux comptes complets).
-const FREE_ACTIVE_LEASE_LIMIT = 2;
-function activeLeaseLimitForTier(tier: string): number | null {
-  switch (tier) {
-    case "paid":
-      return null;
-    case "free":
-      return FREE_ACTIVE_LEASE_LIMIT;
-    default:
-      return 0;
-  }
-}
+// FEAT-056 : le plafond de baux ACTIFS vient désormais de la table générée
+// (`config/entitlements.json`), résolue sur le PALIER EFFECTIF — plus de
+// constante locale ni de switch sur `subscriptionTier`.
 
 // ============================================================================
 // createLease
@@ -244,14 +234,13 @@ export const createLease = onCall(
       const leaseRawCount = landlord.activeLeasesCount;
       const leaseHasCounter = typeof leaseRawCount === "number";
       if (status === "active") {
-        const limit = activeLeaseLimitForTier(
-          typeof landlord.subscriptionTier === "string" ?
-            landlord.subscriptionTier :
-            "anonymous",
-        );
+        const limit = quotaLimit(resolvePlan(landlord), "activeLeases");
         const count = leaseHasCounter ? leaseRawCount : (seededLeaseCount ?? 0);
         if (limit !== null && count >= limit) {
-          throw new HttpsError("resource-exhausted", "lease_limit_reached");
+          throw new HttpsError(
+            "resource-exhausted",
+            errorCodeFor("activeLeases"),
+          );
         }
       }
 
@@ -455,14 +444,13 @@ export const updateLease = onCall(
           }
           // Re-vérifier le plafond. Compteur absent (legacy) → fail-closed
           // sur le recompte pré-transaction (miroir createLease).
-          const limit = activeLeaseLimitForTier(
-            typeof ldata.subscriptionTier === "string" ?
-              ldata.subscriptionTier :
-              "anonymous",
-          );
+          const limit = quotaLimit(resolvePlan(ldata), "activeLeases");
           const count = landlordActiveLeases ?? seededLeaseCount ?? 0;
           if (limit !== null && count >= limit) {
-            throw new HttpsError("resource-exhausted", "lease_limit_reached");
+            throw new HttpsError(
+              "resource-exhausted",
+              errorCodeFor("activeLeases"),
+            );
           }
         }
       }

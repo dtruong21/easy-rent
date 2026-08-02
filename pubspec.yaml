@@ -89,6 +89,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 
+  # SHA-256 de config/entitlements.json (FEAT-056) — utilisé par
+  # tool/gen_entitlements.dart pour estampiller le miroir Dart généré, et par
+  # scripts/check-entitlements-parity.sh pour comparer les deux miroirs.
+  # Dev-only : rien dans lib/ n'importe crypto (le SHA est un littéral généré).
+  crypto: ^3.0.0
+
   # Code generation
   build_runner: ^2.4.13
   freezed: ^2.5.7
