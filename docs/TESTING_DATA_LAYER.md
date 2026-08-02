@@ -88,12 +88,13 @@ ses écritures ne l'étaient pas — c'est ajouté par ce ticket (cf. §4).
 `landlordId`, refus des écritures serveur-only) — pas au mapping de payload, trop
 lent pour ça.
 
-> ⚠️ **Cette suite ne tourne PAS en CI.** Le job `functions` de
-> `.github/workflows/ci.yml` exécute `npm test`, dont la config vitest n'inclut
-> que `src/**/*.test.ts` ; `test:rules` n'est référencé nulle part dans
-> `.github/`. Les tests de règles — les 33 préexistants comme les 25 ajoutés ici
-> — sont donc un filet **local uniquement** tant que la CI ne les câble pas
-> (étape dédiée avec émulateur + JDK).
+> ℹ️ **Cette suite tourne bien en CI**, dans un job dédié `firestore-rules`
+> (« Firestore Rules (cross-user) ») de `.github/workflows/ci.yml`, séparé du job
+> `functions` : `npm test` utilise la config vitest par défaut, qui n'inclut que
+> `src/**/*.test.ts`, donc `rules-tests/` a besoin de sa propre étape (JDK +
+> émulateur, avec cache du jar). Attention en lisant une branche ancienne : ce
+> job a été ajouté sur `develop` et n'existe pas sur `main`, donc un `grep` dans
+> `.github/` depuis une branche en retard conclut à tort qu'il n'y a rien.
 
 > Recommandation de séquencement : niveaux 1 + 2 d'abord (gratuits, attrapent la
 > régression de FEAT-056), niveau 3 ensuite pour `investment_scenarios` et les
@@ -141,9 +142,6 @@ coupable. Vérifié par mutation (ouverture de `delete` + retrait de
 
 - Niveau 1 pour `payments`, `documents`, `expenses`, `receipts` (chemins
   callables), `profile`, `landlord_tier`, `paid_plan_interest`.
-- **Câbler `test:rules` en CI** — aujourd'hui la suite de règles ne tourne qu'en
-  local (cf. encadré §3). C'est le prérequis pour que le niveau 3 protège
-  réellement les merges.
 - Étendre la matrice `_clientDirectWrites` si de nouvelles collections
   apparaissent — le test `chaque collection déclarée a un bloc de règles et un
   dépôt` échoue si une entrée pointe dans le vide, mais une collection **jamais

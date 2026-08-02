@@ -47,7 +47,7 @@ jobs:
         run: bash scripts/check-secrets.sh --all
 
   functions:
-    name: Functions (lint · build · test · rules)
+    name: Functions (lint · build · test)
     runs-on: ubuntu-latest
     # Job Node séparé (les Cloud Functions sont un projet npm indépendant sous
     # functions/). Jusqu'ici la suite vitest (createLease/createPayment, webhook
@@ -75,20 +75,4 @@ jobs:
 
       - name: Tests
         run: npm test
-        working-directory: functions
-
-      # `npm test` (config vitest par défaut) ne ramasse que src/**/*.test.ts :
-      # la suite de Security Rules vit sous rules-tests/ avec sa propre config
-      # et ne tournait donc QUE en local. Une PR cassant les rules passait le
-      # CI au vert. Étape séparée car elle démarre l'émulateur Firestore, qui
-      # est un binaire Java — d'où le JDK explicite ci-dessous. Le script npm
-      # épingle firebase-tools@13 (les CLI >= 14 exigent un JDK >= 21).
-      - name: Setup JDK (émulateur Firestore)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Tests règles Firestore (émulateur)
-        run: npm run test:rules
         working-directory: functions
