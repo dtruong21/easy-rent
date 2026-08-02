@@ -301,31 +301,72 @@ export class FakeFirestore {
 
 /**
  * Fake Storage minimal — couvre le sous-ensemble utilisé par
- * `documents.ts` (`bucket().file(path).exists()` / `.getSignedUrl()`) et
- * `delete_account.ts` (`bucket().deleteFiles({prefix})`). Par défaut tous
- * les fichiers "existent" (upload réputé réussi) ; `existingPaths` permet
- * de simuler un upload manquant pour les tests qui exercent ce garde-fou.
- * `deletedPrefixes` enregistre les purges par préfixe ; `deleteFilesError`
- * simule un échec GCS.
+ * `documents.ts` (`bucket().file(path).getMetadata()` / `.delete()` /
+ * `.getSignedUrl()`) et `delete_account.ts`
+ * (`bucket().deleteFiles({prefix})`). Par défaut tous les fichiers
+ * "existent" (upload réputé réussi) ; `existingPaths` permet de simuler un
+ * upload manquant pour les tests qui exercent ce garde-fou.
+ *
+ * `sizesByPath` pilote la taille RÉELLE renvoyée par `getMetadata()` —
+ * c'est la source de vérité du plafond depuis que `createDocument` ne fait
+ * plus confiance au `sizeBytes` déclaré par le client. Défaut
+ * [defaultSizeBytes] pour les chemins non renseignés. Comme GCS, la taille
+ * est renvoyée en **string** (API JSON) afin que les tests exercent le
+ * parsing réel.
+ *
+ * `deletedPaths` enregistre les suppressions unitaires (nettoyage de
+ * l'objet orphelin quand la création est refusée) ; `deletedPrefixes` les
+ * purges par préfixe ; `deleteFilesError` / `deleteError` simulent un échec
+ * GCS.
  */
 export class FakeStorage {
   existingPaths: Set<string> | null = null; // null = tout existe
+  readonly sizesByPath = new Map<string, number>();
+  defaultSizeBytes = 1024;
+  readonly deletedPaths: string[] = [];
   readonly deletedPrefixes: string[] = [];
   deleteFilesError: Error | null = null;
+  deleteError: Error | null = null;
+
+  private exists(path: string): boolean {
+    return this.existingPaths === null || this.existingPaths.has(path);
+  }
+
+  /** Erreur 404 façon `@google-cloud/storage` (ApiError avec `code`). */
+  private notFound(path: string): Error & {code: number} {
+    const err = new Error(`No such object: ${path}`) as Error & {code: number};
+    err.code = 404;
+    return err;
+  }
 
   bucket(): {
     file: (path: string) => {
       exists: () => Promise<[boolean]>;
+      getMetadata: () => Promise<[{size: string}]>;
+      delete: (opts?: {ignoreNotFound?: boolean}) => Promise<void>;
       getSignedUrl: (opts: unknown) => Promise<[string]>;
     };
     deleteFiles: (opts: {prefix: string}) => Promise<void>;
     } {
     return {
       file: (path: string) => ({
-        exists: () =>
-          Promise.resolve([
-            this.existingPaths === null || this.existingPaths.has(path),
-          ]),
+        exists: () => Promise.resolve([this.exists(path)] as [boolean]),
+        getMetadata: () => {
+          if (!this.exists(path)) return Promise.reject(this.notFound(path));
+          const size = this.sizesByPath.get(path) ?? this.defaultSizeBytes;
+          // GCS renvoie `size` en string — on reproduit fidèlement.
+          return Promise.resolve([{size: String(size)}] as [{size: string}]);
+        },
+        delete: (opts?: {ignoreNotFound?: boolean}) => {
+          if (this.deleteError) return Promise.reject(this.deleteError);
+          // `ignoreNotFound` (utilisé par `deleteStorageObject`) rend l'appel
+          // idempotent : un objet absent n'est pas une erreur.
+          if (!this.exists(path) && opts?.ignoreNotFound !== true) {
+            return Promise.reject(this.notFound(path));
+          }
+          this.deletedPaths.push(path);
+          return Promise.resolve();
+        },
         getSignedUrl: () => Promise.resolve([`https://fake-signed-url/${path}`]),
       }),
       deleteFiles: (opts: {prefix: string}) => {
