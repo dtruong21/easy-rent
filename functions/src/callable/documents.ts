@@ -24,6 +24,11 @@
  * si les deux sont fournis, `lease.propertyId == propertyId` est exigé.
  * Rétrocompat stricte : un appel avec `leaseId` seul suit exactement le
  * chemin de validation d'avant (tous les uploads de bail existants passent).
+ *
+ * v3 (durcissement taille) : le `sizeBytes` du payload n'est plus lu. La
+ * taille persistée et plafonnée est celle lue sur l'objet Storage via
+ * `getMetadata()` — cf. `resolveRealSize()` pour le raisonnement complet
+ * (coût, divergence déclaré/réel, nettoyage de l'orphelin).
  */
 
 import * as admin from "firebase-admin";
@@ -37,11 +42,10 @@ import {
   dataOrFail,
   optionalString,
   requireAuthUid,
-  requireInt,
   requireString,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
-
+import {deleteStorageObject} from "../utils/storage_cleanup";
 
 const ALLOWED_CATEGORIES = new Set([
   "bail_signe",
@@ -70,6 +74,91 @@ const ALLOWED_MIME = new Set([
 const DOWNLOAD_URL_EXPIRY_SECONDS = 5 * 60;
 
 /**
+ * Lit la taille RÉELLE de l'objet Storage.
+ *
+ * **Pourquoi** : le `sizeBytes` du payload est déclaré par le client et
+ * n'engage que lui. Il est persisté tel quel dans Firestore et sommé côté
+ * client (`DocumentsQuota.totalBytes`, seuil d'alerte 100 Mo) — un client
+ * modifié pouvait donc fausser ce total. La taille réelle est la seule
+ * source de vérité.
+ *
+ * **Coût : zéro aller-retour supplémentaire.** `getMetadata()` REMPLACE le
+ * `exists()` qui était déjà fait ici — un 404 GCS vaut « pas d'objet », ce
+ * qui est exactement le garde-fou anti-doc-fantôme d'avant. Même nombre
+ * d'appels Storage qu'avant ce changement.
+ *
+ * **Divergence déclaré/réel : on accepte, sur la seule foi du réel.** On ne
+ * refuse PAS un écart. Refuser n'apporterait aucune sécurité (le réel est
+ * de toute façon la valeur contrôlée et persistée) mais transformerait tout
+ * écart légitime — retry qui ré-uploade un objet légèrement différent,
+ * transformation côté SDK — en échec dur sur un upload dont l'utilisateur a
+ * DÉJÀ payé la bande passante. Le `sizeBytes` déclaré devient purement
+ * indicatif : il est ignoré, jamais persisté.
+ *
+ * **Refus ⇒ l'objet est supprimé** par le `catch` de `createDocument`, qui
+ * couvre tous les motifs de refus (pas seulement la taille) : sans ça on
+ * laisserait des octets facturés sans document Firestore en face. Le
+ * rollback client de `documents_repository.dart` ne peut pas le faire —
+ * `storage.rules` interdit le `delete` client sur ce préfixe.
+ *
+ * Note : le plafond est DÉJÀ appliqué à l'upload par `storage.rules`
+ * (`request.resource.size <= 10 MiB`), qui reste la première ligne de
+ * défense. Ce contrôle est la ceinture qui double les bretelles — il rend
+ * `sizeBytes` fiable et couvre le cas où les règles seraient mal déployées
+ * (le bucket est partagé prod/staging et `storage.rules` n'est PAS déployé
+ * par la CI — cf. ADR 0003).
+ *
+ * @returns la taille réelle en octets, à persister.
+ */
+async function resolveRealSize(
+  storagePath: string,
+  uid: string,
+): Promise<number> {
+  const file = admin.storage().bucket().file(storagePath);
+
+  let rawSize: unknown;
+  try {
+    const [metadata] = await file.getMetadata();
+    rawSize = metadata.size;
+  } catch (err) {
+    // 404 GCS = aucun objet à ce path → même refus qu'avant (doc fantôme).
+    if ((err as {code?: unknown})?.code === 404) {
+      throw new HttpsError(
+        "failed-precondition",
+        "no file at storagePath — upload first",
+      );
+    }
+    logger.error("createDocument: getMetadata failed", {uid, storagePath, err});
+    throw new HttpsError("internal", "storage_metadata_failed");
+  }
+
+  // GCS renvoie `size` en string (API JSON) ; on tolère aussi un number.
+  const realSize = typeof rawSize === "string" ? Number(rawSize) : rawSize;
+  if (typeof realSize !== "number" || !Number.isFinite(realSize)) {
+    logger.error("createDocument: unreadable object size", {
+      uid,
+      storagePath,
+      rawSize,
+    });
+    throw new HttpsError("internal", "storage_metadata_failed");
+  }
+
+  if (realSize < 1) {
+    // L'objet orphelin est purgé par le `catch` de `createDocument`, qui
+    // couvre TOUS les refus (pas seulement la taille) — cf. son commentaire.
+    logger.warn("createDocument: empty object rejected", {uid, storagePath});
+    throw new HttpsError("invalid-argument", "document_empty");
+  }
+
+  // Le plafond HAUT n'est volontairement PLUS appliqué ici. Depuis FEAT-056 il
+  // dépend du palier de l'appelant (`documentMaxBytes` : 10 Mio free et Pro,
+  // 25 Mio Max, 50 Mio Ultra), donc il ne peut être tranché qu'avec la limite
+  // renvoyée par `assertDocumentQuota` — voir `assertRealSizeWithinPlan`. Cette
+  // fonction ne garde que le refus de FORME (objet vide), indépendant du palier.
+  return realSize;
+}
+
+/**
  * Gating du stockage documentaire par palier — le stockage a un coût réel,
  * donc le volume est plafonné hors paliers payants.
  *
@@ -94,12 +183,20 @@ const DOWNLOAD_URL_EXPIRY_SECONDS = 5 * 60;
  *
  * FEAT-056 : les deux plafonds viennent de la table générée, résolus sur le
  * palier effectif (subscriptionTier + planLevel), plus d'une constante locale.
+ *
+ * Cette fonction applique le quota n°1 et RENVOIE le plafond n°2, qu'elle ne
+ * peut pas appliquer elle-même : depuis la purge Storage (#156) la taille de
+ * référence n'est plus celle que le client déclare mais celle que
+ * `resolveRealSize()` lit dans le bucket, plus loin dans le flux. La renvoyer
+ * évite un second read du doc landlord.
+ *
+ * @returns le plafond de taille en octets applicable à l'appelant (`null` =
+ *          illimité), à passer à `assertRealSizeWithinPlan`.
  */
 async function assertDocumentQuota(
   db: admin.firestore.Firestore,
   uid: string,
-  sizeBytes: number,
-): Promise<void> {
+): Promise<number | null> {
   const landlordSnap = await db.doc(`landlords/${uid}`).get();
   if (!landlordSnap.exists) {
     throw new HttpsError("not-found", "landlord not found");
@@ -121,10 +218,28 @@ async function assertDocumentQuota(
     }
   }
 
-  // 2. Taille du fichier — PR-7b. `details` porte le plafond APPLICABLE À
-  // L'APPELANT (et le plus petit palier qui accepterait ce fichier) pour que
-  // le client compose un message utile sans dupliquer la grille.
-  const byteLimit = quotaLimit(plan, "documentMaxBytes");
+  // 2. Taille du fichier — résolue ici (un seul read landlord), appliquée plus
+  // loin sur la taille RÉELLE lue dans Storage.
+  return quotaLimit(plan, "documentMaxBytes");
+}
+
+/**
+ * Applique le plafond de taille du palier à la taille RÉELLE de l'objet.
+ *
+ * Séparé de `assertDocumentQuota` parce que les deux valeurs n'arrivent pas au
+ * même moment : le plafond vient du doc landlord (avant les lookups d'ownership),
+ * la taille vient des métadonnées Storage (après). Pur et exporté, donc testable
+ * sans Firestore ni bucket.
+ *
+ * `details` porte le plafond APPLICABLE À L'APPELANT et le plus petit palier qui
+ * accepterait ce fichier, pour que le client compose un message utile sans
+ * dupliquer la grille. `upgradeTo` vaut `null` quand aucun palier ne suffit — on
+ * ne propose jamais une montée en gamme qui ne débloquerait rien.
+ */
+export function assertRealSizeWithinPlan(
+  sizeBytes: number,
+  byteLimit: number | null,
+): void {
   if (byteLimit !== null && sizeBytes > byteLimit) {
     throw new HttpsError(
       "resource-exhausted",
@@ -170,12 +285,14 @@ export const createDocument = onCall(
     if (!ALLOWED_MIME.has(mimeType)) {
       throw new HttpsError("invalid-argument", `invalid mimeType: ${mimeType}`);
     }
-    // Pas de plafond STATIQUE ici : la taille max dépend du palier de
-    // l'appelant (`documentMaxBytes`), donc elle ne peut être tranchée qu'après
-    // le read du doc landlord, dans `assertDocumentQuota`. Ce `requireInt` ne
-    // valide plus que la forme (entier strictement positif) ; le refus métier
-    // porte le code contractuel `file_too_large`, pas `invalid-argument`.
-    const sizeBytes = requireInt(data.sizeBytes, "sizeBytes", {min: 1});
+    // `data.sizeBytes` est volontairement IGNORÉ : la taille déclarée par le
+    // client n'engage que lui. La valeur persistée vient de `resolveRealSize()`
+    // (métadonnées Storage) plus bas. Le champ reste accepté dans le payload
+    // pour rétrocompat — les clients déployés l'envoient encore.
+    //
+    // C'est aussi ce qui rend le plafond PAR PALIER de FEAT-056 réellement
+    // contraignant : appliqué à une taille déclarée, un client modifié pouvait
+    // annoncer 1 Ko et téléverser 40 Mio.
 
     // Path doit commencer par documents/{uid}/ pour matcher les Storage Rules.
     const expectedPrefix = `documents/${uid}/`;
@@ -188,80 +305,98 @@ export const createDocument = onCall(
 
     const db = dbForRequest(request);
 
-    // Gating par palier AVANT tout travail coûteux (lookups cross-entity +
-    // accès Storage) : un compte au plafond, ou un fichier trop volumineux pour
-    // son palier, est refusé immédiatement.
-    await assertDocumentQuota(db, uid, sizeBytes);
-
-    // Validate lease ownership (cross-entity) — inchangé si leaseId fourni.
-    if (leaseId !== null) {
-      const leaseSnap = await db.doc(`leases/${leaseId}`).get();
-      const lease = dataOrFail(leaseSnap, "lease not found");
-      if (lease.landlordId !== uid) {
-        throw new HttpsError("permission-denied", "lease not owned");
-      }
-      if (lease.deletedAt != null) {
-        throw new HttpsError("failed-precondition", "lease is deleted");
-      }
-      // Si les deux sont fournis, la cohérence lease.propertyId == propertyId
-      // est obligatoire (garde-fou cross-entity, pattern createExpense).
-      if (propertyId !== null && lease.propertyId !== propertyId) {
-        throw new HttpsError(
-          "failed-precondition",
-          "lease_property_mismatch",
-        );
-      }
-    }
-
-    // Validate property ownership (cross-entity) — nouveau chemin v2.
-    if (propertyId !== null) {
-      const propertySnap = await db.doc(`properties/${propertyId}`).get();
-      const property = dataOrFail(propertySnap, "property not found");
-      if (property.landlordId !== uid) {
-        throw new HttpsError("permission-denied", "property not owned");
-      }
-      if (property.deletedAt != null) {
-        throw new HttpsError("failed-precondition", "property is deleted");
-      }
-    }
-
-    // Verify file actually uploaded (else client could register a phantom doc).
-    const bucket = admin.storage().bucket();
-    const [exists] = await bucket.file(storagePath).exists();
-    if (!exists) {
-      throw new HttpsError(
-        "failed-precondition",
-        "no file at storagePath — upload first",
-      );
-    }
-
-    const legalHold = LEGAL_HOLD_CATEGORIES.has(category);
-
-    const docRef = db.collection("documents").doc();
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    // À partir d'ici, l'objet est DÉJÀ dans le bucket (le client uploade avant
+    // d'appeler) et le préfixe `documents/{uid}/` est vérifié : tout refus doit
+    // emporter l'objet avec lui, sinon on facture des octets qu'aucun document
+    // Firestore ne référence — invisibles dans l'app, donc jamais nettoyés.
+    //
+    // Le client ne peut pas s'en charger (`storage.rules` lui interdit
+    // `delete`), d'où ce rollback côté serveur qui couvre TOUS les refus :
+    // quota, ownership lease/bien, taille, échec de persistance.
+    //
+    // Contrepartie assumée sur les erreurs transitoires (`internal`) : on
+    // purge quand même. L'utilisateur devra re-uploader — ce que le client
+    // fait déjà de toute façon, puisqu'il traite tout échec de `createDocument`
+    // comme un échec d'upload complet. Mieux vaut ça qu'un orphelin silencieux.
     try {
-      await docRef.set({
-        id: docRef.id,
-        landlordId: uid,
-        leaseId,
-        propertyId,
-        category,
-        filename,
-        storagePath,
-        mimeType,
-        sizeBytes,
-        legalHold,
-        uploadedAt: now,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      });
-    } catch (err) {
-      logger.error("createDocument failed", {uid, storagePath, err});
-      throw new HttpsError("internal", "document_persist_failed");
-    }
+      // Gating par palier AVANT tout travail coûteux (lookups cross-entity +
+      // accès Storage) : un compte au plafond est refusé immédiatement. Le
+      // plafond de TAILLE est seulement résolu ici — il s'applique plus bas, à
+      // la taille réelle de l'objet (FEAT-056 × purge Storage #156).
+      const maxBytesForPlan = await assertDocumentQuota(db, uid);
 
-    return {documentId: docRef.id, legalHold};
+      // Validate lease ownership (cross-entity) — inchangé si leaseId fourni.
+      if (leaseId !== null) {
+        const leaseSnap = await db.doc(`leases/${leaseId}`).get();
+        const lease = dataOrFail(leaseSnap, "lease not found");
+        if (lease.landlordId !== uid) {
+          throw new HttpsError("permission-denied", "lease not owned");
+        }
+        if (lease.deletedAt != null) {
+          throw new HttpsError("failed-precondition", "lease is deleted");
+        }
+        // Si les deux sont fournis, la cohérence lease.propertyId == propertyId
+        // est obligatoire (garde-fou cross-entity, pattern createExpense).
+        if (propertyId !== null && lease.propertyId !== propertyId) {
+          throw new HttpsError(
+            "failed-precondition",
+            "lease_property_mismatch",
+          );
+        }
+      }
+
+      // Validate property ownership (cross-entity) — nouveau chemin v2.
+      if (propertyId !== null) {
+        const propertySnap = await db.doc(`properties/${propertyId}`).get();
+        const property = dataOrFail(propertySnap, "property not found");
+        if (property.landlordId !== uid) {
+          throw new HttpsError("permission-denied", "property not owned");
+        }
+        if (property.deletedAt != null) {
+          throw new HttpsError("failed-precondition", "property is deleted");
+        }
+      }
+
+      // Vérifie que le fichier est bien uploadé ET lit sa taille réelle (un
+      // 404 vaut « doc fantôme »). Source de vérité du plafond de taille.
+      const sizeBytes = await resolveRealSize(storagePath, uid);
+
+      // Plafond de taille du palier, appliqué à la taille RÉELLE. Un refus ici
+      // emporte l'objet avec lui via le `catch` ci-dessous.
+      assertRealSizeWithinPlan(sizeBytes, maxBytesForPlan);
+
+      const legalHold = LEGAL_HOLD_CATEGORIES.has(category);
+
+      const docRef = db.collection("documents").doc();
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      try {
+        await docRef.set({
+          id: docRef.id,
+          landlordId: uid,
+          leaseId,
+          propertyId,
+          category,
+          filename,
+          storagePath,
+          mimeType,
+          sizeBytes,
+          legalHold,
+          uploadedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: null,
+        });
+      } catch (err) {
+        logger.error("createDocument failed", {uid, storagePath, err});
+        throw new HttpsError("internal", "document_persist_failed");
+      }
+
+      return {documentId: docRef.id, legalHold};
+    } catch (err) {
+      // Best-effort et idempotent : le refus prime sur l'échec de purge.
+      await deleteStorageObject(storagePath, uid);
+      throw err;
+    }
   },
 );
 

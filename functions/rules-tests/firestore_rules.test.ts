@@ -87,6 +87,53 @@ beforeAll(async () => {
       accountDeletedAt: new Date(),
     });
 
+    // Scénarios d'investissement : docs dédiés (ne pas réutiliser `doc-a`,
+    // partagé avec les tests de list-scoping) portant la forme COMPLÈTE exigée
+    // par la rule create — support des tests update/delete ci-dessous.
+    await db.doc("investment_scenarios/scenario-a").set({
+      id: "scenario-a",
+      landlordId: LANDLORD_A,
+      name: "Studio Lyon 3",
+      schemaVersion: 1,
+      scenarioJson: {purchasePriceCents: 15000000},
+      createdAt: new Date("2026-01-01"),
+      deletedAt: null,
+    });
+    await db.doc("investment_scenarios/scenario-deleted").set({
+      id: "scenario-deleted",
+      landlordId: LANDLORD_A,
+      name: "Scénario archivé",
+      schemaVersion: 1,
+      scenarioJson: {purchasePriceCents: 9000000},
+      createdAt: new Date("2026-01-01"),
+      deletedAt: new Date("2026-06-01"),
+    });
+    // Docs jetables, un par test d'écriture NÉGATIF (update/delete refusés).
+    //
+    // Ces tests tentent des mutations qui doivent échouer. Si la rule régresse,
+    // la mutation PASSE et corrompt le doc — avec un doc partagé, le premier
+    // test qui régresse (p. ex. `landlordId` réécrit) fait cascader tous les
+    // suivants en faux négatifs, et la suite pointe vers le mauvais coupable.
+    // Un doc par test garde chaque échec diagnostique.
+    for (const id of [
+      "scenario-del-owner",
+      "scenario-del-other",
+      "scenario-upd-other",
+      "scenario-upd-landlord",
+      "scenario-upd-createdat",
+      "scenario-upd-softdelete",
+    ]) {
+      await db.doc(`investment_scenarios/${id}`).set({
+        id,
+        landlordId: LANDLORD_A,
+        name: "Scénario jetable",
+        schemaVersion: 1,
+        scenarioJson: {purchasePriceCents: 1000000},
+        createdAt: new Date("2026-01-01"),
+        deletedAt: null,
+      });
+    }
+
     // FEAT-044 : landlord A « complet » avec 2 biens comptabilisés — support
     // des tests d'immutabilité du compteur / gating.
     await db.doc("landlords/landlord-a").set({
@@ -552,5 +599,234 @@ describe("FEAT-056 — création de scénarios CF-exclusive (PR-2b)", () => {
     await assertSucceeds(
       asOwnerA().doc("investment_scenarios/scn-editable").get(),
     );
+  });
+});
+
+/**
+ * investment_scenarios — écritures.
+ *
+ * Le list-scoping est déjà couvert plus haut (LANDLORD_SCOPED_COLLECTIONS) ;
+ * ce bloc couvre create/update/delete, qui ne l'étaient pas.
+ *
+ * Particularité historique (#156) : c'était la SEULE collection métier dont la
+ * création restait ouverte au client (`allow create: if isSignedIn() && …`) au
+ * lieu d'être CF-exclusive, et volontairement ouverte aux comptes ANONYMES
+ * (`isSignedIn()`, pas `isFullyAuthed()`) — le simulateur est la seule surface
+ * accessible sans compte complet (BAILLAN-M1).
+ *
+ * FEAT-056 (PR-2b) a refermé cette porte : `allow create: if false`. Le
+ * simulateur reste ouvert aux anonymes, mais via la Callable `createScenario`,
+ * qui seule sait appliquer le plafond de scénarios du palier. Les cas de
+ * création ci-dessous sont donc TOUS devenus des refus — ils sont conservés (et
+ * les deux « autorisé » retournés en `assertFails`) parce qu'ils restent la
+ * non-régression du deny : si la rule redevenait permissive, ils repasseraient
+ * au rouge.
+ *
+ * Corollaire : c'est aussi la seule collection où le transport client peut
+ * diverger des rules sans qu'un backend s'y oppose. Ces tests figent le
+ * contrat côté rules ; le pendant côté client vit dans
+ * `test/unit/firestore_write_path_conformance_test.dart`.
+ */
+describe("investment_scenarios — écritures (create/update/delete)", () => {
+  const validScenario = (
+    uid: string,
+    id: string,
+    over: Record<string, unknown> = {},
+  ) => ({
+    id,
+    landlordId: uid,
+    name: "Studio Lyon 3",
+    schemaVersion: 1,
+    scenarioJson: {purchasePriceCents: 15000000},
+    createdAt: new Date(),
+    deletedAt: null,
+    ...over,
+  });
+
+  describe("create", () => {
+    // La validation de FORME que ces cas exerçaient (id ≠ docId, nom vide, nom
+    // > 120, schemaVersion, scenarioJson) vit désormais dans
+    // `parseScenarioInputs` — couverte par
+    // functions/src/__tests__/scenarios.test.ts. Ici, tout create client est
+    // refusé quelle que soit la forme du payload : c'est exactement le contrat
+    // que ces tests figent.
+    it("le propriétaire crée un scénario valide → REFUSÉ depuis PR-2b (CF-exclusive)", async () => {
+      // Ce cas était un `assertSucceeds` avant FEAT-056. C'est LE test qui
+      // repasse au rouge si `allow create` redevenait permissif.
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-ok")
+          .set(validScenario(LANDLORD_A, "s-ok")),
+      );
+    });
+
+    it("un compte ANONYME crée un scénario → REFUSÉ depuis PR-2b (passe par la callable)", async () => {
+      // Le simulateur reste ouvert aux anonymes, mais leur plafond (1 scénario)
+      // n'est vérifiable que côté serveur : le write direct est fermé.
+      const anon = env
+        .authenticatedContext("anon-1", {
+          firebase: {sign_in_provider: "anonymous"},
+        })
+        .firestore();
+      await assertFails(
+        anon
+          .doc("investment_scenarios/s-anon")
+          .set(validScenario("anon-1", "s-anon")),
+      );
+    });
+
+    it("un non-authentifié ne peut pas créer", async () => {
+      await assertFails(
+        env
+          .unauthenticatedContext()
+          .firestore()
+          .doc("investment_scenarios/s-nosign")
+          .set(validScenario(LANDLORD_A, "s-nosign")),
+      );
+    });
+
+    it("créer pour le compte d'AUTRUI → refusé", async () => {
+      await assertFails(
+        asOtherB()
+          .doc("investment_scenarios/s-steal")
+          .set(validScenario(LANDLORD_A, "s-steal")),
+      );
+    });
+
+    it("id du payload ≠ docId → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-mismatch")
+          .set(validScenario(LANDLORD_A, "autre-id")),
+      );
+    });
+
+    it("créer déjà soft-deleted → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-predeleted")
+          .set(
+            validScenario(LANDLORD_A, "s-predeleted", {deletedAt: new Date()}),
+          ),
+      );
+    });
+
+    it("nom vide → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-noname")
+          .set(validScenario(LANDLORD_A, "s-noname", {name: ""})),
+      );
+    });
+
+    it("nom > 120 caractères → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-longname")
+          .set(validScenario(LANDLORD_A, "s-longname", {name: "x".repeat(121)})),
+      );
+    });
+
+    it("schemaVersion absent / non-int → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-badversion")
+          .set(validScenario(LANDLORD_A, "s-badversion", {schemaVersion: "1"})),
+      );
+    });
+
+    it("schemaVersion <= 0 → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-zeroversion")
+          .set(validScenario(LANDLORD_A, "s-zeroversion", {schemaVersion: 0})),
+      );
+    });
+
+    it("scenarioJson non-map → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/s-badjson")
+          .set(validScenario(LANDLORD_A, "s-badjson", {scenarioJson: "nope"})),
+      );
+    });
+  });
+
+  describe("update", () => {
+    it("le propriétaire renomme son scénario → autorisé", async () => {
+      await assertSucceeds(
+        asOwnerA()
+          .doc("investment_scenarios/scenario-a")
+          .update({name: "Studio Lyon 3 — révisé"}),
+      );
+    });
+
+    it("un autre compte ne peut pas modifier le scénario d'autrui", async () => {
+      await assertFails(
+        asOtherB()
+          .doc("investment_scenarios/scenario-upd-other")
+          .update({name: "Détourné"}),
+      );
+    });
+
+    it("muter landlordId (immuable) → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/scenario-upd-landlord")
+          .update({landlordId: LANDLORD_B}),
+      );
+    });
+
+    it("muter createdAt (immuable) → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/scenario-upd-createdat")
+          .update({createdAt: new Date("2020-01-01")}),
+      );
+    });
+
+    it("soft-delete via update client → refusé (CF softDeleteEntity only)", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/scenario-upd-softdelete")
+          .update({deletedAt: new Date()}),
+      );
+    });
+
+    it("modifier un scénario déjà soft-deleted → refusé", async () => {
+      await assertFails(
+        asOwnerA()
+          .doc("investment_scenarios/scenario-deleted")
+          .update({name: "Ressuscité"}),
+      );
+    });
+  });
+
+  describe("delete", () => {
+    it("suppression directe par le propriétaire → refusée (CF-exclusive)", async () => {
+      await assertFails(
+        asOwnerA().doc("investment_scenarios/scenario-del-owner").delete(),
+      );
+    });
+
+    it("suppression directe par autrui → refusée", async () => {
+      await assertFails(
+        asOtherB().doc("investment_scenarios/scenario-del-other").delete(),
+      );
+    });
+  });
+
+  describe("get — non-régression", () => {
+    it("le propriétaire lit son scénario", async () => {
+      await assertSucceeds(
+        asOwnerA().doc("investment_scenarios/scenario-a").get(),
+      );
+    });
+
+    it("un scénario soft-deleted n'est plus lisible", async () => {
+      await assertFails(
+        asOwnerA().doc("investment_scenarios/scenario-deleted").get(),
+      );
+    });
   });
 });

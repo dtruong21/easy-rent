@@ -540,9 +540,151 @@ describe("createDocument — palier effectif (FEAT-056)", () => {
 });
 
 // ==========================================================================
+// Plafond de TAILLE — la taille RÉELLE de l'objet Storage fait foi (#156).
+//
+// Le `sizeBytes` du payload est déclaré par le client : il est ignoré, et la
+// valeur persistée vient de `getMetadata()`. Bornes exactes autour du plafond
+// servi par défaut ici (le `beforeEach` sème `paid` sans planLevel → dérivé
+// `pro` → 10 Mio), plus le contrat de divergence déclaré/réel et le nettoyage
+// de l'objet orphelin en cas de refus.
+//
+// FEAT-056 × #156 : le dépassement ne se solde plus par
+// `invalid-argument/document_too_large` (constante globale levée dans
+// `resolveRealSize`) mais par `resource-exhausted/file_too_large`
+// (`assertRealSizeWithinPlan`), puisque le plafond dépend désormais du palier.
+// Le refus de FORME — objet vide — reste `invalid-argument/document_empty` :
+// lui ne dépend d'aucun palier. Le comportement testé est le même, seul le
+// code d'erreur a bougé.
+// ==========================================================================
+describe("createDocument — plafond de taille (taille réelle Storage)", () => {
+  // Plafond `documentMaxBytes` du palier servi par défaut dans ce describe
+  // (pro). Vient de la table de droits, plus d'une constante de documents.ts.
+  const MAX_BYTES = 10 * 1024 * 1024;
+
+  /** Appel valide minimal ; [declared] = `sizeBytes` envoyé par le client. */
+  function callCreate(declared: unknown = 1024) {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+    return createDocument.run(
+      makeRequest(LANDLORD_A, {
+        ...baseInput,
+        sizeBytes: declared,
+        leaseId: "lease-1",
+        category: "bail_signe",
+      }),
+    );
+  }
+
+  /** Fixe la taille RÉELLE de l'objet à STORAGE_PATH. */
+  function setRealSize(bytes: number) {
+    fakeStorage.sizesByPath.set(STORAGE_PATH, bytes);
+  }
+
+  // ---------------------------------------------------------------- bornes
+  it("taille réelle SOUS le plafond (10 MiB - 1) → crée le document", async () => {
+    setRealSize(MAX_BYTES - 1);
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+    expect(fakeDb.peek(`documents/${result.documentId}`)?.sizeBytes).toBe(
+      MAX_BYTES - 1,
+    );
+  });
+
+  it("taille réelle AU plafond exact (10 MiB) → accepté (borne inclusive)", async () => {
+    setRealSize(MAX_BYTES);
+    const result = await callCreate();
+    expect(result.documentId).toBeTruthy();
+    expect(fakeDb.peek(`documents/${result.documentId}`)?.sizeBytes).toBe(
+      MAX_BYTES,
+    );
+  });
+
+  it("taille réelle JUSTE au-dessus (10 MiB + 1) → refus file_too_large", async () => {
+    setRealSize(MAX_BYTES + 1);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "file_too_large",
+    });
+  });
+
+  it("objet vide (0 octet) → refus document_empty", async () => {
+    setRealSize(0);
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "invalid-argument",
+      message: "document_empty",
+    });
+  });
+
+  // ------------------------------------------- divergence déclaré vs réel
+  it("déclaré minuscule + réel hors plafond → refusé sur le RÉEL", async () => {
+    // Le scénario de contournement : le client ment sur sizeBytes. C'est aussi
+    // ce qui rend le plafond PAR PALIER réellement contraignant — appliqué au
+    // déclaré, un client modifié annoncerait 1 Ko pour 40 Mio téléversés.
+    setRealSize(40 * 1024 * 1024); // 40 MiB réellement uploadés
+    await expect(callCreate(1024)).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "file_too_large",
+    });
+  });
+
+  it("déclaré énorme + réel sous le plafond → accepté (le déclaré n'est pas un motif de refus)", async () => {
+    setRealSize(2048);
+    const result = await callCreate(999 * 1024 * 1024);
+    expect(result.documentId).toBeTruthy();
+    // Et c'est bien le RÉEL qui est persisté, pas le déclaré.
+    expect(fakeDb.peek(`documents/${result.documentId}`)?.sizeBytes).toBe(2048);
+  });
+
+  it("sizeBytes absent du payload → accepté (rétrocompat, réel fait foi)", async () => {
+    setRealSize(4096);
+    const result = await callCreate(undefined);
+    expect(fakeDb.peek(`documents/${result.documentId}`)?.sizeBytes).toBe(4096);
+  });
+
+  it("sizeBytes non numérique → ignoré sans erreur (réel fait foi)", async () => {
+    setRealSize(4096);
+    const result = await callCreate("beaucoup");
+    expect(fakeDb.peek(`documents/${result.documentId}`)?.sizeBytes).toBe(4096);
+  });
+
+  // ------------------------------------------------- nettoyage / orphelins
+  it("refus pour dépassement → l'objet Storage orphelin est supprimé", async () => {
+    setRealSize(MAX_BYTES + 1);
+    await expect(callCreate()).rejects.toThrowError(HttpsError);
+    expect(fakeStorage.deletedPaths).toContain(STORAGE_PATH);
+  });
+
+  it("création acceptée → l'objet Storage n'est PAS supprimé", async () => {
+    setRealSize(1024);
+    await callCreate();
+    expect(fakeStorage.deletedPaths).not.toContain(STORAGE_PATH);
+  });
+
+  it("échec du nettoyage → le refus prime malgré tout", async () => {
+    setRealSize(MAX_BYTES + 1);
+    fakeStorage.deleteError = new Error("GCS down");
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "file_too_large",
+    });
+  });
+
+  // ------------------------------------------------------ absence d'objet
+  it("aucun objet au storagePath → failed-precondition (garde-fou doc fantôme)", async () => {
+    fakeStorage.existingPaths = new Set(); // getMetadata → 404
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "failed-precondition",
+    });
+  });
+});
+
+// ==========================================================================
 // PR-7b — `documentMaxBytes` câblé sur la table. Quota de TAILLE (unit
 // `bytes`), à ne jamais confondre avec le compteur `documents` ci-dessus : ces
-// tests ne sèment AUCUN document et ne jouent que sur `sizeBytes`.
+// tests ne sèment AUCUN document et ne jouent que sur la taille du fichier.
+//
+// Depuis #156, « la taille du fichier » = la taille RÉELLE lue dans le bucket,
+// pas celle déclarée dans le payload (que `baseInput` laisse volontairement à
+// 1 Ko : si le plafond mordait sur le déclaré, tous ces tests passeraient).
 // ==========================================================================
 describe("createDocument — taille max par fichier (PR-7b)", () => {
   const MIB = 1024 * 1024;
@@ -564,13 +706,13 @@ describe("createDocument — taille max par fichier (PR-7b)", () => {
       .length;
   }
 
-  /** Upload d'un fichier de [sizeBytes] octets par LANDLORD_A. */
+  /** Upload d'un fichier de [sizeBytes] octets RÉELS par LANDLORD_A. */
   function callCreate(sizeBytes: number) {
+    fakeStorage.sizesByPath.set(STORAGE_PATH, sizeBytes);
     seedLease("lease-1", LANDLORD_A, "prop-1");
     return createDocument.run(
       makeRequest(LANDLORD_A, {
         ...baseInput,
-        sizeBytes,
         leaseId: "lease-1",
         category: "bail_signe",
       }),
@@ -595,6 +737,10 @@ describe("createDocument — taille max par fichier (PR-7b)", () => {
       seedPlan(tier, planLevel);
       const result = await callCreate(limitBytes);
       expect(result.documentId).toBeTruthy();
+      // Et c'est la taille RÉELLE qui est persistée, pas le 1 Ko déclaré.
+      expect(fakeDb.peek(`documents/${result.documentId}`)?.sizeBytes).toBe(
+        limitBytes,
+      );
     });
 
     it(`${label} : un octet au-dessus de ${mib} Mio → file_too_large`, async () => {
@@ -605,6 +751,8 @@ describe("createDocument — taille max par fichier (PR-7b)", () => {
       });
       // Aucun document Firestore ne doit avoir été écrit.
       expect(writtenDocumentCount()).toBe(0);
+      // …et l'objet uploadé ne doit pas rester orphelin dans le bucket (#156).
+      expect(fakeStorage.deletedPaths).toContain(STORAGE_PATH);
     });
   }
 
@@ -676,21 +824,114 @@ describe("createDocument — taille max par fichier (PR-7b)", () => {
     });
   });
 
-  it("sizeBytes non entier ou nul reste un invalid-argument (validation de forme)", async () => {
+  it("objet vide (0 octet) → invalid-argument, quel que soit le palier", async () => {
+    // Refus de FORME, indépendant du palier : `resolveRealSize` le lève avant
+    // tout plafond, y compris pour un ultra dont les 50 Mio ne disent rien d'un
+    // objet de 0 octet. Le `sizeBytes` DÉCLARÉ, lui, n'est plus validé du tout
+    // depuis #156 (cf. « déclaré vs réel » ci-dessus) : seul le réel décide.
     seedPlan("paid", "ultra");
     await expect(callCreate(0)).rejects.toMatchObject({
       code: "invalid-argument",
+      message: "document_empty",
     });
-    seedPlan("paid", "ultra");
+    expect(writtenDocumentCount()).toBe(0);
+  });
+});
+
+// ==========================================================================
+// Rollback Storage — TOUT refus de createDocument emporte l'objet uploadé.
+//
+// Le client uploade AVANT d'appeler le callable et ne peut pas nettoyer
+// lui-même (`storage.rules` : `allow delete: if false` sur `documents/**`).
+// Sans purge serveur, chaque refus laisserait des octets facturés qu'aucun
+// document Firestore ne référence — donc invisibles et jamais nettoyés.
+// ==========================================================================
+describe("createDocument — rollback de l'objet Storage sur refus", () => {
+  function callCreate(overrides: Record<string, unknown> = {}) {
+    return createDocument.run(
+      makeRequest(LANDLORD_A, {
+        ...baseInput,
+        leaseId: "lease-1",
+        category: "bail_signe",
+        ...overrides,
+      }),
+    );
+  }
+
+  it("refus de QUOTA → l'objet est purgé", async () => {
+    seedLandlord("free");
+    seedDocuments(10); // plafond atteint
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "resource-exhausted",
+    });
+    expect(fakeStorage.deletedPaths).toContain(STORAGE_PATH);
+  });
+
+  it("refus d'OWNERSHIP (bail d'un autre) → l'objet est purgé", async () => {
+    seedLease("lease-1", LANDLORD_B, "prop-1");
+
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "permission-denied",
+    });
+    expect(fakeStorage.deletedPaths).toContain(STORAGE_PATH);
+  });
+
+  it("refus BAIL SUPPRIMÉ → l'objet est purgé", async () => {
+    seedLease("lease-1", LANDLORD_A, "prop-1", {deletedAt: new Date()});
+
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "failed-precondition",
+    });
+    expect(fakeStorage.deletedPaths).toContain(STORAGE_PATH);
+  });
+
+  it("refus TAILLE → l'objet est purgé", async () => {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+    fakeStorage.sizesByPath.set(STORAGE_PATH, 40 * 1024 * 1024);
+
+    await expect(callCreate()).rejects.toMatchObject({
+      message: "file_too_large",
+    });
+    expect(fakeStorage.deletedPaths).toContain(STORAGE_PATH);
+  });
+
+  it("refus AVANT validation du préfixe → aucune purge (path pas encore sûr)", async () => {
+    // Un storagePath hors `documents/{uid}/` ne doit surtout pas être supprimé :
+    // il pourrait désigner l'objet d'un autre bailleur.
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+
     await expect(
-      createDocument.run(
-        makeRequest(LANDLORD_A, {
-          ...baseInput,
-          sizeBytes: "beaucoup",
-          leaseId: "lease-1",
-          category: "bail_signe",
-        }),
-      ),
+      callCreate({storagePath: `documents/${LANDLORD_B}/vole.pdf`}),
     ).rejects.toMatchObject({code: "invalid-argument"});
+    expect(fakeStorage.deletedPaths).toEqual([]);
+  });
+
+  it("catégorie invalide (avant préfixe) → aucune purge", async () => {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+
+    await expect(callCreate({category: "inconnue"})).rejects.toMatchObject({
+      code: "invalid-argument",
+    });
+    expect(fakeStorage.deletedPaths).toEqual([]);
+  });
+
+  it("SUCCÈS → l'objet est conservé", async () => {
+    seedLease("lease-1", LANDLORD_A, "prop-1");
+
+    const result = await callCreate();
+
+    expect(result.documentId).toBeTruthy();
+    expect(fakeStorage.deletedPaths).toEqual([]);
+  });
+
+  it("échec de la purge → le refus d'origine est bien propagé", async () => {
+    seedLease("lease-1", LANDLORD_B, "prop-1");
+    fakeStorage.deleteError = new Error("GCS down");
+
+    await expect(callCreate()).rejects.toMatchObject({
+      code: "permission-denied",
+    });
   });
 });
