@@ -58,6 +58,74 @@ export function resolveRgpdConsentVersion(clientValue: unknown): string {
     : CURRENT_RGPD_VERSION;
 }
 
+/** Vue minimale d'un `UserRecord` — permet de tester sans firebase-admin. */
+export interface AuthIdentity {
+  email?: string | null;
+  displayName?: string | null;
+  providerData: ReadonlyArray<{
+    email?: string | null;
+    displayName?: string | null;
+  }>;
+}
+
+const nonEmpty = (v: unknown): v is string =>
+  typeof v === "string" && v.trim().length > 0;
+
+/**
+ * Résout `email` et `fullName` à persister lors de l'upgrade anonyme → compte.
+ *
+ * **Le bug que ça corrige.** Le doc anonyme est créé avec `email: null` et
+ * `fullName: ''` — normal, un anonyme n'a ni l'un ni l'autre. Cette callable
+ * basculait ensuite `isAnonymous`, le tier et le consentement, mais **laissait
+ * ces deux champs intacts** : on obtenait un compte complet sans email ni nom.
+ * Conséquences observées en recette : le dashboard affiche « Hello » sans nom,
+ * et l'écran Informations personnelles échoue à charger, `LandlordProfile`
+ * déclarant `required String email` alors que le doc contient `null`.
+ * La règle Firestore impose bien `email is string` et `fullName.size() > 0`,
+ * mais seulement à la CRÉATION — ce doc passe par une création anonyme puis un
+ * update, il contournait donc l'invariant sans jamais le violer formellement.
+ *
+ * **Pourquoi `providerData` et pas seulement le niveau supérieur.** Sur un
+ * `linkWithPopup` Google, `authUser.displayName` peut valoir `undefined` alors
+ * que l'entrée du fournisseur porte le nom réel. Observé tel quel : un compte
+ * Google fournissant « Thi Kim Chi Le » ressortait avec `fullName: ''`. Idem
+ * pour l'email. On lit donc le niveau supérieur d'abord, puis les fournisseurs.
+ *
+ * **On ne réécrit jamais par-dessus une valeur déjà renseignée** : la fonction
+ * ne renvoie que les champs manquants ou vides. Un upgrade rejoué ne peut donc
+ * pas écraser un nom que l'utilisateur aurait corrigé entre-temps.
+ *
+ * Dernier repli du nom : l'email. C'est laid mais ça respecte l'invariant
+ * « un compte complet a un nom non vide », et ça reste modifiable dans l'app —
+ * mieux qu'un champ vide qui casse l'écran de profil.
+ *
+ * Pure (aucune dépendance Firebase) pour rester testable sans émulateur.
+ */
+export function resolveUpgradeIdentity(
+  authUser: AuthIdentity,
+  current: Record<string, unknown>,
+): {email?: string; fullName?: string} {
+  const fromProviders = <K extends "email" | "displayName">(key: K) =>
+    authUser.providerData.find((p) => nonEmpty(p[key]))?.[key];
+
+  const email = nonEmpty(authUser.email) ?
+    authUser.email :
+    fromProviders("email");
+  const displayName = nonEmpty(authUser.displayName) ?
+    authUser.displayName :
+    fromProviders("displayName");
+
+  const patch: {email?: string; fullName?: string} = {};
+  if (!nonEmpty(current.email) && nonEmpty(email)) {
+    patch.email = email.trim();
+  }
+  if (!nonEmpty(current.fullName)) {
+    const name = nonEmpty(displayName) ? displayName : email;
+    if (nonEmpty(name)) patch.fullName = name.trim();
+  }
+  return patch;
+}
+
 export const finalizeAnonymousUpgrade = onCall(
   {region: "europe-west1"},
   async (request) => {
@@ -114,7 +182,13 @@ export const finalizeAnonymousUpgrade = onCall(
       }
 
       const now = admin.firestore.FieldValue.serverTimestamp();
+      // `email` / `fullName` viennent d'Auth (niveau supérieur puis
+      // `providerData`) — le doc anonyme les portait vides par construction, et
+      // ne pas les renseigner ici produisait un compte complet sans identité.
+      // Ne réécrit jamais par-dessus une valeur déjà présente.
+      const identity = resolveUpgradeIdentity(authUser, current);
       tx.update(ref, {
+        ...identity,
         isAnonymous: false,
         subscriptionTier: "free",
         anonExpiresAt: null,
