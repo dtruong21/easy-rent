@@ -106,4 +106,28 @@ if [ "$dart_sha" != "$json_sha" ]; then
   fail "sourceSha ($dart_sha) != SHA-256 réel de $SOURCE ($json_sha)"
 fi
 
+# --- 6. Le plafond de `storage.rules` couvre-t-il le palier le plus généreux ?
+# Les règles Storage ne peuvent PAS lire le palier (elles n'accèdent qu'à la
+# base Firestore par défaut, or staging vit sur une base nommée — ADR 0003).
+# Elles portent donc un garde-fou grossier qui doit valoir AU MOINS le maximum
+# de `documentMaxBytes`. S'il passait en dessous, le palier concerné deviendrait
+# inatteignable EN SILENCE : l'upload serait refusé par les règles avant même
+# que `createDocument` ne voie le fichier, et aucun test serveur ne le verrait
+# (ils court-circuitent les règles Storage).
+STORAGE_RULES="storage.rules"
+max_quota=$(node -e "
+  const t = require('./$SOURCE');
+  const v = Object.values(t.quotas.documentMaxBytes.values).filter((x) => x !== null);
+  process.stdout.write(String(Math.max(...v)));
+")
+# Le littéral de la règle est écrit '50 * 1024 * 1024' → on évalue le produit.
+rule_cap=$(sed -n 's/.*request\.resource\.size <= \([0-9 *]*\).*/\1/p' "$STORAGE_RULES" \
+  | head -1 | tr -d ' ' | awk -F'*' '{p=1; for(i=1;i<=NF;i++) p*=$i; print p}')
+
+[ -n "$rule_cap" ] || fail "plafond de taille introuvable dans $STORAGE_RULES"
+if [ "$rule_cap" -lt "$max_quota" ]; then
+  fail "$STORAGE_RULES plafonne à $rule_cap octets, mais la table autorise jusqu'à $max_quota (documentMaxBytes). Le palier le plus haut serait refusé à l'upload, en silence."
+fi
+
 echo "✅ Table de droits : miroirs Dart/TS à jour et cohérents (sourceSha ${dart_sha:0:12}…)."
+echo "✅ storage.rules ($rule_cap o) couvre le plafond max de la table ($max_quota o)."

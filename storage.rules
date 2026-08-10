@@ -20,9 +20,36 @@ service firebase.storage {
     // ============================================================
     match /documents/{landlordId}/{file=**} {
       allow read: if false; // download via signed URL côté callable
+      // Plafond de taille : 50 Mio = le MAXIMUM de la grille des paliers
+      // (`documentMaxBytes` dans config/entitlements.json : 10 Mio en gratuit et
+      // Pro, 25 Mio en Max, 50 Mio en Ultra). Cette règle est un garde-fou
+      // anti-abus GROSSIER, pas le plafond commercial.
+      //
+      // Pourquoi pas le plafond exact du palier ici : les règles Storage ne
+      // savent lire Firestore que sur la base PAR DÉFAUT. Avec ADR 0003
+      // (prod sur `(default)`, staging sur `staging`) le doc landlord d'un
+      // utilisateur de staging est illisible d'ici — un `firestore.get()`
+      // renverrait rien, ou pire le doc de PROD portant le même uid. Le bucket
+      // étant partagé entre les deux environnements, la règle doit être juste
+      // pour les deux : elle ne peut donc pas dépendre du palier.
+      //
+      // Le plafond PAR PALIER est appliqué par `createDocument`
+      // (functions/src/callable/documents.ts, `assertRealSizeWithinPlan`), sur
+      // la taille RÉELLE lue dans les métadonnées Storage — et non sur celle
+      // déclarée par le client. Un fichier refusé là voit son objet purgé du
+      // bucket, donc rien n'est facturé durablement.
+      //
+      // Contrepartie assumée : un compte gratuit peut désormais téléverser
+      // jusqu'à 50 Mio avant d'être refusé, au lieu d'être bloqué à 10 Mio à
+      // l'upload. Le client pré-vérifie déjà le plafond de son palier, donc
+      // seul un client modifié gaspille cette bande passante — et il le
+      // pouvait déjà à 10 Mio.
+      //
+      // ⚠️ Si un palier dépasse un jour 50 Mio dans la table, CE nombre doit
+      // suivre, sinon le palier sera inatteignable en silence.
       allow create: if request.auth != null
         && request.auth.uid == landlordId
-        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.size <= 50 * 1024 * 1024
         && request.resource.contentType.matches(
           'application/pdf|image/jpeg|image/png|image/webp',
         );

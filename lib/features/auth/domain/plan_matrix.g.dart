@@ -97,7 +97,7 @@ class PlanMatrix {
 
   /// SHA-256 de config/entitlements.json au moment de la génération.
   static const String sourceSha =
-      '9455bd6767a8b1865b9ca7271ec88db71d60fb965893ee8a36f549254925e1c0';
+      'cc1c22490de7ce2a8cff6d08e6e882e6b145d91c8bfb3b225e0fb9ca9c09acaa';
 
   /// Clé de palier des sessions anonymes.
   static const String anonymousKey = 'anonymous';

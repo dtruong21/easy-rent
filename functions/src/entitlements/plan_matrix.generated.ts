@@ -67,7 +67,7 @@ export interface PlanLevelSpec {
 export const PLAN_MATRIX_SCHEMA_VERSION = 1;
 
 /** SHA-256 de config/entitlements.json au moment de la génération. */
-export const PLAN_MATRIX_SOURCE_SHA = "9455bd6767a8b1865b9ca7271ec88db71d60fb965893ee8a36f549254925e1c0";
+export const PLAN_MATRIX_SOURCE_SHA = "cc1c22490de7ce2a8cff6d08e6e882e6b145d91c8bfb3b225e0fb9ca9c09acaa";
 
 /** Clé de palier des sessions anonymes. */
 export const ANONYMOUS_KEY = "anonymous";
