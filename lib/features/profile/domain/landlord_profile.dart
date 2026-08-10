@@ -23,7 +23,20 @@ class LandlordProfile with _$LandlordProfile {
     required String id,
 
     /// Adresse email du bailleur, immutable (identifiant d'authentification).
-    required String email,
+    ///
+    /// **Nullable à dessein.** Ce champ était `required String`, ce qui faisait
+    /// échouer `fromJson` — et donc l'écran Informations personnelles entier,
+    /// sur un message d'erreur sans issue — dès qu'un doc `landlords` portait
+    /// `email: null`. C'est arrivé en recette : un compte issu du parcours
+    /// « essai sans compte » gardait l'email vide du doc anonyme, faute d'être
+    /// renseigné à l'upgrade (corrigé côté serveur dans
+    /// `finalizeAnonymousUpgrade`).
+    ///
+    /// La source tarie, ce champ reste nullable comme filet : un document
+    /// ancien, importé ou réparé à la main ne doit jamais pouvoir rendre l'écran
+    /// inaccessible. La vraie source de vérité de l'email est Firebase Auth —
+    /// l'UI y retombe quand la copie Firestore manque.
+    String? email,
 
     /// Nom complet du bailleur — requis pour les quittances (loi 1989 art. 21).
     @JsonKey(name: 'full_name') String? fullName,
