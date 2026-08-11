@@ -68,11 +68,25 @@ class FirestoreProfileRepository implements ProfileRepository {
       return t.isEmpty ? null : t;
     }
 
+    // `updatedAt` n'est VOLONTAIREMENT pas écrit ici : le trigger serveur
+    // `setUpdatedAtLandlords` (functions/src/triggers/set_updated_at.ts) s'en
+    // charge, et c'est lui la source de vérité.
+    //
+    // L'écrire depuis le client cassait la sauvegarde du profil. Un
+    // `FieldValue.serverTimestamp()` vaut `null` tant que le serveur n'a pas
+    // confirmé (compensation de latence) ; la relecture juste en dessous
+    // rendait alors un doc dont `updatedAt` était nul, or `LandlordProfile` le
+    // déclare `required DateTime` → `fromJson` levait, la couche appelante
+    // classait ça en « erreur inattendue » et l'utilisateur voyait
+    // « Impossible de mettre à jour le profil ».
+    //
+    // Le piège : **l'écriture avait bel et bien réussi**. Seule la relecture
+    // échouait. L'utilisateur enregistrait donc son profil à chaque tentative
+    // en croyant l'inverse — signalé en recette sur staging (2026-08-11).
     final payload = <String, dynamic>{
       'fullName': trimmed(fullName),
       'phone': trimmed(phone),
       'address': trimmed(address),
-      'updatedAt': FieldValue.serverTimestamp(),
     };
     final ref = _ref(uid);
     await ref.update(payload);
