@@ -3111,7 +3111,7 @@
   },
   "receiptsSectionTitle": "Receipts issued",
   "@receiptsSectionTitle": {
-    "description": "Card section header of ReceiptsListSection, embedded in the lease detail page (shows a 3-item preview of receipts)."
+    "description": "Card section header of ReceiptsListSection, embedded in the lease detail page (shows a compact clickable summary row, not the receipts themselves)."
   },
   "receiptsSectionErrorMessage": "Error loading receipts.",
   "@receiptsSectionErrorMessage": {
@@ -3121,9 +3121,23 @@
   "@receiptsSectionEmptyHint": {
     "description": "Small italic hint shown inside ReceiptsListSection (lease detail page) when the lease has no receipt yet; distinct from receiptsEmptyStateTitle, which is the full CardEmptyState on the dedicated /leases/:id/receipts list page."
   },
-  "receiptsSectionSeeAllButton": "View all receipts",
-  "@receiptsSectionSeeAllButton": {
-    "description": "Link button under the receipts preview in ReceiptsListSection (lease detail page), navigating to the full receipts list page."
+  "receiptsSectionSummaryCount": "{count} {count, plural, one{receipt} other{receipts}}",
+  "@receiptsSectionSummaryCount": {
+    "description": "First half of the compact summary row in ReceiptsListSection (lease detail page) — total receipts issued for the lease (including voided ones, same convention as receiptsBannerGeneratedCount); concatenated visually with receiptsSectionSummaryLastLabel on the row's subtitle line. Tapping the row (ListTile, key tile_receipts_summary) navigates to /leases/:id/receipts.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsSectionSummaryLastLabel": "Latest: {month}",
+  "@receiptsSectionSummaryLastLabel": {
+    "description": "Subtitle of the compact summary row in ReceiptsListSection (lease detail page) — period of the most recent receipt; {month} is already formatted (e.g. 'Août 2026', see receiptPeriodMonthYear — intentionally French month names regardless of app locale, same convention as receipt cards/timeline).",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
   },
   "receiptsBannerPropertyLoadingPlaceholder": "Loading property...",
   "@receiptsBannerPropertyLoadingPlaceholder": {
