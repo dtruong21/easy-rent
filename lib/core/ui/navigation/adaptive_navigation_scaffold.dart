@@ -93,11 +93,30 @@ List<_Destination> _destinations(BuildContext context) {
   ];
 }
 
-/// Bascule vers la branche [index]. Re-tap de l'onglet déjà actif → retour à
-/// la racine de la branche (`initialLocation: true`), idiome Material
-/// standard (« pop to root »).
+/// Index de la branche **Profil** dans `_destinations` — dernière destination.
+/// Le comportement qui en dépend est verrouillé par un test de navigation, pas
+/// par cette constante seule (cf. `shell_branch_state_test.dart`).
+const int _profileBranchIndex = 4;
+
+/// Bascule vers la branche [index]. Retour à la racine (`initialLocation: true`)
+/// dans DEUX cas :
+///
+/// 1. **Re-tap de l'onglet déjà actif** — idiome Material standard
+///    (« pop to root »).
+/// 2. **Entrée dans la branche Profil**, quelle que soit la branche d'origine.
+///
+/// Le cas 2 est une exception assumée à la préservation d'état par branche
+/// (`docs/UX_NAVIGATION.md` §7), qui reste la règle pour Biens, Locataires et
+/// Baux : y retrouver son filtre ou sa position dans une liste après un détour
+/// est précieux. Profil est un **hub de réglages** — il n'y a pas de « travail
+/// en cours » à préserver, et retomber sur le dernier réglage ouvert (ex.
+/// Informations personnelles) plutôt que sur le hub désoriente : l'utilisateur
+/// clique « Profil » pour voir le menu, pas pour reprendre où il en était.
+/// Signalé en recette sur staging.
 void _onDestinationSelected(StatefulNavigationShell shell, int index) {
-  shell.goBranch(index, initialLocation: index == shell.currentIndex);
+  final resetToRoot =
+      index == shell.currentIndex || index == _profileBranchIndex;
+  shell.goBranch(index, initialLocation: resetToRoot);
 }
 
 // ---------------------------------------------------------------------------

@@ -223,10 +223,37 @@ de 6ᵉ item). Style rail + barre : thème `navigationRailTheme` /
 
 | Geste | API GoRouter | Effet |
 |---|---|---|
-| **Changer d'onglet** | `goBranch(index)` (via `StatefulNavigationShell.goBranch`) | Bascule sur la branche, **sans réinitialiser** sa pile (grâce à `indexedStack`). C'est le tap sur une destination. |
+| **Changer d'onglet** | `goBranch(index)` (via `StatefulNavigationShell.goBranch`) | Bascule sur la branche, **sans réinitialiser** sa pile (grâce à `indexedStack`). C'est le tap sur une destination. **Deux exceptions** → retour à la racine : re-tap de l'onglet déjà actif, et **toute entrée dans la branche Profil** (cf. ci-dessous). |
 | **Naviguer vers une racine par URL/KPI** | `context.go('/leases?filter=active')` | Active la branche correspondante + remplace sa pile par la racine. Utilisé par les **KPI drill-down** et les deep links. |
 | **Empiler dans l'onglet courant** | `context.push('/leases/:id')` | Pousse une sous-page **dans la branche active**. Le bouton retour dépile. Utilisé par tap sur une carte de liste, un bouton « + Nouveau », etc. |
 | **Retour** | `context.pop()` / `BackButton` | Dépile **dans la branche courante**. Quand la branche est à sa racine, le bouton retour disparaît (cf. §6). |
+
+### 5.1 Exception Profil — la branche revient toujours à son hub (2026-08-11)
+
+La préservation d'état par branche reste la règle pour **Biens, Locataires et
+Baux** : y retrouver son filtre ou sa position dans une liste après un détour est
+précieux, et c'est verrouillé par `test/widget/shell_branch_state_test.dart`.
+
+**Profil fait exception** : entrer dans cet onglet remet toujours sa pile à
+`/profile`, quelle que soit la branche d'origine. Motif : c'est un **hub de
+réglages**, il n'y a pas de « travail en cours » à préserver. Retomber sur le
+dernier réglage ouvert — Informations personnelles, par exemple — désoriente :
+on clique « Profil » pour voir le menu, pas pour reprendre où on en était.
+
+Signalé en recette sur staging, où le symptôme était aggravé par un écran
+Informations personnelles alors cassé : l'onglet Profil renvoyait
+systématiquement sur une page en erreur, sans moyen évident d'atteindre le hub.
+
+Implémenté dans `_onDestinationSelected`
+(`lib/core/ui/navigation/adaptive_navigation_scaffold.dart`) et verrouillé par un
+test qui échoue si l'exception disparaît.
+
+> Non traité à ce stade : `context.push` ne synchronise pas la barre d'adresse
+> sur le web, donc une sous-page poussée s'affiche sous l'URL de la racine de sa
+> branche. Conséquence : rechargement et partage de lien ramènent à la racine.
+> C'est inhérent à `push`, que ce contrat impose (§5) — le corriger demanderait
+> de rebasculer les sous-pages sur `go`, avec l'effet de bord d'un reset de pile.
+> À arbitrer si le partage de sous-pages devient un besoin.
 
 **Règles d'or** :
 

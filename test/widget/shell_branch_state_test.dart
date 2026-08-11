@@ -544,6 +544,36 @@ void main() {
 
       expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
     });
+
+    testWidgets(
+      'EXCEPTION Profil : sous-page → Accueil → Profil rouvre le HUB, '
+      'pas la sous-page',
+      (tester) async {
+        // Contre-partie assumée du test précédent. Biens/Locataires/Baux
+        // conservent leur pile (filtre, position dans une liste : du travail en
+        // cours). Profil est un hub de réglages — y retomber sur le dernier
+        // réglage ouvert désoriente, l'utilisateur clique « Profil » pour voir
+        // le menu. Signalé en recette sur staging.
+        final router = await _pumpShellApp(
+          tester,
+          sessionState: SessionState.fullyAuthenticated,
+          initialLocation: '/profile/details',
+        );
+
+        // Départ sur une sous-page : la pile n'est pas vide.
+        expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+
+        await tester.tap(find.text('Accueil'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Profil'));
+        await tester.pumpAndSettle();
+
+        // Pile remise à la racine — plus de bouton retour, et l'URL suit.
+        expect(find.byKey(const Key('app_bar_back')), findsNothing);
+        expect(_loc(router), '/profile');
+      },
+    );
   });
 
   group('Shell — drill-down KPI (Accueil → Baux)', () {
