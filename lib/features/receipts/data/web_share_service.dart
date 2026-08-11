@@ -73,6 +73,31 @@ class WebShareServiceImpl implements WebShareService {
   }
 
   @override
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  }) async {
+    try {
+      final blob = web.Blob(
+        [Uint8List.fromList(pdfBytes).toJS].toJS,
+        web.BlobPropertyBag(type: 'application/pdf'),
+      );
+      final url = web.URL.createObjectURL(blob);
+      web.window.open(url, '_blank');
+      // Révocation DIFFÉRÉE, jamais immédiate : l'onglet lit l'URL de façon
+      // asynchrone après son ouverture. Révoquer dans la foulée lui couperait
+      // la source et redonnerait la page blanche qu'on corrige ici.
+      Future<void>.delayed(
+        const Duration(minutes: 2),
+        () => web.URL.revokeObjectURL(url),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
   Future<bool> copyToClipboard(String text) async {
     try {
       await web.window.navigator.clipboard.writeText(text).toDart;

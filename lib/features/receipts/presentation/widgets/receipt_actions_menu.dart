@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logging/logging.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/breakpoints.dart';
 import '../../application/share_receipt_controller.dart';
 import '../../application/void_receipt_controller.dart';
-import '../../data/receipts_repository.dart';
+import '../open_receipt_pdf.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipt_action_error.dart';
 import 'receipt_action_error_l10n.dart';
 import 'share_receipt_button.dart';
 import 'void_receipt_dialog.dart';
-
-final _log = Logger('ReceiptActionsMenu');
 
 /// Modèle interne d'une action disponible pour une quittance.
 enum _ReceiptActionKind { openPdf, share, cancel }
@@ -165,30 +161,8 @@ class _DesktopActionsRow extends ConsumerWidget {
     });
   }
 
-  Future<void> _openPdf(BuildContext context, WidgetRef ref) async {
-    try {
-      final repo = ref.read(receiptsRepositoryProvider);
-      final url = await repo.signedUrl(receipt.id);
-      final uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
-          );
-        }
-      }
-    } catch (e, st) {
-      _log.warning('Erreur téléchargement PDF', e, st);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.receiptsErrorGeneratePdfLink),
-            backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          ),
-        );
-      }
-    }
-  }
+  Future<void> _openPdf(BuildContext context, WidgetRef ref) =>
+      openReceiptPdf(context, ref, receipt.id);
 
   Future<void> _showVoidDialog(BuildContext context, WidgetRef ref) async {
     await showDialog<void>(
@@ -334,34 +308,8 @@ class _MobileActionsMenu extends ConsumerWidget {
     }
   }
 
-  Future<void> _openPdf(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeData theme,
-  ) async {
-    try {
-      final repo = ref.read(receiptsRepositoryProvider);
-      final url = await repo.signedUrl(receipt.id);
-      final uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
-          );
-        }
-      }
-    } catch (e, st) {
-      _log.warning('Erreur téléchargement PDF', e, st);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.receiptsErrorGeneratePdfLink),
-            backgroundColor: theme.colorScheme.errorContainer,
-          ),
-        );
-      }
-    }
-  }
+  Future<void> _openPdf(BuildContext context, WidgetRef ref, ThemeData theme) =>
+      openReceiptPdf(context, ref, receipt.id);
 
   Future<void> _showVoidDialog(BuildContext context, WidgetRef ref) async {
     await showDialog<void>(

@@ -92,6 +92,12 @@ class _MockWebShare implements WebShareService {
   bool canShareFiles() => _canShare;
 
   @override
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  }) async => false;
+
+  @override
   Future<void> sharePdf({
     required String title,
     required String text,

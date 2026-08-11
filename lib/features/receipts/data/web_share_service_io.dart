@@ -68,6 +68,19 @@ class WebShareServiceImpl implements WebShareService {
   /// Best-effort, comme l'impl web : ne doit jamais faire échouer le flux
   /// de partage appelant.
   @override
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  }) async {
+    // Hors Web, `launchUrl` sur une URL `data:` fonctionne (la restriction de
+    // navigation de premier niveau est propre aux navigateurs). On renvoie
+    // `false` pour laisser l'appelant conserver son chemin historique, plutôt
+    // que d'introduire ici une écriture de fichier temporaire dont personne
+    // n'a besoin aujourd'hui.
+    return false;
+  }
+
+  @override
   Future<bool> copyToClipboard(String text) async {
     if (!_isMobile) {
       return false;
