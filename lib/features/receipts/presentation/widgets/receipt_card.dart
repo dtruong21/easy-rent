@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logging/logging.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
@@ -9,15 +7,13 @@ import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
 import '../../application/void_receipt_controller.dart';
-import '../../data/receipts_repository.dart';
+import '../open_receipt_pdf.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipt_action_error.dart';
 import 'receipt_action_error_l10n.dart';
 import 'receipt_status_mapper.dart';
 import 'share_receipt_button.dart';
 import 'void_receipt_dialog.dart';
-
-final _log = Logger('ReceiptCard');
 
 /// Carte v2 représentant une quittance dans la vue Cards.
 ///
@@ -125,30 +121,8 @@ class ReceiptCard extends ConsumerWidget {
     });
   }
 
-  Future<void> _openPdf(BuildContext context, WidgetRef ref) async {
-    try {
-      final repo = ref.read(receiptsRepositoryProvider);
-      final url = await repo.signedUrl(receipt.id);
-      final uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
-          );
-        }
-      }
-    } catch (e, st) {
-      _log.warning('Erreur ouverture PDF', e, st);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.receiptsErrorGeneratePdfLink),
-            backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          ),
-        );
-      }
-    }
-  }
+  Future<void> _openPdf(BuildContext context, WidgetRef ref) =>
+      openReceiptPdf(context, ref, receipt.id);
 
   Future<void> _showVoidDialog(BuildContext context, WidgetRef ref) async {
     await showDialog<void>(
