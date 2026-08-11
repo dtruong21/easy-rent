@@ -1254,11 +1254,11 @@
   },
   "propertiesDetailActiveLeasesTitle": "Active leases",
   "@propertiesDetailActiveLeasesTitle": {
-    "description": "Section title on the property detail page for the (stub) active leases section."
+    "description": "Section title on the property detail page listing the property's active leases (status == active)."
   },
-  "propertiesDetailActiveLeasesStub": "Available after FEAT-005",
-  "@propertiesDetailActiveLeasesStub": {
-    "description": "Placeholder text under the active leases section title, indicating the feature is not yet implemented (internal feature-flag reference, dev-facing but currently user-visible)."
+  "propertiesDetailActiveLeasesEmpty": "No active lease for this property.",
+  "@propertiesDetailActiveLeasesEmpty": {
+    "description": "Empty-state message shown under the active leases section title on the property detail page when the property has no active lease."
   },
   "propertiesDetailArchiveButton": "Archive this property",
   "@propertiesDetailArchiveButton": {

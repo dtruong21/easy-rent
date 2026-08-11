@@ -240,4 +240,93 @@ void main() {
       expect(items.single.isLate, isFalse);
     });
   });
+
+  group('FirestoreLeaseRepository.listActiveLeasesForProperty — '
+      'section "Baux actifs" fiche bien (FEAT-005)', () {
+    test('bien sans bail → liste vide', () async {
+      final leases = await repo.listActiveLeasesForProperty('p1');
+
+      expect(leases, isEmpty);
+    });
+
+    test('un bail actif sur le bien → renvoyé au format snake_case', () async {
+      await seedLease(id: 'l1', startDate: DateTime(2024, 6, 1));
+
+      final leases = await repo.listActiveLeasesForProperty('p1');
+
+      expect(leases, hasLength(1));
+      expect(leases.single['id'], 'l1');
+      expect(leases.single['property_id'], 'p1');
+      expect(leases.single['status'], 'active');
+      expect(leases.single['rent_amount_cents'], 80000);
+      expect(leases.single['start_date'], isNotNull);
+    });
+
+    test('bail terminated sur le bien → exclu (section "Baux actifs" '
+        'seulement)', () async {
+      await seedLease(
+        id: 'l1',
+        status: 'terminated',
+        startDate: DateTime(2023, 1, 1),
+      );
+
+      final leases = await repo.listActiveLeasesForProperty('p1');
+
+      expect(leases, isEmpty);
+    });
+
+    test('bail actif soft-supprimé → exclu', () async {
+      await seedLease(id: 'l1', startDate: DateTime(2024, 1, 1));
+      await firestore.collection('leases').doc('l1').update({
+        'deletedAt': Timestamp.fromDate(DateTime(2024, 6, 1)),
+      });
+
+      final leases = await repo.listActiveLeasesForProperty('p1');
+
+      expect(leases, isEmpty);
+    });
+
+    test('bail actif d\'un autre bien → exclu (filtre propertyId)', () async {
+      await firestore.collection('leases').doc('l1').set({
+        'landlordId': uid,
+        'propertyId': 'autre-bien',
+        'tenantId': 't1',
+        'rentAmountCents': 50000,
+        'chargesAmountCents': 0,
+        'startDate': Timestamp.fromDate(DateTime(2024, 1, 1)),
+        'status': 'active',
+        'paymentDay': 1,
+        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1)),
+        'updatedAt': Timestamp.fromDate(DateTime(2024, 1, 1)),
+        'deletedAt': null,
+      });
+
+      final leases = await repo.listActiveLeasesForProperty('p1');
+
+      expect(leases, isEmpty);
+    });
+
+    test(
+      'bail actif d\'un autre landlord → exclu (isolation cross-user)',
+      () async {
+        await firestore.collection('leases').doc('l1').set({
+          'landlordId': 'autre-landlord',
+          'propertyId': 'p1',
+          'tenantId': 't1',
+          'rentAmountCents': 50000,
+          'chargesAmountCents': 0,
+          'startDate': Timestamp.fromDate(DateTime(2024, 1, 1)),
+          'status': 'active',
+          'paymentDay': 1,
+          'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1)),
+          'updatedAt': Timestamp.fromDate(DateTime(2024, 1, 1)),
+          'deletedAt': null,
+        });
+
+        final leases = await repo.listActiveLeasesForProperty('p1');
+
+        expect(leases, isEmpty);
+      },
+    );
+  });
 }

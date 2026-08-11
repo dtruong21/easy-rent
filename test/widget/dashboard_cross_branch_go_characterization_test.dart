@@ -332,6 +332,11 @@ class _FakeLeaseRepo implements LeaseRepository {
   ];
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
+
+  @override
   Future<Lease> getById(String id) async {
     if (id == 'lease-shell-1') {
       return _makeLease(id: id, status: LeaseStatus.active);

@@ -8,11 +8,13 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../expenses/presentation/widgets/expenses_history_section.dart';
+import '../../leases/data/lease_repository.dart';
 import '../application/properties_list_provider.dart';
 import '../application/property_detail_provider.dart';
 import '../data/property_repository.dart';
 import '../domain/property.dart';
 import 'widgets/heating_type_l10n.dart';
+import 'widgets/property_lease_summary.dart';
 import 'widgets/property_profitability_card.dart';
 import 'widgets/property_type_l10n.dart';
 
@@ -23,7 +25,10 @@ final _log = Logger('PropertyDetailPage');
 /// Route : `/properties/:id`
 ///
 /// Affiche toutes les informations + boutons "Modifier" et "Archiver".
-/// Section "Baux actifs" : stub V1 (disponible après FEAT-005).
+/// Section "Baux actifs" : query directe `leases` via
+/// `LeaseRepository.listActiveLeasesForProperty` (FEAT-005). Ne montre que
+/// les baux `status == active` — les baux terminés/archivés du bien restent
+/// consultables depuis la fiche bail / la liste des baux, pas dupliqués ici.
 ///
 /// Critères Gherkin :
 /// - Cross-user : si les Firestore Rules ne renvoient aucun document → "Bien introuvable".
@@ -85,29 +90,8 @@ class _PropertyDetailContent extends ConsumerWidget {
             ExpensesHistorySection(propertyId: property.id),
             const SizedBox(height: 24),
 
-            // Section baux — stub V1
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.propertiesDetailActiveLeasesTitle,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.propertiesDetailActiveLeasesStub,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Section baux actifs
+            _LeasesSection(propertyId: property.id),
             const SizedBox(height: 32),
 
             // Bouton Archiver
@@ -413,6 +397,88 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Section baux actifs — charge depuis le repository et affiche [PropertyLeaseSummary].
+class _LeasesSection extends ConsumerStatefulWidget {
+  const _LeasesSection({required this.propertyId});
+
+  final String propertyId;
+
+  @override
+  ConsumerState<_LeasesSection> createState() => _LeasesSectionState();
+}
+
+class _LeasesSectionState extends ConsumerState<_LeasesSection> {
+  List<Map<String, dynamic>>? _leases;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLeases();
+  }
+
+  Future<void> _fetchLeases() async {
+    try {
+      final leases = await ref
+          .read(leaseRepositoryProvider)
+          .listActiveLeasesForProperty(widget.propertyId);
+      if (mounted) {
+        setState(() {
+          _leases = leases;
+          _loading = false;
+        });
+      }
+    } catch (e, st) {
+      _log.warning('listActiveLeasesForProperty failed', e, st);
+      if (mounted) {
+        setState(() {
+          _error = context.l10n.tenantsErrorLoadLeases;
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.propertiesDetailActiveLeasesTitle,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Center(
+                child: SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (_error != null)
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              )
+            else
+              PropertyLeaseSummary(leases: _leases ?? []),
+          ],
+        ),
+      ),
     );
   }
 }

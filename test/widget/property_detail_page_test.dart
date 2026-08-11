@@ -1,6 +1,13 @@
 import 'dart:async';
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/theme/app_theme.dart';
+import 'package:easyrent/features/leases/data/lease_repository.dart';
+import 'package:easyrent/features/leases/domain/charge_mode.dart';
+import 'package:easyrent/features/leases/domain/lease.dart';
+import 'package:easyrent/features/leases/domain/lease_list_item.dart';
+import 'package:easyrent/features/leases/domain/lease_type.dart';
+import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/properties/application/property_detail_provider.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
@@ -15,7 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 // ---------------------------------------------------------------------------
-// Fake repository
+// Fake repository (bien)
 // ---------------------------------------------------------------------------
 
 class _FakeRepo implements PropertyRepository {
@@ -84,6 +91,68 @@ class _FakeRepo implements PropertyRepository {
 }
 
 // ---------------------------------------------------------------------------
+// Fake repository (baux) — section "Baux actifs"
+// ---------------------------------------------------------------------------
+
+class _FakeLeaseRepo implements LeaseRepository {
+  _FakeLeaseRepo({this.activeLeases = const [], this.loadError});
+
+  final List<Map<String, dynamic>> activeLeases;
+  final Exception? loadError;
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async {
+    if (loadError != null) throw loadError!;
+    return activeLeases;
+  }
+
+  @override
+  Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
+
+  @override
+  Future<Lease> getById(String id) async => throw UnimplementedError();
+
+  @override
+  Future<Lease> create({
+    required String propertyId,
+    required String tenantId,
+    required int rentAmountCents,
+    required int chargesAmountCents,
+    required DateTime startDate,
+    DateTime? endDate,
+    LeaseType leaseType = LeaseType.unfurnished,
+    ChargeMode? chargeMode,
+    int? depositAmountCents,
+    int paymentDay = 1,
+    PaymentMethod paymentMethod = PaymentMethod.virement,
+    double? irlIndexValue,
+    String? irlQuarterRef,
+    int agencyFeesCents = 0,
+    bool solidarityClause = false,
+    bool entryInventoryDone = false,
+    int nonRecoverableChargesCents = 0,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Lease> update(Lease lease) async => throw UnimplementedError();
+
+  @override
+  Future<Lease> close(String id, {required DateTime effectiveEndDate}) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> hasOtherActiveLeaseOnProperty(
+    String propertyId, {
+    String? excludeLeaseId,
+  }) async => false;
+
+  @override
+  Future<void> archive(String id) async {}
+}
+
+// ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
 
@@ -98,7 +167,11 @@ Property _makeProperty({double? surfaceM2}) => Property(
   updatedAt: DateTime(2024, 3, 20),
 );
 
-Widget _buildPage({required String propertyId, required _FakeRepo repo}) {
+Widget _buildPage({
+  required String propertyId,
+  required _FakeRepo repo,
+  LeaseRepository? leaseRepo,
+}) {
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -114,12 +187,21 @@ Widget _buildPage({required String propertyId, required _FakeRepo repo}) {
         builder: (context, state) =>
             Scaffold(body: Text('edit ${state.pathParameters['id']}')),
       ),
+      GoRoute(
+        path: '/leases/:id',
+        builder: (_, state) =>
+            Scaffold(body: Text('bail ${state.pathParameters['id']}')),
+      ),
     ],
   );
 
   return ProviderScope(
-    overrides: [propertyRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      propertyRepositoryProvider.overrideWithValue(repo),
+      leaseRepositoryProvider.overrideWithValue(leaseRepo ?? _FakeLeaseRepo()),
+    ],
     child: MaterialApp.router(
+      theme: AppTheme.light,
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       locale: const Locale('fr'),
@@ -203,6 +285,105 @@ void main() {
 
       expect(find.textContaining('15/01/2024'), findsOneWidget);
     });
+
+    // -----------------------------------------------------------------------
+    // Section "Baux actifs" (FEAT-005 — remplace le stub)
+    // -----------------------------------------------------------------------
+    testWidgets('section "Baux actifs" — état vide', (tester) async {
+      final repo = _FakeRepo(result: _makeProperty());
+      await tester.pumpWidget(
+        _buildPage(
+          propertyId: 'prop-1',
+          repo: repo,
+          leaseRepo: _FakeLeaseRepo(activeLeases: const []),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Baux actifs'), findsOneWidget);
+      expect(find.text('Aucun bail actif pour ce bien.'), findsOneWidget);
+    });
+
+    testWidgets('section "Baux actifs" — affiche un bail actif', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(result: _makeProperty());
+      await tester.pumpWidget(
+        _buildPage(
+          propertyId: 'prop-1',
+          repo: repo,
+          leaseRepo: _FakeLeaseRepo(
+            activeLeases: const [
+              {
+                'id': 'lease-1',
+                'property_id': 'prop-1',
+                'start_date': '2024-01-01',
+                'end_date': null,
+                'status': 'active',
+                'rent_amount_cents': 80000,
+              },
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Actif'), findsOneWidget);
+      expect(find.textContaining('800,00'), findsOneWidget);
+      expect(find.text('Voir le bail'), findsOneWidget);
+    });
+
+    testWidgets(
+      'section "Baux actifs" — tap sur un bail navigue vers /leases/:id',
+      (tester) async {
+        final repo = _FakeRepo(result: _makeProperty());
+        await tester.pumpWidget(
+          _buildPage(
+            propertyId: 'prop-1',
+            repo: repo,
+            leaseRepo: _FakeLeaseRepo(
+              activeLeases: const [
+                {
+                  'id': 'lease-1',
+                  'property_id': 'prop-1',
+                  'start_date': '2024-01-01',
+                  'end_date': null,
+                  'status': 'active',
+                  'rent_amount_cents': 80000,
+                },
+              ],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // La section est sous la ligne de flottaison (SingleChildScrollView) —
+        // il faut la faire défiler dans le viewport avant le tap.
+        await tester.ensureVisible(find.text('Voir le bail'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Voir le bail'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('bail lease-1'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'section "Baux actifs" — erreur de chargement affiche un message',
+      (tester) async {
+        final repo = _FakeRepo(result: _makeProperty());
+        await tester.pumpWidget(
+          _buildPage(
+            propertyId: 'prop-1',
+            repo: repo,
+            leaseRepo: _FakeLeaseRepo(loadError: Exception('boom')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Impossible de charger les baux.'), findsOneWidget);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Bien introuvable (les Firestore Rules ne renvoient aucun document ou PropertyNotFoundException)

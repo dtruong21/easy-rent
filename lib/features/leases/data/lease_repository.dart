@@ -30,6 +30,20 @@ abstract interface class LeaseRepository {
   /// jamais et obtiennent le défaut `DateTime.now()`.
   Future<List<LeaseListItem>> listForDisplay({DateTime? now});
 
+  /// Liste les baux actifs (`status == 'active'`) d'un bien, hors soft-delete.
+  ///
+  /// Format retour Map brut snake_case, aligné sur
+  /// `TenantRepository.listLeasesForTenant` — même patron consommé par la
+  /// fiche bien (section « Baux actifs », `PropertyLeaseSummary`) que par la
+  /// fiche locataire (section « Baux liés », `TenantLeaseSummary`), pour un
+  /// rendu strictement identique entre les deux écrans. Le filtre `active`
+  /// est appliqué côté client pour réutiliser l'index composite existant
+  /// `landlordId, propertyId, deletedAt, startDate DESC` sans en ajouter un
+  /// nouveau.
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  );
+
   Future<Lease> getById(String id);
 
   /// Crée un nouveau bail via la Callable `createLease` (validation
@@ -202,6 +216,39 @@ class FirestoreLeaseRepository implements LeaseRepository {
       }
     }
     return result;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async {
+    _log.info('listActiveLeasesForProperty($propertyId)');
+    final qs = await _col
+        .where('landlordId', isEqualTo: _uid)
+        .where('propertyId', isEqualTo: propertyId)
+        .where('deletedAt', isNull: true)
+        .orderBy('startDate', descending: true)
+        .get();
+
+    return qs.docs.where((d) => d.data()['status'] == 'active').map((d) {
+      final raw = d.data();
+      // Aligne le format avec `TenantRepository.listLeasesForTenant`
+      // (snake_case + ISO strings) — même patron d'affichage.
+      return {
+        'id': d.id,
+        'property_id': raw['propertyId'],
+        'start_date': (raw['startDate'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+        'end_date': (raw['endDate'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+        'status': raw['status'],
+        'rent_amount_cents': raw['rentAmountCents'],
+      };
+    }).toList();
   }
 
   @override

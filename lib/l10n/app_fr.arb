@@ -296,7 +296,7 @@
   "propertiesListErrorTitle": "Impossible de charger vos biens.",
   "propertiesDetailAppBarTitle": "Fiche bien",
   "propertiesDetailActiveLeasesTitle": "Baux actifs",
-  "propertiesDetailActiveLeasesStub": "Disponible après FEAT-005",
+  "propertiesDetailActiveLeasesEmpty": "Aucun bail actif pour ce bien.",
   "propertiesDetailArchiveButton": "Archiver ce bien",
   "propertiesArchiveDialogTitle": "Archiver ce bien ?",
   "propertiesArchiveDialogStandardMessage": "Voulez-vous archiver \"{propertyName}\" ? Le bien n'apparaîtra plus dans votre liste. Les baux liés seront conservés.",

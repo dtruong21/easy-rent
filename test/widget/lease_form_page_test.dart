@@ -41,6 +41,11 @@ class _FakeLeaseRepo implements LeaseRepository {
   Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
+
+  @override
   Future<Lease> getById(String id) async => throw UnimplementedError();
 
   @override

@@ -47,6 +47,25 @@ class _InMemoryLeaseRepository implements LeaseRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async {
+    return _leases
+        .where((l) => l.propertyId == propertyId && l.status.name == 'active')
+        .map(
+          (l) => {
+            'id': l.id,
+            'property_id': l.propertyId,
+            'start_date': l.startDate.toUtc().toIso8601String(),
+            'end_date': l.endDate?.toUtc().toIso8601String(),
+            'status': l.status.name,
+            'rent_amount_cents': l.rentAmountCents,
+          },
+        )
+        .toList();
+  }
+
+  @override
   Future<Lease> getById(String id) async {
     final matches = _leases.where((l) => l.id == id);
     if (matches.isEmpty) throw LeaseNotFoundException(id);

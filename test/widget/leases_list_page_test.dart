@@ -37,6 +37,11 @@ class _FakeRepo implements LeaseRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
+
+  @override
   Future<Lease> getById(String id) async => throw UnimplementedError();
 
   @override
