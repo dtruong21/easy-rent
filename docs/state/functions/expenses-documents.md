@@ -8,24 +8,32 @@ Dépenses (FEAT-041a) + documents (FEAT-008, v2 FEAT-041b). Fichiers : `function
 
 **ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
 
-### `createDocument` (v2, FEAT-008/FEAT-041b/FEAT-044)
-Client invoke. **⚠️ Section corrigée le 2026-07-21 — l'état décrivait une signature et des catégories qui n'existent pas dans le code.**
+### `createDocument` (v3, FEAT-008/FEAT-041b/FEAT-044/FEAT-056)
+Client invoke. **v3 (2026-08-03+) : taille RÉELLE lue depuis Storage, paliers différenciés par tier.**
 - **Flow réel** : le client **uploade d'abord** dans Storage (SDK Firebase, Storage Rules `uid == landlordId` dans le path), **puis** appelle ce callable avec le `storagePath`. Il n'y a **pas** de transfert base64 par la callable.
-- **Params** : `leaseId` (opt), `propertyId` (opt) — **au moins un des deux requis** ; `category`, `filename`, `storagePath`, `mimeType`, `sizeBytes`. Il n'existe **pas** de param `expenseId` (le lien se fait dans l'autre sens : `expenses.documentId`).
-- **Catégories réelles** : `bail_signe` \| `etat_des_lieux` \| `attestation_assurance` \| `quittance_scannee` \| `expense_receipt` \| `autre`. (L'état listait `lease_scan`/`insurance`/`other` — inexistantes.)
-- **Validations** : auth ; ownership du bail et/ou du bien + non soft-deleted ; si les deux fournis → `lease.propertyId == propertyId` sinon `lease_property_mismatch` ; MIME ∈ {PDF, JPEG, PNG, **WEBP**} ; `sizeBytes` ∈ [1, **10 MiB**] (et non 25 MB) ; `storagePath` doit commencer par `documents/{uid}/` ; **le fichier doit exister dans Storage** sinon `failed-precondition` (empêche l'enregistrement d'un doc fantôme).
-- **Gate multi-paliers (FEAT-044 PR #120, étendu FEAT-056)** : `assertDocumentQuota` s'exécute **AVANT** tout travail coûteux → `resource-exhausted` / `document_limit_reached` ou `file_too_large`. 
-  - **Plafond document count** (FEAT-056, source `config/entitlements.json`) : anonymous=0 · free=10 · pro=50 · max=150 · ultra=null. **Comptage live** (`count()` where `deletedAt == null`), pas de compteur dénormalisé — soft-delete universel → rien à décrémenter. SOURCE DE VÉRITÉ.
-  - **Plafond par fichier** (documentMaxBytes, FEAT-056) : anonymous=0 · free=10 Mio · pro=10 Mio · max=25 Mio · ultra=50 Mio. Rejeté APRÈS vérification du plafond `count` (sinon un anon se verrait proposer « fichier trop volumineux » au lieu de « aucun doc autorisé »).
+- **Params** : `leaseId` (opt), `propertyId` (opt) — **au moins un des deux requis** ; `category`, `filename`, `storagePath`, `mimeType`, `sizeBytes` (opt, **ignoré**). Il n'existe **pas** de param `expenseId` (le lien se fait dans l'autre sens : `expenses.documentId`).
+  - **`sizeBytes` accepté pour rétrocompat** mais volontairement IGNORÉ : déclaré par le client, ne peut pas être source de vérité. Depuis PR #156, la taille persistée vient de `resolveRealSize()` qui lit les métadonnées Storage. C'est ce qui rend le plafond PAR PALIER contraignant (au lieu d'être contournable par un client modifié).
+- **Catégories réelles** : `bail_signe` \| `etat_des_lieux` \| `attestation_assurance` \| `quittance_scannee` \| `expense_receipt` \| `autre`.
+- **Validations** : auth ; `storagePath` doit commencer par `documents/{uid}/` ; **le fichier doit exister dans Storage** sinon `failed-precondition` (empêche l'enregistrement d'un doc fantôme) ; MIME ∈ {PDF, JPEG, PNG, WEBP} ; ownership du bail et/ou du bien + non soft-deleted ; si les deux fournis → `lease.propertyId == propertyId` sinon `lease_property_mismatch` ; **taille réelle ≥ 1 octet** sinon `document_empty` ; taille réelle **≤ plafond du palier** sinon `file_too_large` (details: `{limitBytes, sizeBytes, upgradeTo}`).
+- **Gate multi-paliers (FEAT-056)** — ordre stricte :
+  1. `assertDocumentQuota(db, uid)` → applique quota N°1 **NOMBRE** (count), renvoie le plafond N°2 **TAILLE** `documentMaxBytes` du palier. Quota count d'abord : sinon un anon se verrait proposer « fichier trop volumineux » au lieu de « aucun doc autorisé ».
+  2. `resolveRealSize(storagePath, uid)` → lit les métadonnées Storage (replace l'ancien `exists()` — même bilan : 404 GCS = doc fantôme). Valide format size, non-vide.
+  3. `assertRealSizeWithinPlan(sizeBytes, byteLimit)` → pur et exporté. Applique le plafond du palier à la taille RÉELLE. Rejette après vérification cross-entity pour plus de précision dans le message d'erreur.
+  - **Plafond document count** : anonymous=0 · free=10 · pro=50 · max=150 · ultra=∞. **Comptage live** (`count()` where `deletedAt == null`), pas de compteur dénormalisé. SOURCE DE VÉRITÉ.
+  - **Plafond par fichier** (documentMaxBytes en **bytes**, FEAT-056) : anonymous=0 · free=10 485 760 (10 Mio) · pro=10 485 760 · max=26 214 400 (25 Mio) · ultra=52 428 800 (50 Mio). Source canonique : `config/entitlements.json`.
   - Effective plan déduit de `(subscriptionTier, planLevel)` par `resolvePlan()`. Landlord absent → `not-found` (fail-closed).
-- **`legalHold` dérivé serveur** (immuable) = `category ∈ {bail_signe, etat_des_lieux, expense_receipt}`. ⚠️ **`expense_receipt` EST sous rétention** (10 ans, comptable) — l'état affirmait l'inverse (« soft-delete autorisé ») ; `attestation_assurance` ne l'est **pas** (l'état disait `insurance`→true).
-- **Retour** : `{documentId, legalHold}` (et non `{documentId, storageUrl}`). Fichier `documents.ts`.
+- **Orphelin Storage (depuis PR #156)** : tout refus (quota, ownership, taille, format) emporte l'objet Storage avec lui via `deleteStorageObject(storagePath, uid)` (catch bloc) — le client ne peut pas le faire (storage.rules refuse delete). Idempotent : `ignoreNotFound=true`.
+- **`legalHold` dérivé serveur** (immuable) = `category ∈ {bail_signe, etat_des_lieux, expense_receipt}`. Verrouille le soft-delete (immutable 5 ans loi 1989, 10 ans comptable).
+- **Retour** : `{documentId, legalHold}`. Fichier `documents.ts`.
 
 ### `getDocumentDownloadUrl` (FEAT-008)
 Client invoke. Génère une **URL signée court-terme (5 min)** pour télécharger le fichier. Ownership check (`landlordId==uid`) + refus si `deletedAt!=null`. **Retour** : `{downloadUrl, downloadUrlExpiresAt}`. Fichier `documents.ts`.
 
-### Soft-delete de documents — via `softDeleteEntity('documents')`
-Pas de callable dédié (`softDeleteDocument` n'existe pas) : le soft-delete passe par le `softDeleteEntity` universel (spec canonique → account). Fetch document ; si `legalHold==true` → FAILED_PRECONDITION (immutable) ; sinon `deletedAt=now()`. **Retour** : `{success:true}`. Fichier `soft_delete.ts`.
+### Soft-delete de documents — via `softDeleteEntity('documents')` + Storage cleanup
+Pas de callable dédié (`softDeleteDocument` n'existe pas) : le soft-delete passe par le `softDeleteEntity` universel (spec canonique → account). Flow : fetch document ; si `legalHold==true` → FAILED_PRECONDITION (immutable) ; sinon `deletedAt=now()` **PUIS** `deleteStorageObject(storagePath, uid)` (best-effort, idempotent). **Retour** : `{success:true, storageDeleted, alreadyDeleted}`. Fichier `soft_delete.ts`. Détail du cleanup → `functions/src/utils/storage_cleanup.ts`.
+
+#### Utilité `deleteStorageObject(storagePath, uid)` — pur serveur
+Supprime un objet Storage de manière idempotente (ignoreNotFound=true). **Jamais ne throw** : best-effort. Appelants : `softDeleteEntity('documents')` (post-commit Firestore) ou `createDocument` (catch bloc si refus après upload). Logues les résidus en ERROR + tag `[orphan-document]` pour rejeu par `scripts/purge-orphan-documents.mjs`. Fichier `functions/src/utils/storage_cleanup.ts`. ✅ **Testé** : `functions/src/__tests__/soft_delete_documents_storage.test.ts` (PR #156, 2026-08-01).
 
 ## Callables — Expenses
 

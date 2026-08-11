@@ -16,9 +16,9 @@ Auth/provisioning, cycle de vie compte, soft-delete universel, crons, **facturat
 
 ### `finalizeAnonymousUpgrade` (BAILLAN-M1, FEAT-019)
 Client invoke. Déclencheur : anonyme clique « Créer un compte » après essai 14 j.
-- **Validations** : user doit être anonyme ; email non-existant (aucun autre user même email).
-- **Mutations** (transact Admin SDK) update `landlords/{uid}` : `isAnonymous=false`, `subscriptionTier='free'`, `rgpdConsentAt=now()` (consent signup), `rgpdConsentVersion='v2-2026-07'`, `email`+`fullName` from data, `anonExpiresAt=null`. Preserve `investment_scenarios` (landlordId==uid constant, **pas de migration**).
-- **Retour** : `{success:true}`. Fichier `finalize_anonymous_upgrade.ts`. Tests `__tests__/finalize_anonymous_upgrade.test.ts`.
+- **Validations** : user doit être anonyme ; au moins un provider doit être lié (email/password / Google / Apple) — `providerData.length > 0` ; email non-existant (aucun autre user même email). Garde contre un anonyme pur qui invoquerait la callable.
+- **Mutations** (transact Admin SDK) update `landlords/{uid}` : `isAnonymous=false`, `subscriptionTier='free'`, `rgpdConsentAt=now()` (consent signup), `rgpdConsentVersion=CURRENT_RGPD_VERSION` (v3-2026-07), **`email`+`fullName` depuis Firebase Auth** (fonction pure `resolveUpgradeIdentity`), `anonExpiresAt=null`. **Bug corrigé** (commit 2e3c762, 2026-08-08) : l'ancien code ne renseignait pas ces champs — un compte upgradé restait sans nom ni email. Logique v3 : lit `authUser.email`/`displayName` niveau supérieur puis chacun de `providerData` (sur un `linkWithPopup` Google, `displayName` peut être `undefined` au sommet mais présent chez le fournisseur) ; **ne réécrit jamais par-dessus une valeur déjà renseignée** ; dernier repli du nom : l'email. Preserve `investment_scenarios` (landlordId==uid constant, **pas de migration**).
+- **Retour** : `{ok:true, tier}`. Fichier `finalize_anonymous_upgrade.ts`. Tests `__tests__/finalize_anonymous_upgrade.test.ts` + `resolveUpgradeIdentity` pur en unitaire.
 
 ### `deleteAccount` (FEAT-045, RGPD art. 17)
 Client invoke, **tout compte authentifié y compris anonyme**. Exigence stores : Google Play « Account deletion » (13327111) + App Store 5.1.1(v).

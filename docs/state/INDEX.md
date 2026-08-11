@@ -7,23 +7,29 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-08-02 (state-keeper FEAT-056)
-- **Commit ref** : `6c74bad` (branche `feat/056-multi-tier-subscriptions`, avant merge)
-- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ / client 🚧** (FEAT-056 non mergé) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
+- **Dernière mise à jour** : 2026-08-11 (state-keeper correctifs post-recette)
+- **Commit ref** : `49d6069` (branche `feat/056-multi-tier-subscriptions`)
+- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
 
 ### Périmètre réellement re-vérifié
 
 | Zone | État |
 |---|---|
+| `functions/src/callable/finalize_anonymous_upgrade.ts` + `resolveUpgradeIdentity` | ✅ **re-vérifié 2026-08-11** — correctif commit 2e3c762 : renseigne email/fullName depuis Auth, nouvelle fonction pure + garde provider.length > 0 |
+| `lib/features/profile/domain/landlord_profile.dart` | ✅ **re-vérifié 2026-08-11** — correctif commit d7d56cc : `email: String?` nullable (fallback Auth) |
+| `lib/core/router/app_router.dart` — shell nav et goBranch | ✅ **re-vérifié 2026-08-11** — correctif commit 49d6069 : `goBranch(index, initialLocation: true)` systématique, renversement de décision 2026-08-11 |
+| `storage.rules` | ✅ **re-vérifié 2026-08-11** — correctif commit c302210 : plafond 50 Mio (max de la grille), limite garde-fou anti-abus (palier réel appliqué en callable) |
 | `functions/src/callable/{create_checkout_session,manage_subscription,scenarios}.ts` + entitlements modules | ✅ **relu ligne à ligne 2026-08-02** — FEAT-056 callables multi-paliers, 3 actions (cancel/reactivate/change_plan), quota enforce |
 | `firestore.rules` (landlords : `planLevel`, `entitlements` gelés client ; investment_scenarios : `create if false`) | ✅ **re-vérifié 2026-08-02** — FEAT-056 contraintes immutabilité client, routing scenario création CF-exclusive |
 | `lib/core/router/app_router.dart` — routes `/pro/*` (`success`, `cancel`) | ✅ **vérifié 2026-08-02** — routes déclarées (lignes 234-247), corrigent une fausse info de l'état 2026-07-21 |
-| Domaine `account` (schéma/functions/routes) | ✅ **re-vérifié 2026-08-02** — FEAT-056 : `planLevel`, `entitlements` sur `landlords` ; `manageSubscription` callable manquant de l'état ancien ; routes `/pro/*` réelles |
+| Domaine `account` (schéma/functions/routes) | ✅ **re-vérifié 2026-08-11** — FEAT-056 : `planLevel`, `entitlements` sur `landlords` ; correctifs : email nullable, finalizeAnonymousUpgrade renseigne identité |
 | Domaines `properties`, `leases`, `expenses-documents`, `simulator` — quotas FEAT-056 | ✅ **vérifié 2026-08-02** — grille `config/entitlements.json` appliquée callables ; `investment_scenarios/create` CF-exclusive |
 | `config/entitlements.json` (source canonique quotas) | ✅ **lu 2026-08-02** — 3 paliers, quotas par palier, statuts `purchasable`/`priceIndicative`, features matrix |
 | `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
 
-> La passe FEAT-056 (2026-08-02) a corrigé 2 dérives détectées dans `functions/account.md` : (1) callable `manage_subscription` manquant, (2) fausse affirmation que `/pro/success` et `/pro/cancel` « n'existent pas ». Mise à jour : tous les shards account + properties/leases/expenses-documents/simulator pour documenter quotas différenciés et la callable CF-exclusive `createScenario`. Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.
+> **Passe 2026-08-11** (correctifs post-recette) : documenté 4 bug fixes déployés en staging (commits 2e3c762, d7d56cc, 49d6069, c302210) — `finalizeAnonymousUpgrade` renseigne email/nom, `LandlordProfile.email` nullable, navigation reset à branche, storage.rules 50 Mio. Tous les shards `account`, `routes/README` mis à jour. CHANGELOG.md détaillé (4 entrées précédent FEAT-056).
+> 
+> **Passe 2026-08-02** (FEAT-056) a corrigé 2 dérives détectées dans `functions/account.md` : (1) callable `manage_subscription` manquant, (2) fausse affirmation que `/pro/success` et `/pro/cancel` « n'existent pas ». Mise à jour : tous les shards account + properties/leases/expenses-documents/simulator pour documenter quotas différenciés et la callable CF-exclusive `createScenario`. Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.
 
 ## Comment charger l'état (règle tokens)
 

@@ -341,6 +341,34 @@ transition de sortie sur au moins une frame) contre ~300-480 ms avant
 correctif — mesuré, pas supposé, cf. le test « pas de flash… » dans
 `shell_branch_state_test.dart`.
 
+> ⚠️ **Non résolu, reporté par décision du propriétaire (2026-08-11).** La
+> mesure ci-dessus vient du harnais de tests widget, qui compte des frames
+> logiques. **En conditions réelles (CanvasKit, navigateur), le résidu reste
+> perceptible** : « c'est un peu mieux, toujours un peu flashé mais c'est
+> mieux », puis confirmation qu'il s'agit bien du symptôme d'origine —
+> l'ancienne sous-page entrevue **en arrivant** sur l'onglet. Ne pas se fier
+> au test seul pour déclarer le sujet clos.
+>
+> Deux mécanismes restent en lice, non départagés :
+> 1. **une course** — la réinitialisation de la branche quittée repose sur un
+>    `addPostFrameCallback`, soit une seule frame d'avance ; si la
+>    reconstruction du routeur n'a pas fini de mémoriser l'état nettoyé, la
+>    branche rouvre avec son ancienne pile (expliquerait le caractère
+>    intermittent) ;
+> 2. **une animation** — `_kReverseDuration` vaut 120 ms
+>    (`lib/core/router/transitions.dart`) ; un pop joué pendant que la branche
+>    est déjà visible durerait bien plus que les 1-2 frames mesurées.
+>
+> **Piste de fond, à préférer à un troisième correctif de timing** : ce
+> bricolage n'existe que parce qu'on utilise `indexedStack`, conçu pour
+> *préserver* l'état des onglets, puis qu'on défait cette préservation à
+> chaque bascule. Depuis le 2026-08-11 cette préservation n'a plus de raison
+> d'être. Sortir les sous-pages des piles de branche (mode « par-dessus le
+> shell », déjà prévu §4.2) supprimerait la classe entière de problèmes :
+> plus d'ancienne pile à réinitialiser, donc plus rien à faire flasher, et
+> `_onDestinationSelected` redevient une ligne. Coût à assumer : une sous-page
+> occupe alors l'écran entier, barre d'onglets masquée.
+
 **Ce qui survit quand même** à cette réinitialisation (cf. l'encart en tête
 de document pour le détail) : les filtres de liste (Riverpod, scope racine,
 indépendants du `Navigator`) et le scroll d'une racine de branche jamais

@@ -13,7 +13,7 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 | Champ | Type | Valeur | Immuable |
 |---|---|---|---|
 | `id` | string | Firebase Auth UID | ✅ |
-| `email` | string\|null | null (anon) / email (compte) | ✅ |
+| `email` | string\|null | null (anon) / email (compte). **Nullable à dessein depuis commit d7d56cc** (2026-08-08) : `LandlordProfile` pouvait échouer `fromJson` si ce champ était null. Source de vérité pour l'UI : Firebase Auth (fallback). | ✅ |
 | `fullName` | string | '' (anon) / nom complet | ✅ |
 | `isAnonymous` | bool | true (essai) / false (compte) | ✅ |
 | `subscriptionTier` | string | 'anonymous' \| 'free' \| 'paid' (classe d'accès, inchangée) | ✅ |
@@ -23,7 +23,7 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 | `phone` | string\|null | téléphone (optionnel) | — |
 | `address` | string\|null | adresse postale (requis pour quittances) | — |
 | `rgpdConsentAt` | timestamp\|null | null (anon) / date signature | ✅ |
-| `rgpdConsentVersion` | string | v3-2026-07 (v1-2026-06 legacy ; v2-2026-07 ancien) | ✅ |
+| `rgpdConsentVersion` | string | **v3-2026-07** (v1-2026-06 legacy ; v2-2026-07 ancien). Constante serveur `CURRENT_RGPD_VERSION` dans `functions/src/callable/finalize_anonymous_upgrade.ts` — source de vérité. | ✅ |
 | `activePropertiesCount` | int | FEAT-044 : biens actifs (dénorm, maintenu CF exclusive) | — |
 | `activeTenantsCount` | int | FEAT-044 : locataires actifs (dénorm, maintenu CF exclusive) | — |
 | `activeLeasesCount` | int | FEAT-044 : baux actifs (dénorm, maintenu CF createLease/updateLease) | — |
@@ -47,7 +47,7 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 
 **Règles Firestore** :
 - `get` : isOwner(uid) && (resource==null \|\| isActive(rsc))
-- `create` compte : isFullyAuthed() + RGPD consent v2-2026-07 ; planLevel/entitlements gelés à null/absent (FEAT-056)
+- `create` compte : isFullyAuthed() + `rgpdConsentVersion` **chaîne non vide** (`firestore.rules:85-86` — la rule n'épingle AUCUNE version précise, contrairement à ce que ce shard affirmait jusqu'au 2026-08-11 ; c'est la callable qui impose `CURRENT_RGPD_VERSION`) + `email is string` + `fullName.size() > 0` ; planLevel/entitlements gelés à null/absent (FEAT-056)
 - `create` anon : isAnonymous() + anonExpiresAt <= now+15j ; planLevel/entitlements gelés à null/absent (FEAT-056)
 - `update` compte : isFullyAuthed() && preservesImmutables() && planLevel/entitlements immuables client (FEAT-056)
 - `update` anon : isAnonymous() && anonExpiresAt valide && planLevel/entitlements immuables (FEAT-056)

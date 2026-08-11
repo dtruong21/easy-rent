@@ -24,7 +24,7 @@ Justificatifs (contrats, baux scannés, attestations assurance, **FEAT-041b : re
 | `legalHold` | bool | dérivé serveur : true si category ∈ {`bail_signe`, `etat_des_lieux`, `expense_receipt`} — immuable, verrouille le soft-delete |
 | `filename` | string | nom fichier original (minuscule `n`) |
 | `storagePath` | string | chemin Storage, doit commencer par `documents/{uid}/` ; l'existence du fichier est vérifiée à la création |
-| `sizeBytes` | int | taille, ∈ [1, **10 MiB**] |
+| `sizeBytes` | int | taille en **octets**, lue depuis Storage metadata (FEAT-056 PR #156) — **jamais celle déclarée par le client** qui est ignorée depuis v3. Plafond par palier : anonymous=0 · free=10,485,760 · pro=10,485,760 · max=26,214,400 · ultra=52,428,800 |
 | `mimeType` | string | PDF \| JPEG \| PNG \| WEBP |
 | `uploadedAt` | timestamp | date chargement (serverTimestamp) |
 | `createdAt` | timestamp | immuable |
@@ -37,11 +37,13 @@ Justificatifs (contrats, baux scannés, attestations assurance, **FEAT-041b : re
 
 **Rétention légale** : `bail_signe`/`etat_des_lieux` (loi 6/07/1989) et `expense_receipt` (10 ans, obligation comptable — cf. `docs/LEGAL.md`). `attestation_assurance` n'est **pas** sous legalHold.
 
-**Quota free (FEAT-044, PR #120)** : documents **actifs** plafonnés à 10 en free (0 en anonyme, illimité en paid), compté **live** côté `createDocument` — aucun compteur dénormalisé sur `landlords`.
+**Quotas** (FEAT-056, source canonique `config/entitlements.json`) :
+- **NOMBRE de documents actifs** : anonymous=0 · free=10 · pro=50 · max=150 · ultra=∞. **Comptage live** côté `createDocument` (pas de compteur dénormalisé). SOURCE DE VÉRITÉ.
+- **TAILLE par fichier** (documentMaxBytes, en octets) : anonymous=0 · free=10 485 760 · pro=10 485 760 · max=26 214 400 · ultra=52 428 800. Appliquée à la taille RÉELLE (Storage metadata, pas celle déclarée par le client). Défense à trois niveaux : (1) `storage.rules` plafonne l'upload à **50 Mio** (maximum de la grille, garde-fou anti-abus grossier) ; (2) `createDocument` applique le plafond du PALIER via `assertRealSizeWithinPlan()` ; (3) client pré-vérifie via `quotaLimitProvider`. Stockage Rules ne peut pas lire Firestore que sur la base par défaut (ADR 0003, staging base nommée, bucket partagé) → ne peut pas dépendre du palier → plafonne au maximum.
 
 **Règles Firestore** :
 - `get/list` : isOwner(landlordId) && isActive(rsc)
-- `create/update/delete` : CF exclusive (`createDocument` ; soft-delete via `softDeleteEntity` universel)
+- `create/update/delete` : CF exclusive (`createDocument` ; soft-delete via `softDeleteEntity` universel + purge Storage)
 
 **Indexes** (3, relevés dans `firestore.indexes.json` le 2026-07-21) :
 - landlordId ↑, leaseId ↑, deletedAt ↑, uploadedAt ↓ (documents d'un bail)
@@ -50,9 +52,11 @@ Justificatifs (contrats, baux scannés, attestations assurance, **FEAT-041b : re
 
 ⚠️ L'index `landlordId, deletedAt, expenseId` précédemment listé **n'existe pas** (le champ non plus).
 
-**Callables** : `createDocument`, `getDocumentDownloadUrl` ; soft-delete via `softDeleteEntity` (universel).
+**Callables** : `createDocument` (v3 : taille réelle + paliers différenciés), `getDocumentDownloadUrl` ; soft-delete via `softDeleteEntity` (universel + purge Storage).
 
-**Triggers** : setUpdatedAt.
+**Triggers** : setUpdatedAt + `softDeleteEntity` trigger cleanup Storage (PR #156, 2026-08-01).
+
+**Utils** : `deleteStorageObject()` (idempotent, best-effort, gère `[orphan-document]` tagging pour rejeu). Tests : `soft_delete_documents_storage.test.ts`.
 
 ---
 

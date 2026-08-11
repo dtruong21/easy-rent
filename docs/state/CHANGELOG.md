@@ -30,7 +30,26 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-07-23 → 2026-08-02)
+## Changements (2026-08-03 → 2026-08-11)
+
+### PR — FIX: navigation — tout changement d'onglet ramène à la racine (2026-08-11, commit 49d6069)
+- Renversement de décision produit (2026-08-11). Depuis FEAT-026 (2026-07-03), changer d'onglet conservait l'état de la branche (pile navigation, position scroll, filtres) via `indexedStack`. Le propriétaire la juge fautive sur TOUS les onglets (pas seulement Profil comme ponctuellement testé le 2026-08-10) : cliquer Profil puis Home puis Profil rouvrait la sous-page au lieu du hub.
+- Implémentation : `goBranch(index, initialLocation: true)` systématique vers la racine de chaque branche (à changer d'onglet). L'indexedStack et son State subsistent pour une racine jamais quittée en profondeur, donc les filtres (`StateProvider` non-autoDispose) et le scroll d'une racine non-pourvue de sous-page survivent quand même (conséquence mécanique, non un oubli).
+- Résidu : flash visuel subsiste (non résolu, reporté par le propriétaire).
+
+### PR — FIX: storage.rules — plafond d'upload 10 Mio → 50 Mio (palier max) (2026-08-08, commit c302210)
+- Garde-fou anti-abus : `storage.rules` plafondait tous les uploads à 10 Mio, quel que soit le palier. Les 25 Mio (Max) et 50 Mio (Ultra) étaient donc INATTEIGNABLES : la règle refusait le fichier avant même que `createDocument` ne puisse valider le plafond du palier.
+- **Pourquoi le plafond ne peut pas être différencié par palier dans storage.rules** : la règle Storage lit Firestore sur la base `(default)` exclusivement. Avec ADR 0003 (prod=`(default)`, staging=`staging`), un doc landlord en staging serait illisible → aucun palier ne peut être dérivé de manière fiable. Le bucket est partagé. Donc la règle doit couvrir le maximum de **tous** les paliers, le contrôle fin étant déléggué à `createDocument` (functions).
+- Palier appliqué : `assertRealSizeWithinPlan()` dans le callable, qui lit la taille RÉELLE (métadonnées Storage) sans jamais faire confiance à la déclaration client. Fichier refusé → orphelin Storage immédiatement purgé.
+
+### PR — FIX: profile.email nullable, écran profil ne casse plus (2026-08-08, commit d7d56cc)
+- `LandlordProfile.email` était `required String`. Un doc `landlords` portant `email: null` (cas : compte anonyme upgradé avant la fix du callable) faisait échouer `fromJson` entièrement, et l'écran Informations personnelles affichait une erreur sans issue : « Impossible de charger le profil ».
+- Correction : `email: String?` (nullable) + fallback UI sur Firebase Auth (source de vérité unique). Le champ est immuable, l'email ne peut être changé que par les administrateurs (le signaler au propriétaire si besoin).
+
+### PR — FIX: finalizeAnonymousUpgrade renseigne email et nom depuis Auth (2026-08-08, commit 2e3c762)
+- **Bug critique** : callable n'écrivait ni `email` ni `fullName` lors de la transition anonyme → compte complet. Le doc anonyme porte ces champs vides par construction (`email: null`, `fullName: ''`), et le callable les laissait intacts. Résultat : un compte complet sans identité — dashboard affiche « Hello » sans nom, écran Profil en erreur (voir fix d7d56cc).
+- **Correction** : fonction pure `resolveUpgradeIdentity(authUser, current)` qui lit l'identité depuis Firebase Auth (niveau supérieur `email`/`displayName` puis chaque entrée de `providerData` — sur un `linkWithPopup` Google, le displayName peut être `undefined` en haut mais présent chez le fournisseur). Logique : **ne réécrit jamais par-dessus une valeur déjà renseignée** (un upgrade rejoué ne corrompt pas un nom édité depuis). Dernier repli du nom : l'email (« mieux qu'un champ vide »).
+- Garde ajoutée : vérifie qu'un provider est effectivement lié (`providerData.length > 0`) — un anonyme pur ne peut plus invoquer le callable et fake un upgrade sans lier de provider.
 
 ### FEAT-056 : Abonnements multi-paliers Pro/Max/Ultra — implémentation back-end + client partiel (2026-08-02, branche `feat/056-multi-tier-subscriptions`)
 - Modèle de données : `planLevel ∈ {pro, max, ultra | null}` + `entitlements` map additifs sur `landlords/{uid}` (gelés client, écrit Admin SDK seul).

@@ -37,7 +37,7 @@
 
 - Responsive : `<600px` NavigationBar bottom (5 dest, labels+icônes) ; `≥600px` NavigationRail left (compact ou libellés+icônes).
 - `railExpandedProvider` (FEAT-026) : StateProvider<bool>, SharedPreferences, défaut `true` (expanded).
-- État branche préservé auto (indexedStack). Branding logo Baillan (réplié icône / déplié wordmark). Ref `docs/UX_NAVIGATION.md`.
+- **Réinitialisation au changement d'onglet** (commit 49d6069, 2026-08-11, renversement de décision produit) : `goBranch(index, initialLocation: true)` systématique ramène chaque branche à sa racine. ⚠️ L'implémentation reste `indexedStack` (chaque branche garde son Navigator), donc le `State` d'une racine **jamais quittée en profondeur** (aucune sous-page poussée) survit, ainsi que sa position de scroll et ses filtres (`StateProvider` Riverpod non-autoDispose). Détail & historique des arbitrages → `docs/UX_NAVIGATION.md` encart en tête (§5.1). Branding logo Baillan (réplié icône / déplié wordmark).
 
 ## Transitions (`lib/core/router/transitions.dart`)
 
