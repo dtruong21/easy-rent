@@ -93,30 +93,45 @@ List<_Destination> _destinations(BuildContext context) {
   ];
 }
 
-/// Index de la branche **Profil** dans `_destinations` — dernière destination.
-/// Le comportement qui en dépend est verrouillé par un test de navigation, pas
-/// par cette constante seule (cf. `shell_branch_state_test.dart`).
-const int _profileBranchIndex = 4;
-
-/// Bascule vers la branche [index]. Retour à la racine (`initialLocation: true`)
-/// dans DEUX cas :
+/// Bascule vers la branche [index] et la ramène systématiquement à sa racine
+/// (`initialLocation: true`) — que ce soit un changement de branche ou un
+/// re-tap de l'onglet déjà actif.
 ///
-/// 1. **Re-tap de l'onglet déjà actif** — idiome Material standard
-///    (« pop to root »).
-/// 2. **Entrée dans la branche Profil**, quelle que soit la branche d'origine.
-///
-/// Le cas 2 est une exception assumée à la préservation d'état par branche
-/// (`docs/UX_NAVIGATION.md` §7), qui reste la règle pour Biens, Locataires et
-/// Baux : y retrouver son filtre ou sa position dans une liste après un détour
-/// est précieux. Profil est un **hub de réglages** — il n'y a pas de « travail
-/// en cours » à préserver, et retomber sur le dernier réglage ouvert (ex.
-/// Informations personnelles) plutôt que sur le hub désoriente : l'utilisateur
-/// clique « Profil » pour voir le menu, pas pour reprendre où il en était.
-/// Signalé en recette sur staging.
+/// Règle générale (décision produit du 2026-08-11, cf.
+/// `docs/UX_NAVIGATION.md` §5.1) : un tap sur un onglet du shell est un
+/// raccourci vers la racine de cette section, pas une reprise de « là où on
+/// s'était arrêté ». Avant cette date, seule la branche Profil se comportait
+/// ainsi (exception assumée) et Biens/Locataires/Baux préservaient leur pile
+/// via `indexedStack`. Signalé comme un bug par l'utilisateur : après un
+/// détour par un autre onglet, retomber sur une sous-page (ex. « Informations
+/// personnelles ») plutôt que sur la racine de l'onglet visé désoriente,
+/// quelle que soit la branche.
 void _onDestinationSelected(StatefulNavigationShell shell, int index) {
-  final resetToRoot =
-      index == shell.currentIndex || index == _profileBranchIndex;
-  shell.goBranch(index, initialLocation: resetToRoot);
+  if (shell.currentIndex == index) {
+    shell.goBranch(index, initialLocation: true);
+    return;
+  }
+  // Réinitialise D'ABORD la branche qu'on QUITTE, PENDANT qu'elle est
+  // encore la branche active (onstage), puis seulement APRÈS bascule vers
+  // [index] au frame suivant. Nécessaire dans cet ordre précis :
+  // `StatefulNavigationShellState` ne persiste l'état "propre" d'une
+  // branche (matchList sans la sous-route abandonnée) que lorsqu'elle est
+  // `currentIndex` AU MOMENT du rebuild. Faire les deux `goBranch` dans le
+  // même tick ne persiste PAS le reset de la branche quittée (la 2de
+  // navigation écrase l'état avant que le rebuild de la 1re ne l'ait
+  // enregistré) : la branche cible rouvrait alors avec sa sous-page
+  // périmée, le temps de la transition de pop Navigator (~300ms, largement
+  // le temps qu'un œil humain la lise) — le flash remonté en recette.
+  //
+  // Ce séquencement réduit ce délai à 1-2 frames (~16-32ms, un pop
+  // Navigator reste intrinsèquement animé sur au moins une frame — voir
+  // shell_branch_state_test.dart, test « pas de flash… ») mais ne
+  // l'annule pas à zéro frame : le pipeline de rendu Flutter ne peut pas
+  // peindre l'état "après" avant qu'au moins un build n'ait tourné.
+  shell.goBranch(shell.currentIndex, initialLocation: true);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    shell.goBranch(index, initialLocation: true);
+  });
 }
 
 // ---------------------------------------------------------------------------

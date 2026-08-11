@@ -5,6 +5,55 @@
 > Statut : **concept proposé** — décisions à valider avant implémentation
 > (voir §12). Auteur : software-architect, 2026-07-03.
 
+> ## ⚠️ Renversement de décision (2026-08-11) — lire avant tout le reste
+>
+> Ce document a été écrit le **2026-07-03** en posant, comme règle générale, la
+> **préservation d'état par branche** (`indexedStack` : pile, scroll, filtres
+> conservés au changement d'onglet — §2, §4.1, §5, §11 option D). Le
+> **2026-08-10**, une exception ponctuelle a été introduite pour la seule
+> branche **Profil** (toujours revenir au hub). Le **2026-08-11**, le
+> propriétaire du produit a **renversé la règle générale elle-même** :
+>
+> > « je suis dans Home, je navigue vers Profile puis Personal Information.
+> > Ensuite je clique Home et je reclique sur Profile. J'ai l'écran Personal
+> > Information au lieu de Profile. Ça c'est un bug pour moi. Et j'ai
+> > l'impression que partout dans notre outil, il est comme ça. »
+>
+> **Nouvelle règle (en vigueur)** : **changer d'onglet ramène TOUJOURS
+> l'onglet cible à sa racine**, pour les cinq branches (Accueil, Biens,
+> Locataires, Baux, Profil) — pas seulement Profil. L'exception du
+> 2026-08-10 est donc devenue la règle générale ; elle n'est plus documentée
+> comme un cas particulier.
+>
+> Ce qui **ne change pas** : `StatefulShellRoute.indexedStack` reste
+> l'implémentation (chaque branche garde son propre `Navigator`, cf. §11
+> option D) — mais son bénéfice de *préservation* de pile inter-onglets, qui
+> était la justification d'origine, est désormais **volontairement
+> neutralisé** par `goBranch(index, initialLocation: true)` systématique
+> (`lib/core/ui/navigation/adaptive_navigation_scaffold.dart`).
+>
+> Ce qui **survit quand même** à un changement d'onglet, et ce n'est PAS un
+> oubli de la réinitialisation mais une conséquence mécanique distincte :
+> - **Les filtres de liste** (Biens/Locataires/Baux) vivent dans des
+>   `StateProvider` Riverpod (`leaseFilterProvider`,
+>   `propertyFilterProvider`, `tenantFilterProvider`) — un provider
+>   **non-autoDispose** est scope racine de l'app, indépendant du `Navigator`.
+>   Un `?filter=` dans l'URL n'est qu'une graine one-shot appliquée au
+>   montage (`initState`/`didUpdateWidget`) ; il n'est PAS restauré dans
+>   l'URL après un `goBranch(initialLocation: true)` (celui-ci navigue vers
+>   la racine nue de la branche), mais la valeur qu'il a posée dans le
+>   provider, elle, reste posée.
+> - **La position de scroll** d'une racine de branche **jamais quittée en
+>   profondeur** (aucune sous-page poussée dessus) survit aussi : GoRouter
+>   réutilise la même clé de page pour une racine, donc le même `State`
+>   Flutter — rien n'est reconstruit. En revanche, une sous-page poussée
+>   (ex. le détail d'un bail) EST bien abandonnée au changement d'onglet :
+>   sa propre position de scroll, elle, est perdue avec elle.
+>
+> Détail : `docs/state/routes/README.md` (shard court) reste correct sans
+> modification (il ne détaille pas ce contrat) ; c'est CE document qui fait
+> foi pour le comportement de bascule d'onglet.
+
 ---
 
 ## 1. Problème
@@ -46,8 +95,12 @@ web et le mobile :
 - **`NavigationRail` à gauche** quand la largeur ≥ 600 px (desktop / tablette /
   web large) ;
 - implémenté avec **`StatefulShellRoute.indexedStack`** de GoRouter : chaque
-  destination est une **branche** dont l'état (pile de navigation, scroll,
-  filtres, formulaires en cours) est **préservé** quand on change d'onglet.
+  destination est une **branche**, avec son propre `Navigator`.
+  > ⚠️ **Décision renversée le 2026-08-11** (voir l'encart en tête de
+  > document) : à l'origine (2026-07-03), l'état de chaque branche (pile de
+  > navigation, scroll, filtres, formulaires en cours) était **préservé**
+  > quand on change d'onglet. Ce n'est plus le cas : changer d'onglet
+  > **réinitialise systématiquement** la branche cible à sa racine.
 
 Le dashboard **cesse d'être le hub obligatoire**. Il devient une destination
 parmi les autres : l'onglet **Accueil**. La navigation entre sections se fait
@@ -63,8 +116,13 @@ via les destinations persistantes, plus par le dashboard.
 - **La même structure sert le web et le mobile** : le shell réduit
   massivement le chantier FEAT-024 (plus de navigation à réinventer pour le
   tactile — voir §9).
-- `indexedStack` préserve l'état : revenir sur Baux après un détour par Biens
-  restitue la liste filtrée + la position de scroll, sans rechargement.
+- `indexedStack` donne à chaque branche son propre `Navigator` persistant
+  (~~préserve l'état~~ : ⚠️ **décision renversée le 2026-08-11**, voir
+  l'encart en tête de document — revenir sur Baux après un détour par Biens
+  **ne** restitue **plus** la liste filtrée sur son détail : la pile de la
+  branche est réinitialisée à sa racine. Seuls le filtre posé, via son
+  provider Riverpod, et le scroll d'une racine jamais quittée en profondeur
+  survivent — cf. l'encart en tête de document).
 
 ---
 
@@ -179,7 +237,8 @@ Pour un **compte complet**, le simulateur reste atteignable :
 │  │           │/properties│/tenants/  │/leases/:id│  support   │  │
 │  │           │  /:id/edit│  :id/edit │ /receipts │            │  │
 │  └───────────┴───────────┴───────────┴───────────┴────────────┘  │
-│   chaque branche conserve SA pile + scroll + filtres (indexedStack)│
+│  changer d'ONGLET réinitialise TOUJOURS la pile de la branche      │
+│  cible à sa racine (décision du 2026-08-11 — cf. encart en tête)   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -221,64 +280,109 @@ de 6ᵉ item). Style rail + barre : thème `navigationRailTheme` /
 
 ## 5. Règles de navigation (contrat)
 
+> ⚠️ Table mise à jour le 2026-08-11 (renversement de décision, encart en
+> tête de document). L'historique (préservation d'état par branche,
+> 2026-07-03 → 2026-08-10) est conservé en §5.1.
+
 | Geste | API GoRouter | Effet |
 |---|---|---|
-| **Changer d'onglet** | `goBranch(index)` (via `StatefulNavigationShell.goBranch`) | Bascule sur la branche, **sans réinitialiser** sa pile (grâce à `indexedStack`). C'est le tap sur une destination. **Deux exceptions** → retour à la racine : re-tap de l'onglet déjà actif, et **toute entrée dans la branche Profil** (cf. ci-dessous). |
-| **Naviguer vers une racine par URL/KPI** | `context.go('/leases?filter=active')` | Active la branche correspondante + remplace sa pile par la racine. Utilisé par les **KPI drill-down** et les deep links. |
-| **Empiler dans l'onglet courant** | `context.push('/leases/:id')` | Pousse une sous-page **dans la branche active**. Le bouton retour dépile. Utilisé par tap sur une carte de liste, un bouton « + Nouveau », etc. |
+| **Changer d'onglet** | `goBranch(index, initialLocation: true)` (via `StatefulNavigationShell.goBranch`) | Bascule sur la branche ET **réinitialise systématiquement** sa pile à sa racine — c'est le tap sur une destination, **quelle que soit la branche**, y compris un re-tap de l'onglet déjà actif. Aucune exception (cf. §5.1). |
+| **Naviguer vers une racine par URL/KPI** | `context.go('/leases?filter=active')` | Active la branche correspondante + remplace sa pile par la racine. Utilisé par les **KPI drill-down** et les deep links. Depuis le 2026-08-11, produit un effet **identique** à `goBranch` côté pile (les deux réinitialisent) — la différence restante est l'application du `?filter=` en query string. |
+| **Empiler dans l'onglet courant** | `context.push('/leases/:id')` | Pousse une sous-page **dans la branche active**. Le bouton retour dépile. Utilisé par tap sur une carte de liste, un bouton « + Nouveau », etc. Cette pile est celle que le changement d'onglet réinitialise désormais systématiquement (§5.1). |
 | **Retour** | `context.pop()` / `BackButton` | Dépile **dans la branche courante**. Quand la branche est à sa racine, le bouton retour disparaît (cf. §6). |
 
-### 5.1 Exception Profil — la branche revient toujours à son hub (2026-08-11)
+### 5.1 Retour à la racine au changement d'onglet — règle générale (2026-08-11)
 
-La préservation d'état par branche reste la règle pour **Biens, Locataires et
-Baux** : y retrouver son filtre ou sa position dans une liste après un détour est
-précieux, et c'est verrouillé par `test/widget/shell_branch_state_test.dart`.
+**Décision (2026-08-11, renverse celle du 2026-07-03/2026-08-10)** :
+changer d'onglet **réinitialise toujours** la branche cible à sa racine —
+pour les **cinq** branches (Accueil, Biens, Locataires, Baux, Profil), sans
+exception. Un tap sur un onglet est un raccourci vers la racine de cette
+section, pas une reprise de « là où on s'était arrêté ».
 
-**Profil fait exception** : entrer dans cet onglet remet toujours sa pile à
-`/profile`, quelle que soit la branche d'origine. Motif : c'est un **hub de
-réglages**, il n'y a pas de « travail en cours » à préserver. Retomber sur le
-dernier réglage ouvert — Informations personnelles, par exemple — désoriente :
-on clique « Profil » pour voir le menu, pas pour reprendre où on en était.
+Motif — verbatim utilisateur (cf. encart en tête de document) : retomber sur
+une sous-page (ex. le détail d'un bail encore ouvert, ou Informations
+personnelles sous Profil) au lieu de la racine de l'onglet visé, après un
+détour par un autre onglet, est perçu comme **un bug**, pas comme une
+fonctionnalité de confort.
 
-Signalé en recette sur staging, où le symptôme était aggravé par un écran
-Informations personnelles alors cassé : l'onglet Profil renvoyait
-systématiquement sur une page en erreur, sans moyen évident d'atteindre le hub.
+**Historique** (gardé pour mémoire des arbitrages, ne plus appliquer) :
+- **2026-07-03** : décision d'origine de ce document — préservation d'état
+  par branche via `indexedStack` (Biens/Locataires/Baux conservaient leur
+  pile ; retrouver un filtre ou une position de liste après un détour était
+  considéré précieux).
+- **2026-08-10** : première correction, limitée à la branche **Profil**
+  seule (« hub de réglages, pas de travail en cours à préserver »), traitée
+  comme une **exception** à la règle du 2026-07-03. Signalée en recette sur
+  staging, où le symptôme était aggravé par un écran Informations
+  personnelles alors cassé (l'onglet Profil renvoyait systématiquement sur
+  une page en erreur, sans moyen évident d'atteindre le hub).
+- **2026-08-11** : l'utilisateur signale que le MÊME défaut existe sur
+  **toutes** les branches (Home → Profile → Personal Information → Home →
+  Profile rouvre Personal Information au lieu du hub Profile). L'exception
+  Profil du 2026-08-10 devient la règle générale ci-dessus ; elle n'est plus
+  un cas particulier de la préservation par branche.
 
 Implémenté dans `_onDestinationSelected`
-(`lib/core/ui/navigation/adaptive_navigation_scaffold.dart`) et verrouillé par un
-test qui échoue si l'exception disparaît.
+(`lib/core/ui/navigation/adaptive_navigation_scaffold.dart`), verrouillé par
+des tests qui échouent si la réinitialisation disparaît
+(`test/widget/shell_branch_state_test.dart`,
+`test/core/ui/navigation/adaptive_navigation_scaffold_test.dart`).
 
-> Non traité à ce stade : `context.push` ne synchronise pas la barre d'adresse
-> sur le web, donc une sous-page poussée s'affiche sous l'URL de la racine de sa
-> branche. Conséquence : rechargement et partage de lien ramènent à la racine.
-> C'est inhérent à `push`, que ce contrat impose (§5) — le corriger demanderait
-> de rebasculer les sous-pages sur `go`, avec l'effet de bord d'un reset de pile.
-> À arbitrer si le partage de sous-pages devient un besoin.
+**Point technique — flash de l'ancien contenu (retour de recette, 2026-08-11)**
+: un `goBranch(index, initialLocation: true)` unique, appelé directement à
+l'ENTRÉE de la branche cible, laissait apparaître une frame de l'ancienne
+sous-page avant la racine (l'`IndexedStack` bascule sur la branche cible,
+qui porte encore sa pile précédente, avant que la réinitialisation ne
+s'applique). Le correctif réinitialise la branche qu'on **quitte** pendant
+qu'elle est encore active, puis bascule vers la cible au frame suivant
+(commentaire détaillé dans `_onDestinationSelected`). Cela réduit le flash
+à 1-2 frames (~16-32 ms, un `Navigator` qui retire une page joue toujours sa
+transition de sortie sur au moins une frame) contre ~300-480 ms avant
+correctif — mesuré, pas supposé, cf. le test « pas de flash… » dans
+`shell_branch_state_test.dart`.
+
+**Ce qui survit quand même** à cette réinitialisation (cf. l'encart en tête
+de document pour le détail) : les filtres de liste (Riverpod, scope racine,
+indépendants du `Navigator`) et le scroll d'une racine de branche jamais
+quittée en profondeur. Ce qui est réellement abandonné : toute sous-page
+poussée dans la branche (détail, formulaire, sous-route déclarée comme
+`/profile/details`).
+
+> `context.push` ne synchronise pas la barre d'adresse sur le web, donc une
+> sous-page poussée s'affiche sous l'URL de la racine de sa branche.
+> Conséquence : rechargement et partage de lien ramènent à la racine. C'est
+> inhérent à `push` — indépendant du renversement de décision ci-dessus (déjà
+> vrai du temps de la préservation par branche).
 
 **Règles d'or** :
 
 1. **`goBranch` pour les onglets, `push` pour approfondir.** On ne fait jamais
-   `go('/tenants')` pour changer d'onglet depuis la barre (ça reset la pile) —
-   on utilise `goBranch`. `go()` reste réservé aux **deep links** et au
-   **drill-down KPI** (où reset de pile est le comportement voulu).
+   `go('/tenants')` pour changer d'onglet depuis la barre — on utilise
+   `goBranch`. Depuis le 2026-08-11, `goBranch` et `go()` réinitialisent
+   tous les deux la pile de la branche cible (§5) ; `go()` reste réservé aux
+   **deep links** et au **drill-down KPI** (où l'on veut en plus positionner
+   un `?filter=` précis).
 2. **Les formulaires et détails sont des sous-pages empilées** (`push`), jamais
    des destinations. Pattern déjà appliqué au hub `/profile` (FEAT-025b) : le
    hub liste des tuiles qui `push()` vers `/profile/details`, `/profile/password`,
-   `/profile/support`.
+   `/profile/support`. Ces sous-pages sont désormais abandonnées à chaque
+   changement d'onglet (§5.1) — c'est voulu.
 3. **Un bouton « + Nouveau » `push()` dans la branche courante** ; au succès, il
    `pop()` (ou `pop(id)` en mode picker, cf. `TenantFormPage(popOnSuccess:)`).
 4. **Pas de hub obligatoire.** On ne route plus via le dashboard. Aucun code ne
    doit faire `go('/dashboard')` pour « revenir au menu ».
 
-### 5.1 Deep links — inchangés
+### 5.2 Deep links — inchangés
 
 Les URLs restent identiques (`/properties/:id`, `/leases/:id/receipts`,
 `/simulator/:id`, …). GoRouter, avec `StatefulShellRoute`, résout un deep link
 vers une sous-page en **activant la bonne branche et en construisant sa pile**
 jusqu'à la cible. Aucune URL n'est cassée, la PWA et le futur app-linking mobile
-continuent de fonctionner à l'identique.
+continuent de fonctionner à l'identique. Un deep link direct (première visite
+de la branche, pas un tap d'onglet) n'est **pas** concerné par la
+réinitialisation de §5.1 : il construit la pile normalement jusqu'à sa cible.
 
-### 5.2 Transitions
+### 5.3 Transitions
 
 - **Aucune transition (pas de slide) entre onglets.** Le changement de branche
   est instantané (`indexedStack` affiche/masque, il n'anime pas). C'est le
@@ -408,10 +512,13 @@ qui reçoit le `StatefulNavigationShell` et rend :
 
 - `LayoutBuilder` → si `constraints.maxWidth < 600` : `Scaffold` +
   `bottomNavigationBar: NavigationBar` ; sinon : `Row(NavigationRail, contenu)`.
-- `selectedIndex: shell.currentIndex`, `onDestinationSelected: (i) =>
-  shell.goBranch(i, initialLocation: i == shell.currentIndex)`.
-  (`initialLocation: true` sur re-tap de l'onglet actif = « pop to root » de la
-  branche, comportement Material attendu.)
+- `selectedIndex: shell.currentIndex`, `onDestinationSelected: (i) => ...`.
+  > ⚠️ Extrait d'origine (2026-07-03), périmé depuis le 2026-08-11 : il
+  > montrait `shell.goBranch(i, initialLocation: i == shell.currentIndex)`
+  > (reset uniquement sur re-tap). L'implémentation réelle actuelle
+  > réinitialise **systématiquement** la branche cible, quel que soit
+  > l'index d'origine — voir §5.1 pour la règle et le détail de la séquence
+  > (`_onDestinationSelected` dans le fichier lui-même fait foi).
 - 5 destinations (icône outline / filled selon sélection, label FR).
 - `SafeArea` (voir §9).
 
@@ -493,8 +600,9 @@ navigable au tactile.
   - tap sur une destination → `goBranch` appelé avec le bon index ;
   - `selectedIndex` reflète la branche active.
 - **`shell_branch_state_test.dart`** (widget) : naviguer Baux → pousser un
-  détail → basculer Biens → revenir Baux → **le détail est toujours empilé**
-  (preuve de préservation d'état `indexedStack`).
+  détail → basculer Biens → revenir Baux → **le détail n'est plus empilé**
+  (preuve de la réinitialisation systématique par onglet, §5.1 — attendu
+  inversé le 2026-08-11 ; c'était l'inverse jusque-là).
 - **Étendre `router_three_state_guard_test.dart`** : deep link direct sur une
   sous-page (`/leases/:id`) en `fullyAuthenticated` → branche Baux active + pile
   construite ; en `anonymous` → redirect `/simulator` (garde intacte).
@@ -502,8 +610,9 @@ navigable au tactile.
 ### 10.3 QA manuelle (parcours à valider)
 
 1. Login → Accueil ; taper chaque onglet → la bonne section s'affiche.
-2. Baux → ouvrir un bail → onglet Biens → revenir Baux : **le bail est encore
-   ouvert** (état préservé).
+2. Baux → ouvrir un bail → onglet Biens → revenir Baux : **le bail n'est plus
+   ouvert**, on retrouve la liste Baux (réinitialisation systématique,
+   §5.1 — inversé le 2026-08-11, c'était l'inverse jusque-là).
 3. KPI « baux actifs » sur Accueil → bascule sur Baux **filtré** actif.
 4. Deep link `app.com/leases/<id>` (nouvel onglet navigateur) → Baux ouvert sur
    le détail, retour ramène à la liste Baux.
@@ -533,10 +642,18 @@ déroutant et complexifie le shell ; et un onglet fixe exposerait aux anonymes 4
 destinations mortes. Le simulateur est un « outil » ponctuel, pas une section →
 point d'entrée depuis Accueil + `push` plein écran.
 
-**Option D — `ShellRoute` simple (sans état par branche).** Écartée : ne
-préserve pas les piles/scroll/filtres par onglet — on perdrait l'état de Baux en
-passant par Biens. `StatefulShellRoute.indexedStack` est explicitement conçu pour
-ce besoin.
+**Option D — `ShellRoute` simple (sans état par branche).** Écartée à
+l'origine (2026-07-03) : ne préserve pas les piles/scroll/filtres par
+onglet — on perdrait l'état de Baux en passant par Biens.
+`StatefulShellRoute.indexedStack` est explicitement conçu pour ce besoin.
+> ⚠️ Depuis le renversement du 2026-08-11 (§5.1), la préservation de pile
+> inter-onglets n'est plus recherchée : `goBranch(initialLocation: true)`
+> la neutralise volontairement. `indexedStack` reste néanmoins le bon choix,
+> pour une raison différente : c'est le mécanisme GoRouter qui donne à
+> chaque branche son propre `Navigator` (nécessaire pour les deep links
+> directs vers une sous-page et pour qu'une racine jamais quittée réutilise
+> son `State` sans rechargement, cf. l'encart en tête de document) —
+> `ShellRoute` simple ne le permettrait pas non plus.
 
 **Option E — `NavigationDrawer` (menu hamburger) au lieu de Bar/Rail.** Écartée :
 le drawer cache la navigation derrière un tap supplémentaire et est moins bon sur
@@ -556,18 +673,19 @@ maintiendrait deux modèles de navigation divergents ; l'objectif explicite est
       Locataires, Baux, Profil).
 - [ ] `NavigationBar` (<600 px) / `NavigationRail` (≥600 px), bascule au
       breakpoint 600 px.
-- [ ] État de chaque branche préservé au changement d'onglet (pile + scroll +
-      filtres).
-- [ ] Changement d'onglet via `goBranch` ; sous-navigation via `push` ; deep
-      links inchangés et fonctionnels.
+- [ ] Chaque branche réinitialisée à sa racine au changement d'onglet
+      (§5.1 — critère **inversé le 2026-08-11** ; à l'origine, 2026-07-03 :
+      « État de chaque branche préservé (pile + scroll + filtres) »).
+- [ ] Changement d'onglet via `goBranch(initialLocation: true)` ;
+      sous-navigation via `push` ; deep links inchangés et fonctionnels.
 - [ ] Garde 3 états **inchangée** (fix 07f20a3 intact) ; anonyme sans onglets ;
       simulateur hors shell.
 - [ ] Dashboard = onglet Accueil, sans icônes profil/déconnexion, sans raccourcis
       redondants (simulateur conservé en CTA).
 - [ ] Racines de branche sans bouton retour ; sous-pages avec retour natif.
 - [ ] `SafeArea` respectée (prépare FEAT-024).
-- [ ] Tests de garde verts ; nouveaux tests shell (adaptatif + préservation
-      d'état) verts ; `flutter analyze` clean.
+- [ ] Tests de garde verts ; nouveaux tests shell (adaptatif + retour à la
+      racine par onglet) verts ; `flutter analyze` clean.
 - [ ] `dart format .` OK ; `code-reviewer` ✅ ; `security-auditor` ✅ (surface
       inchangée : mêmes routes, même garde, mêmes rules).
 

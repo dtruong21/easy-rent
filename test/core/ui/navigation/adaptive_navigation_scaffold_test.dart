@@ -31,6 +31,12 @@ Widget _brancheFactice(String label) => Scaffold(
   ),
 );
 
+/// Sous-page poussée à l'intérieur d'une branche (ex. `/baux/detail`) — sert
+/// à prouver le mécanisme générique de reset (`initialLocation: true`), par
+/// opposition à `_brancheFactice` qui ne quitte jamais la racine.
+Widget _sousPageFactice(String label) =>
+    Scaffold(key: Key('souspage_$label'), body: Text('sous-page $label'));
+
 GoRouter _buildTestRouter() {
   return GoRouter(
     initialLocation: '/accueil',
@@ -68,6 +74,12 @@ GoRouter _buildTestRouter() {
               GoRoute(
                 path: '/baux',
                 builder: (context, state) => _brancheFactice('baux'),
+                routes: [
+                  GoRoute(
+                    path: 'detail',
+                    builder: (context, state) => _sousPageFactice('baux'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -368,9 +380,14 @@ void main() {
     });
   });
 
-  group('AdaptiveNavigationScaffold — préservation d\'état par branche', () {
+  group('AdaptiveNavigationScaffold — retour à la racine au changement '
+      'd\'onglet (décision produit du 2026-08-11)', () {
     testWidgets(
-      'changer de branche PUIS revenir préserve la saisie (indexedStack)',
+      'racine jamais quittée : changer de branche PUIS revenir réutilise '
+      'la même page (rien à réinitialiser — nuance mécanique de '
+      'GoRouter/Navigator par clé de page, PAS une politique de '
+      'préservation de branche ; cf. le test suivant pour la sous-route, '
+      'seule concernée par le reset)',
       (tester) async {
         await _setViewportWidth(tester, 400);
         await _pumpApp(tester, _buildTestRouter());
@@ -392,30 +409,76 @@ void main() {
         expect(find.text('valeur-persistee'), findsOneWidget);
       },
     );
+
+    testWidgets('sous-route poussée dans une branche → abandonnée après un '
+        'aller-retour d\'onglet (goBranch(initialLocation: true) '
+        'systématique, plus une exception Profil)', (tester) async {
+      await _setViewportWidth(tester, 400);
+      final router = _buildTestRouter();
+      await _pumpApp(tester, router);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Baux'));
+      await tester.pumpAndSettle();
+      router.push('/baux/detail');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('souspage_baux')), findsOneWidget);
+
+      await tester.tap(find.text('Accueil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Baux'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('souspage_baux')), findsNothing);
+      expect(find.byKey(const Key('field_baux')), findsOneWidget);
+    });
   });
 
   group('AdaptiveNavigationScaffold — re-tap onglet courant', () {
+    testWidgets('re-tap sur l\'onglet déjà actif (racine) → reste à la racine '
+        '(cas particulier de la règle générale — pas une branche de code à '
+        'part depuis le 2026-08-11)', (tester) async {
+      await _setViewportWidth(tester, 400);
+      final router = _buildTestRouter();
+      await _pumpApp(tester, router);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/accueil',
+      );
+
+      await tester.tap(find.text('Accueil'));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/accueil',
+      );
+    });
+
     testWidgets(
-      're-tap sur l\'onglet déjà actif → goBranch avec initialLocation '
-      '(retour racine de branche)',
+      're-tap sur l\'onglet déjà actif alors qu\'une sous-route est ouverte '
+      '→ retour à la racine de CET onglet (même mécanisme que le '
+      'changement de branche, pas un idiome « pop to root » distinct)',
       (tester) async {
         await _setViewportWidth(tester, 400);
         final router = _buildTestRouter();
         await _pumpApp(tester, router);
         await tester.pumpAndSettle();
 
-        expect(
-          router.routerDelegate.currentConfiguration.uri.toString(),
-          '/accueil',
-        );
+        await tester.tap(find.text('Baux'));
+        await tester.pumpAndSettle();
+        router.push('/baux/detail');
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('souspage_baux')), findsOneWidget);
 
-        await tester.tap(find.text('Accueil'));
+        // Re-tap « Baux » alors qu'on y est déjà (currentIndex == index).
+        await tester.tap(find.text('Baux'));
         await tester.pumpAndSettle();
 
-        expect(
-          router.routerDelegate.currentConfiguration.uri.toString(),
-          '/accueil',
-        );
+        expect(find.byKey(const Key('souspage_baux')), findsNothing);
+        expect(find.byKey(const Key('field_baux')), findsOneWidget);
       },
     );
   });
