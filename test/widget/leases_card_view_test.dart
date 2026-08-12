@@ -8,6 +8,7 @@ import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/leases/presentation/widgets/lease_card.dart';
 import 'package:easyrent/features/leases/presentation/widgets/leases_card_view.dart';
+import 'package:easyrent/features/properties/presentation/widgets/property_color_dot.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -149,6 +150,23 @@ void main() {
 
       expect(find.byType(LeaseCard), findsNWidgets(6));
     });
+
+    testWidgets(
+      'chaque bail affiche la pastille de couleur d\'identité de son bien '
+      '(FEAT-057) — même sans propertyColorKey stockée (repli '
+      'déterministe)',
+      (tester) async {
+        final items = [
+          _makeItem(id: 'l1', propertyName: 'Bien 1'),
+          _makeItem(id: 'l2', propertyName: 'Bien 2'),
+        ];
+
+        await tester.pumpWidget(_buildCardView(items));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PropertyColorDot), findsNWidgets(2));
+      },
+    );
 
     testWidgets('tap card → navigue vers /leases/:id', (tester) async {
       final items = [_makeItem(id: 'lease-xyz', propertyName: 'Bien Test')];

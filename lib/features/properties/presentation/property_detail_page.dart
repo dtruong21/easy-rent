@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../expenses/presentation/widgets/expenses_history_section.dart';
@@ -14,6 +15,8 @@ import '../application/property_detail_provider.dart';
 import '../data/property_repository.dart';
 import '../domain/property.dart';
 import 'widgets/heating_type_l10n.dart';
+import 'widgets/property_color_dot.dart';
+import 'widgets/property_color_l10n.dart';
 import 'widgets/property_lease_summary.dart';
 import 'widgets/property_profitability_card.dart';
 import 'widgets/property_type_l10n.dart';
@@ -200,6 +203,8 @@ class _InfoCard extends StatelessWidget {
               label: l10n.propertiesFieldName,
               value: property.name,
             ),
+            const Divider(height: 24),
+            _ColorInfoRow(property: property),
 
             // --- Localisation ---
             const Divider(height: 24),
@@ -358,6 +363,51 @@ class _InfoCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Ligne "Couleur" — pastille + nom localisé de la teinte résolue.
+///
+/// Modifiable uniquement depuis le formulaire d'édition (cf.
+/// `PropertyColorPicker`) — cette ligne est en lecture seule ici.
+class _ColorInfoRow extends StatelessWidget {
+  const _ColorInfoRow({required this.property});
+
+  final Property property;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final colorKey = PropertyColorKey.resolve(
+      entityId: property.id,
+      stored: property.colorKey,
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: PropertyColorDot(colorKey: colorKey, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.propertiesFieldColor,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(colorKey.label(context), style: theme.textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

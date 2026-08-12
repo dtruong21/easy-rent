@@ -15,6 +15,7 @@ class LeaseListItem {
     required this.propertyName,
     required this.tenantDisplayName,
     this.isLate = false,
+    this.propertyColorKey,
   });
 
   /// Le bail complet (tous les champs scalaires).
@@ -39,6 +40,17 @@ class LeaseListItem {
   /// pas casser les call sites existants (formulaires, tests) qui ne
   /// connaissent pas cette notion.
   final bool isLate;
+
+  /// Clé de palette [PropertyColorKey] du bien lié (`properties.colorKey`
+  /// brut, potentiellement `null`) — cf. `lib/core/ui/theme/property_color.dart`.
+  ///
+  /// Résolue via une SEULE lecture groupée de `properties` en parallèle de
+  /// la requête `leases` (cf. `LeaseRepository.listForDisplay`), jamais une
+  /// requête par bail. Toujours résoudre l'affichage via
+  /// `PropertyColorKey.resolve(entityId: lease.propertyId, stored: propertyColorKey)`
+  /// plutôt que lire ce champ directement — `null` est un état normal (bien
+  /// pas encore personnalisé), pas une absence de couleur à l'écran.
+  final String? propertyColorKey;
 
   factory LeaseListItem.fromJson(Map<String, dynamic> json) {
     final property = json['property'] as Map<String, dynamic>?;

@@ -320,6 +320,10 @@ class FirestorePropertyRepository implements PropertyRepository {
           : Timestamp.fromDate(loanStartDate.toUtc()),
       'loanMonthlyPaymentOverrideCents':
           property.loanMonthlyPaymentOverrideCents,
+      // Préférence d'affichage, pas un champ de sécurité — la rule
+      // `properties/update` l'autorise (`preservesImmutables()` ne gèle que
+      // landlordId/createdAt/deletedAt).
+      'colorKey': property.colorKey,
       'updatedAt': FieldValue.serverTimestamp(),
     };
     final ref = _col.doc(property.id);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../ui/theme/app_colors.dart';
 import '../ui/theme/app_radii.dart';
 import '../ui/theme/app_spacing.dart';
+import '../ui/theme/property_color.dart';
 
 /// Thème Baillan. — papier + encre + olive (FEAT-020 rebrand).
 ///
@@ -412,11 +413,15 @@ class AppTheme {
         ),
       ),
 
-      // Extensions de thème (statut pills, spacing, radii).
+      // Extensions de thème (statut pills, spacing, radii, couleurs d'identité
+      // des biens — FEAT-057).
       extensions: [
         brightness == Brightness.light ? AppColors.light : AppColors.dark,
         const AppSpacing(),
         const AppRadii(),
+        brightness == Brightness.light
+            ? PropertyColorPalette.light
+            : PropertyColorPalette.dark,
       ],
     );
   }

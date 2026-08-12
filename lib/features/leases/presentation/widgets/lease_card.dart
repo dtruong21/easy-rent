@@ -3,11 +3,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
+import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
+import '../../../../core/ui/theme/property_color.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../properties/presentation/widgets/property_color_dot.dart';
 import '../../domain/lease.dart';
 import '../../domain/lease_list_item.dart';
 import '../lease_list_item_display_l10n.dart';
@@ -35,14 +38,20 @@ class LeaseCard extends StatelessWidget {
     final theme = Theme.of(context);
     final lease = item.lease;
     final pillData = leaseStatusPill(context, lease, isLate: item.isLate);
+    final colorKey = PropertyColorKey.resolve(
+      entityId: lease.propertyId,
+      stored: item.propertyColorKey,
+    );
 
     return EntityCard(
       onTap: onTap,
+      density: EntityCardDensity.compact,
       semanticLabel: context.l10n.leasesCardSemanticLabel(
         item.displayPropertyName(context),
         item.displayTenantName(context),
       ),
       header: EntityCardHeader(
+        leading: PropertyColorDot(colorKey: colorKey),
         title: Text(
           item.displayPropertyName(context),
           style: theme.textTheme.titleSmall?.copyWith(

@@ -222,10 +222,23 @@ class FirestoreTenantRepository implements TenantRepository {
         .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .get();
+    // Couleur d'identité (FEAT-057) : 1 SEULE lecture groupée des biens du
+    // landlord, en parallèle des 2 autres requêtes — jamais une lecture par
+    // locataire. Bornée à 200 comme `PropertyRepository.list()`.
+    final propertiesQs = _firestore
+        .collection('properties')
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isNull: true)
+        .limit(200)
+        .get();
 
-    final results = await Future.wait([tenantsQs, leasesQs]);
+    final results = await Future.wait([tenantsQs, leasesQs, propertiesQs]);
     final tenantDocs = results[0].docs;
     final leaseDocs = results[1].docs;
+    final colorKeyByPropertyId = <String, String?>{
+      for (final doc in results[2].docs)
+        doc.id: doc.data()['colorKey'] as String?,
+    };
 
     // Index par tenantId — si plusieurs actifs, garde celui au startDate le plus récent.
     final activeByTenantId = <String, Map<String, dynamic>>{};
@@ -270,12 +283,17 @@ class FirestoreTenantRepository implements TenantRepository {
         }
       }
 
+      final propertyId = lease['propertyId'] as String?;
       return TenantListItem(
         tenant: tenant,
         activeLeaseId: lease['id'] as String?,
         currentPropertyName: lease['propertyName'] as String?,
         activeLeasePeriodLabel: periodLabel,
         activeLeaseRentCents: lease['rentAmountCents'] as int?,
+        currentPropertyId: propertyId,
+        currentPropertyColorKey: propertyId != null
+            ? colorKeyByPropertyId[propertyId]
+            : null,
       );
     }).toList();
   }

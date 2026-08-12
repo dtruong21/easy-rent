@@ -67,6 +67,18 @@ class Property with _$Property {
     @JsonKey(name: 'loan_start_date') DateTime? loanStartDate,
     @JsonKey(name: 'loan_monthly_payment_override_cents')
     int? loanMonthlyPaymentOverrideCents,
+    // --- Couleur d'identité (propagation biens/baux/locataires/paiements/
+    // quittances) ---
+    //
+    // Clé de palette [PropertyColorKey] (`lib/core/ui/theme/property_color.dart`),
+    // JAMAIS une couleur brute (le thème résout). `null` = pas encore
+    // personnalisée par l'utilisateur (bien créé avant cette fonctionnalité,
+    // ou attribution automatique pas encore persistée côté serveur) : les
+    // widgets d'affichage doivent TOUJOURS résoudre via
+    // `PropertyColorKey.resolve(entityId: property.id, stored: property.colorKey)`
+    // plutôt que lire ce champ directement — ne jamais laisser un bien
+    // s'afficher sans couleur.
+    @JsonKey(name: 'color_key') String? colorKey,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
     @JsonKey(name: 'deleted_at') DateTime? deletedAt,

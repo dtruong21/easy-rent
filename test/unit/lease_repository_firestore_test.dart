@@ -241,6 +241,103 @@ void main() {
     });
   });
 
+  group('FirestoreLeaseRepository.listForDisplay — propertyColorKey '
+      '(FEAT-057, lecture groupée)', () {
+    test('bien avec colorKey personnalisée → propagée sur le LeaseListItem '
+        '(pas de requête supplémentaire par bail)', () async {
+      await firestore.collection('properties').doc('p1').set({
+        'landlordId': uid,
+        'name': 'Studio Test',
+        'address': '1 rue Test',
+        'type': 'studio',
+        'colorKey': 'cobalt',
+        'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'deletedAt': null,
+      });
+      await seedLease(id: 'l1', startDate: DateTime(2020, 1, 1));
+
+      final items = await repo.listForDisplay(now: _fixedNow);
+
+      expect(items.single.propertyColorKey, 'cobalt');
+    });
+
+    test('bien sans colorKey (créé avant FEAT-057) → propertyColorKey null '
+        'sur le LeaseListItem (le repli déterministe se fait à '
+        "l'affichage, pas ici)", () async {
+      await firestore.collection('properties').doc('p1').set({
+        'landlordId': uid,
+        'name': 'Studio Test',
+        'address': '1 rue Test',
+        'type': 'studio',
+        'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'deletedAt': null,
+      });
+      await seedLease(id: 'l1', startDate: DateTime(2020, 1, 1));
+
+      final items = await repo.listForDisplay(now: _fixedNow);
+
+      expect(items.single.propertyColorKey, isNull);
+    });
+
+    test('bien introuvable (archivé/supprimé) → propertyColorKey null, pas '
+        "d'erreur", () async {
+      await seedLease(id: 'l1', startDate: DateTime(2020, 1, 1));
+
+      final items = await repo.listForDisplay(now: _fixedNow);
+
+      expect(items.single.propertyColorKey, isNull);
+    });
+
+    test('deux baux sur deux biens distincts → chaque item porte la '
+        'couleur du BON bien (pas de mélange)', () async {
+      await firestore.collection('properties').doc('p1').set({
+        'landlordId': uid,
+        'name': 'Studio A',
+        'address': '1 rue A',
+        'type': 'studio',
+        'colorKey': 'cobalt',
+        'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'deletedAt': null,
+      });
+      await firestore.collection('properties').doc('p2').set({
+        'landlordId': uid,
+        'name': 'Studio B',
+        'address': '2 rue B',
+        'type': 'studio',
+        'colorKey': 'sauge',
+        'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'deletedAt': null,
+      });
+      await seedLease(id: 'l1', startDate: DateTime(2020, 1, 1));
+      await firestore.collection('leases').doc('l2').set({
+        'landlordId': uid,
+        'propertyId': 'p2',
+        'tenantId': 't2',
+        'rentAmountCents': 90000,
+        'chargesAmountCents': 0,
+        'startDate': Timestamp.fromDate(DateTime(2020, 1, 1)),
+        'status': 'terminated',
+        'paymentDay': 1,
+        'propertyName': 'Studio B',
+        'tenantFirstName': 'Marie',
+        'tenantLastName': 'Curie',
+        'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+        'deletedAt': null,
+      });
+
+      final items = await repo.listForDisplay(now: _fixedNow);
+      final byId = {for (final item in items) item.lease.id: item};
+
+      expect(byId['l1']!.propertyColorKey, 'cobalt');
+      expect(byId['l2']!.propertyColorKey, 'sauge');
+    });
+  });
+
   group('FirestoreLeaseRepository.listActiveLeasesForProperty — '
       'section "Baux actifs" fiche bien (FEAT-005)', () {
     test('bien sans bail → liste vide', () async {

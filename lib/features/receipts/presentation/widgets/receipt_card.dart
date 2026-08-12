@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
+import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
+import '../../../../core/ui/theme/property_color.dart';
+import '../../../properties/presentation/widgets/property_color_dot.dart';
 import '../../application/void_receipt_controller.dart';
 import '../open_receipt_pdf.dart';
 import '../../domain/receipt.dart';
@@ -32,6 +35,7 @@ class ReceiptCard extends ConsumerWidget {
     this.tenantFirstName = '',
     this.propertyAddress = '',
     this.landlordFullName = '',
+    this.propertyColorKey,
   });
 
   final Receipt receipt;
@@ -40,6 +44,12 @@ class ReceiptCard extends ConsumerWidget {
   final String tenantFirstName;
   final String propertyAddress;
   final String landlordFullName;
+
+  /// Couleur d'identité du bien lié — déjà résolue par l'appelant (le bien
+  /// est déjà chargé une seule fois au niveau de la page, cf.
+  /// `LeaseReceiptsPage` / `LeaseContextBanner`), jamais une requête par
+  /// quittance.
+  final PropertyColorKey? propertyColorKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,11 +64,15 @@ class ReceiptCard extends ConsumerWidget {
     return EntityCard(
       key: Key('receipt_card_${receipt.id}'),
       onTap: () => _openPdf(context, ref),
+      density: EntityCardDensity.compact,
       semanticLabel: l10n.receiptsCardSemanticLabel(
         periodLabel,
         receipt.totalEuros,
       ),
       header: EntityCardHeader(
+        leading: propertyColorKey != null
+            ? PropertyColorDot(colorKey: propertyColorKey!)
+            : null,
         title: Text(
           periodLabel,
           style: theme.textTheme.titleSmall?.copyWith(

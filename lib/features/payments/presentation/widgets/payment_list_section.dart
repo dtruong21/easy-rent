@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/theme/property_color.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../leases/application/lease_detail_provider.dart';
 import '../../../leases/domain/lease.dart';
+import '../../../properties/presentation/widgets/property_color_dot.dart';
 import '../../application/lease_payments_provider.dart';
 import '../../application/payment_form_controller.dart';
 import '../../domain/payment.dart';
@@ -22,9 +24,18 @@ final _log = Logger('PaymentListSection');
 /// Bouton "Ajouter paiement" désactivé si bail clôturé
 /// (status ∈ {terminated, archived}).
 class PaymentListSection extends ConsumerWidget {
-  const PaymentListSection({super.key, required this.leaseId});
+  const PaymentListSection({
+    super.key,
+    required this.leaseId,
+    this.propertyColorKey,
+  });
 
   final String leaseId;
+
+  /// Couleur d'identité du bien lié — déjà résolue par l'appelant
+  /// (`LeaseDetailPage`, qui charge déjà le bien pour d'autres besoins :
+  /// zéro lecture supplémentaire).
+  final PropertyColorKey? propertyColorKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,6 +54,7 @@ class PaymentListSection extends ConsumerWidget {
         lease: lease,
         asyncPayments: asyncPayments,
         leaseId: leaseId,
+        propertyColorKey: propertyColorKey,
       ),
     );
   }
@@ -53,11 +65,13 @@ class _PaymentListContent extends ConsumerWidget {
     required this.lease,
     required this.asyncPayments,
     required this.leaseId,
+    this.propertyColorKey,
   });
 
   final Lease lease;
   final AsyncValue<List<Payment>> asyncPayments;
   final String leaseId;
+  final PropertyColorKey? propertyColorKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,6 +87,10 @@ class _PaymentListContent extends ConsumerWidget {
             // En-tête avec titre et bouton ajouter
             Row(
               children: [
+                if (propertyColorKey != null) ...[
+                  PropertyColorDot(colorKey: propertyColorKey!),
+                  const SizedBox(width: 8),
+                ],
                 Text(
                   context.l10n.paymentsSectionTitle,
                   style: theme.textTheme.titleMedium,

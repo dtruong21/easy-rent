@@ -3,11 +3,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
+import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
+import '../../../../core/ui/theme/property_color.dart';
 import '../../domain/property_list_item.dart';
 import '../../domain/property_type.dart';
+import 'property_color_dot.dart';
 import 'property_status_mapper.dart';
 import 'property_type_l10n.dart';
 
@@ -31,6 +34,10 @@ class PropertyCard extends StatelessWidget {
     final l10n = context.l10n;
     final property = item.property;
     final pillData = propertyOccupancyPill(item, context);
+    final colorKey = PropertyColorKey.resolve(
+      entityId: property.id,
+      stored: property.colorKey,
+    );
 
     final surfaceSuffix = property.surfaceM2 != null
         ? ' · ${l10n.propertiesSurfaceValue(property.surfaceM2!.toStringAsFixed(property.surfaceM2! % 1 == 0 ? 0 : 2))}'
@@ -38,11 +45,13 @@ class PropertyCard extends StatelessWidget {
 
     return EntityCard(
       onTap: onTap,
+      density: EntityCardDensity.compact,
       semanticLabel: l10n.propertiesCardSemanticLabel(
         property.name,
         pillData.label,
       ),
       header: EntityCardHeader(
+        leading: PropertyColorDot(colorKey: colorKey),
         title: Text(
           property.name,
           style: theme.textTheme.titleSmall?.copyWith(

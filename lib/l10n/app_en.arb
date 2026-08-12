@@ -1464,6 +1464,60 @@
   "@propertiesFormSurfaceLabel": {
     "description": "Label of the optional surface area text field."
   },
+  "propertiesFormSectionColor": "Identity color",
+  "@propertiesFormSectionColor": {
+    "description": "Header of the identity color picker section in the property edit form (creation gets an automatic color, no picker shown)."
+  },
+  "propertiesFormColorHelper": "Helps you spot this property across lists, leases, tenants, payments and receipts.",
+  "@propertiesFormColorHelper": {
+    "description": "Helper text under the identity color picker explaining where the color is reused across the app."
+  },
+  "propertiesFieldColor": "Color",
+  "@propertiesFieldColor": {
+    "description": "Label of the identity color row on the property detail page."
+  },
+  "propertiesColorNameRouille": "Rust",
+  "@propertiesColorNameRouille": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameBordeaux": "Bordeaux",
+  "@propertiesColorNameBordeaux": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNamePrune": "Plum",
+  "@propertiesColorNamePrune": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameCobalt": "Cobalt",
+  "@propertiesColorNameCobalt": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameArdoise": "Slate",
+  "@propertiesColorNameArdoise": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameSauge": "Sage",
+  "@propertiesColorNameSauge": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameMoutarde": "Mustard",
+  "@propertiesColorNameMoutarde": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameRosePoudre": "Dusty rose",
+  "@propertiesColorNameRosePoudre": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorSwatchLabel": "{colorName} color",
+  "@propertiesColorSwatchLabel": {
+    "description": "Accessibility label read by screen readers for a tappable color swatch in the identity color picker.",
+    "placeholders": {
+      "colorName": {
+        "type": "String",
+        "example": "Rust"
+      }
+    }
+  },
   "propertiesFormSectionCharacteristics": "Characteristics (optional)",
   "@propertiesFormSectionCharacteristics": {
     "description": "ExpansionTile title for the optional characteristics section of the property form."

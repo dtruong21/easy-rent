@@ -7,6 +7,8 @@ import 'dart:typed_data';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
+import 'package:easyrent/core/ui/theme/property_color.dart';
+import 'package:easyrent/features/properties/presentation/widgets/property_color_dot.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
@@ -77,13 +79,17 @@ Receipt _makeReceipt({required String id, required DateTime periodStart}) =>
       createdAt: periodStart.add(const Duration(days: 5)),
     );
 
-Widget _buildView(List<Receipt> receipts) {
+Widget _buildView(List<Receipt> receipts, {PropertyColorKey? colorKey}) {
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
         builder: (context, _) => Scaffold(
-          body: ReceiptsCardView(receipts: receipts, leaseId: 'lease-1'),
+          body: ReceiptsCardView(
+            receipts: receipts,
+            leaseId: 'lease-1',
+            propertyColorKey: colorKey,
+          ),
         ),
       ),
     ],
@@ -187,6 +193,35 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Mars 2026'), findsOneWidget);
+    });
+  });
+
+  group('ReceiptsCardView — couleur d\'identité du bien (FEAT-057)', () {
+    testWidgets('propertyColorKey fourni → chaque carte affiche la pastille', (
+      tester,
+    ) async {
+      final receipts = [
+        _makeReceipt(id: 'r1', periodStart: DateTime(2026, 3, 1)),
+        _makeReceipt(id: 'r2', periodStart: DateTime(2026, 2, 1)),
+      ];
+
+      await tester.pumpWidget(
+        _buildView(receipts, colorKey: PropertyColorKey.cobalt),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PropertyColorDot), findsNWidgets(2));
+    });
+
+    testWidgets('propertyColorKey absent → aucune pastille', (tester) async {
+      final receipts = [
+        _makeReceipt(id: 'r1', periodStart: DateTime(2026, 3, 1)),
+      ];
+
+      await tester.pumpWidget(_buildView(receipts));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PropertyColorDot), findsNothing);
     });
   });
 }

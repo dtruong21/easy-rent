@@ -3,9 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
+import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
+import '../../../../core/ui/theme/property_color.dart';
+import '../../../properties/presentation/widgets/property_color_dot.dart';
 import '../../domain/tenant_list_item.dart';
 import 'tenant_status_mapper.dart';
 
@@ -29,12 +32,21 @@ class TenantCard extends StatelessWidget {
     final l10n = context.l10n;
     final tenant = item.tenant;
     final pillData = tenantOccupancyPill(context, item);
+    final propertyId = item.currentPropertyId;
+    final colorKey = propertyId != null
+        ? PropertyColorKey.resolve(
+            entityId: propertyId,
+            stored: item.currentPropertyColorKey,
+          )
+        : null;
 
     return EntityCard(
       onTap: onTap,
+      density: EntityCardDensity.compact,
       semanticLabel:
           '${tenant.firstName} ${tenant.lastName} — ${pillData.label}',
       header: EntityCardHeader(
+        leading: colorKey != null ? PropertyColorDot(colorKey: colorKey) : null,
         title: Text(
           '${tenant.firstName} ${tenant.lastName}',
           style: theme.textTheme.titleSmall?.copyWith(

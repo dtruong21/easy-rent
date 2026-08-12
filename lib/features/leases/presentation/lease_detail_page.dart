@@ -8,6 +8,7 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/status_pill.dart';
 import '../../../core/ui/cards/status_pill_tone.dart';
+import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/utils/property_address.dart';
@@ -20,6 +21,7 @@ import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/property_detail_provider.dart';
+import '../../properties/presentation/widgets/property_color_dot.dart';
 import '../../receipts/presentation/receipts_list_section.dart';
 import '../../tenants/application/tenant_detail_provider.dart';
 import '../application/lease_detail_provider.dart';
@@ -150,6 +152,15 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
       postalCode: property?.postalCode,
       city: property?.city,
     );
+    // Couleur d'identité (FEAT-057) : le bien est déjà chargé ci-dessus pour
+    // l'adresse — aucune lecture supplémentaire pour la propager aux
+    // sections Paiements/Quittances de cette même page.
+    final propertyColorKey = property != null
+        ? PropertyColorKey.resolve(
+            entityId: property.id,
+            stored: property.colorKey,
+          )
+        : null;
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
     final landlordAddress = asyncProfile.valueOrNull?.address ?? '';
 
@@ -237,11 +248,17 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
               tenantEmail: tenantEmail,
             ),
             const SizedBox(height: 16),
-            _InfoCard(lease: lease),
+            _InfoCard(lease: lease, propertyColorKey: propertyColorKey),
             const SizedBox(height: 16),
-            PaymentListSection(leaseId: lease.id),
+            PaymentListSection(
+              leaseId: lease.id,
+              propertyColorKey: propertyColorKey,
+            ),
             const SizedBox(height: 16),
-            ReceiptsListSection(leaseId: lease.id),
+            ReceiptsListSection(
+              leaseId: lease.id,
+              propertyColorKey: propertyColorKey,
+            ),
             const SizedBox(height: 16),
             DocumentsSection(leaseId: lease.id),
             const SizedBox(height: 32),
@@ -387,9 +404,10 @@ class _StatusCard extends StatelessWidget {
 
 /// Card d'informations du bail (lecture seule).
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.lease});
+  const _InfoCard({required this.lease, this.propertyColorKey});
 
   final Lease lease;
+  final PropertyColorKey? propertyColorKey;
 
   @override
   Widget build(BuildContext context) {
@@ -406,6 +424,7 @@ class _InfoCard extends StatelessWidget {
               icon: Icons.home_outlined,
               label: l10n.leasesDetailPropertyLabel,
               onTap: () => context.go('/properties/${lease.propertyId}'),
+              colorKey: propertyColorKey,
             ),
             const Divider(height: 24),
 
@@ -629,11 +648,16 @@ class _LinkRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.colorKey,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+
+  /// Couleur d'identité du bien lié (`null` pour la ligne locataire, qui
+  /// n'a pas de couleur propre).
+  final PropertyColorKey? colorKey;
 
   @override
   Widget build(BuildContext context) {
@@ -642,7 +666,13 @@ class _LinkRow extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          if (colorKey != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: PropertyColorDot(colorKey: colorKey!, size: 12),
+            )
+          else
+            Icon(icon, size: 20, color: theme.colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

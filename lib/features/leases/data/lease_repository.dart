@@ -121,12 +121,30 @@ class FirestoreLeaseRepository implements LeaseRepository {
     // Tri côté serveur : startDate DESC. Le tri status ASC (active d'abord)
     // est appliqué côté client après lecture pour ne pas multiplier les
     // indexes composites.
-    final qs = await _col
+    final leasesQuery = _col
         .where('landlordId', isEqualTo: _uid)
         .where('deletedAt', isNull: true)
         .orderBy('startDate', descending: true)
         .limit(200)
         .get();
+
+    // Couleur d'identité (FEAT-057) : 1 SEULE lecture groupée des biens du
+    // landlord, en parallèle de la requête baux — jamais une lecture par
+    // bail. Bornée à 200 comme `PropertyRepository.list()` (portefeuille
+    // cible : 1-20 biens, cf. docstring du repository).
+    final propertiesQuery = _firestore
+        .collection('properties')
+        .where('landlordId', isEqualTo: _uid)
+        .where('deletedAt', isNull: true)
+        .limit(200)
+        .get();
+
+    final results = await Future.wait([leasesQuery, propertiesQuery]);
+    final qs = results[0];
+    final colorKeyByPropertyId = <String, String?>{
+      for (final doc in results[1].docs)
+        doc.id: doc.data()['colorKey'] as String?,
+    };
 
     final leases = qs.docs
         .map(
@@ -164,6 +182,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
         propertyName: propertyName,
         tenantDisplayName: tenantDisplayName,
         isLate: isLate,
+        propertyColorKey: colorKeyByPropertyId[lease.propertyId],
       );
     }).toList();
 

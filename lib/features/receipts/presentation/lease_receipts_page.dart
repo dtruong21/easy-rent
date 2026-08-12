@@ -9,6 +9,7 @@ import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/ui/breakpoints.dart';
+import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/property_address.dart';
 import '../../leases/application/lease_detail_provider.dart';
 import '../../profile/application/landlord_profile_provider.dart';
@@ -71,6 +72,12 @@ class LeaseReceiptsPage extends ConsumerWidget {
       city: property?.city,
     );
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
+    final propertyColorKey = property != null
+        ? PropertyColorKey.resolve(
+            entityId: property.id,
+            stored: property.colorKey,
+          )
+        : null;
 
     return Scaffold(
       appBar: AppAppBar(
@@ -121,6 +128,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
                     tenantFirstName: tenantFirstName,
                     propertyAddress: propertyAddress,
                     landlordFullName: landlordFullName,
+                    propertyColorKey: propertyColorKey,
                   );
                 }
 

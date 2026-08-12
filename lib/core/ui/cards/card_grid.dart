@@ -27,6 +27,7 @@ class CardGrid extends StatelessWidget {
     this.gap = 16,
     this.padding = EdgeInsets.zero,
     this.shrinkWrap = false,
+    this.mainAxisExtent,
   }) : itemCount = null,
        itemBuilder = null;
 
@@ -38,6 +39,7 @@ class CardGrid extends StatelessWidget {
     this.gap = 16,
     this.padding = EdgeInsets.zero,
     this.shrinkWrap = false,
+    this.mainAxisExtent,
   }) : children = null;
 
   /// Widgets à afficher (constructeur standard).
@@ -58,13 +60,25 @@ class CardGrid extends StatelessWidget {
   /// Si `true`, la grille prend la hauteur minimale nécessaire.
   final bool shrinkWrap;
 
+  /// Hauteur fixe (px) des cellules, si fournie.
+  ///
+  /// Par défaut (`null`), la hauteur suit `childAspectRatio: 1.4` — sur les
+  /// grandes largeurs de cellule (desktop), ce ratio laisse une zone vide
+  /// sous des cartes au contenu compact (retour recette 2026-08). Les cartes
+  /// d'entités (biens/baux/locataires/quittances) fournissent une hauteur
+  /// fixe calibrée sur leur contenu réel plutôt que de dépendre de la
+  /// largeur de cellule.
+  final double? mainAxisExtent;
+
   @override
   Widget build(BuildContext context) {
+    final extent = mainAxisExtent;
     final delegate = SliverGridDelegateWithMaxCrossAxisExtent(
       maxCrossAxisExtent: 380,
       mainAxisSpacing: gap,
       crossAxisSpacing: gap,
-      childAspectRatio: 1.4,
+      mainAxisExtent: extent,
+      childAspectRatio: extent != null ? 1.0 : 1.4,
     );
 
     if (itemBuilder != null && itemCount != null) {

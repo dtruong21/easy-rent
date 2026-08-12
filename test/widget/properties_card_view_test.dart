@@ -6,6 +6,7 @@ import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/features/properties/presentation/widgets/properties_card_view.dart';
 import 'package:easyrent/features/properties/presentation/widgets/property_card.dart';
+import 'package:easyrent/features/properties/presentation/widgets/property_color_dot.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -189,5 +190,22 @@ void main() {
 
       expect(find.text('Loué'), findsOneWidget);
     });
+
+    testWidgets(
+      'chaque bien affiche sa pastille de couleur d\'identité (FEAT-057) — '
+      'même un bien "legacy" sans colorKey stockée (repli déterministe, '
+      'jamais sans couleur)',
+      (tester) async {
+        final items = [
+          _makeItem(id: 'p1', name: 'Bien 1'),
+          _makeItem(id: 'p2', name: 'Bien 2'),
+        ];
+
+        await tester.pumpWidget(_buildCardView(items));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PropertyColorDot), findsNWidgets(2));
+      },
+    );
   });
 }
