@@ -15,7 +15,7 @@ Bien immobilier (appartement, maison, etc). **Création exclusively via callable
 | `id` | string | UUID, docId |
 | `landlordId` | string | FK → landlords.id, immuable |
 | `name` | string | adresse ou nom |
-| `address` | string | complète (rue + code postal) |
+| `address` | string | ⚠️ **la RUE seule en pratique**, pas l'adresse complète — voir la note sous ce tableau |
 | `type` | string | 'appartement' \| 'maison' \| 'studio' \| 'autre', immuable |
 | `surfaceM2` | number\|null | surface habitable (FEAT-017) |
 | `postalCode` | string\|null | code postal |
@@ -47,6 +47,35 @@ Bien immobilier (appartement, maison, etc). **Création exclusively via callable
 | `createdAt` | timestamp | immuable |
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete, isActive filter |
+
+> ### ⚠️ `address` ne contient QUE la rue (corrigé le 2026-08-12)
+>
+> Ce shard affirmait que `address` était « complète (rue + code postal) ».
+> **C'était faux, et ça a produit un bug visible par l'utilisateur** : le champ
+> « Logement » des quittances de loyer n'affichait que la rue, sans code postal
+> ni ville — sur un document à valeur légale (loi du 6 juillet 1989).
+>
+> La réalité : `property_form.dart` étiquette le champ « Adresse complète », mais
+> son exemple est « Ex. : 12 rue de la Paix » et il expose `postalCode` et `city`
+> en **champs séparés** juste en dessous. Les utilisateurs y saisissent donc la
+> rue seule. Rien ne l'impose techniquement — un bien saisi autrement peut
+> contenir davantage — d'où la règle ci-dessous.
+>
+> **Ne concatène jamais toi-même.** Utilise `composePropertyAddress()`
+> (`functions/src/utils/property_address.ts` côté serveur,
+> `lib/core/utils/property_address.dart` côté client) : elle n'ajoute que les
+> composants ABSENTS. Sinon on obtient « …, 95000 Cergy, 95000 Cergy » sur les
+> biens dont l'adresse porte déjà le code postal. Deux pièges déjà traités et
+> couverts par ses tests : le trait d'union (« Cergy » ne doit pas matcher dans
+> « Cergy-Pontoise ») et la position d'insertion du code postal quand l'adresse
+> se termine par la ville.
+>
+> Le `propertyAddress` figé sur `leases` est écrit par `createLease` avec cette
+> fonction, et n'est **jamais re-synchronisé** ensuite (exigence loi 1989).
+> Corriger un bien après coup ne corrige donc ni les baux existants, ni a
+> fortiori les quittances déjà émises — celles-ci sont immuables par les règles.
+> Rattrapage des baux : `functions/scripts/backfill-lease-property-address.mjs`
+> (dry-run par défaut, base à passer explicitement).
 
 **Règles Firestore** :
 - `get` : isOwner(landlordId) && isActive(rsc)
