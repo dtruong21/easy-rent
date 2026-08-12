@@ -169,7 +169,8 @@ class FirestorePropertyRepository implements PropertyRepository {
       final firstName = lease['tenantFirstName'] as String? ?? '';
       final lastName = lease['tenantLastName'] as String? ?? '';
       final tenantName = '$firstName $lastName'.trim();
-      final rent = lease['rentAmountCents'] as int? ?? 0;
+      final rentHcCents = lease['rentAmountCents'] as int?;
+      final rent = rentHcCents ?? 0;
       final charges = lease['chargesAmountCents'] as int? ?? 0;
       return PropertyListItem(
         property: property,
@@ -177,6 +178,7 @@ class FirestorePropertyRepository implements PropertyRepository {
         currentTenantName: tenantName.isEmpty ? null : tenantName,
         currentRentLabel:
             '${MoneyFormat.formatEurosFromCents(rent + charges)} CC / mois',
+        currentRentHcCents: rentHcCents,
       );
     }).toList();
   }

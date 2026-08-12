@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:logging/logging.dart';
 
+import '../../../../core/finance/profitability_snapshot.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/money_format.dart';
@@ -24,17 +25,18 @@ final _log = Logger('PortfolioYieldSection');
 class PortfolioYieldSummary with _$PortfolioYieldSummary {
   const factory PortfolioYieldSummary({
     /// Rendement brut moyen pondéré par prix d'acquisition.
-    /// Null si aucun bien avec prix d'achat + bail actif.
+    /// Null si aucun bien avec prix d'achat + bail actif + loyer HC connu.
     double? avgYieldGrossPercent,
 
     /// Rendement net moyen pondéré.
     /// Null si charges manquantes pour tous les biens calculables.
     double? avgYieldNetPercent,
 
-    /// Cash flow mensuel total (centimes). Null si non calculable.
+    /// Cash flow mensuel total (centimes) — somme des biens calculables.
+    /// Null si aucun bien n'a de charges ou de prêt renseignés.
     int? totalMonthlyCashflowCents,
 
-    /// Nombre de biens avec prix d'achat + bail actif.
+    /// Nombre de biens avec prix d'achat + bail actif + loyer HC connu.
     required int computedCount,
 
     /// Nombre total de biens du portfolio.
@@ -48,11 +50,17 @@ class PortfolioYieldSummary with _$PortfolioYieldSummary {
 
 /// Calcule la rentabilité agrégée du portfolio.
 ///
-/// Limitation : PropertyListItem expose `currentRentLabel` (string formatée CC)
-/// mais pas `rent_amount_cents` (loyer HC en centimes bruts).
-/// Sans le loyer HC précis, les rendements brut/net ne sont pas calculables ici.
-/// On retourne les biens "en attente" (prix + bail actif) pour l'UI de status.
-/// Les rendements seront disponibles via une future version avec jointure enrichie.
+/// Réutilise [computeSnapshotForProperty] — le même moteur que
+/// `PropertyProfitabilityCard` sur la fiche d'un bien — pour ne jamais faire
+/// diverger les deux calculs.
+///
+/// Un bien n'entre dans le calcul que s'il a un prix d'achat renseigné,
+/// un bail actif ET un loyer HC connu ; c'est [PortfolioYieldSummary.computedCount].
+/// Le rendement brut et le rendement net sont des moyennes pondérées par le
+/// prix d'achat (biens sans charges renseignées exclus du rendement net,
+/// comme sur la fiche individuelle). Le cash flow mensuel est une somme sur
+/// les biens dont le cash flow est lui-même calculable (charges ou prêt
+/// renseignés).
 PortfolioYieldSummary computePortfolioYield(List<PropertyListItem> items) {
   if (items.isEmpty) {
     return const PortfolioYieldSummary(computedCount: 0, totalCount: 0);
@@ -63,41 +71,53 @@ PortfolioYieldSummary computePortfolioYield(List<PropertyListItem> items) {
   double weightedGrossDenominator = 0;
   double weightedNetNumerator = 0;
   double weightedNetDenominator = 0;
+  int totalMonthlyCashflowCents = 0;
+  bool hasCashflow = false;
 
   for (final item in items) {
     final property = item.property;
     final purchasePrice = property.purchasePriceCents;
-    // Seuls les biens avec prix d'achat ET bail actif sont comptabilisés.
+    final rentHcCents = item.currentRentHcCents;
+    // Seuls les biens avec prix d'achat, bail actif ET loyer HC connu
+    // sont comptabilisés — les 3 sont nécessaires au calcul.
     if (purchasePrice == null || purchasePrice <= 0) continue;
-    if (item.activeLeaseId == null) continue;
+    if (item.activeLeaseId == null || rentHcCents == null) continue;
 
     computedCount++;
     final weight = purchasePrice.toDouble();
 
-    // Note : sans loyer HC disponible dans PropertyListItem,
-    // on ne peut pas calculer les rendements brut/net ici.
-    // Ces calculs sont disponibles sur la fiche du bien via PropertyProfitabilityCard.
-    // Pour le dashboard, on affiche le nombre de biens calculables.
-    weightedGrossDenominator += weight;
+    final snapshot = computeSnapshotForProperty(
+      property: property,
+      monthlyRentHcCents: rentHcCents,
+    );
 
-    final hasCharges =
-        property.propertyTaxAnnualCents != null ||
-        property.insurancePnoAnnualCents != null ||
-        property.condoFeesNonRecoverableCents != null;
-    if (hasCharges) {
+    final grossYield = snapshot.yieldGrossPercent;
+    if (grossYield != null) {
+      weightedGrossNumerator += grossYield * weight;
+      weightedGrossDenominator += weight;
+    }
+
+    final netYield = snapshot.yieldNetPercent;
+    if (netYield != null) {
+      weightedNetNumerator += netYield * weight;
       weightedNetDenominator += weight;
+    }
+
+    final cashflow = snapshot.monthlyCashflowBeforeTaxCents;
+    if (cashflow != null) {
+      totalMonthlyCashflowCents += cashflow;
+      hasCashflow = true;
     }
   }
 
   return PortfolioYieldSummary(
-    // Rendements null — loyer HC non accessible dans PropertyListItem.
     avgYieldGrossPercent: weightedGrossDenominator > 0
-        ? weightedGrossNumerator / weightedGrossDenominator * 100
+        ? weightedGrossNumerator / weightedGrossDenominator
         : null,
     avgYieldNetPercent: weightedNetDenominator > 0
-        ? weightedNetNumerator / weightedNetDenominator * 100
+        ? weightedNetNumerator / weightedNetDenominator
         : null,
-    totalMonthlyCashflowCents: null,
+    totalMonthlyCashflowCents: hasCashflow ? totalMonthlyCashflowCents : null,
     computedCount: computedCount,
     totalCount: items.length,
   );
