@@ -669,6 +669,7 @@
   "dashboardMonthlyChartPositiveLabel": "Positif",
   "dashboardMonthlyChartNegativeLabel": "Négatif",
   "dashboardMonthlyChartNoDataLabel": "Aucune donnée",
+  "dashboardMonthlyChartNoExpenseNote": "Aucune dépense saisie sur cette période : le cash-flow affiché correspond donc aux loyers encaissés.",
   "dashboardChartPeriod6Months": "6 mois",
   "dashboardChartPeriod12Months": "12 mois",
   "dashboardChartPeriod24Months": "24 mois",

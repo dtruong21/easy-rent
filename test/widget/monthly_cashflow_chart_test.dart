@@ -481,4 +481,53 @@ void main() {
       expect(ChartPeriod.fromName(null), isNull);
     });
   });
+
+  group('MonthlyCashflowChart — mention « aucune dépense »', () {
+    // Signalé en recette : le graphique affichait exactement les loyers et
+    // semblait ignorer les dépenses. Le calcul était juste — le bailleur
+    // n'avait saisi AUCUNE dépense. C'est l'absence d'explication qui a coûté
+    // un aller-retour de diagnostic, pas le chiffre.
+    // Fragment stable du libellé FR (le harnais force `Locale('fr')`).
+    final noteFr = find.textContaining('Aucune dépense saisie');
+
+    testWidgets('des loyers mais zéro dépense → la mention s\'affiche', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          _PeriodAwareDashboardRepository(),
+          const _FakeExpensesRepository(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(noteFr, findsOneWidget);
+    });
+
+    testWidgets('au moins une dépense → pas de mention', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _PeriodAwareDashboardRepository(),
+          _FakeExpensesRepository([
+            _expense(
+              id: 'e1',
+              amountCents: 12000,
+              expenseDate: DateTime(2026, 3, 15),
+            ),
+          ]),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(noteFr, findsNothing);
+    });
+
+    testWidgets('période entièrement vide → pas de mention (l\'état vide '
+        'parle déjà)', (tester) async {
+      await tester.pumpWidget(_buildChart(empty: true));
+      await tester.pumpAndSettle();
+
+      expect(noteFr, findsNothing);
+    });
+  });
 }

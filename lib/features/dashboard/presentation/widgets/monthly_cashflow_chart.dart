@@ -104,6 +104,10 @@ class _MonthlyCashflowChartState extends ConsumerState<MonthlyCashflowChart> {
               onGroupTouched: (i) => setState(() => _touchedGroupIndex = i),
             ),
           ),
+          if (months != null && _hasNoExpenseAtAll(months)) ...[
+            const SizedBox(height: 8),
+            const _NoExpenseNote(),
+          ],
         ],
       ),
     );
@@ -242,6 +246,40 @@ class _ChartLoading extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
+    );
+  }
+}
+
+/// Note affichée sous le graphique quand la période ne contient AUCUNE dépense.
+///
+/// Le cash-flow égale alors les loyers encaissés, ce qui donne l'impression que
+/// les dépenses sont ignorées. Cette note lève l'ambiguïté — signalée en
+/// recette, où le calcul était juste mais rien ne l'expliquait.
+class _NoExpenseNote extends StatelessWidget {
+  const _NoExpenseNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.info_outline,
+          size: 14,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            context.l10n.dashboardMonthlyChartNoExpenseNote,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -681,6 +719,20 @@ class _ChartBuilder {
 /// il ne doit PAS déclencher l'empty state.
 bool _isAllEmpty(List<MonthlyCashflow> months) =>
     months.every((m) => !m.hasData);
+
+/// `true` si la période contient des données MAIS aucune dépense.
+///
+/// Sans cette mention, le graphique affiche exactement les loyers encaissés et
+/// paraît ignorer les dépenses — ce qui a été signalé en recette comme un bug
+/// alors que le calcul était juste : le bailleur n'avait simplement saisi
+/// aucune dépense. Le chiffre était bon, c'est l'absence d'explication qui
+/// coûtait cher.
+///
+/// Volontairement muet sur une période entièrement vide : `_ChartBody` affiche
+/// déjà son propre état vide, et empiler deux messages brouillerait le propos.
+bool _hasNoExpenseAtAll(List<MonthlyCashflow> months) =>
+    !_isAllEmpty(months) &&
+    months.every((m) => m.nonRecoverableExpenseCents == 0);
 
 /// Icône associée à chaque [ChartFormat], utilisée dans le toggle d'en-tête.
 IconData _iconForFormat(ChartFormat format) => switch (format) {
