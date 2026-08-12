@@ -14,6 +14,16 @@ final _log = Logger('ExpensesRepository');
 
 const int _kMaxExpensesPerList = 500;
 
+/// Cap de la requête landlord-wide (`listAllForLandlord`) — un cap unique
+/// couvrant tous les biens plutôt qu'un cap par bien ; 500 dépenses au total
+/// est très généreux pour un portefeuille (dizaines de biens, plusieurs
+/// années d'historique). Au-delà, le repli gracieux est le comportement
+/// habituel : les dépenses les plus anciennes (hors des 500 plus récentes)
+/// ne contribuent plus à la couverture 12 mois d'une charge → cash flow
+/// réel non exploitable pour ce poste → repli sur le prévisionnel déclaré,
+/// jamais un crash.
+const int _kMaxExpensesForLandlordWide = 500;
+
 /// Dépenses = entité first-class « l'argent qui sort » (FEAT-041).
 ///
 /// Collection **CF-EXCLUSIVE** — toute écriture passe par les Callables
@@ -34,6 +44,14 @@ abstract interface class ExpensesRepository {
   /// Stream temps réel des dépenses actives d'un bien, triées par
   /// `expenseDate DESC`.
   Stream<List<Expense>> watchForProperty(String propertyId);
+
+  /// Liste (one-shot) TOUTES les dépenses actives du landlord courant, tous
+  /// biens confondus, triées par `expenseDate DESC` — **une seule requête**
+  /// Firestore (index `landlordId, deletedAt, expenseDate` existant) au
+  /// lieu d'une requête par bien. Alimente l'agrégation portfolio du
+  /// dashboard (cash flow réel — `PortfolioYieldSection`) : voir
+  /// `groupRealChargesByProperty`.
+  Future<List<Expense>> listAllForLandlord();
 
   Future<Expense> getById(String id);
 
@@ -117,6 +135,23 @@ class FirestoreExpensesRepository implements ExpensesRepository {
           )
           .toList(),
     );
+  }
+
+  @override
+  Future<List<Expense>> listAllForLandlord() async {
+    _log.info('listAllForLandlord()');
+    final qs = await _col
+        .where('landlordId', isEqualTo: _uid)
+        .where('deletedAt', isNull: true)
+        .orderBy('expenseDate', descending: true)
+        .limit(_kMaxExpensesForLandlordWide)
+        .get();
+    return qs.docs
+        .map(
+          (d) =>
+              Expense.fromJson(firestoreDocToSnakeJson(d.data(), docId: d.id)),
+        )
+        .toList();
   }
 
   @override

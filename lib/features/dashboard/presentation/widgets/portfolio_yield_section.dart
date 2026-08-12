@@ -6,9 +6,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:logging/logging.dart';
 
 import '../../../../core/finance/profitability_snapshot.dart';
+import '../../../../core/finance/real_expense_charges.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../expenses/application/real_charges_grouping.dart';
+import '../../../expenses/data/expenses_repository.dart';
 import '../../../properties/application/properties_list_provider.dart';
 import '../../../properties/domain/property_list_item.dart';
 
@@ -52,16 +56,26 @@ class PortfolioYieldSummary with _$PortfolioYieldSummary {
 ///
 /// Réutilise [computeSnapshotForProperty] — le même moteur que
 /// `PropertyProfitabilityCard` sur la fiche d'un bien — pour ne jamais faire
-/// diverger les deux calculs.
+/// diverger les deux calculs, y compris pour la bascule réel/prévisionnel
+/// du cash flow (cf. `computeMonthlyCashflowBeforeTaxCents`).
 ///
 /// Un bien n'entre dans le calcul que s'il a un prix d'achat renseigné,
 /// un bail actif ET un loyer HC connu ; c'est [PortfolioYieldSummary.computedCount].
 /// Le rendement brut et le rendement net sont des moyennes pondérées par le
 /// prix d'achat (biens sans charges renseignées exclus du rendement net,
 /// comme sur la fiche individuelle). Le cash flow mensuel est une somme sur
-/// les biens dont le cash flow est lui-même calculable (charges ou prêt
-/// renseignés).
-PortfolioYieldSummary computePortfolioYield(List<PropertyListItem> items) {
+/// les biens dont le cash flow est lui-même calculable (charges/dépenses ou
+/// prêt renseignés).
+///
+/// [realChargesByPropertyId] : dépenses réelles de chaque bien, déjà
+/// regroupées par nature de charge (`groupRealChargesByProperty`) — absent
+/// ou vide pour un bien = cash flow purement prévisionnel pour ce bien,
+/// comme avant. [now] est injectable pour les tests.
+PortfolioYieldSummary computePortfolioYield(
+  List<PropertyListItem> items, {
+  Map<String, PropertyRealCharges> realChargesByPropertyId = const {},
+  DateTime? now,
+}) {
   if (items.isEmpty) {
     return const PortfolioYieldSummary(computedCount: 0, totalCount: 0);
   }
@@ -89,6 +103,9 @@ PortfolioYieldSummary computePortfolioYield(List<PropertyListItem> items) {
     final snapshot = computeSnapshotForProperty(
       property: property,
       monthlyRentHcCents: rentHcCents,
+      realCharges:
+          realChargesByPropertyId[property.id] ?? PropertyRealCharges.empty,
+      now: now,
     );
 
     final grossYield = snapshot.yieldGrossPercent;
@@ -128,11 +145,37 @@ PortfolioYieldSummary computePortfolioYield(List<PropertyListItem> items) {
 // ---------------------------------------------------------------------------
 
 /// Provider du résumé de rentabilité du portfolio.
+///
+/// Une seule requête landlord-wide (`listAllForLandlord`) alimente le cash
+/// flow réel de tous les biens — pas de requête de dépenses par bien. Si
+/// cette lecture échoue (ex. environnement de test sans Firebase
+/// initialisé), on se replie gracieusement sur un cash flow purement
+/// prévisionnel plutôt que de faire échouer toute la section rentabilité
+/// (les rendements/prix d'achat, essentiels, restent eux bloquants).
 final portfolioYieldProvider =
     FutureProvider.autoDispose<PortfolioYieldSummary>((ref) async {
       _log.info('portfolioYieldProvider: computing');
       final items = await ref.watch(propertiesListItemsProvider.future);
-      return computePortfolioYield(items);
+
+      var realChargesByPropertyId = const <String, PropertyRealCharges>{};
+      try {
+        final expenses = await ref
+            .watch(expensesRepositoryProvider)
+            .listAllForLandlord();
+        realChargesByPropertyId = groupRealChargesByProperty(expenses);
+      } catch (e, st) {
+        _log.warning(
+          'portfolioYieldProvider: real expenses fetch failed, '
+          'falling back to forecast-only cash flow',
+          e,
+          st,
+        );
+      }
+
+      return computePortfolioYield(
+        items,
+        realChargesByPropertyId: realChargesByPropertyId,
+      );
     });
 
 // ---------------------------------------------------------------------------
@@ -236,6 +279,7 @@ class _PortfolioYieldData extends StatelessWidget {
                     )
                   : '—',
               subtitle: l10n.dashboardPortfolioYieldBeforeTaxSubtitle,
+              signedCents: summary.totalMonthlyCashflowCents,
             ),
           ],
         ),
@@ -250,6 +294,14 @@ class _PortfolioYieldData extends StatelessWidget {
             fontStyle: FontStyle.italic,
           ),
         ),
+        if (summary.totalMonthlyCashflowCents != null)
+          Text(
+            l10n.dashboardPortfolioYieldCashflowMethodology,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
       ],
     );
   }
@@ -262,6 +314,7 @@ class _PortfolioKpiCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.subtitle,
+    this.signedCents,
   });
 
   final IconData icon;
@@ -269,9 +322,34 @@ class _PortfolioKpiCard extends StatelessWidget {
   final String value;
   final String subtitle;
 
+  /// Montant signé porté par cette carte, s'il en porte un.
+  ///
+  /// Quand il est fourni, la valeur se colore via l'extension de thème
+  /// [AppColors] — `success` si positif, `danger` si négatif. On passe par
+  /// l'extension et NON par les constantes brutes du thème : elle porte des
+  /// variantes claire et sombre, et `sealGreen` en dur serait illisible sur le
+  /// fond sombre de l'app.
+  ///
+  /// **La couleur RENFORCE, elle ne porte jamais l'information seule** :
+  /// `MoneyFormat` conserve le signe « − » sur un montant négatif, lisible par
+  /// une personne daltonienne — 8 % des hommes — qui ne distinguerait pas les
+  /// deux teintes. Sur un chiffre financier, confondre un cash flow négatif
+  /// avec un positif coûte cher.
+  ///
+  /// `null` (cas des rendements, toujours positifs ou absents) = pas de
+  /// coloration, on garde la couleur de texte par défaut.
+  final int? signedCents;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = theme.extension<AppColors>();
+    final amount = signedCents;
+    final valueColor = amount == null || amount == 0 || appColors == null
+        ? null
+        : amount > 0
+        ? appColors.success.onSurface
+        : appColors.danger.onSurface;
     return Container(
       constraints: const BoxConstraints(minWidth: 150),
       padding: const EdgeInsets.all(16),
@@ -300,6 +378,7 @@ class _PortfolioKpiCard extends StatelessWidget {
             value,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
+              color: valueColor,
             ),
           ),
           Text(

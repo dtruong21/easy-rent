@@ -70,6 +70,9 @@ class _FakeExpensesRepository implements ExpensesRepository {
   Future<List<Expense>> listForProperty(String propertyId) async => [];
 
   @override
+  Future<List<Expense>> listAllForLandlord() async => [];
+
+  @override
   Stream<List<Expense>> watchForProperty(String propertyId) => Stream.value([]);
 }
 

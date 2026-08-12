@@ -85,6 +85,9 @@ class _FakeExpensesRepo implements ExpensesRepository {
   Future<List<Expense>> listForProperty(String propertyId) async => const [];
 
   @override
+  Future<List<Expense>> listAllForLandlord() async => const [];
+
+  @override
   Future<Expense> getById(String id) async => throw UnimplementedError();
 
   @override

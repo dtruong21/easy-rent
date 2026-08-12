@@ -8,6 +8,7 @@
 /// [computeSnapshotForProperty], le même moteur que la fiche d'un bien).
 library;
 
+import 'package:easyrent/core/finance/real_expense_charges.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/portfolio_yield_section.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
@@ -272,6 +273,46 @@ void main() {
       expect(summary.avgYieldGrossPercent, isNull);
       expect(summary.avgYieldNetPercent, isNull);
       expect(summary.totalMonthlyCashflowCents, isNull);
+    });
+
+    test('dépenses réelles fournies pour un bien → cash flow agrégé bascule '
+        'sur le réel pour ce bien uniquement (une seule requête landlord-wide '
+        'groupée côté appelant, cf. groupRealChargesByProperty)', () {
+      final now = DateTime(2026, 1, 1);
+      final items = [
+        _makeItem(
+          id: 'p-real',
+          purchasePriceCents: 20000000,
+          activeLeaseId: 'lease-1',
+          rentHcCents: 80000,
+          propertyTaxAnnualCents: 120000, // déclaré, ignoré si bascule
+        ),
+        _makeItem(
+          id: 'p-forecast',
+          purchasePriceCents: 20000000,
+          activeLeaseId: 'lease-2',
+          rentHcCents: 80000,
+          propertyTaxAnnualCents: 120000, // reste prévisionnel (pas de réel)
+        ),
+      ];
+
+      final summary = computePortfolioYield(
+        items,
+        realChargesByPropertyId: {
+          'p-real': PropertyRealCharges(
+            propertyTax: [
+              // Couverture ≥ 1 an.
+              (amountCents: 50000, expenseDate: DateTime(2024, 6, 1)),
+              (amountCents: 240000, expenseDate: DateTime(2025, 6, 1)),
+            ],
+          ),
+        },
+        now: now,
+      );
+
+      // p-real : 80000 - 240000/12 = 80000 - 20000 = 60000.
+      // p-forecast (prévisionnel inchangé) : 80000 - 120000/12 = 70000.
+      expect(summary.totalMonthlyCashflowCents, 130000);
     });
   });
 

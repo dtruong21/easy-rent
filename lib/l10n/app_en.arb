@@ -1786,6 +1786,16 @@
   "@propertiesProfitabilityNetNotComputable": {
     "description": "Note shown when gross yield is available but net yield cannot be computed due to missing annual charges."
   },
+  "propertiesProfitabilityCashflowRealBasis": "{count, plural, =1{Based on your actual expenses for 1 of 3 charges (12-month rolling average).} other{Based on your actual expenses for {count} of 3 charges (12-month rolling average).}}",
+  "@propertiesProfitabilityCashflowRealBasis": {
+    "description": "Note shown under the cash flow chip when at least one of the 3 charge categories (property tax, landlord insurance, non-recoverable condo fees) uses the real rolling 12-month expense average instead of the amount declared on the property — makes explicit whether the displayed figure is actual or forecast.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of charge categories (out of 3) using real expense data instead of the declared forecast amount."
+      }
+    }
+  },
   "propertiesProfitabilityDisclaimer": "Indicative estimate before tax — does not account for the tax regime or social security contributions (17.2%)",
   "@propertiesProfitabilityDisclaimer": {
     "description": "Legal/financial disclaimer shown at the bottom of the profitability card."
@@ -2758,6 +2768,10 @@
         "type": "int"
       }
     }
+  },
+  "dashboardPortfolioYieldCashflowMethodology": "Aggregated cash flow uses your actual expenses smoothed over a rolling 12 months when available, otherwise the charges declared on each property.",
+  "@dashboardPortfolioYieldCashflowMethodology": {
+    "description": "Static one-sentence methodology note shown under the portfolio yield footnote, explaining that the aggregated cash flow figure may blend real expense data and forecast data per property — same underlying rule as the property detail card, described at portfolio level since a per-property breakdown isn't shown here."
   },
   "dashboardMonthlyChartTitle": "Rent",
   "@dashboardMonthlyChartTitle": {
