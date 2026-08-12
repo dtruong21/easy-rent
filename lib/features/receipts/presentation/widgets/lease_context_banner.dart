@@ -6,6 +6,7 @@ import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_radii.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../core/utils/property_address.dart';
 import '../../../leases/application/lease_detail_provider.dart';
 import '../../../properties/application/property_detail_provider.dart';
 import '../../../tenants/application/tenant_detail_provider.dart';
@@ -57,7 +58,14 @@ class LeaseContextBanner extends ConsumerWidget {
               propertyName:
                   property?.name ??
                   context.l10n.receiptsBannerPropertyLoadingPlaceholder,
-              propertyAddress: property?.address ?? '',
+              // Adresse COMPLÈTE : `address` ne porte en pratique que la rue,
+              // le code postal et la ville vivant dans des champs séparés
+              // (cf. property_address.dart).
+              propertyAddress: composePropertyAddress(
+                address: property?.address,
+                postalCode: property?.postalCode,
+                city: property?.city,
+              ),
               tenantName: '${tenant?.firstName ?? ''} ${tenant?.lastName ?? ''}'
                   .trim(),
               rentCents: lease.rentAmountCents,

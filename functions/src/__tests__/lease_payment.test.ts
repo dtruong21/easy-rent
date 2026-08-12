@@ -169,13 +169,20 @@ function callableRequest<T>(uid: string, data: T): CallableRequest<T> {
   };
 }
 
-function seedProperty(id: string, landlordId = LANDLORD_UID) {
+function seedProperty(
+  id: string,
+  landlordId = LANDLORD_UID,
+  overrides: FakeDoc = {},
+) {
   store.set(`properties/${id}`, {
     landlordId,
     deletedAt: null,
     name: "Appartement Test",
     address: "1 rue de Test",
+    postalCode: null,
+    city: null,
     activeLeaseCount: 0,
+    ...overrides,
   });
 }
 
@@ -238,6 +245,54 @@ beforeEach(() => {
   seedProperty("prop-1");
   seedTenant("tenant-1");
   seedLandlord();
+});
+
+describe("createLease — snapshot propertyAddress (adresse complète)", () => {
+  // La quittance recopie `lease.propertyAddress` sans jamais le re-synchroniser
+  // (snapshot légal figé, loi du 6 juillet 1989). C'est donc ICI, à l'unique
+  // point d'écriture du champ, que l'adresse doit être complète : sinon le
+  // « Logement : » du PDF ne désigne qu'une rue, sans commune.
+  it("compose rue + code postal + ville depuis le bien", async () => {
+    seedProperty("prop-1", LANDLORD_UID, {
+      address: "48 avenue du Hazay",
+      postalCode: "95000",
+      city: "Cergy",
+    });
+
+    const result = (await createLease.run(
+      callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+    )) as {leaseId: string};
+
+    expect(store.get(`leases/${result.leaseId}`)?.propertyAddress).toBe(
+      "48 avenue du Hazay, 95000 Cergy",
+    );
+  });
+
+  it("ne duplique pas les composants déjà présents dans address", async () => {
+    seedProperty("prop-1", LANDLORD_UID, {
+      address: "48 avenue du Hazay, 95000 Cergy",
+      postalCode: "95000",
+      city: "Cergy",
+    });
+
+    const result = (await createLease.run(
+      callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+    )) as {leaseId: string};
+
+    expect(store.get(`leases/${result.leaseId}`)?.propertyAddress).toBe(
+      "48 avenue du Hazay, 95000 Cergy",
+    );
+  });
+
+  it("se rabat sur la rue seule quand le bien n'a ni code postal ni ville", async () => {
+    const result = (await createLease.run(
+      callableRequest(LANDLORD_UID, {...baseCreateLeaseData}),
+    )) as {leaseId: string};
+
+    expect(store.get(`leases/${result.leaseId}`)?.propertyAddress).toBe(
+      "1 rue de Test",
+    );
+  });
 });
 
 describe("createLease — nonRecoverableChargesCents (FEAT-036)", () => {

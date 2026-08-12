@@ -34,6 +34,7 @@ import {
   toTimestamp,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
+import {composePropertyAddress} from "../utils/property_address";
 
 
 const LEASE_TYPES = new Set([
@@ -251,7 +252,17 @@ export const createLease = onCall(
         propertyId,
         tenantId,
         propertyName: property.name,
-        propertyAddress: property.address,
+        // Adresse COMPLÈTE (rue + code postal + ville) : `properties` porte
+        // ces trois champs séparément et le formulaire ne met en pratique que
+        // la rue dans `address`. Cette snapshot alimente la quittance, où le
+        // logement doit être identifiable (loi du 6 juillet 1989) — d'où la
+        // composition ici, au seul point d'écriture du champ. Voir
+        // `utils/property_address.ts` pour la robustesse aux doublons.
+        propertyAddress: composePropertyAddress({
+          address: property.address,
+          postalCode: property.postalCode,
+          city: property.city,
+        }),
         tenantFirstName: tenant.firstName,
         tenantLastName: tenant.lastName,
         tenantEmail: tenant.email,

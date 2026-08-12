@@ -10,6 +10,7 @@ import '../../../core/ui/cards/status_pill.dart';
 import '../../../core/ui/cards/status_pill_tone.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/utils/property_address.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_matrix.g.dart';
@@ -139,7 +140,16 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     final tenantFirstName = asyncTenant.valueOrNull?.firstName ?? '';
     final tenantLastName = asyncTenant.valueOrNull?.lastName ?? '';
     final tenantFullName = '$tenantFirstName $tenantLastName'.trim();
-    final propertyAddress = asyncProperty.valueOrNull?.address ?? '';
+    // Adresse COMPLÈTE : `address` ne porte en pratique que la rue, le code
+    // postal et la ville vivant dans des champs séparés du bien. Elle part
+    // dans le PDF de régularisation de charges (champ « Logement : ») et dans
+    // le texte de partage (cf. property_address.dart).
+    final property = asyncProperty.valueOrNull;
+    final propertyAddress = composePropertyAddress(
+      address: property?.address,
+      postalCode: property?.postalCode,
+      city: property?.city,
+    );
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
     final landlordAddress = asyncProfile.valueOrNull?.address ?? '';
 
