@@ -25,7 +25,6 @@ import 'package:easyrent/features/auth/domain/session_state.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -165,7 +164,9 @@ class _FakeDashboardRepoWithActivity implements DashboardRepository {
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [

@@ -14,37 +14,60 @@ import '../../application/chart_period_provider.dart';
 import '../../application/dashboard_provider.dart';
 import '../../domain/chart_format.dart';
 import '../../domain/chart_period.dart';
-import '../../domain/monthly_amount.dart';
+import '../../domain/monthly_cashflow.dart';
 import '../chart_format_l10n.dart';
 import '../chart_period_l10n.dart';
 
-/// Graphique "Loyers" (période sélectionnable), format switchable.
+/// Graphique "Cash-flow mensuel" (période sélectionnable), format switchable.
 ///
-/// Les montants mensuels viennent de [monthlyAmountsProvider], indépendant du
+/// Remplace l'ancien barchart « Loyers » (encaissé vs dû) : un loyer est
+/// fixe, le voir en barres n'apprenait rien au bailleur qui le connaît déjà
+/// de tête. Ce graphique montre le cash flow **réel** de chaque mois — loyers
+/// encaissés moins dépenses non récupérables réellement engagées — qui, lui,
+/// n'est jamais connu à l'avance.
+///
+/// Les données viennent de [monthlyCashflowProvider], indépendant du
 /// dashboard principal : changer de période (6/12/24 mois) ne recharge QUE ce
 /// graphique, pas les KPI ni l'activité récente.
 ///
+/// **Ne pas confondre avec la section « Rentabilité portfolio » juste
+/// au-dessus** : celle-ci affiche un cash flow LISSÉ (moyenne sur 12 mois
+/// glissants, avec bascule réel/prévisionnel par catégorie de charge) — ce
+/// graphique-ci montre le réel BRUT mois par mois, forcément plus irrégulier
+/// (une grosse facture de travaux peut créer un mois franchement négatif).
+/// Les deux sont légitimes et ne se contredisent pas ; le sous-titre
+/// ([AppLocalizations.dashboardMonthlyChartMethodologyCaption]) le rappelle
+/// explicitement pour ne jamais laisser l'utilisateur croire à une erreur.
+///
 /// Deux sélecteurs dans l'en-tête, persistés séparément :
-/// - Format ([chartFormatProvider]) : [ChartFormat.bars] (2 barres/mois,
-///   défaut), [ChartFormat.line] (courbes), [ChartFormat.area] (aires).
+/// - Format ([chartFormatProvider]) : [ChartFormat.bars] (1 barre/mois,
+///   défaut — seul format qui montre clairement un mois négatif),
+///   [ChartFormat.line] (courbe), [ChartFormat.area] (aire).
 /// - Période ([chartPeriodProvider]) : [ChartPeriod.m6] (défaut),
 ///   [ChartPeriod.m12], [ChartPeriod.m24].
 ///
-/// Couleurs : Encaissé = [AppColors.success.solid] (vert — argent rentré) ;
-/// Dû = gris pâle en barres, gris soutenu en courbes (un trait pâle serait
-/// illisible).
+/// Couleurs : cash flow positif = [AppColors.success], négatif =
+/// [AppColors.danger] — jamais de constante brute (`Colors.green` etc.), ces
+/// deux tons portent des variantes claire ET sombre.
+///
+/// Un mois sans AUCUNE donnée (`MonthlyCashflow.hasData == false`) diffère
+/// d'un mois à zéro net mesuré : la barre "zéro mesuré" affiche un trait
+/// plat neutre visible, la barre "sans donnée" reste un vide (rien à
+/// mesurer) — la nuance reste accessible en infobulle au survol/tap.
 ///
 /// Enveloppé dans un card container (border, radius, padding, bg surface).
 /// Hauteur : 200 px desktop, 160 px mobile (<600 px).
-/// Si toutes les données sont à zéro → [CardEmptyState] (toggles masqués).
-class MonthlyBarchart extends ConsumerStatefulWidget {
-  const MonthlyBarchart({super.key});
+/// Si aucun mois de la période n'a de donnée → [CardEmptyState] (toggles
+/// masqués).
+class MonthlyCashflowChart extends ConsumerStatefulWidget {
+  const MonthlyCashflowChart({super.key});
 
   @override
-  ConsumerState<MonthlyBarchart> createState() => _MonthlyBarchartState();
+  ConsumerState<MonthlyCashflowChart> createState() =>
+      _MonthlyCashflowChartState();
 }
 
-class _MonthlyBarchartState extends ConsumerState<MonthlyBarchart> {
+class _MonthlyCashflowChartState extends ConsumerState<MonthlyCashflowChart> {
   int? _touchedGroupIndex;
 
   @override
@@ -52,13 +75,13 @@ class _MonthlyBarchartState extends ConsumerState<MonthlyBarchart> {
     final theme = Theme.of(context);
     final spacing = theme.extension<AppSpacing>() ?? const AppSpacing();
     final radii = theme.extension<AppRadii>() ?? const AppRadii();
-    final asyncMonths = ref.watch(monthlyAmountsProvider);
+    final asyncMonths = ref.watch(monthlyCashflowProvider);
     final months = asyncMonths.valueOrNull;
     // `hasData` détermine l'affichage des toggles — même définition que
-    // l'empty state de [_ChartBody] (tous les montants à zéro), sinon les
+    // l'empty state de [_ChartBody] (aucun mois avec des données), sinon les
     // toggles resteraient visibles pendant que la card affiche déjà l'empty
     // state (incohérence visuelle).
-    final hasData = months != null && !_isAllZero(months);
+    final hasData = months != null && !_isAllEmpty(months);
 
     return Container(
       padding: EdgeInsets.all(spacing.cardPaddingStandard),
@@ -88,14 +111,15 @@ class _MonthlyBarchartState extends ConsumerState<MonthlyBarchart> {
 }
 
 // ---------------------------------------------------------------------------
-// En-tête : titre + sélecteurs période/format
+// En-tête : titre + sous-titre méthodologique + sélecteurs période/format
 // ---------------------------------------------------------------------------
 
 class _ChartHeader extends ConsumerWidget {
   const _ChartHeader({required this.hasData});
 
-  /// `true` si des montants non nuls sont chargés — masque les toggles sinon
-  /// (cohérent avec le comportement historique du sélecteur de format).
+  /// `true` si au moins un mois avec des données est chargé — masque les
+  /// toggles sinon (cohérent avec le comportement historique du sélecteur de
+  /// format).
   final bool hasData;
 
   @override
@@ -159,7 +183,7 @@ class _ChartHeader extends ConsumerWidget {
 
     // Mobile : les deux SegmentedButton côte à côte serrent trop — on les
     // enroule sur une 2e ligne via Wrap plutôt que de les comprimer.
-    return Wrap(
+    final selectorsRow = Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: spacing.sm,
@@ -171,6 +195,26 @@ class _ChartHeader extends ConsumerWidget {
           runSpacing: spacing.sm,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [periodSelector, formatSelector],
+        ),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        selectorsRow,
+        const SizedBox(height: 4),
+        // Différencie explicitement ce graphique (réel, brut, non lissé) de
+        // la section « Rentabilité portfolio » juste au-dessus (cash flow
+        // lissé sur 12 mois glissants) — sans ça, un mois franchement
+        // négatif ici pourrait sembler contredire un cash flow agrégé positif
+        // là-haut.
+        Text(
+          l10n.dashboardMonthlyChartMethodologyCaption,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       ],
     );
@@ -234,7 +278,7 @@ class _ChartBody extends StatelessWidget {
     required this.onGroupTouched,
   });
 
-  final List<MonthlyAmount> months;
+  final List<MonthlyCashflow> months;
   final int? touchedGroupIndex;
   final ValueChanged<int?> onGroupTouched;
 
@@ -242,7 +286,7 @@ class _ChartBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColors>()!;
-    final isEmpty = _isAllZero(months);
+    final isEmpty = _isAllEmpty(months);
     final l10n = context.l10n;
 
     if (isEmpty) {
@@ -289,14 +333,10 @@ class _ChartBody extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _Legend(
-              encaissedLabel: l10n.dashboardMonthlyChartEncaisseLabel,
-              dueLabel: l10n.dashboardMonthlyChartDueLabel,
-              encaissedColor: colors.success.solid,
-              // Un trait gris pâle serait invisible : les courbes utilisent
-              // le gris soutenu, la légende suit le format affiché.
-              dueColor: format == ChartFormat.bars
-                  ? colors.neutral.surface
-                  : colors.neutral.solid,
+              positiveLabel: l10n.dashboardMonthlyChartPositiveLabel,
+              negativeLabel: l10n.dashboardMonthlyChartNegativeLabel,
+              positiveColor: colors.success.solid,
+              negativeColor: colors.danger.solid,
             ),
           ],
         );
@@ -309,7 +349,7 @@ class _ChartBody extends StatelessWidget {
 ///
 /// Extrait dans une classe dédiée (plutôt que des méthodes de State) car
 /// [_ChartBody] est désormais un widget sans state — [touchedGroupIndex] et
-/// [onGroupTouched] remplacent l'ancien `setState` local de `_MonthlyBarchartState`.
+/// [onGroupTouched] remplacent l'ancien `setState` local de `_MonthlyCashflowChartState`.
 class _ChartBuilder {
   const _ChartBuilder({
     required this.months,
@@ -319,7 +359,7 @@ class _ChartBuilder {
     required this.localeName,
   });
 
-  final List<MonthlyAmount> months;
+  final List<MonthlyCashflow> months;
   final int? touchedGroupIndex;
   final ValueChanged<int?> onGroupTouched;
 
@@ -333,52 +373,48 @@ class _ChartBuilder {
   /// l'abréviation du mois sur l'axe des abscisses.
   final String localeName;
 
+  /// Fraction de l'intervalle Y utilisée comme hauteur du trait plat qui
+  /// signale un mois « zéro net mesuré » (données présentes, solde nul) — un
+  /// vrai zéro ne dessinerait sinon aucun pixel, indiscernable d'un mois
+  /// « sans donnée » (qui, lui, reste un vide volontaire).
+  static const double _zeroMarkerFraction = 0.03;
+
   BarChartData buildBarChart(ThemeData theme, AppColors colors) {
-    final encaissedColor = colors.success.solid;
-    final dueColor = colors.neutral.surface;
+    final bounds = _yBounds();
     final groups = <BarChartGroupData>[];
 
     for (int i = 0; i < months.length; i++) {
       final m = months[i];
       final isTouched = touchedGroupIndex == i;
+      final color = _colorFor(m, colors);
+      final height = _barHeightFor(m, bounds.interval);
       groups.add(
         BarChartGroupData(
           x: i,
           barRods: [
             BarChartRodData(
-              toY: m.encaissedCents / 100,
-              color: encaissedColor.withAlpha(isTouched ? 255 : 200),
-              width: 10,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(4),
-              ),
-            ),
-            BarChartRodData(
-              toY: m.dueCents / 100,
-              color: dueColor.withAlpha(isTouched ? 255 : 200),
-              width: 10,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(4),
-              ),
+              fromY: 0,
+              toY: height,
+              color: color.withAlpha(isTouched ? 255 : 200),
+              width: 14,
+              borderRadius: height >= 0
+                  ? const BorderRadius.vertical(top: Radius.circular(4))
+                  : const BorderRadius.vertical(bottom: Radius.circular(4)),
             ),
           ],
         ),
       );
     }
 
-    final yInterval = _yInterval();
-
     return BarChartData(
       barGroups: groups,
+      minY: bounds.minY,
+      maxY: bounds.maxY,
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
           getTooltipItem: (group, groupIndex, rod, rodIndex) {
-            final label = rodIndex == 0
-                ? l10n.dashboardMonthlyChartEncaisseLabel
-                : l10n.dashboardMonthlyChartDueLabel;
-            final euros = _formatCompactEuros((rod.toY * 100).round());
             return BarTooltipItem(
-              '$label\n$euros',
+              _tooltipText(months[groupIndex], l10n),
               TextStyle(color: theme.colorScheme.onSurface, fontSize: 11),
             );
           },
@@ -391,72 +427,153 @@ class _ChartBuilder {
           }
         },
       ),
-      titlesData: _titlesData(theme, yInterval),
-      gridData: _gridData(theme, yInterval),
+      titlesData: _titlesData(theme, bounds.interval),
+      gridData: _gridData(theme, bounds.interval),
       borderData: FlBorderData(show: false),
+      extraLinesData: bounds.minY < 0
+          ? _zeroLine(colors)
+          : const ExtraLinesData(),
     );
   }
 
-  /// Courbes "Encaissé / Dû" — [filled] ajoute l'aire sous chaque courbe.
+  /// Courbe unique de cash flow net — [filled] ajoute l'aire sous la courbe,
+  /// bornée à la ligne zéro des deux côtés (`applyCutOffY`/`cutOffY: 0`)
+  /// plutôt qu'au bord du graphique, pour un rendu correct quand la courbe
+  /// passe sous zéro.
   LineChartData buildLineChart(
     ThemeData theme,
     AppColors colors, {
     required bool filled,
   }) {
-    List<FlSpot> spotsOf(int Function(MonthlyAmount) cents) => [
+    final bounds = _yBounds();
+    final spots = [
       for (int i = 0; i < months.length; i++)
-        FlSpot(i.toDouble(), cents(months[i]) / 100),
+        FlSpot(i.toDouble(), months[i].netCents / 100),
     ];
 
-    LineChartBarData series(List<FlSpot> spots, Color color) =>
-        LineChartBarData(
-          spots: spots,
-          color: color,
-          barWidth: 2.5,
-          isCurved: true,
-          curveSmoothness: 0.25,
-          preventCurveOverShooting: true,
-          dotData: const FlDotData(show: true),
-          belowBarData: BarAreaData(show: filled, color: color.withAlpha(46)),
-        );
+    // Un seul trait (pas de segmentation par signe : fl_chart ne permet pas
+    // de colorer un `LineChartBarData` par tronçon selon le signe des
+    // valeurs) — le signe reste porté par la couleur de chaque point
+    // ([FlDotCirclePainter] ci-dessous) et par le tooltip.
+    final lineColor = theme.colorScheme.primary;
 
-    final yInterval = _yInterval();
+    final series = LineChartBarData(
+      spots: spots,
+      color: lineColor,
+      barWidth: 2.5,
+      isCurved: true,
+      curveSmoothness: 0.25,
+      preventCurveOverShooting: true,
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (spot, percent, bar, index) {
+          final m = months[index];
+          return FlDotCirclePainter(
+            radius: m.hasData ? 3.5 : 2.5,
+            color: _colorFor(m, colors),
+            strokeWidth: 0,
+          );
+        },
+      ),
+      belowBarData: BarAreaData(
+        show: filled,
+        color: lineColor.withAlpha(46),
+        applyCutOffY: true,
+        cutOffY: 0,
+      ),
+    );
 
     return LineChartData(
-      minY: 0,
-      lineBarsData: [
-        series(spotsOf((m) => m.encaissedCents), colors.success.solid),
-        // Gris soutenu (pas le gris pâle des barres) : un trait pâle sur
-        // fond surface serait illisible.
-        series(spotsOf((m) => m.dueCents), colors.neutral.solid),
-      ],
+      minY: bounds.minY,
+      maxY: bounds.maxY,
+      lineBarsData: [series],
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           getTooltipItems: (spots) => [
             for (final s in spots)
               LineTooltipItem(
-                '${s.barIndex == 0 ? l10n.dashboardMonthlyChartEncaisseLabel : l10n.dashboardMonthlyChartDueLabel}\n'
-                '${_formatCompactEuros((s.y * 100).round())}',
+                _tooltipText(months[s.x.toInt()], l10n),
                 TextStyle(color: theme.colorScheme.onSurface, fontSize: 11),
               ),
           ],
         ),
       ),
-      titlesData: _titlesData(theme, yInterval),
-      gridData: _gridData(theme, yInterval),
+      titlesData: _titlesData(theme, bounds.interval),
+      gridData: _gridData(theme, bounds.interval),
       borderData: FlBorderData(show: false),
+      extraLinesData: bounds.minY < 0
+          ? _zeroLine(colors)
+          : const ExtraLinesData(),
     );
   }
+
+  // ---------------------------------------------------------------------
+  // Couleur / hauteur / tooltip — partagés bars + line/area
+  // ---------------------------------------------------------------------
+
+  /// Couleur sémantique d'un mois : succès si net positif, danger si négatif,
+  /// neutre si net exactement zéro (mesuré) ou si le mois n'a aucune donnée.
+  static Color _colorFor(MonthlyCashflow m, AppColors colors) {
+    if (!m.hasData) return colors.neutral.surface;
+    if (m.netCents > 0) return colors.success.solid;
+    if (m.netCents < 0) return colors.danger.solid;
+    return colors.neutral.solid;
+  }
+
+  /// Hauteur (en euros, signée) de la barre représentant [m].
+  ///
+  /// - Sans donnée : 0 — vide volontaire, rien à mesurer.
+  /// - Zéro net mesuré : trait plat minimal visible (sinon indiscernable du
+  ///   cas précédent, cf. [_zeroMarkerFraction]).
+  /// - Sinon : le net réel, signé (peut dépasser sous l'axe des abscisses).
+  static double _barHeightFor(MonthlyCashflow m, double interval) {
+    if (!m.hasData) return 0;
+    final net = m.netCents / 100;
+    if (net == 0) return interval * _zeroMarkerFraction;
+    return net;
+  }
+
+  static String _tooltipText(MonthlyCashflow m, AppLocalizations l10n) {
+    if (!m.hasData) return l10n.dashboardMonthlyChartNoDataLabel;
+    return _formatCompactEuros(m.netCents);
+  }
+
+  static ExtraLinesData _zeroLine(AppColors colors) => ExtraLinesData(
+    horizontalLines: [
+      HorizontalLine(
+        y: 0,
+        color: colors.neutral.solid.withAlpha(140),
+        strokeWidth: 1,
+        dashArray: const [4, 4],
+      ),
+    ],
+  );
 
   // ---------------------------------------------------------------------
   // Axes, grille, échelle — partagés entre les trois formats
   // ---------------------------------------------------------------------
 
-  double _yInterval() {
-    final maxY = months
-        .expand((m) => [m.encaissedCents / 100, m.dueCents / 100])
-        .fold(0.0, (prev, v) => v > prev ? v : prev);
-    return maxY > 0 ? _niceInterval(maxY) : 100.0;
+  /// Bornes Y « nice » (alignées sur [interval]) englobant systématiquement
+  /// zéro — même quand tous les mois sont positifs (bas = 0, comportement
+  /// historique) ou tous négatifs (haut = 0, tout le graphique sous l'axe).
+  ({double minY, double maxY, double interval}) _yBounds() {
+    double maxNet = 0;
+    double minNet = 0;
+    for (final m in months) {
+      if (!m.hasData) continue;
+      final net = m.netCents / 100;
+      if (net > maxNet) maxNet = net;
+      if (net < minNet) minNet = net;
+    }
+    final maxAbs = maxNet > -minNet ? maxNet : -minNet;
+    final interval = maxAbs > 0 ? _niceInterval(maxAbs) : 100.0;
+    final maxY = maxNet > 0
+        ? (maxNet / interval).ceilToDouble() * interval
+        : 0.0;
+    final minY = minNet < 0
+        ? (-minNet / interval).ceilToDouble() * -interval
+        : 0.0;
+    return (minY: minY, maxY: maxY, interval: interval);
   }
 
   /// Densité des libellés de l'axe X : avec 12/24 mois, afficher tous les
@@ -508,7 +625,11 @@ class _ChartBuilder {
                 label,
                 style: TextStyle(
                   fontSize: 10,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  // Mois sans donnée : libellé atténué — signal visuel
+                  // discret que ce mois n'a rien à montrer.
+                  color: m.hasData
+                      ? theme.colorScheme.onSurfaceVariant
+                      : theme.colorScheme.onSurfaceVariant.withAlpha(120),
                 ),
               ),
             );
@@ -550,14 +671,16 @@ class _ChartBuilder {
   }
 }
 
-/// `true` si tous les [MonthlyAmount] de la liste ont encaissé ET dû à zéro.
+/// `true` si aucun mois de la liste n'a de donnée (`hasData == false`
+/// partout) — une liste VIDE (période sans aucun document Firestore) est
+/// vacuously "tout vide" (`every` sur liste vide), cohérent avec le
+/// comportement historique.
 ///
-/// Définition partagée entre [_ChartHeader] (masque les toggles) et
-/// [_ChartBody] (affiche le [CardEmptyState]) — une liste VIDE (période sans
-/// aucun document Firestore) est considérée comme "tout à zéro" (`every` sur
-/// liste vide est vacuously true), cohérent avec le comportement historique.
-bool _isAllZero(List<MonthlyAmount> months) =>
-    months.every((m) => m.encaissedCents == 0 && m.dueCents == 0);
+/// Diffère volontairement de "tous les mois à net zéro" : un mois mesuré à
+/// zéro net (loyers encaissés == dépenses non récupérables) a des données,
+/// il ne doit PAS déclencher l'empty state.
+bool _isAllEmpty(List<MonthlyCashflow> months) =>
+    months.every((m) => !m.hasData);
 
 /// Icône associée à chaque [ChartFormat], utilisée dans le toggle d'en-tête.
 IconData _iconForFormat(ChartFormat format) => switch (format) {
@@ -576,36 +699,38 @@ String _shortMonth(int month, String localeName) {
   return DateFormat.MMM(localeName).format(DateTime(2024, month));
 }
 
+/// Formate des centimes (signés) en euros compacts : `"1,2k €"`, `"-450 €"`.
 String _formatCompactEuros(int cents) {
-  final euros = cents / 100;
+  final sign = cents < 0 ? '-' : '';
+  final euros = cents.abs() / 100;
   if (euros >= 1000) {
     final k = euros / 1000;
     final formatted = k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1);
-    return '${formatted.replaceAll('.', ',')}k €';
+    return '$sign${formatted.replaceAll('.', ',')}k €';
   }
-  return '${euros.toStringAsFixed(0)} €';
+  return '$sign${euros.toStringAsFixed(0)} €';
 }
 
 class _Legend extends StatelessWidget {
   const _Legend({
-    required this.encaissedLabel,
-    required this.dueLabel,
-    required this.encaissedColor,
-    required this.dueColor,
+    required this.positiveLabel,
+    required this.negativeLabel,
+    required this.positiveColor,
+    required this.negativeColor,
   });
-  final String encaissedLabel;
-  final String dueLabel;
-  final Color encaissedColor;
-  final Color dueColor;
+  final String positiveLabel;
+  final String negativeLabel;
+  final Color positiveColor;
+  final Color negativeColor;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 16,
+      runSpacing: 4,
       children: [
-        _LegendChip(color: encaissedColor, label: encaissedLabel),
-        const SizedBox(width: 16),
-        _LegendChip(color: dueColor, label: dueLabel),
+        _LegendChip(color: positiveColor, label: positiveLabel),
+        _LegendChip(color: negativeColor, label: negativeLabel),
       ],
     );
   }

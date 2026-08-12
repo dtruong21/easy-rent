@@ -10,10 +10,10 @@ part 'dashboard_snapshot.freezed.dart';
 /// Agrège les 4 KPI, l'activité récente (5 items) et l'indicateur
 /// d'onboarding.
 ///
-/// Les montants mensuels du graphique « Loyers » ne font PLUS partie de ce
-/// snapshot : ils sont chargés indépendamment par `monthlyAmountsProvider`
-/// (dashboard_provider.dart) pour que changer la période du graphique ne
-/// recharge pas les KPI/activité.
+/// Le cash flow mensuel du graphique « Cash-flow mensuel » ne fait PAS
+/// partie de ce snapshot : il est chargé indépendamment par
+/// `monthlyCashflowProvider` (dashboard_provider.dart) pour que changer la
+/// période du graphique ne recharge pas les KPI/activité.
 ///
 /// [isOnboarding] est `true` quand le bailleur n'a aucun bien, locataire ni bail.
 /// Dans ce cas, les 4 KPI sont vides — on affiche l'onboarding.

@@ -8,7 +8,6 @@ library;
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -20,7 +19,7 @@ class _FakeDashboardRepository implements DashboardRepository {
   final RetardsKpi _retards;
   final RenouvellementsKpi _renouvellements;
   final DocsPendingKpi _docs;
-  final List<MonthlyAmount> _monthly;
+  final List<MonthlyCollectedRent> _monthly;
   final List<ActivityItem> _activity;
   final bool _onboarding;
 
@@ -29,7 +28,7 @@ class _FakeDashboardRepository implements DashboardRepository {
     RetardsKpi? retards,
     RenouvellementsKpi? renouvellements,
     DocsPendingKpi? docs,
-    List<MonthlyAmount>? monthly,
+    List<MonthlyCollectedRent>? monthly,
     List<ActivityItem>? activity,
     bool onboarding = false,
   }) : _loyers =
@@ -55,8 +54,9 @@ class _FakeDashboardRepository implements DashboardRepository {
   Future<DocsPendingKpi> fetchDocsPending() async => _docs;
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async =>
-      _monthly;
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => _monthly;
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async =>
@@ -129,10 +129,10 @@ void main() {
     });
   });
 
-  group('fetchLastMonthsAmounts', () {
+  group('fetchLastMonthsCollectedRent', () {
     test('retourne liste vide par défaut', () async {
       final repo = const _FakeDashboardRepository();
-      final months = await repo.fetchLastMonthsAmounts(6);
+      final months = await repo.fetchLastMonthsCollectedRent(6);
       expect(months, isEmpty);
     });
 
@@ -141,15 +141,15 @@ void main() {
       () async {
         final sixMonths = List.generate(
           6,
-          (i) => MonthlyAmount(
+          (i) => MonthlyCollectedRent(
             year: 2026,
             month: i + 1,
-            encaissedCents: (i + 1) * 10000,
-            dueCents: 90000,
+            collectedCents: (i + 1) * 10000,
+            hasPayments: true,
           ),
         );
         final repo = _FakeDashboardRepository(monthly: sixMonths);
-        final months = await repo.fetchLastMonthsAmounts(6);
+        final months = await repo.fetchLastMonthsCollectedRent(6);
         expect(months.length, 6);
         expect(months.first.month, 1);
       },

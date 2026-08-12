@@ -2773,53 +2773,61 @@
   "@dashboardPortfolioYieldCashflowMethodology": {
     "description": "Static one-sentence methodology note shown under the portfolio yield footnote, explaining that the aggregated cash flow figure may blend real expense data and forecast data per property — same underlying rule as the property detail card, described at portfolio level since a per-property breakdown isn't shown here."
   },
-  "dashboardMonthlyChartTitle": "Rent",
+  "dashboardMonthlyChartTitle": "Monthly cash flow",
   "@dashboardMonthlyChartTitle": {
-    "description": "Title of the monthly rent chart card header (MonthlyBarchart), shown even when there is no data yet (toggles hidden)."
+    "description": "Title of the monthly cash flow chart card header (MonthlyCashflowChart), shown even when there is no data yet (toggles hidden)."
   },
-  "dashboardMonthlyChartErrorMessage": "Unable to load rent data for this period.",
+  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — not to be confused with the 12-month rolling average cash flow in the Portfolio yield section above.",
+  "@dashboardMonthlyChartMethodologyCaption": {
+    "description": "Short italic caption under the monthly cash flow chart header, distinguishing it from the smoothed 12-month rolling cash flow shown in the Portfolio yield section just above — prevents the user from thinking the two figures contradict each other."
+  },
+  "dashboardMonthlyChartErrorMessage": "Unable to load cash flow data for this period.",
   "@dashboardMonthlyChartErrorMessage": {
-    "description": "Error message shown in the monthly rent chart body when the monthlyAmountsProvider fails."
+    "description": "Error message shown in the monthly cash flow chart body when the monthlyCashflowProvider fails."
   },
   "dashboardMonthlyChartEmptyTitle": "No history yet",
   "@dashboardMonthlyChartEmptyTitle": {
-    "description": "CardEmptyState title shown in the monthly rent chart when all amounts for the period are zero."
+    "description": "CardEmptyState title shown in the monthly cash flow chart when no month in the period has any data."
   },
-  "dashboardMonthlyChartEmptyMessage": "Rent will appear here after the first payment.",
+  "dashboardMonthlyChartEmptyMessage": "Cash flow will appear here as soon as rent is collected or an expense is recorded.",
   "@dashboardMonthlyChartEmptyMessage": {
-    "description": "CardEmptyState message shown in the monthly rent chart when all amounts for the period are zero."
+    "description": "CardEmptyState message shown in the monthly cash flow chart when no month in the period has any data."
   },
-  "dashboardMonthlyChartEncaisseLabel": "Collected",
-  "@dashboardMonthlyChartEncaisseLabel": {
-    "description": "Label for the 'collected rent' series, used in chart tooltips (bar/line) and in the chart legend chip."
+  "dashboardMonthlyChartPositiveLabel": "Positive",
+  "@dashboardMonthlyChartPositiveLabel": {
+    "description": "Legend chip label for months with a positive net cash flow (collected rent minus non-recoverable expenses) in the monthly cash flow chart."
   },
-  "dashboardMonthlyChartDueLabel": "Due",
-  "@dashboardMonthlyChartDueLabel": {
-    "description": "Label for the 'due rent' series, used in chart tooltips (bar/line) and in the chart legend chip."
+  "dashboardMonthlyChartNegativeLabel": "Negative",
+  "@dashboardMonthlyChartNegativeLabel": {
+    "description": "Legend chip label for months with a negative net cash flow (non-recoverable expenses exceeded collected rent) in the monthly cash flow chart."
+  },
+  "dashboardMonthlyChartNoDataLabel": "No data",
+  "@dashboardMonthlyChartNoDataLabel": {
+    "description": "Tooltip text shown for a month with no recorded payment and no recorded expense in the monthly cash flow chart — distinguishes an unmeasured month from a month whose measured net cash flow happens to be exactly zero."
   },
   "dashboardChartPeriod6Months": "6 months",
   "@dashboardChartPeriod6Months": {
-    "description": "ChartPeriod.m6 label shown in the monthly rent chart's period SegmentedButton."
+    "description": "ChartPeriod.m6 label shown in the monthly cash flow chart's period SegmentedButton."
   },
   "dashboardChartPeriod12Months": "12 months",
   "@dashboardChartPeriod12Months": {
-    "description": "ChartPeriod.m12 label shown in the monthly rent chart's period SegmentedButton."
+    "description": "ChartPeriod.m12 label shown in the monthly cash flow chart's period SegmentedButton."
   },
   "dashboardChartPeriod24Months": "24 months",
   "@dashboardChartPeriod24Months": {
-    "description": "ChartPeriod.m24 label shown in the monthly rent chart's period SegmentedButton."
+    "description": "ChartPeriod.m24 label shown in the monthly cash flow chart's period SegmentedButton."
   },
   "dashboardChartFormatBars": "Bars",
   "@dashboardChartFormatBars": {
-    "description": "ChartFormat.bars tooltip shown on the monthly rent chart's format SegmentedButton icon."
+    "description": "ChartFormat.bars tooltip shown on the monthly cash flow chart's format SegmentedButton icon."
   },
   "dashboardChartFormatLine": "Lines",
   "@dashboardChartFormatLine": {
-    "description": "ChartFormat.line tooltip shown on the monthly rent chart's format SegmentedButton icon."
+    "description": "ChartFormat.line tooltip shown on the monthly cash flow chart's format SegmentedButton icon."
   },
   "dashboardChartFormatArea": "Areas",
   "@dashboardChartFormatArea": {
-    "description": "ChartFormat.area tooltip shown on the monthly rent chart's format SegmentedButton icon."
+    "description": "ChartFormat.area tooltip shown on the monthly cash flow chart's format SegmentedButton icon."
   },
   "dashboardRecentActivityTitle": "Recent activity",
   "@dashboardRecentActivityTitle": {

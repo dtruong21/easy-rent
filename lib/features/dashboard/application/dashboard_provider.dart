@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../expenses/data/expenses_repository.dart';
+import '../../expenses/domain/expense_category.dart';
 import '../data/dashboard_repository.dart';
 import '../domain/dashboard_snapshot.dart';
-import '../domain/monthly_amount.dart';
+import '../domain/monthly_cashflow.dart';
 import 'chart_period_provider.dart';
 
 final _log = Logger('DashboardController');
@@ -14,8 +16,8 @@ final _log = Logger('DashboardController');
 /// (required #4 — remplace le pattern `as dynamic` non type-safe).
 /// Si [isLandlordOnboarding] est `true`, les 5 autres requêtes sont court-circuitées.
 ///
-/// Le graphique « Loyers » (montants mensuels) est chargé séparément par
-/// [monthlyAmountsProvider] : sa période est sélectionnable par l'utilisateur
+/// Le graphique « Cash-flow mensuel » est chargé séparément par
+/// [monthlyCashflowProvider] : sa période est sélectionnable par l'utilisateur
 /// et un changement de période ne doit PAS recharger les KPI/activité.
 ///
 /// Expose [refresh] pour un pull-to-refresh manuel.
@@ -68,18 +70,84 @@ final dashboardProvider =
       DashboardController.new,
     );
 
-/// Provider des montants mensuels du graphique « Loyers », indépendant du
-/// [dashboardProvider].
+/// Provider du cash flow mensuel réel du graphique « Cash-flow mensuel »,
+/// indépendant du [dashboardProvider].
 ///
 /// Watch [chartPeriodProvider] : changer la période ne refait QUE cette
 /// requête, sans recharger les KPI ni l'activité récente (`autoDispose` —
 /// pas de cache persistant nécessaire, le graphique est la seule
 /// consommatrice).
-final monthlyAmountsProvider = FutureProvider.autoDispose<List<MonthlyAmount>>((
-  ref,
-) async {
-  final repo = ref.watch(dashboardRepositoryProvider);
-  final period = ref.watch(chartPeriodProvider);
-  _log.info('monthlyAmountsProvider: fetch ${period.months} mois');
-  return repo.fetchLastMonthsAmounts(period.months);
-});
+///
+/// Combine 2 sources indépendantes pour la période affichée :
+/// - loyers encaissés, mois par mois (`DashboardRepository`, requête
+///   Firestore bornée à la fenêtre de [ChartPeriod]) ;
+/// - dépenses réelles **non récupérables** du landlord, **une seule requête
+///   landlord-wide** (`ExpensesRepository.listAllForLandlord`, déjà cappée à
+///   500 documents) filtrée et regroupée par mois côté client — jamais une
+///   requête par mois affiché (coût de lecture).
+///
+/// Si la lecture des dépenses échoue (ex. environnement de test sans
+/// Firebase initialisé, erreur réseau ponctuelle), le cash flow retombe
+/// gracieusement sur le seul encaissé (dépenses = 0) plutôt que de faire
+/// échouer tout le graphique — même compromis que `portfolioYieldProvider`
+/// (`PortfolioYieldSection`), les loyers encaissés restant la donnée
+/// principale et bloquante.
+final monthlyCashflowProvider =
+    FutureProvider.autoDispose<List<MonthlyCashflow>>((ref) async {
+      final repo = ref.watch(dashboardRepositoryProvider);
+      final period = ref.watch(chartPeriodProvider);
+      final months = period.months;
+      _log.info('monthlyCashflowProvider: fetch $months mois');
+
+      final rent = await repo.fetchLastMonthsCollectedRent(months);
+
+      var expenseCentsByMonth = const <String, int>{};
+      var expenseCountByMonth = const <String, int>{};
+      try {
+        final now = DateTime.now();
+        final startMonth = DateTime(now.year, now.month - (months - 1), 1);
+        final expenses = await ref
+            .watch(expensesRepositoryProvider)
+            .listAllForLandlord();
+        final cents = <String, int>{};
+        final counts = <String, int>{};
+        for (final expense in expenses) {
+          if (expense.category != ExpenseCategory.nonRecoverable) continue;
+          if (expense.expenseDate.isBefore(startMonth)) continue;
+          final key = _monthKey(
+            expense.expenseDate.year,
+            expense.expenseDate.month,
+          );
+          cents[key] = (cents[key] ?? 0) + expense.amountCents;
+          counts[key] = (counts[key] ?? 0) + 1;
+        }
+        expenseCentsByMonth = cents;
+        expenseCountByMonth = counts;
+      } catch (e, st) {
+        _log.warning(
+          'monthlyCashflowProvider: dépenses non récupérables '
+          'indisponibles, repli sur le seul encaissé',
+          e,
+          st,
+        );
+      }
+
+      return [
+        for (final r in rent)
+          MonthlyCashflow(
+            year: r.year,
+            month: r.month,
+            collectedRentCents: r.collectedCents,
+            nonRecoverableExpenseCents:
+                expenseCentsByMonth[_monthKey(r.year, r.month)] ?? 0,
+            hasData:
+                r.hasPayments ||
+                (expenseCountByMonth[_monthKey(r.year, r.month)] ?? 0) > 0,
+          ),
+      ];
+    });
+
+/// Clé `"YYYY-MM"` — même format que `dashboard_repository.dart` (fichiers
+/// distincts, pas de partage d'utilitaire pour une fonction d'une ligne).
+String _monthKey(int year, int month) =>
+    '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';

@@ -6,7 +6,6 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
 import 'package:easyrent/features/dashboard/presentation/dashboard_page.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/kpi_card.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/shortcuts_row.dart';
@@ -71,7 +70,9 @@ class _FakeDashboardRepo implements DashboardRepository {
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
@@ -319,13 +320,18 @@ void main() {
   });
 
   group('DashboardPage — empty states (CardEmptyState)', () {
-    testWidgets('barchart vide affiche texte CardEmptyState', (tester) async {
-      // Le repo retourne [] pour fetchLastMonthsAmounts → isEmpty = true.
+    testWidgets('cash flow chart vide affiche texte CardEmptyState', (
+      tester,
+    ) async {
+      // Le repo retourne [] pour fetchLastMonthsCollectedRent → isEmpty = true.
       await tester.pumpWidget(_wrap());
       await tester.pumpAndSettle();
       expect(find.text("Pas encore d'historique"), findsOneWidget);
       expect(
-        find.text('Les loyers apparaîtront ici dès le 1er paiement.'),
+        find.text(
+          'Le cash-flow apparaîtra ici dès le premier loyer encaissé ou la '
+          'première dépense enregistrée.',
+        ),
         findsOneWidget,
       );
     });

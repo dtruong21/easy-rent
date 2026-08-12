@@ -14,7 +14,7 @@ import '../application/dashboard_provider.dart';
 import '../domain/dashboard_snapshot.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/kpi_grid.dart';
-import 'widgets/monthly_barchart.dart';
+import 'widgets/monthly_cashflow_chart.dart';
 import 'widgets/onboarding_first_steps.dart';
 import 'widgets/portfolio_yield_section.dart';
 import 'widgets/recent_activity_section.dart';
@@ -29,7 +29,7 @@ import 'widgets/shortcuts_row.dart';
 /// - Contenu conditionnel :
 ///   - Onboarding si 0 biens/locataires/baux → [OnboardingFirstSteps]
 ///   - Sinon : [SectionHeader] « Vue d'ensemble » + [KpiGrid] +
-///     [PortfolioYieldSection] + [MonthlyBarchart] + [RecentActivitySection]
+///     [PortfolioYieldSection] + [MonthlyCashflowChart] + [RecentActivitySection]
 /// - [ShortcutsRow] (mobile uniquement, en bas) — réduite au seul CTA
 ///   simulateur : sur desktop le simulateur est épinglé au rail de
 ///   navigation (FEAT-026), le raccourci y serait redondant ; Biens/
@@ -37,9 +37,9 @@ import 'widgets/shortcuts_row.dart';
 ///   (docs/UX_NAVIGATION.md §7).
 ///
 /// Pull-to-refresh via [RefreshIndicator] + [dashboardProvider]. Le
-/// graphique « Loyers » a son propre cycle de chargement indépendant
-/// ([monthlyAmountsProvider]) : changer sa période ne relance pas ce
-/// `refresh()`.
+/// graphique « Cash-flow mensuel » a son propre cycle de chargement
+/// indépendant ([monthlyCashflowProvider]) : changer sa période ne relance
+/// pas ce `refresh()`.
 ///
 /// Le dashboard n'est plus le hub de navigation (§2 du doc) : pas de bouton
 /// retour (`showBackButton: false`), et les icônes profil/déconnexion ont
@@ -206,7 +206,7 @@ class _DataView extends StatelessWidget {
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
-        const MonthlyBarchart(),
+        const MonthlyCashflowChart(),
         SizedBox(height: spacing.xl),
         RecentActivitySection(items: snapshot.activity),
       ],
