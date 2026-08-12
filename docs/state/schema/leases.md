@@ -15,7 +15,7 @@ Collection : `leases`. CF exclusive (FEAT-036, FEAT-042, FEAT-044, FEAT-006). Pa
 | `propertyId` | string | FK → properties.id, immuable, validation CF |
 | `tenantId` | string | FK → tenants.id, immuable, validation CF |
 | `propertyName` | string | snapshot properties.name (dénorm) |
-| `propertyAddress` | string | snapshot properties.address |
+| `propertyAddress` | string | adresse COMPLÈTE composée (rue + code postal + ville) via `composePropertyAddress()` — immuable après création, identifie le logement pour la quittance (loi 6/7/1989). Non mutable. |
 | `tenantFirstName` | string | snapshot tenants.firstName |
 | `tenantLastName` | string | snapshot tenants.lastName |
 | `tenantEmail` | string | snapshot tenants.email |
@@ -48,6 +48,8 @@ Collection : `leases`. CF exclusive (FEAT-036, FEAT-042, FEAT-044, FEAT-006). Pa
 - **Forfait** : `nonRecoverableChargesCents` forcé à 0 serveur (ventilation interdite) — vaut aussi pour baux legacy mobilité
 
 **Mutable fields** (updateLease) : rentAmountCents, chargesAmountCents, nonRecoverableChargesCents, endDate, status, leaseType, chargeMode, depositAmountCents, paymentDay, paymentMethod, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone.
+
+**Immutable fields** : id, landlordId, propertyId, tenantId, propertyAddress (snapshot immuable composée à création), propertyName, tenantFirstName, tenantLastName, tenantEmail, startDate, createdAt, deletedAt. Aucun de ces champs ne peut être modifié ou re-synchronisé après création — `propertyAddress` en particulier est gelée au moment du `createLease` pour garantir traçabilité dans les quittances (loi 6/7/1989, exigence légale d'identifiabilité du logement).
 
 **Réactivation (PR #94, 2026-07-10)** : Transition `terminated|archived → active` verrouillée via `updateLease` :
 - Le bien (propertyId) et locataire (tenantId) doivent exister et ne pas être soft-deleted (failed-precondition sinon) — sinon on créerait un bail pointant vers une entité supprimée.

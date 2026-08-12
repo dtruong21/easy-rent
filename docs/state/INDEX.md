@@ -7,8 +7,8 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-08-11 (state-keeper correctifs post-recette)
-- **Commit ref** : `49d6069` (branche `feat/056-multi-tier-subscriptions`)
+- **Dernière mise à jour** : 2026-08-12 (state-keeper rafraîchissement leases + functions)
+- **Commit ref** : `c185929` (branche `feat/056-multi-tier-subscriptions`)
 - **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
 
 ### Périmètre réellement re-vérifié
@@ -25,8 +25,12 @@
 | Domaine `account` (schéma/functions/routes) | ✅ **re-vérifié 2026-08-11** — FEAT-056 : `planLevel`, `entitlements` sur `landlords` ; correctifs : email nullable, finalizeAnonymousUpgrade renseigne identité |
 | Domaines `properties`, `leases`, `expenses-documents`, `simulator` — quotas FEAT-056 | ✅ **vérifié 2026-08-02** — grille `config/entitlements.json` appliquée callables ; `investment_scenarios/create` CF-exclusive |
 | `config/entitlements.json` (source canonique quotas) | ✅ **lu 2026-08-02** — 3 paliers, quotas par palier, statuts `purchasable`/`priceIndicative`, features matrix |
+| Domaine `leases` (schéma/functions) — `propertyAddress` composée | ✅ **re-vérifié 2026-08-12** — `createLease` compose rue+CP+ville via `composePropertyAddress()`, immuable après création (loi 6/7/1989). Repository Dart : `listActiveLeasesForProperty()` nouveau, statut retard dérivé requiert invalidation providers. Script backfill existe. |
+| `functions/` décompte précis | ✅ **re-compté 2026-08-12** — 19 callables (non 17), 8 triggers, 1 HTTP, 2 scheduled. Tests : 430 (non 209), rules : 80 (non 16). README/leases mis à jour. |
 | `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
 
+> **Passe 2026-08-12** (détecteur dérive : leases + functions) : vérifié code contre pistes du détecteur. Corrections : (1) `schema/leases.md` : `propertyAddress` n'est pas un snapshot brut de properties.address, mais une adresse COMPLÈTE composée via `composePropertyAddress()` — immuable, non mutable. Ajout section immutable fields. (2) `functions/README.md` : table callables corrigée 17→19 (manquaient createCheckoutSession/manageSubscription, FEAT-056). Tests re-comptés : 430 functions + 80 rules (état disait 209 + 16). (3) `functions/leases.md` : ajout helper `composePropertyAddress()`, clarification `listActiveLeasesForProperty()` repository, documentation pattern d'invalidation providers (statut retard dérivé). INDEX rafraîchi. Aucun écart majeur détecté en domaine account/routes ; shards reputés à jour du 2026-08-11 confirmés.
+> 
 > **Passe 2026-08-11** (correctifs post-recette) : documenté 4 bug fixes déployés en staging (commits 2e3c762, d7d56cc, 49d6069, c302210) — `finalizeAnonymousUpgrade` renseigne email/nom, `LandlordProfile.email` nullable, navigation reset à branche, storage.rules 50 Mio. Tous les shards `account`, `routes/README` mis à jour. CHANGELOG.md détaillé (4 entrées précédent FEAT-056).
 > 
 > **Passe 2026-08-02** (FEAT-056) a corrigé 2 dérives détectées dans `functions/account.md` : (1) callable `manage_subscription` manquant, (2) fausse affirmation que `/pro/success` et `/pro/cancel` « n'existent pas ». Mise à jour : tous les shards account + properties/leases/expenses-documents/simulator pour documenter quotas différenciés et la callable CF-exclusive `createScenario`. Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.

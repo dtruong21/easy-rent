@@ -2,17 +2,21 @@
 
 > Source d'état — leases. Maintenu par state-keeper.
 
-Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c). Fichier callables/constants : `functions/src/callable/lease_payment.ts`. FEAT : 005, 028, 036, 041c, 042.
+Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c). Fichiers : `functions/src/callable/lease_payment.ts` (callables) · `functions/src/utils/property_address.ts` (composition adresse, fonction pure). FEAT : 005, 028, 036, 041c, 042.
 
 ## Callables
 
 **ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
 
+### Helper : `composePropertyAddress()` (`functions/src/utils/property_address.ts`)
+
+Fonction pure testée : compose l'adresse COMPLÈTE (rue + code postal + ville) en évitant les doublons. Le formulaire client n'expose que trois champs séparés sur `properties`, et les bailleurs en pratique ne remplissent que la rue (`address`). La quittance doit identifier le logement (loi 6/7/1989) — d'où la composition au seul point d'écriture du bail (callable `createLease`). Miroir Dart : `lib/core/utils/property_address.dart` (même logique client-side pour affichage).
+
 ### `createLease` (FEAT-042, étendu multi-paliers FEAT-056)
 Client invoke, isFullyAuthed only.
 - **Params** : `propertyId, tenantId, rentAmountCents, chargesAmountCents, nonRecoverableChargesCents` (FEAT-036), `chargeMode` (FEAT-042, optionnel, résolu/enforced serveur), `startDate, endDate, status, leaseType, paymentDay, paymentMethod, depositAmountCents, irlIndexValue, irlQuarterRef, agencyFeesCents, solidarityClause, entryInventoryDone`.
 - **Validations** : auth uid présent ; FK GET `properties/{propertyId}` + `tenants/{tenantId}` ; ownership `properties.landlordId==tenants.landlordId==uid` ; FEAT-036 `nonRecoverableChargesCents ≥ 0` (pas de total constraint) ; **FEAT-042** `resolveChargeMode(leaseType, chargeMode)` → canonique (coerce type↔mode, rejette incompatible) ; **Forfait** → force `nonRecoverableChargesCents=0` (ventilation interdite) ; `startDate <= endDate` ; status inference `active|terminated|archived` ; **FEAT-056** si `active` → vérifier quota `activeLeases` du plan effectif avant increment.
-- **Mutations** (transact) : CREATE `leases/{id}` snapshot denorm (`propertyName, tenantFirstName/LastName`…) ; persiste `chargesAmountCents` (récupérable) + `nonRecoverableChargesCents` (≥0 ou forcé 0 si forfait) ; persiste `chargeMode` résolu ; si `active` → INCREMENT `properties.activeLeaseCount` + `tenants.activeLeaseCount` + `landlords.activeLeasesCount`.
+- **Mutations** (transact) : CREATE `leases/{id}` snapshot denorm (`propertyName, tenantFirstName/LastName, propertyAddress composée via composePropertyAddress()`…) ; persiste `chargesAmountCents` (récupérable) + `nonRecoverableChargesCents` (≥0 ou forcé 0 si forfait) ; persiste `chargeMode` résolu ; si `active` → INCREMENT `properties.activeLeaseCount` + `tenants.activeLeaseCount` + `landlords.activeLeasesCount`. **`propertyAddress` est immuable après création** (snapshot gelée à la création, traçabilité légale).
 - **Retour** : `{leaseId}`. **Erreurs** : PERMISSION_DENIED, NOT_FOUND, INVALID_ARGUMENT, FAILED_PRECONDITION (type↔mode conflict), RESOURCE_EXHAUSTED (`lease_limit_reached` si FEAT-056 quota saturé).
 
 ### `updateLease` (FEAT-042, PR #94 ; étendu FEAT-056)
@@ -47,6 +51,10 @@ Effective plan déduit de `(subscriptionTier, planLevel)` par `resolvePlan()` (n
 | `setUpdatedAtLeases` | `onDocumentUpdated(leases)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
 | `recomputeChargeRegularization` (FEAT-041c) | type à déterminer — 📋 **PLANNED V1.1** (pas déployé, aucun code) | Si `expense.category=='recoverable' && expense.leaseId` → query lease ; alimente `lease.chargeRegularizationFeed` subcollection (draft) ; agrège charges mensuelles → provision + avis PDF |
 
-## Dart repository — getter calculé
+## Dart repository — gestion de l'affichage
 
-`FirestoreLeaseRepository.listForDisplay({DateTime? now})` — `lib/features/leases/data/lease_repository.dart`. Query `landlordId==uid && deletedAt==null`, sort `startDate DESC` (200 limit) ; fetch ALL payments baux **actifs** (FEAT-028 : évite baux terminés) ; **clock injectable** `now ?? DateTime.now()` (tests déterministes, FEAT-042) ; `isLeaseLate(lease, payments, now)` → retard coloré + filtre (FEAT-028) ; return `List<LeaseListItem>`. Utilisé par `leasesListProvider` (Riverpod FutureProvider).
+**`FirestoreLeaseRepository.listForDisplay({DateTime? now})`** — `lib/features/leases/data/lease_repository.dart`. Query `landlordId==uid && deletedAt==null`, sort `startDate DESC` (200 limit) ; fetch ALL payments baux **actifs** (FEAT-028 : évite baux terminés) ; **clock injectable** `now ?? DateTime.now()` (tests déterministes, FEAT-042) ; `isLeaseLate(lease, payments, now)` → retard coloré + filtre (FEAT-028) ; return `List<LeaseListItem>`. Utilisé par `leasesListProvider` (Riverpod FutureProvider).
+
+**`listActiveLeasesForProperty(propertyId)`** — `lib/features/leases/data/lease_repository.dart` ligne 43 ; retourne baux actifs d'un bien (format Map brut snake_case). Consommé par section « Baux actifs » du détail bien + section « Baux liés » du détail locataire. Réutilise l'index composite existant `landlordId, propertyId, deletedAt, startDate DESC`.
+
+⚠️ **Statut « en retard » est DÉRIVÉ** : `isLeaseLate()` se calcule à chaque affichage, jamais stocké. Conséquence : toute action modifiant les paiements (ajout, archive) doit invalider `leasesListProvider` + `leaseDetailProvider(leaseId)` dans le même scope, sinon le statut affiché reste périmé. Codifié dans `PaymentFormController` (submit + archive). Exemple : commit `c185929` corrige oubli d'invalidation lors de l'encaissement.

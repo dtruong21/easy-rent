@@ -12,7 +12,7 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 >
 > ⚠️ L'état décrivait ces triggers comme `onDocumentWritten (create/update/delete)` et « ignore soft-deleted (`deletedAt==null`) » : **les deux sont faux**. Erreur systémique corrigée dans tous les shards `functions/` (elle subsistait même dans les shards réputés vérifiés au refresh #133).
 
-## Callables (17) → shard
+## Callables (19) → shard
 
 | Callable | Feature | Shard |
 |---|---|---|
@@ -32,7 +32,8 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 | `softDeleteEntity` (universel) | — | account |
 | `finalizeAnonymousUpgrade` | BAILLAN-M1/FEAT-019 | account |
 | `deleteAccount` | FEAT-045 | account |
-| `createCheckoutSession` | FEAT-044 paiement web (PR #117) | account |
+| `createCheckoutSession` | FEAT-056 (checkout Stripe 3 paliers) | account |
+| `manageSubscription` | FEAT-056 (cancel/reactivate/change_plan actions) | account |
 
 ## HTTP / webhooks (1) → shard
 
@@ -64,9 +65,9 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 | `cleanupExpiredAnon` (BAILLAN-M1) | `0 3 * * *` **Europe/Paris** | account |
 | `reconcileEntitlements` (FEAT-044, PR #114) | `30 3 * * *` Europe/Paris | account |
 
-> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-07-21) : **17 callables + 9 triggers déployés (8 `setUpdatedAt` + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables).
+> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-08-12) : **19 callables + 8 triggers déployés (`setUpdatedAt` on 7 collections + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables, pas de champ `updatedAt`).
 >
-> Corrections de cette passe : la table listait **14** callables et omettait `createProperty`/`createTenant` (livrés en FEAT-044, PR #91) ; `cleanupExpiredAnon` était annoncé « Daily 2 AM UTC » alors que le code dit `0 3 * * *` en `Europe/Paris`.
+> Passe 2026-08-12 : table des callables corrigée (19, non 17) — manquaient `createCheckoutSession` + `manageSubscription` (FEAT-056, PR #154). Tests Vitest : 430 cas ; tests rules : 80 cas (l'ancien état disait 209 / 16, largement en retard).
 
 > FEAT-043 (i18n « 5 ans » / citation loi 6/7/1989) : **no impact** sur les Cloud Functions (sync 2026-07-08).
 
@@ -76,7 +77,7 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 - **Secrets requis AVANT déploiement** (`firebase functions:secrets:set`) : `STRIPE_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_API_KEY`. Params non secrets : `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`, `STRIPE_PRICE_MAX_MONTHLY`, `STRIPE_PRICE_MAX_ANNUAL`, `STRIPE_PRICE_ULTRA_MONTHLY`, `STRIPE_PRICE_ULTRA_ANNUAL` (FEAT-056, 6 prix Stripe en mode test), `WEB_APP_BASE_URL` (défaut `https://baillan.com`).
 - **Cloud Run quota** (2026-08-03, commit `8068fee`) : `setGlobalOptions({cpu: "gcf_gen1"})` bascule du défaut gen2 (1 vCPU par instance) au ratio gen1 (~0,167 vCPU/256 Mio). Quota régional « Total CPU allocation » = `nb_fonctions × maxInstances × cpu` : était 16 × 2 × 1 = 32 vCPU (dépassement), passe à 16 × 2 × 0,167 = ~5,3 vCPU. Ces callables sont E/S-bound (Firestore), pas CPU-bound. ⚠️ Ne pas réintroduire de calcul intensif sans re-audit du quota.
 - **Entitlements parity** (FEAT-056) : `scripts/check-entitlements-parity.sh` (obligatoire en CI, exit 2 si défaut) valide : (1) source canonique `config/entitlements.json` bien formée ; (2) les deux miroirs (Dart + TS) sont régénérés et à jour ; (3) `sourceSha` embarqué matche le JSON ; (4) grille valide (aucun trou, palier payant a rcEntitlementId, pas de marqueur « À DÉFINIR ») ; (5) `storage.rules` max ≥ `documentMaxBytes` max (sinon plafond inatteignable en silence). Génération : `tool/gen_entitlements.dart` (Dart) + `functions/tool/gen_entitlements.mjs` (TS).
-- **Tests** : Vitest — **209 cas** dans `functions/src/__tests__/` (13 fichiers), dont `rental_register_free_e2e.test.ts` (chaîne createProperty→createTenant→createLease→createPayment en tier free), `revenuecat_webhook.test.ts`, `reconcile_entitlements.test.ts`, `create_checkout_session.test.ts`. Rules : `npm run test:rules` → **16 cas** (4 `describe`) dans `functions/rules-tests/firestore_rules.test.ts` (l'ancien « 28 tests » ne correspond à aucun décompte retrouvable).
+- **Tests** : Vitest — **430 cas** dans `functions/src/__tests__/` (20 fichiers), dont e2e `rental_register_free_e2e.test.ts` (createProperty→createTenant→createLease→createPayment en tier free), `revenuecat_webhook.test.ts`, `reconcile_entitlements.test.ts`, `create_checkout_session.test.ts`, `manage_subscription.test.ts`, `property_address.test.ts`, coverage plans/matrices. Rules : `npm run test:rules` → **80 cas** dans `functions/rules-tests/firestore_rules.test.ts`.
 - **CI** : job `functions` (Node 20, `npm ci` → lint + build + test) depuis PR #115 — la suite n'était validée qu'en local avant.
 - **Logs** : `firebase functions:log` (stream/tail), Cloud Logging console.
 - **Env** : `.env` local (test), Cloud Secret Manager (prod).
