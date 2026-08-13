@@ -12,6 +12,7 @@
 ///   bouton absent, message
 library;
 
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
@@ -101,6 +102,8 @@ class _FakeExpensesRepo implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async => throw UnimplementedError();

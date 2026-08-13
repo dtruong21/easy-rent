@@ -10,8 +10,53 @@
 /// `Expense` vers ces types minimaux — voir `groupRealCharges`.
 library;
 
-/// Entrée minimale d'une dépense réelle : montant + date d'engagement.
-typedef RealChargeEntry = ({int amountCents, DateTime expenseDate});
+import 'expense_recurrence.dart';
+
+/// Entrée minimale d'une dépense réelle : montant, date d'engagement, et
+/// périodicité éventuelle (FEAT-041d).
+///
+/// Classe et non record depuis FEAT-041d : la périodicité doit avoir une
+/// valeur par défaut ([ExpenseRecurrence.none] — les dépenses existantes
+/// restent ponctuelles), ce qu'un record ne sait pas exprimer.
+class RealChargeEntry {
+  const RealChargeEntry({
+    required this.amountCents,
+    required this.expenseDate,
+    this.recurrence = ExpenseRecurrence.none,
+    this.recurrenceEndDate,
+  });
+
+  /// Montant d'UNE échéance, en centimes.
+  final int amountCents;
+
+  /// Date d'engagement — pour une dépense récurrente, la **première**
+  /// échéance (cf. `expense_recurrence.dart`, « Décision 2 »).
+  final DateTime expenseDate;
+
+  /// Périodicité déclarée. [ExpenseRecurrence.none] = dépense ponctuelle.
+  final ExpenseRecurrence recurrence;
+
+  /// Fin de la récurrence (incluse), ou `null` si aucune fin n'est prévue.
+  final DateTime? recurrenceEndDate;
+
+  /// Vrai si cette charge revient encore à l'instant [at].
+  bool isRecurringActiveAt(DateTime at) => isRecurrenceActiveAt(
+    firstOccurrence: expenseDate,
+    recurrence: recurrence,
+    endDate: recurrenceEndDate,
+    at: at,
+  );
+
+  /// Échéances tombant dans `[from, to]` (bornes incluses).
+  List<DateTime> occurrencesBetween(DateTime from, DateTime to) =>
+      expenseOccurrences(
+        firstOccurrence: expenseDate,
+        recurrence: recurrence,
+        endDate: recurrenceEndDate,
+        from: from,
+        to: to,
+      );
+}
 
 /// Dépenses réelles **non récupérables** d'un bien, déjà regroupées par
 /// nature de charge ayant un équivalent prévisionnel déclaré sur la fiche

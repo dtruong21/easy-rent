@@ -12,6 +12,7 @@
 /// - Repli gracieux sur le seul encaissé si les dépenses échouent à charger
 library;
 
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/features/dashboard/application/dashboard_provider.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
@@ -85,6 +86,8 @@ class _FakeExpensesRepository implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async => throw UnimplementedError();
@@ -117,6 +120,8 @@ class _ThrowingExpensesRepository implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async => throw UnimplementedError();
@@ -132,6 +137,8 @@ Expense _expense({
   required DateTime expenseDate,
   required ExpenseCategory category,
   ExpenseNature nature = ExpenseNature.works,
+  ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+  DateTime? recurrenceEndDate,
 }) => Expense(
   id: id,
   landlordId: 'landlord-1',
@@ -141,6 +148,8 @@ Expense _expense({
   nature: nature,
   category: category,
   periodYear: expenseDate.year,
+  recurrence: recurrence,
+  recurrenceEndDate: recurrenceEndDate,
   createdAt: expenseDate,
   updatedAt: expenseDate,
 );
@@ -266,6 +275,129 @@ void main() {
       // Une seule requête landlord-wide pour toute la période affichée,
       // jamais une par mois.
       expect(expensesRepo.listAllForLandlordCallCount, 1);
+    });
+  });
+
+  group('monthlyCashflowProvider — dépenses récurrentes (FEAT-041d)', () {
+    /// Construit le container avec 3 mois de loyers vides et les [expenses]
+    /// fournies — seules les dépenses varient d'un test à l'autre.
+    Future<List<MonthlyCashflow>> run(List<Expense> expenses) async {
+      final rent = [
+        for (final monthsAgo in [2, 1, 0])
+          MonthlyCollectedRent(
+            year: monthDate(monthsAgo).year,
+            month: monthDate(monthsAgo).month,
+            collectedCents: 0,
+            hasPayments: false,
+          ),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(
+            _FakeDashboardRepository(rent),
+          ),
+          expensesRepositoryProvider.overrideWithValue(
+            _FakeExpensesRepository(expenses),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container.read(monthlyCashflowProvider.future);
+    }
+
+    test('dépense mensuelle → comptée dans CHAQUE mois affiché, sans qu\'un '
+        'seul document supplémentaire existe en base', () async {
+      final result = await run([
+        _expense(
+          id: 'exp-monthly',
+          amountCents: 10000,
+          expenseDate: monthDate(6),
+          category: ExpenseCategory.nonRecoverable,
+          recurrence: ExpenseRecurrence.monthly,
+        ),
+      ]);
+
+      expect(result, hasLength(3));
+      for (final month in result) {
+        expect(month.nonRecoverableExpenseCents, 10000);
+        expect(month.netCents, -10000);
+        expect(
+          month.hasData,
+          isTrue,
+          reason: 'une échéance virtuelle fait exister le mois',
+        );
+      }
+    });
+
+    test('dépense trimestrielle → un mois sur trois seulement, et jamais '
+        'avant sa date de saisie (pas de rétroactivité)', () async {
+      final result = await run([
+        _expense(
+          id: 'exp-quarterly',
+          amountCents: 15000,
+          // Première échéance il y a 2 mois : la suivante tombe le mois
+          // prochain, donc hors du graphique.
+          expenseDate: monthDate(2),
+          category: ExpenseCategory.nonRecoverable,
+          recurrence: ExpenseRecurrence.quarterly,
+        ),
+      ]);
+
+      expect(result[0].nonRecoverableExpenseCents, 15000);
+      expect(result[1].nonRecoverableExpenseCents, 0);
+      expect(result[2].nonRecoverableExpenseCents, 0);
+      expect(result[1].hasData, isFalse);
+    });
+
+    test(
+      'date de fin de récurrence respectée → plus rien après elle',
+      () async {
+        final result = await run([
+          _expense(
+            id: 'exp-monthly-ended',
+            amountCents: 10000,
+            expenseDate: monthDate(6),
+            category: ExpenseCategory.nonRecoverable,
+            recurrence: ExpenseRecurrence.monthly,
+            recurrenceEndDate: monthDate(2),
+          ),
+        ]);
+
+        expect(result[0].nonRecoverableExpenseCents, 10000);
+        expect(result[1].nonRecoverableExpenseCents, 0);
+        expect(result[2].nonRecoverableExpenseCents, 0);
+      },
+    );
+
+    test('dépense ponctuelle ancienne → toujours ignorée (comportement '
+        'inchangé, aucune expansion)', () async {
+      final result = await run([
+        _expense(
+          id: 'exp-one-off-old',
+          amountCents: 99999,
+          expenseDate: monthDate(6),
+          category: ExpenseCategory.nonRecoverable,
+        ),
+      ]);
+
+      expect(result.every((m) => m.nonRecoverableExpenseCents == 0), isTrue);
+      expect(result.every((m) => m.hasData == false), isTrue);
+    });
+
+    test('dépense récurrente RÉCUPÉRABLE → toujours exclue du cash flow '
+        '(refacturée au locataire), la périodicité n\'y change rien', () async {
+      final result = await run([
+        _expense(
+          id: 'exp-recoverable-monthly',
+          amountCents: 10000,
+          expenseDate: monthDate(6),
+          category: ExpenseCategory.recoverable,
+          nature: ExpenseNature.condoCharges,
+          recurrence: ExpenseRecurrence.monthly,
+        ),
+      ]);
+
+      expect(result.every((m) => m.nonRecoverableExpenseCents == 0), isTrue);
     });
   });
 

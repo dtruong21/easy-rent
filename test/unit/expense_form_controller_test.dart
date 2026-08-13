@@ -2,6 +2,7 @@
 /// du justificatif (`documentId`) vers `ExpensesRepository.create`/`update`.
 library;
 
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/features/expenses/application/expense_form_controller.dart';
 import 'package:easyrent/features/expenses/data/expenses_repository.dart';
 import 'package:easyrent/features/expenses/domain/expense.dart';
@@ -33,6 +34,8 @@ class _FakeExpensesRepository implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async {

@@ -17,6 +17,10 @@ import '../domain/expense_nature.dart';
 /// `condo_charges`) — les autres (`works`, `repair_maintenance`,
 /// `management_fees`, `other`) n'ont pas de champ déclaré équivalent et
 /// restent hors du calcul de cash flow dans cette itération.
+///
+/// La périodicité (FEAT-041d) est transportée telle quelle : c'est
+/// `profitability.dart` qui décide de son effet (bascule immédiate sur le
+/// réel + montant annualisé tant que la récurrence est en cours).
 PropertyRealCharges groupRealCharges(Iterable<Expense> expenses) {
   final propertyTax = <RealChargeEntry>[];
   final insurancePno = <RealChargeEntry>[];
@@ -24,9 +28,11 @@ PropertyRealCharges groupRealCharges(Iterable<Expense> expenses) {
 
   for (final expense in expenses) {
     if (expense.category != ExpenseCategory.nonRecoverable) continue;
-    final entry = (
+    final entry = RealChargeEntry(
       amountCents: expense.amountCents,
       expenseDate: expense.expenseDate,
+      recurrence: expense.recurrence,
+      recurrenceEndDate: expense.recurrenceEndDate,
     );
     switch (expense.nature) {
       case ExpenseNature.propertyTax:

@@ -82,6 +82,28 @@ class ExpenseFormValidators {
     return null;
   }
 
+  /// Valide la fin de récurrence (FEAT-041d).
+  ///
+  /// Optionnelle par nature : `null` = récurrence sans fin prévue (elle
+  /// s'arrête alors d'elle-même à la borne haute de chaque calcul, jamais
+  /// dans le futur — cf. `core/finance/expense_recurrence.dart`).
+  /// Si elle est fournie, elle doit être **postérieure ou égale** à la date
+  /// de la dépense, qui est la première échéance : une fin antérieure
+  /// décrirait une récurrence sans aucune échéance.
+  static ValidationError? validateRecurrenceEndDate(
+    DateTime? value,
+    DateTime? expenseDate,
+  ) {
+    if (value == null) return null;
+    if (!DateBounds.contains(value)) {
+      return ValidationError.dateOutOfRange;
+    }
+    if (expenseDate != null && value.isBefore(expenseDate)) {
+      return ValidationError.recurrenceEndBeforeExpenseDate;
+    }
+    return null;
+  }
+
   /// Valide les notes (optionnelles, max 2000 caractères — cf. plan § a).
   static ValidationError? validateNotes(String? value) {
     if (value == null || value.isEmpty) return null;

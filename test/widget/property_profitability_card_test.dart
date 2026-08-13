@@ -151,12 +151,12 @@ void main() {
         final realCharges = PropertyRealCharges(
           propertyTax: [
             // Ancre hors fenêtre (≥ 1 an) → couverture acquise.
-            (
+            RealChargeEntry(
               amountCents: 50000,
               expenseDate: now.subtract(const Duration(days: 400)),
             ),
             // Dans la fenêtre glissante → utilisée pour la moyenne.
-            (
+            RealChargeEntry(
               amountCents: 240000,
               expenseDate: now.subtract(const Duration(days: 60)),
             ),
@@ -188,7 +188,7 @@ void main() {
         final now = DateTime.now();
         final realCharges = PropertyRealCharges(
           propertyTax: [
-            (
+            RealChargeEntry(
               amountCents: 5000, // 50€, aucun recul → repli sur le déclaré
               expenseDate: now.subtract(const Duration(days: 10)),
             ),

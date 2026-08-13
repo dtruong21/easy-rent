@@ -11,6 +11,7 @@
 ///   donnée=neutre + hauteur nulle (négatif visible sous l'axe des abscisses)
 library;
 
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
@@ -139,6 +140,8 @@ class _FakeExpensesRepository implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async => throw UnimplementedError();

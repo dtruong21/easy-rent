@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/config/firestore_provider.dart';
+import '../../../core/finance/expense_recurrence.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
@@ -69,6 +70,8 @@ abstract interface class ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   });
@@ -179,6 +182,8 @@ class FirestoreExpensesRepository implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async {
@@ -193,6 +198,8 @@ class FirestoreExpensesRepository implements ExpensesRepository {
       'periodStart': periodStart?.toUtc().toIso8601String(),
       'periodEnd': periodEnd?.toUtc().toIso8601String(),
       'periodYear': periodYear,
+      'recurrence': recurrence.sqlValue,
+      'recurrenceEndDate': recurrenceEndDate?.toUtc().toIso8601String(),
       'documentId': documentId,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
     });
@@ -214,6 +221,8 @@ class FirestoreExpensesRepository implements ExpensesRepository {
       'periodYear': expense.periodYear,
       'periodStart': expense.periodStart?.toUtc().toIso8601String(),
       'periodEnd': expense.periodEnd?.toUtc().toIso8601String(),
+      'recurrence': expense.recurrence.sqlValue,
+      'recurrenceEndDate': expense.recurrenceEndDate?.toUtc().toIso8601String(),
       'documentId': expense.documentId,
       'notes': expense.notes,
     };

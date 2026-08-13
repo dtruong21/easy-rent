@@ -302,8 +302,14 @@ void main() {
           'p-real': PropertyRealCharges(
             propertyTax: [
               // Couverture ≥ 1 an.
-              (amountCents: 50000, expenseDate: DateTime(2024, 6, 1)),
-              (amountCents: 240000, expenseDate: DateTime(2025, 6, 1)),
+              RealChargeEntry(
+                amountCents: 50000,
+                expenseDate: DateTime(2024, 6, 1),
+              ),
+              RealChargeEntry(
+                amountCents: 240000,
+                expenseDate: DateTime(2025, 6, 1),
+              ),
             ],
           ),
         },

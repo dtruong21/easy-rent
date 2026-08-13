@@ -101,4 +101,33 @@ class ExpenseTotals {
       nonRecoverableCents: nonRecoverable,
     );
   }
+
+  /// Totaux sur une **fenêtre de temps** `[from, to]` : chaque dépense y
+  /// compte autant de fois qu'elle a d'échéances dans la fenêtre (FEAT-041d).
+  ///
+  /// Distinct de [ExpenseTotals.fromExpenses], qui somme des LIGNES : un
+  /// total qui annonce « les 12 derniers mois » doit compter les quatre
+  /// appels de charges d'une récurrence trimestrielle, là où le total d'une
+  /// liste filtrée doit rester la somme exacte des lignes affichées.
+  factory ExpenseTotals.overWindow({
+    required Iterable<Expense> expenses,
+    required DateTime from,
+    required DateTime to,
+  }) {
+    var recoverable = 0;
+    var nonRecoverable = 0;
+    for (final e in expenses) {
+      final occurrences = e.occurrencesBetween(from, to).length;
+      if (occurrences == 0) continue;
+      if (e.isRecoverable) {
+        recoverable += e.amountCents * occurrences;
+      } else {
+        nonRecoverable += e.amountCents * occurrences;
+      }
+    }
+    return ExpenseTotals(
+      recoverableCents: recoverable,
+      nonRecoverableCents: nonRecoverable,
+    );
+  }
 }

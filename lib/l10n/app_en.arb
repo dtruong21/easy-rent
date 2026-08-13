@@ -209,6 +209,10 @@
   "@validationPeriodEndBeforeStart": {
     "description": "Validation error: the expense billing period end is before or equal to its start."
   },
+  "validationRecurrenceEndBeforeExpenseDate": "The recurrence end cannot be before the expense date, which is its first occurrence",
+  "@validationRecurrenceEndBeforeExpenseDate": {
+    "description": "Validation error: the recurrence end date of an expense is earlier than the expense date, which is by definition the first occurrence of the recurrence."
+  },
   "validationExpenseNotesTooLong": "Notes cannot exceed 2000 characters",
   "@validationExpenseNotesTooLong": {
     "description": "Validation error: expense notes field exceeds the 2000 character limit."
@@ -4278,6 +4282,38 @@
   "@expensesFormReceiptUploadInProgressSnackbar": {
     "description": "Snackbar shown when the landlord tries to submit the expense form while a receipt upload is still in progress (submission is blocked until it completes)."
   },
+  "expensesFormRecurrenceEndClearTooltip": "Remove the end date",
+  "@expensesFormRecurrenceEndClearTooltip": {
+    "description": "Tooltip of the clear button that removes the recurrence end date, turning a bounded recurring expense back into an open-ended one."
+  },
+  "expensesFormRecurrenceEndFieldHelper": "Leave empty if the charge has no planned end: it is counted up to the current month, never beyond.",
+  "@expensesFormRecurrenceEndFieldHelper": {
+    "description": "Helper text under the recurrence end date field of the expense form, explaining that an open-ended recurrence is still bounded by today (no future projection)."
+  },
+  "expensesFormRecurrenceEndFieldLabel": "Recurrence end (optional)",
+  "@expensesFormRecurrenceEndFieldLabel": {
+    "description": "Label of the optional recurrence end date field in the expense form (last occurrence of a recurring expense)."
+  },
+  "expensesFormRecurrenceEndNoEndPlaceholder": "No planned end",
+  "@expensesFormRecurrenceEndNoEndPlaceholder": {
+    "description": "Placeholder shown in the recurrence end date field when no end date has been picked (open-ended recurrence)."
+  },
+  "expensesFormRecurrenceEndPickerHelp": "Last occurrence of the recurrence",
+  "@expensesFormRecurrenceEndPickerHelp": {
+    "description": "Help text of the date picker used to choose the recurrence end date of an expense."
+  },
+  "expensesFormRecurrenceExplanation": "The first occurrence is the expense date above: earlier periods are not recomputed. So do not also enter each occurrence by hand — it would be counted twice.",
+  "@expensesFormRecurrenceExplanation": {
+    "description": "Explanation box shown in the expense form once a recurrence is selected: states the two rules the landlord must understand (no retroactivity before the expense date, and do not enter each occurrence manually on top of the recurrence)."
+  },
+  "expensesFormRecurrenceFieldHelper": "A recurring expense is counted automatically at every occurrence, with no extra entry.",
+  "@expensesFormRecurrenceFieldHelper": {
+    "description": "Helper text under the recurrence (frequency) dropdown of the expense form."
+  },
+  "expensesFormRecurrenceFieldLabel": "Frequency",
+  "@expensesFormRecurrenceFieldLabel": {
+    "description": "Label of the recurrence (frequency) dropdown in the expense form: one-off, monthly, quarterly or yearly."
+  },
   "expensesFormSelectDatePlaceholder": "Select a date",
   "@expensesFormSelectDatePlaceholder": {
     "description": "Placeholder text shown in the expense date field before any date has been picked."
@@ -4427,6 +4463,34 @@
         "type": "String"
       }
     }
+  },
+  "expensesRecurrenceBadgeUntil": "{recurrenceLabel} until {endDate}",
+  "@expensesRecurrenceBadgeUntil": {
+    "description": "Badge on an expense row for a recurring expense that has an end date; {recurrenceLabel} is the already-localized frequency label (ExpenseRecurrenceL10n.localizedLabel) and {endDate} the formatted end date.",
+    "placeholders": {
+      "recurrenceLabel": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesRecurrenceMonthly": "Every month",
+  "@expensesRecurrenceMonthly": {
+    "description": "ExpenseRecurrence.monthly localized label (frequency dropdown, expense row badge)."
+  },
+  "expensesRecurrenceNone": "One-off (single time)",
+  "@expensesRecurrenceNone": {
+    "description": "ExpenseRecurrence.none localized label — the default: a plain expense that happens once, on its date."
+  },
+  "expensesRecurrenceQuarterly": "Every quarter",
+  "@expensesRecurrenceQuarterly": {
+    "description": "ExpenseRecurrence.quarterly localized label (frequency dropdown, expense row badge) — typical for co-ownership charge calls."
+  },
+  "expensesRecurrenceYearly": "Every year",
+  "@expensesRecurrenceYearly": {
+    "description": "ExpenseRecurrence.yearly localized label (frequency dropdown, expense row badge) — typical for property tax and landlord insurance."
   },
 
   "chargeRegularizationSectionTitle": "Charge regularization",

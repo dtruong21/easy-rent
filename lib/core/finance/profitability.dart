@@ -38,6 +38,32 @@ import 'real_expense_charges.dart';
 /// un instantané tronqué : soit on a du recul et on fait confiance au réel,
 /// soit on n'en a pas encore et on garde le prévisionnel déclaré.
 ///
+/// ## Dépenses récurrentes : bascule immédiate (FEAT-041d)
+///
+/// Une charge **récurrente en cours** (`ExpenseRecurrence` ≠ `none`, cf.
+/// `expense_recurrence.dart`) fait basculer sa catégorie sur le réel
+/// **immédiatement**, sans attendre les 12 mois de recul exigés des
+/// dépenses ponctuelles.
+///
+/// Le seuil de recul existe parce qu'une dépense ponctuelle est un
+/// **échantillon** : une facture de 50 € ne dit rien du total annuel de ce
+/// poste, et la laisser écraser une taxe foncière de 1200 € déclarée sur le
+/// bien transformerait un cash flow correct en cash flow faussement
+/// excellent. Une récurrence n'est pas un échantillon, c'est une
+/// **déclaration** : « charges de copropriété, 150 € par trimestre » est du
+/// même ordre de fiabilité que le montant annuel saisi sur la fiche du bien,
+/// et il est plus frais. Attendre un an pour l'utiliser reviendrait à
+/// préférer sciemment l'estimation la plus ancienne des deux.
+///
+/// Le montant retenu suit la même logique. Tant que la récurrence est en
+/// cours, la charge annuelle vaut `montant × échéances par an` (600 € pour
+/// 150 €/trimestre) — pas la somme de ses échéances déjà tombées dans la
+/// fenêtre glissante, qui vaudrait 150 € le jour de la saisie et
+/// sous-estimerait la charge de 75 % pendant neuf mois. Une fois la
+/// récurrence **terminée** (date de fin dépassée), elle redevient de
+/// l'histoire : seules comptent ses échéances réellement tombées dans les
+/// 12 derniers mois, exactement comme des dépenses ponctuelles.
+///
 /// Seules les dépenses **non récupérables** comptent : les charges
 /// récupérables sont refacturées au locataire via la régularisation
 /// annuelle, elles ne représentent pas une sortie de cash flow nette pour
@@ -220,32 +246,57 @@ List<_ChargeBucket> _resolveCharges({
 /// Bascule le réel/prévisionnel pour UNE charge — voir la doc de tête de
 /// fichier pour la justification de la règle.
 ///
-/// Bascule sur le réel (montant = somme des dépenses de la fenêtre glissante
-/// de [kRealExpensesRollingWindow]) si et seulement si [entries] contient au
-/// moins une dépense antérieure ou égale au début de cette fenêtre (recul
-/// d'au moins un an sur cette charge). Sinon, repli sur [declaredAnnualCents]
-/// si renseigné ; sinon la charge n'est pas exploitable.
+/// Bascule sur le réel si [entries] contient soit une **récurrence en
+/// cours** (bascule immédiate : une périodicité déclarée n'est pas un
+/// échantillon), soit une dépense ponctuelle antérieure ou égale au début de
+/// la fenêtre glissante de [kRealExpensesRollingWindow] (recul d'au moins un
+/// an sur cette charge). Sinon, repli sur [declaredAnnualCents] si
+/// renseigné ; sinon la charge n'est pas exploitable.
 _ChargeBucket _resolveChargeBucket({
   required int? declaredAnnualCents,
   required List<RealChargeEntry> entries,
   required DateTime now,
 }) {
   final windowStart = now.subtract(kRealExpensesRollingWindow);
+  final hasActiveRecurrence = entries.any((e) => e.isRecurringActiveAt(now));
   final hasFullYearCoverage = entries.any(
     (e) => !e.expenseDate.isAfter(windowStart),
   );
-  if (hasFullYearCoverage) {
-    final windowSumCents = entries
-        .where(
-          (e) =>
-              !e.expenseDate.isBefore(windowStart) &&
-              !e.expenseDate.isAfter(now),
-        )
-        .fold<int>(0, (sum, e) => sum + e.amountCents);
-    return (usable: true, isReal: true, annualCents: windowSumCents);
+  if (hasActiveRecurrence || hasFullYearCoverage) {
+    final annualCents = entries.fold<int>(
+      0,
+      (sum, e) =>
+          sum + _annualContributionCents(e, windowStart: windowStart, now: now),
+    );
+    return (usable: true, isReal: true, annualCents: annualCents);
   }
   if (declaredAnnualCents != null) {
     return (usable: true, isReal: false, annualCents: declaredAnnualCents);
   }
   return (usable: false, isReal: false, annualCents: 0);
+}
+
+/// Contribution d'UNE entrée à la charge annuelle de son poste.
+///
+/// - ponctuelle : son montant si elle tombe dans la fenêtre glissante,
+///   sinon rien (comportement historique) ;
+/// - récurrence **en cours** : son montant annualisé (`montant × échéances
+///   par an`) — voir « bascule immédiate » en tête de fichier ;
+/// - récurrence **terminée** (ou pas encore commencée) : ses seules
+///   échéances réellement tombées dans la fenêtre, comme de l'histoire.
+int _annualContributionCents(
+  RealChargeEntry entry, {
+  required DateTime windowStart,
+  required DateTime now,
+}) {
+  if (!entry.recurrence.isRecurring) {
+    final inWindow =
+        !entry.expenseDate.isBefore(windowStart) &&
+        !entry.expenseDate.isAfter(now);
+    return inWindow ? entry.amountCents : 0;
+  }
+  if (entry.isRecurringActiveAt(now)) {
+    return entry.amountCents * entry.recurrence.occurrencesPerYear;
+  }
+  return entry.amountCents * entry.occurrencesBetween(windowStart, now).length;
 }

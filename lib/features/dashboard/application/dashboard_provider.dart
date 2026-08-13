@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../expenses/data/expenses_repository.dart';
+import '../../expenses/domain/expense.dart';
 import '../../expenses/domain/expense_category.dart';
 import '../data/dashboard_repository.dart';
 import '../domain/dashboard_snapshot.dart';
@@ -86,6 +87,14 @@ final dashboardProvider =
 ///   500 documents) filtrée et regroupée par mois côté client — jamais une
 ///   requête par mois affiché (coût de lecture).
 ///
+/// Une dépense **récurrente** (FEAT-041d) compte dans CHAQUE mois où tombe
+/// une de ses échéances, sans qu'aucun document supplémentaire n'existe en
+/// base : l'expansion est purement locale (`Expense.occurrencesBetween`).
+/// Elle est bornée des deux côtés — jamais avant la date de la dépense
+/// (pas de réécriture rétroactive du graphique, cf.
+/// `core/finance/expense_recurrence.dart`), jamais après sa date de fin ni
+/// après le dernier mois affiché (pas de projection dans le futur).
+///
 /// Si la lecture des dépenses échoue (ex. environnement de test sans
 /// Firebase initialisé, erreur réseau ponctuelle), le cash flow retombe
 /// gracieusement sur le seul encaissé (dépenses = 0) plutôt que de faire
@@ -106,6 +115,11 @@ final monthlyCashflowProvider =
       try {
         final now = DateTime.now();
         final startMonth = DateTime(now.year, now.month - (months - 1), 1);
+        // Borne haute de l'expansion : le premier instant du mois suivant.
+        // Les échéances au-delà ne peuvent de toute façon alimenter aucune
+        // barre (le graphique s'arrête au mois courant), mais borner
+        // explicitement évite de dérouler une récurrence sans fin.
+        final endMonth = DateTime(now.year, now.month + 1, 1);
         final expenses = await ref
             .watch(expensesRepositoryProvider)
             .listAllForLandlord();
@@ -113,13 +127,14 @@ final monthlyCashflowProvider =
         final counts = <String, int>{};
         for (final expense in expenses) {
           if (expense.category != ExpenseCategory.nonRecoverable) continue;
-          if (expense.expenseDate.isBefore(startMonth)) continue;
-          final key = _monthKey(
-            expense.expenseDate.year,
-            expense.expenseDate.month,
-          );
-          cents[key] = (cents[key] ?? 0) + expense.amountCents;
-          counts[key] = (counts[key] ?? 0) + 1;
+          for (final occurrence in expense.occurrencesBetween(
+            startMonth,
+            endMonth,
+          )) {
+            final key = _monthKey(occurrence.year, occurrence.month);
+            cents[key] = (cents[key] ?? 0) + expense.amountCents;
+            counts[key] = (counts[key] ?? 0) + 1;
+          }
         }
         expenseCentsByMonth = cents;
         expenseCountByMonth = counts;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/finance/expense_recurrence.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/utils/expense_form_validators.dart';
 import '../../../core/utils/french_date.dart';
@@ -11,6 +12,7 @@ import '../domain/expense_nature.dart';
 import 'expense_category_l10n.dart';
 import 'expense_nature_l10n.dart';
 import 'expense_receipt_field.dart';
+import 'expense_recurrence_l10n.dart';
 
 /// Libellé localisé d'un [LeaseStatus], pour l'item du dropdown "Bail
 /// concerné" (FEAT-043).
@@ -45,6 +47,13 @@ String _leaseStatusLabel(BuildContext context, LeaseStatus status) {
 ///   risque juridique décret n°87-713.
 /// - La période de rattachement est dérivée de la date de dépense par
 ///   défaut, mais reste corrigeable — obligatoire si `recoverable`.
+/// - La **périodicité** (FEAT-041d) est ponctuelle par défaut. Choisir un
+///   rythme fait compter la dépense dans chaque période concernée sans créer
+///   d'écriture : la date de la dépense devient la **première échéance**, et
+///   la date de fin (optionnelle) la dernière. Les deux règles que
+///   l'utilisateur doit comprendre sont affichées sous le champ — pas de
+///   rétroactivité avant la date de la dépense, et ne pas saisir en plus
+///   chaque échéance à la main (double comptage).
 /// - Le justificatif est **recommandé mais non bloquant** (FEAT-041b,
 ///   décision produit #8) — voir [ExpenseReceiptField].
 ///
@@ -63,6 +72,8 @@ class ExpenseForm extends StatefulWidget {
     this.initialCategoryOverridden = false,
     this.initialPeriodStart,
     this.initialPeriodEnd,
+    this.initialRecurrence = ExpenseRecurrence.none,
+    this.initialRecurrenceEndDate,
     this.initialNotes,
     this.initialDocumentId,
     this.enabled = true,
@@ -85,6 +96,11 @@ class ExpenseForm extends StatefulWidget {
   final bool initialCategoryOverridden;
   final DateTime? initialPeriodStart;
   final DateTime? initialPeriodEnd;
+
+  /// Périodicité initiale (FEAT-041d) — [ExpenseRecurrence.none] en création
+  /// comme pour toute dépense saisie avant l'arrivée de la récurrence.
+  final ExpenseRecurrence initialRecurrence;
+  final DateTime? initialRecurrenceEndDate;
   final String? initialNotes;
 
   /// `documentId` du justificatif déjà attaché (édition) — voir
@@ -105,6 +121,8 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
   ExpenseCategory? _category;
   DateTime? _periodStart;
   DateTime? _periodEnd;
+  ExpenseRecurrence _recurrence = ExpenseRecurrence.none;
+  DateTime? _recurrenceEndDate;
   final TextEditingController _notesController = TextEditingController();
 
   bool _amountTouched = false;
@@ -127,6 +145,8 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
     _categoryManuallyOverridden = widget.initialCategoryOverridden;
     _periodStart = widget.initialPeriodStart;
     _periodEnd = widget.initialPeriodEnd;
+    _recurrence = widget.initialRecurrence;
+    _recurrenceEndDate = widget.initialRecurrenceEndDate;
     _notesController.text = widget.initialNotes ?? '';
   }
 
@@ -199,6 +219,32 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
         _periodStart = picked;
         _periodStartTouched = true;
       });
+    }
+  }
+
+  /// Change la périodicité. Repasser à « ponctuelle » efface la date de fin :
+  /// une dépense qui ne revient pas ne peut pas avoir de fin de récurrence,
+  /// et laisser la valeur en mémoire la ferait ressurgir silencieusement si
+  /// l'utilisateur re-sélectionne un rythme.
+  void _onRecurrenceChanged(ExpenseRecurrence? recurrence) {
+    if (recurrence == null) return;
+    setState(() {
+      _recurrence = recurrence;
+      if (!recurrence.isRecurring) _recurrenceEndDate = null;
+    });
+  }
+
+  Future<void> _pickRecurrenceEndDate() async {
+    final firstAllowed = _expenseDate ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _recurrenceEndDate ?? firstAllowed,
+      firstDate: firstAllowed,
+      lastDate: DateTime(2100),
+      helpText: context.l10n.expensesFormRecurrenceEndPickerHelp,
+    );
+    if (picked != null && mounted) {
+      setState(() => _recurrenceEndDate = picked);
     }
   }
 
@@ -360,6 +406,105 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
           ),
           const SizedBox(height: 16),
 
+          // --- Périodicité (récurrence virtuelle, FEAT-041d) ---
+          DropdownButtonFormField<ExpenseRecurrence>(
+            key: const Key('field_recurrence'),
+            initialValue: _recurrence,
+            decoration: InputDecoration(
+              labelText: context.l10n.expensesFormRecurrenceFieldLabel,
+              helperText: context.l10n.expensesFormRecurrenceFieldHelper,
+              helperMaxLines: 3,
+              border: const OutlineInputBorder(),
+            ),
+            items: ExpenseRecurrence.values
+                .map(
+                  (r) => DropdownMenuItem(
+                    value: r,
+                    child: Text(r.localizedLabel(context)),
+                  ),
+                )
+                .toList(),
+            onChanged: widget.enabled ? _onRecurrenceChanged : null,
+          ),
+          if (_recurrence.isRecurring) ...[
+            const SizedBox(height: 12),
+            Container(
+              key: const Key('recurrence_explanation'),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.autorenew,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      context.l10n.expensesFormRecurrenceExplanation,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            FormField<DateTime>(
+              key: const Key('field_recurrence_end_date'),
+              initialValue: _recurrenceEndDate,
+              validator: (_) => ExpenseFormValidators.validateRecurrenceEndDate(
+                _recurrenceEndDate,
+                _expenseDate,
+              )?.message(context),
+              builder: (state) => InkWell(
+                onTap: widget.enabled ? _pickRecurrenceEndDate : null,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: context.l10n.expensesFormRecurrenceEndFieldLabel,
+                    helperText:
+                        context.l10n.expensesFormRecurrenceEndFieldHelper,
+                    helperMaxLines: 2,
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _recurrenceEndDate == null
+                        ? const Icon(Icons.calendar_today_outlined)
+                        : IconButton(
+                            key: const Key('btn_clear_recurrence_end_date'),
+                            icon: const Icon(Icons.close),
+                            tooltip: context
+                                .l10n
+                                .expensesFormRecurrenceEndClearTooltip,
+                            onPressed: widget.enabled
+                                ? () =>
+                                      setState(() => _recurrenceEndDate = null)
+                                : null,
+                          ),
+                    errorText: state.errorText,
+                  ),
+                  child: Text(
+                    _recurrenceEndDate != null
+                        ? FrenchDate.format(_recurrenceEndDate!)
+                        : context
+                              .l10n
+                              .expensesFormRecurrenceEndNoEndPlaceholder,
+                    style: _recurrenceEndDate == null
+                        ? theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          )
+                        : theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+
           // --- Période de rattachement ---
           Text(
             _isRecoverable
@@ -496,6 +641,12 @@ class ExpenseFormWidgetState extends State<ExpenseForm> {
   bool get currentCategoryOverridden => _categoryManuallyOverridden;
   DateTime? get currentPeriodStart => _periodStart;
   DateTime? get currentPeriodEnd => _periodEnd;
+  ExpenseRecurrence get currentRecurrence => _recurrence;
+
+  /// Fin de récurrence — toujours `null` si la dépense est ponctuelle
+  /// (cf. [_onRecurrenceChanged]).
+  DateTime? get currentRecurrenceEndDate =>
+      _recurrence.isRecurring ? _recurrenceEndDate : null;
   String get currentNotes => _notesController.text.trim();
 }
 
