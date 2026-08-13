@@ -96,9 +96,27 @@ jobs:
           # défaut casserait les deux.
           fetch-depth: 0
 
+      # `flutter-version` ÉPINGLÉE, comme dans `ci.yml` — ne pas retirer.
+      #
+      # Incident du 2026-08-13 : ce workflow ne l'épinglait pas et suivait donc
+      # le canal `stable`. Une nouvelle version de Flutter est sortie dans la
+      # nuit ; son SDK analyse la syntaxe « raccourci point » et produit un
+      # nœud d'AST que l'`analyzer` résolu pour ce projet ne sait pas visiter :
+      #   Exception: Missing implementation of visitDotShorthandPropertyAccess
+      # `build_runner` plantait, l'étape restait bloquée six heures, et le
+      # groupe de concurrence retenait tous les déploiements derrière elle.
+      #
+      # Le symptôme trompait : `ci.yml`, LUI épinglé, restait vert sur le même
+      # commit. On cherche donc un défaut de code qui n'existe pas — alors que
+      # la seule différence entre les deux workflows était cette ligne.
+      #
+      # Toute montée de version doit se faire ICI ET dans `ci.yml`, ensemble :
+      # deux workflows sur des SDK différents, c'est un vert qui ne prouve rien
+      # sur ce qui sera réellement déployé.
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.41.2
           cache: true
 
       - name: Install deps
