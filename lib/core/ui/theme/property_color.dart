@@ -170,6 +170,16 @@ class PropertyColorPalette extends ThemeExtension<PropertyColorPalette> {
   }
 }
 
+/// Opacité du lavis appliqué au fond des cartes d'entité (`EntityCard`).
+///
+/// Volontairement très faible : c'est le plafond mesuré (≈9,5 %) pour que le
+/// texte secondaire le plus défavorable (`onSurfaceVariant`, thème clair,
+/// bordeaux) reste au-dessus du seuil AA (4,5:1) une fois mélangé au fond de
+/// carte — voir mesures dans le plan FEAT-057 (background des cartes). Ne
+/// JAMAIS augmenter cette valeur sans re-mesurer les 8 teintes × 2 thèmes ×
+/// (`onSurface`, `onSurfaceVariant`) × (fond idle, fond hover).
+const double _cardBackgroundOpacity = 0.08;
+
 /// Raccourci de résolution thème pour un [PropertyColorKey].
 extension PropertyColorKeyThemeX on PropertyColorKey {
   /// Couleur résolue dans le thème courant (light/dark).
@@ -180,5 +190,27 @@ extension PropertyColorKeyThemeX on PropertyColorKey {
   Color resolveColor(BuildContext context) {
     final palette = Theme.of(context).extension<PropertyColorPalette>();
     return (palette ?? PropertyColorPalette.light).of(this);
+  }
+
+  /// Fond de carte teinté à la couleur d'identité du bien.
+  ///
+  /// **Ne pose jamais l'accent brut en fond** : un `#RRGGBB` plein rendrait
+  /// le texte illisible dans l'un des deux thèmes. On mélange plutôt
+  /// l'accent avec [base] — le token de surface *courant* de l'appelant
+  /// (idle `surfaceContainerLow` ou hover `surfaceContainerHigh` d'
+  /// `EntityCard`) — à une opacité fixe et faible ([_cardBackgroundOpacity]).
+  /// Le résultat s'adapte donc automatiquement au thème et à l'état de la
+  /// carte, exactement comme [resolveColor] s'adapte au thème.
+  ///
+  /// Contraste mesuré (pire cas, texte `onSurfaceVariant` — le plus exposé
+  /// car déjà le moins contrasté à la base) : **4,60:1 en thème clair**,
+  /// **6,03:1 en thème sombre** — au-dessus du seuil AA (4,5:1) pour les 8
+  /// teintes, fond idle et hover, `onSurface` et `onSurfaceVariant`.
+  Color resolveCardBackground(BuildContext context, Color base) {
+    final accent = resolveColor(context);
+    return Color.alphaBlend(
+      accent.withValues(alpha: _cardBackgroundOpacity),
+      base,
+    );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_radii.dart';
+import '../theme/property_color.dart';
 import 'entity_card_density.dart';
 
 /// Carte d'entité réutilisable.
@@ -33,6 +34,7 @@ class EntityCard extends StatefulWidget {
     this.onTap,
     this.density = EntityCardDensity.standard,
     this.semanticLabel,
+    this.accentColorKey,
   });
 
   /// En-tête de la carte (optionnel).
@@ -57,6 +59,15 @@ class EntityCard extends StatefulWidget {
   /// Label sémantique pour les lecteurs d'écran (TalkBack / VoiceOver).
   final String? semanticLabel;
 
+  /// Couleur d'identité du bien lié, si applicable — `null` pour les
+  /// entités sans bien rattaché (ex. locataire sans bail actif). Teinte
+  /// légèrement le fond de la carte (mélange avec le fond idle/hover
+  /// courant, jamais la couleur brute) pour que le fond « corresponde » à
+  /// l'étiquette de couleur du bien. Voir
+  /// [PropertyColorKeyThemeX.resolveCardBackground] pour le calcul et les
+  /// ratios de contraste mesurés.
+  final PropertyColorKey? accentColorKey;
+
   @override
   State<EntityCard> createState() => _EntityCardState();
 }
@@ -74,9 +85,13 @@ class _EntityCardState extends State<EntityCard> {
     final padding = widget.density.padding;
     final gap = widget.density.gap;
 
-    final bgColor = _isHovered
+    final baseBgColor = _isHovered
         ? colorScheme.surfaceContainerHigh
         : colorScheme.surfaceContainerLow;
+    final accentColorKey = widget.accentColorKey;
+    final bgColor = accentColorKey != null
+        ? accentColorKey.resolveCardBackground(context, baseBgColor)
+        : baseBgColor;
 
     final borderColor = _isFocused
         ? colorScheme.primary

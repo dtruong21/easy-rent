@@ -46,6 +46,7 @@ class PropertyCard extends StatelessWidget {
     return EntityCard(
       onTap: onTap,
       density: EntityCardDensity.compact,
+      accentColorKey: colorKey,
       semanticLabel: l10n.propertiesCardSemanticLabel(
         property.name,
         pillData.label,

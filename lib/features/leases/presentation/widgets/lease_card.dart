@@ -46,6 +46,7 @@ class LeaseCard extends StatelessWidget {
     return EntityCard(
       onTap: onTap,
       density: EntityCardDensity.compact,
+      accentColorKey: colorKey,
       semanticLabel: context.l10n.leasesCardSemanticLabel(
         item.displayPropertyName(context),
         item.displayTenantName(context),

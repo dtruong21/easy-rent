@@ -43,6 +43,7 @@ class TenantCard extends StatelessWidget {
     return EntityCard(
       onTap: onTap,
       density: EntityCardDensity.compact,
+      accentColorKey: colorKey,
       semanticLabel:
           '${tenant.firstName} ${tenant.lastName} — ${pillData.label}',
       header: EntityCardHeader(

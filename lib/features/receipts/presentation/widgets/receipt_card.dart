@@ -65,6 +65,7 @@ class ReceiptCard extends ConsumerWidget {
       key: Key('receipt_card_${receipt.id}'),
       onTap: () => _openPdf(context, ref),
       density: EntityCardDensity.compact,
+      accentColorKey: propertyColorKey,
       semanticLabel: l10n.receiptsCardSemanticLabel(
         periodLabel,
         receipt.totalEuros,

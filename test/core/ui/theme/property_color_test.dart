@@ -2,9 +2,28 @@
 /// (FEAT-057 — couleur d'identité des biens).
 library;
 
+import 'dart:math' as math;
+
+import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/ui/theme/property_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Luminance relative WCAG (formule officielle, indépendante de
+/// l'implémentation testée — sert de garde-fou anti-régression sur le
+/// contraste du fond de carte teinté).
+double _relativeLuminance(Color c) {
+  double channel(double v) =>
+      v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
+  return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+}
+
+/// Ratio de contraste WCAG entre deux couleurs.
+double _contrastRatio(Color a, Color b) {
+  final la = _relativeLuminance(a) + 0.05;
+  final lb = _relativeLuminance(b) + 0.05;
+  return la > lb ? la / lb : lb / la;
+}
 
 void main() {
   group('PropertyColorKey.parse', () {
@@ -173,5 +192,132 @@ void main() {
         PropertyColorPalette.light.of(PropertyColorKey.moutarde),
       );
     });
+  });
+
+  group('PropertyColorKeyThemeX.resolveCardBackground', () {
+    const base = Color(0xFFF7F4ED); // paper — surfaceContainerLow clair
+
+    testWidgets('mélange l\'accent avec la base fournie (alpha blend '
+        'documenté, jamais la couleur brute)', (tester) async {
+      late Color result;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [PropertyColorPalette.light]),
+          home: Builder(
+            builder: (context) {
+              result = PropertyColorKey.cobalt.resolveCardBackground(
+                context,
+                base,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      final expected = Color.alphaBlend(
+        PropertyColorPalette.light
+            .of(PropertyColorKey.cobalt)
+            .withValues(alpha: 0.08),
+        base,
+      );
+      expect(result, expected);
+      // Ni la base pure, ni l'accent pur : un vrai mélange.
+      expect(result, isNot(base));
+      expect(
+        result,
+        isNot(PropertyColorPalette.light.of(PropertyColorKey.cobalt)),
+      );
+    });
+
+    testWidgets('résultat distinct pour deux teintes différentes (le fond '
+        'reste discriminant entre biens)', (tester) async {
+      late Color cobaltBg, rouilleBg;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: const [PropertyColorPalette.light]),
+          home: Builder(
+            builder: (context) {
+              cobaltBg = PropertyColorKey.cobalt.resolveCardBackground(
+                context,
+                base,
+              );
+              rouilleBg = PropertyColorKey.rouille.resolveCardBackground(
+                context,
+                base,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      expect(cobaltBg, isNot(rouilleBg));
+    });
+
+    // --- Garde-fou contraste WCAG AA -----------------------------------
+    //
+    // Le plan FEAT-057 exige un ratio ≥ 4,5:1 (AA, texte normal) pour les 8
+    // teintes × 2 thèmes × (fond idle `surfaceContainerLow`, fond hover
+    // `surfaceContainerHigh`) × (texte `onSurface`, `onSurfaceVariant`).
+    // Ce test recalcule le ratio via la formule WCAG officielle (indépendante
+    // de l'implémentation) : toute variation de `_cardBackgroundOpacity` ou
+    // de la palette qui ferait passer un seul cas sous 4,5:1 doit le faire
+    // échouer.
+    testWidgets(
+      'fond de carte teinté : contraste AA (≥4,5:1) tenu pour les 8 teintes, '
+      'les 2 thèmes, idle/hover, onSurface/onSurfaceVariant',
+      (tester) async {
+        for (final themeEntry in {
+          'light': AppTheme.light,
+          'dark': AppTheme.dark,
+        }.entries) {
+          final theme = themeEntry.value;
+          final bases = [
+            theme.colorScheme.surfaceContainerLow,
+            theme.colorScheme.surfaceContainerHigh,
+          ];
+          final texts = [
+            theme.colorScheme.onSurface,
+            theme.colorScheme.onSurfaceVariant,
+          ];
+
+          final results =
+              <(Color base, Color text, PropertyColorKey key, Color bg)>[];
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: Builder(
+                builder: (context) {
+                  for (final base in bases) {
+                    for (final text in texts) {
+                      for (final key in PropertyColorKey.values) {
+                        results.add((
+                          base,
+                          text,
+                          key,
+                          key.resolveCardBackground(context, base),
+                        ));
+                      }
+                    }
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          );
+
+          expect(results, hasLength(bases.length * texts.length * 8));
+          for (final (base, text, key, bg) in results) {
+            final ratio = _contrastRatio(text, bg);
+            expect(
+              ratio,
+              greaterThanOrEqualTo(4.5),
+              reason:
+                  'thème ${themeEntry.key}, teinte ${key.name} : ratio '
+                  '$ratio < 4,5:1 (AA) — base=$base, texte=$text, fond=$bg',
+            );
+          }
+        }
+      },
+    );
   });
 }
