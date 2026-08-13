@@ -28,11 +28,23 @@ part 'monthly_cashflow.freezed.dart';
 /// contraire au but même du graphique (montrer un mois où les dépenses
 /// dépassent les loyers). Toute dépense non récupérable compte donc ici.
 ///
-/// [hasData] : `true` si au moins un paiement OU une dépense a été
-/// enregistré ce mois-ci — distingue un mois « zéro net » (données
-/// présentes, solde nul par coïncidence) d'un mois « sans donnée » (rien
-/// n'a été saisi, le bailleur n'avait tout simplement pas encore de bien/bail
-/// à cette période).
+/// [loanPaymentCents] : somme, tous biens confondus, des mensualités de
+/// prêt (capital + intérêts + assurance) imputables à ce mois — voir
+/// `monthly_loan_payment.dart` pour la règle de fenêtre (un mois hors
+/// `[loanStartDate, dernière échéance]` ne porte aucune mensualité). Sans
+/// cette déduction, le graphique contredisait le KPI « Rentabilité
+/// portfolio » (`computeMonthlyCashflowBeforeTaxCents`, core/finance), qui
+/// lui déduit déjà la mensualité — signalé en recette (« aucun impact sur
+/// le graphique du cash-flow mensuel »).
+///
+/// [hasData] : `true` si au moins un paiement, une dépense OU une mensualité
+/// de prêt a été enregistré/imputé ce mois-ci — distingue un mois « zéro
+/// net » (données présentes, solde nul par coïncidence) d'un mois « sans
+/// donnée » (rien n'a été saisi, le bailleur n'avait tout simplement pas
+/// encore de bien/bail à cette période). Une mensualité de prêt à elle
+/// seule fait exister le mois : un bien à crédit sans loyer ni dépense ce
+/// mois-là a quand même une sortie de cash flow réelle et négative, pas
+/// « rien à mesurer ».
 @freezed
 class MonthlyCashflow with _$MonthlyCashflow {
   const factory MonthlyCashflow({
@@ -40,6 +52,7 @@ class MonthlyCashflow with _$MonthlyCashflow {
     required int month,
     required int collectedRentCents,
     required int nonRecoverableExpenseCents,
+    required int loanPaymentCents,
     required bool hasData,
   }) = _MonthlyCashflow;
 }
@@ -47,6 +60,8 @@ class MonthlyCashflow with _$MonthlyCashflow {
 /// Getters calculés — non freezed pour ne pas alourdir le codegen.
 extension MonthlyCashflowX on MonthlyCashflow {
   /// Cash flow net du mois : loyers encaissés moins dépenses non
-  /// récupérables réellement engagées. Peut être négatif (dépenses > loyers).
-  int get netCents => collectedRentCents - nonRecoverableExpenseCents;
+  /// récupérables réellement engagées moins mensualité de prêt. Peut être
+  /// négatif (dépenses + mensualité > loyers).
+  int get netCents =>
+      collectedRentCents - nonRecoverableExpenseCents - loanPaymentCents;
 }

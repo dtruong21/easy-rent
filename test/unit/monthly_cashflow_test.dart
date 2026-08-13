@@ -12,12 +12,14 @@ void main() {
         month: 6,
         collectedRentCents: 85000,
         nonRecoverableExpenseCents: 20000,
+        loanPaymentCents: 0,
         hasData: true,
       );
       expect(m.year, 2026);
       expect(m.month, 6);
       expect(m.collectedRentCents, 85000);
       expect(m.nonRecoverableExpenseCents, 20000);
+      expect(m.loanPaymentCents, 0);
       expect(m.hasData, isTrue);
     });
 
@@ -27,6 +29,7 @@ void main() {
         month: 1,
         collectedRentCents: 0,
         nonRecoverableExpenseCents: 0,
+        loanPaymentCents: 0,
         hasData: false,
       );
       const m2 = MonthlyCashflow(
@@ -34,6 +37,7 @@ void main() {
         month: 1,
         collectedRentCents: 0,
         nonRecoverableExpenseCents: 0,
+        loanPaymentCents: 0,
         hasData: false,
       );
       expect(m1, equals(m2));
@@ -45,6 +49,7 @@ void main() {
         month: 1,
         collectedRentCents: 0,
         nonRecoverableExpenseCents: 0,
+        loanPaymentCents: 0,
         hasData: false,
       );
       const m2 = MonthlyCashflow(
@@ -52,6 +57,7 @@ void main() {
         month: 2,
         collectedRentCents: 0,
         nonRecoverableExpenseCents: 0,
+        loanPaymentCents: 0,
         hasData: false,
       );
       expect(m1, isNot(equals(m2)));
@@ -63,6 +69,7 @@ void main() {
         month: 6,
         collectedRentCents: 0,
         nonRecoverableExpenseCents: 90000,
+        loanPaymentCents: 0,
         hasData: true,
       );
       final updated = m.copyWith(collectedRentCents: 80000);
@@ -78,6 +85,7 @@ void main() {
           month: 3,
           collectedRentCents: 85000,
           nonRecoverableExpenseCents: 20000,
+          loanPaymentCents: 0,
           hasData: true,
         );
         expect(m.netCents, 65000);
@@ -89,6 +97,7 @@ void main() {
           month: 4,
           collectedRentCents: 85000,
           nonRecoverableExpenseCents: 300000,
+          loanPaymentCents: 0,
           hasData: true,
         );
         expect(m.netCents, -215000);
@@ -101,6 +110,7 @@ void main() {
           month: 5,
           collectedRentCents: 50000,
           nonRecoverableExpenseCents: 50000,
+          loanPaymentCents: 0,
           hasData: true,
         );
         expect(m.netCents, 0);
@@ -114,10 +124,37 @@ void main() {
           month: 6,
           collectedRentCents: 0,
           nonRecoverableExpenseCents: 0,
+          loanPaymentCents: 0,
           hasData: false,
         );
         expect(m.netCents, 0);
         expect(m.hasData, isFalse);
+      });
+
+      test('mensualité de prêt déduite en plus des dépenses', () {
+        const m = MonthlyCashflow(
+          year: 2026,
+          month: 7,
+          collectedRentCents: 85000,
+          nonRecoverableExpenseCents: 10000,
+          loanPaymentCents: 50000,
+          hasData: true,
+        );
+        expect(m.netCents, 25000); // 85000 - 10000 - 50000
+      });
+
+      test('mensualité de prêt seule fait passer le mois en négatif — '
+          'sans loyer ni dépense (bien vacant à crédit)', () {
+        const m = MonthlyCashflow(
+          year: 2026,
+          month: 8,
+          collectedRentCents: 0,
+          nonRecoverableExpenseCents: 0,
+          loanPaymentCents: 65000,
+          hasData: true,
+        );
+        expect(m.netCents, -65000);
+        expect(m.netCents, lessThan(0));
       });
     });
   });

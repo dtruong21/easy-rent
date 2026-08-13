@@ -2835,9 +2835,9 @@
   "@dashboardMonthlyChartTitle": {
     "description": "Title of the monthly cash flow chart card header (MonthlyCashflowChart), shown even when there is no data yet (toggles hidden)."
   },
-  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — not to be confused with the 12-month rolling average cash flow in the Portfolio yield section above.",
+  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — rent collected, actual expenses and loan repayment. Not to be confused with the 12-month rolling average cash flow in the Portfolio yield section above.",
   "@dashboardMonthlyChartMethodologyCaption": {
-    "description": "Short italic caption under the monthly cash flow chart header, distinguishing it from the smoothed 12-month rolling cash flow shown in the Portfolio yield section just above — prevents the user from thinking the two figures contradict each other."
+    "description": "Short italic caption under the monthly cash flow chart header, listing what the figure includes (collected rent, actual expenses, loan repayment) and distinguishing it from the smoothed 12-month rolling cash flow shown in the Portfolio yield section just above — prevents the user from thinking the two figures contradict each other."
   },
   "dashboardMonthlyChartErrorMessage": "Unable to load cash flow data for this period.",
   "@dashboardMonthlyChartErrorMessage": {
@@ -2862,7 +2862,7 @@
   "dashboardMonthlyChartNoDataLabel": "No data",
   "dashboardMonthlyChartNoExpenseNote": "No expenses recorded for this period, so the cash flow shown equals the rent collected.",
   "@dashboardMonthlyChartNoExpenseNote": {
-    "description": "Note under the monthly cash-flow chart when the period contains rent data but no recorded expenses — explains why the net equals the collected rent."
+    "description": "Note under the monthly cash-flow chart when the period contains rent data but no recorded expenses AND no loan repayment deducted for any displayed month — explains why the net equals the collected rent. Hidden as soon as any month deducts a loan payment, since the net no longer equals the collected rent in that case."
   },
   "@dashboardMonthlyChartNoDataLabel": {
     "description": "Tooltip text shown for a month with no recorded payment and no recorded expense in the monthly cash flow chart — distinguishes an unmeasured month from a month whose measured net cash flow happens to be exactly zero."

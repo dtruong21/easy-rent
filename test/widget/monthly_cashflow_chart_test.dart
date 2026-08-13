@@ -26,6 +26,11 @@ import 'package:easyrent/features/expenses/data/expenses_repository.dart';
 import 'package:easyrent/features/expenses/domain/expense.dart';
 import 'package:easyrent/features/expenses/domain/expense_category.dart';
 import 'package:easyrent/features/expenses/domain/expense_nature.dart';
+import 'package:easyrent/features/properties/data/property_repository.dart';
+import 'package:easyrent/features/properties/domain/heating_type.dart';
+import 'package:easyrent/features/properties/domain/property.dart';
+import 'package:easyrent/features/properties/domain/property_list_item.dart';
+import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -168,17 +173,89 @@ Expense _expense({
   updatedAt: expenseDate,
 );
 
+class _FakePropertyRepository implements PropertyRepository {
+  const _FakePropertyRepository([this._properties = const []]);
+  final List<Property> _properties;
+
+  @override
+  Future<List<Property>> list() async => _properties;
+
+  @override
+  Future<List<PropertyListItem>> listWithLeases() async =>
+      throw UnimplementedError();
+  @override
+  Future<Property> getById(String id) async => throw UnimplementedError();
+  @override
+  Future<Property> create({
+    required String name,
+    required String address,
+    required PropertyType type,
+    double? surfaceM2,
+    String? postalCode,
+    String? city,
+    int? rooms,
+    int? bedrooms,
+    int? floor,
+    bool hasElevator = false,
+    bool furnished = false,
+    HeatingType? heatingType,
+    String? dpeLetter,
+    int? dpeValueKwhM2Year,
+    String? gesLetter,
+    int? constructionYear,
+    int? purchasePriceCents,
+    DateTime? purchaseDate,
+    int? notaryFeesCents,
+    bool isNewProperty = false,
+    int? propertyTaxAnnualCents,
+    int? insurancePnoAnnualCents,
+    int? condoFeesNonRecoverableCents,
+    int? loanPrincipalCents,
+    int? loanRateBps,
+    int? loanInsuranceBps,
+    int? loanDurationMonths,
+    DateTime? loanStartDate,
+    int? loanMonthlyPaymentOverrideCents,
+  }) async => throw UnimplementedError();
+  @override
+  Future<Property> update(Property property) async =>
+      throw UnimplementedError();
+  @override
+  Future<int> countActiveLeases(String propertyId) async =>
+      throw UnimplementedError();
+  @override
+  Future<void> archive(String id) async => throw UnimplementedError();
+}
+
+Property _property({
+  DateTime? loanStartDate,
+  int? loanMonthlyPaymentOverrideCents,
+}) => Property(
+  id: 'p1',
+  landlordId: 'landlord-1',
+  name: 'Bien Test',
+  address: '1 rue Test',
+  type: PropertyType.appartement,
+  createdAt: DateTime(2024),
+  updatedAt: DateTime(2024),
+  loanStartDate: loanStartDate,
+  loanMonthlyPaymentOverrideCents: loanMonthlyPaymentOverrideCents,
+);
+
 // ---------------------------------------------------------------------------
 // Harnais de rendu
 // ---------------------------------------------------------------------------
 
 Widget _wrap(
   DashboardRepository dashboardRepo,
-  ExpensesRepository expensesRepo,
-) => ProviderScope(
+  ExpensesRepository expensesRepo, {
+  PropertyRepository? propertyRepo,
+}) => ProviderScope(
   overrides: [
     dashboardRepositoryProvider.overrideWithValue(dashboardRepo),
     expensesRepositoryProvider.overrideWithValue(expensesRepo),
+    if (propertyRepo != null)
+      propertyRepositoryProvider.overrideWithValue(propertyRepo),
   ],
   child: MaterialApp(
     theme: ThemeData(
@@ -528,6 +605,27 @@ void main() {
     testWidgets('période entièrement vide → pas de mention (l\'état vide '
         'parle déjà)', (tester) async {
       await tester.pumpWidget(_buildChart(empty: true));
+      await tester.pumpAndSettle();
+
+      expect(noteFr, findsNothing);
+    });
+
+    testWidgets('zéro dépense MAIS mensualité de prêt déduite → pas de '
+        'mention (le cash-flow affiché ne vaut plus les loyers encaissés)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          _PeriodAwareDashboardRepository(),
+          const _FakeExpensesRepository(),
+          propertyRepo: _FakePropertyRepository([
+            _property(
+              loanStartDate: DateTime(2020, 1, 1),
+              loanMonthlyPaymentOverrideCents: 50000,
+            ),
+          ]),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(noteFr, findsNothing);

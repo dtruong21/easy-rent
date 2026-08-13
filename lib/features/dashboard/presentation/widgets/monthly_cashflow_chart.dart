@@ -23,8 +23,8 @@ import '../chart_period_l10n.dart';
 /// Remplace l'ancien barchart « Loyers » (encaissé vs dû) : un loyer est
 /// fixe, le voir en barres n'apprenait rien au bailleur qui le connaît déjà
 /// de tête. Ce graphique montre le cash flow **réel** de chaque mois — loyers
-/// encaissés moins dépenses non récupérables réellement engagées — qui, lui,
-/// n'est jamais connu à l'avance.
+/// encaissés moins dépenses non récupérables réellement engagées moins
+/// mensualité de prêt — qui, lui, n'est jamais connu à l'avance.
 ///
 /// Les données viennent de [monthlyCashflowProvider], indépendant du
 /// dashboard principal : changer de période (6/12/24 mois) ne recharge QUE ce
@@ -720,7 +720,8 @@ class _ChartBuilder {
 bool _isAllEmpty(List<MonthlyCashflow> months) =>
     months.every((m) => !m.hasData);
 
-/// `true` si la période contient des données MAIS aucune dépense.
+/// `true` si la période contient des données MAIS aucune dépense NI
+/// mensualité de prêt.
 ///
 /// Sans cette mention, le graphique affiche exactement les loyers encaissés et
 /// paraît ignorer les dépenses — ce qui a été signalé en recette comme un bug
@@ -728,11 +729,19 @@ bool _isAllEmpty(List<MonthlyCashflow> months) =>
 /// aucune dépense. Le chiffre était bon, c'est l'absence d'explication qui
 /// coûtait cher.
 ///
+/// Doit aussi rester muet dès qu'une mensualité de prêt est déduite : la
+/// mention affirme que « le cash-flow affiché correspond […] aux loyers
+/// encaissés » ([AppLocalizations.dashboardMonthlyChartNoExpenseNote]), ce qui
+/// devient faux dès qu'un bien à crédit soustrait sa mensualité — même sans
+/// aucune dépense saisie par ailleurs.
+///
 /// Volontairement muet sur une période entièrement vide : `_ChartBody` affiche
 /// déjà son propre état vide, et empiler deux messages brouillerait le propos.
 bool _hasNoExpenseAtAll(List<MonthlyCashflow> months) =>
     !_isAllEmpty(months) &&
-    months.every((m) => m.nonRecoverableExpenseCents == 0);
+    months.every(
+      (m) => m.nonRecoverableExpenseCents == 0 && m.loanPaymentCents == 0,
+    );
 
 /// Icône associée à chaque [ChartFormat], utilisée dans le toggle d'en-tête.
 IconData _iconForFormat(ChartFormat format) => switch (format) {

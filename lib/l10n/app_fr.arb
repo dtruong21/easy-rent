@@ -663,7 +663,7 @@
   "dashboardPortfolioYieldFootnote": "{computedCount} bien(s) sur {totalCount} avec prix d'achat et bail actif. Estimations avant impôt.",
   "dashboardPortfolioYieldCashflowMethodology": "Le cash flow agrégé utilise vos dépenses réelles lissées sur 12 mois glissants quand elles sont disponibles, sinon les charges déclarées sur chaque bien.",
   "dashboardMonthlyChartTitle": "Cash-flow mensuel",
-  "dashboardMonthlyChartMethodologyCaption": "Réel, mois par mois, non lissé — à ne pas confondre avec le cash flow moyen lissé sur 12 mois de la Rentabilité portfolio ci-dessus.",
+  "dashboardMonthlyChartMethodologyCaption": "Réel, mois par mois, non lissé — loyers encaissés, dépenses réelles et mensualité de prêt. À ne pas confondre avec le cash flow moyen lissé sur 12 mois de la Rentabilité portfolio ci-dessus.",
   "dashboardMonthlyChartErrorMessage": "Impossible de charger le cash-flow pour cette période.",
   "dashboardMonthlyChartEmptyTitle": "Pas encore d'historique",
   "dashboardMonthlyChartEmptyMessage": "Le cash-flow apparaîtra ici dès le premier loyer encaissé ou la première dépense enregistrée.",
