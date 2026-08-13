@@ -104,7 +104,23 @@ jobs:
       - name: Install deps
         run: flutter pub get
 
+      # `timeout-minutes` ajouté le 2026-08-13 après un incident : cette étape
+      # s'est bloquée ici pendant SIX heures, jusqu'à la limite globale de
+      # GitHub Actions, avant d'être annulée — puis le déploiement suivant a
+      # repris exactement le même blocage. Pendant ce temps le groupe de
+      # concurrence retenait tous les déploiements en file, et rien ne
+      # signalait quoi que ce soit : le workflow paraissait simplement « en
+      # cours ».
+      #
+      # Ce n'était PAS un défaut de code — le job `analyze-test` de `ci.yml`
+      # exécutait la commande identique, sur le même commit, en une dizaine de
+      # minutes. Incident d'infrastructure, donc, mais sans borne il coûte une
+      # nuit entière et masque l'état réel de staging.
+      #
+      # 15 min laisse une marge confortable (l'exécution nominale tient en
+      # quelques minutes) tout en transformant un blocage en échec explicite.
       - name: Generate code (freezed / json_serializable)
+        timeout-minutes: 15
         run: dart run build_runner build --delete-conflicting-outputs
 
       # Dérive la version depuis git (tags + nb de commits) — voir

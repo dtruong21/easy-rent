@@ -31,7 +31,12 @@ jobs:
       - name: Install deps
         run: flutter pub get
 
+      # Même borne que dans `deploy.yml` (incident du 2026-08-13 : blocage de
+      # six heures sur cette étape côté déploiement). Ici l'étape n'a jamais
+      # posé problème — on la borne quand même, parce qu'un blocage identique
+      # sur ce workflow retiendrait la CI de toutes les PR sans rien signaler.
       - name: Generate code (freezed / json_serializable)
+        timeout-minutes: 15
         run: dart run build_runner build --delete-conflicting-outputs
 
       # FEAT-056 — la grille de droits (quotas/features par palier) a une
