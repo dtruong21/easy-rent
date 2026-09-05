@@ -65,6 +65,9 @@ jobs:
       - name: Check Firestore isolation (ADR 0003)
         run: bash scripts/check-db-isolation.sh
 
+      - name: Check Stripe isolation (issue #138)
+        run: bash scripts/check-stripe-isolation.sh
+
   functions:
     name: Functions (lint · build · test)
     runs-on: ubuntu-latest
