@@ -56,9 +56,24 @@ deux côtés. Cela impose de déplacer l'app de staging de `stage.baillan.com` v
 coût est quasi nul s'il est payé pendant la bascule de l'app, qui touche déjà
 exactement ces mêmes endroits ; il serait inutilement élevé à tout autre moment.
 
-Deux sites Firebase Hosting, cibles `marketing` et `app`. **Les déploiements
-sont toujours scopés par `--only`** — sans cela, un déploiement écrase l'autre
-site. Le `robots.txt` et le `sitemap.xml` réels déménagent de `web/` vers la
+**Correction du 2026-09-05 :** FEAT-050 §2.3 décrivait `firebase.json` comme
+portant un bloc `hosting` unique à convertir en deux. Ce n'est plus le cas — il
+porte déjà un tableau de deux cibles, `prod` et `stage`, qui servent toutes deux
+l'app Flutter. Il faut donc **ajouter deux cibles**, pas une, pour arriver à
+quatre :
+
+| Cible | Site Firebase | Sert |
+|---|---|---|
+| `prod` | `easy-rent-54cd4` | app, production (existant) |
+| `stage` | `baillan-stage` | app, staging (existant) |
+| `marketing` | `baillan-marketing` | vitrine, production (à créer) |
+| `marketing-stage` | `baillan-marketing-stage` | vitrine, staging (à créer) |
+
+**Les déploiements sont toujours scopés par `--only`** — sans cela, un
+déploiement écrase les autres sites. `deploy.yml` construit déjà ses cibles par
+environnement (`hosting:prod,firestore:(default),storage` sur `main`,
+`hosting:stage,firestore:staging` sur `develop`) et refuse de déployer sur une
+liste vide ; les cibles marketing s'y ajoutent selon la même mécanique. Le `robots.txt` et le `sitemap.xml` réels déménagent de `web/` vers la
 vitrine ; l'app sert un `Disallow: /`.
 
 ## 3. Structure du dépôt
@@ -88,29 +103,56 @@ telle quelle depuis `lib/core/theme/app_theme.dart`.
 | `inkMuted` | `#6B665D` | texte secondaire |
 
 L'objectif est la continuité : un visiteur qui clique « Ouvrir l'app » ne doit
-pas avoir l'impression de changer de produit. **L'application n'est pas
-retouchée** — c'est elle qui fait foi.
+pas avoir l'impression de changer de produit. **Les valeurs de l'application
+font foi** : elles ne changent pas, elles déménagent simplement vers une source
+canonique dont l'app et la vitrine dérivent toutes deux (cf. §5).
 
 ## 5. Générateur de tokens
 
 C'est la seule pièce réellement nouvelle de l'architecture, et le mécanisme qui
 garantit l'écosystème unique.
 
-Un script Dart (`tool/export_theme_tokens.dart`) **importe** le thème et écrit
-`site/src/styles/tokens.css`. Il importe plutôt qu'il ne parse : les valeurs
-produites sont les vraies constantes compilées, jamais une copie susceptible de
-dériver d'une expression régulière trop optimiste.
+**Correction du 2026-09-05, après vérification.** Une première version de cette
+spec prévoyait un script qui *importe* `app_theme.dart` plutôt que de le parser.
+C'est infaisable : la VM Dart autonome ne peut pas compiler un fichier qui
+dépend de Flutter, et `dart run` s'effondre sur `type 'InvalidType' is not a
+subtype of type 'FunctionType'`. La méthode retenue est donc différente, et
+meilleure.
 
-Le fichier généré **est commité**. La CI le régénère et échoue si le résultat
-diffère du fichier versionné. Deux bénéfices : le changement de couleur est
-lisible dans un diff, et il devient impossible de modifier le thème de l'app
-sans que la vitrine suive ou que la CI le signale. C'est l'idiome déjà employé
-dans le dépôt par `check-db-isolation.sh` et `check-stripe-isolation.sh` — une
-vérité vérifiée mécaniquement plutôt que confiée à la discipline.
+Les huit couleurs deviennent une **source canonique unique**,
+`config/theme_tokens.json`, dont un générateur Dart tire deux miroirs :
 
-**Alternative écartée** : générer au moment du build Astro. Cela imposerait un
-SDK Dart dans le build du site, pour aucun gain — la vérification en CI donne
-déjà la garantie recherchée.
+```bash
+dart run tool/gen_theme_tokens.dart
+```
+
+- `lib/core/theme/app_theme.g.dart` — les constantes consommées par l'app ;
+- `site/src/styles/tokens.css` — les variables CSS de la vitrine.
+
+C'est exactement le patron déjà en service dans le dépôt pour
+`config/entitlements.json`, qui engendre un miroir Dart et un miroir TypeScript
+vérifiés par `scripts/check-entitlements-parity.sh`. L'intérêt, dans les termes
+du dépôt lui-même, est de rendre la divergence **inexprimable** plutôt que
+simplement détectable : il n'existe plus d'endroit où écrire deux valeurs
+différentes.
+
+Les deux fichiers générés sont commités et portent l'en-tête
+`GENERATED — do not edit`. Un garde-fou CI les régénère et échoue si le résultat
+diffère de ce qui est versionné — même idiome que `check-db-isolation.sh` et
+`check-stripe-isolation.sh` : une vérité vérifiée mécaniquement plutôt que
+confiée à la discipline.
+
+**Conséquence sur l'application, à assumer.** `app_theme.dart` cesse de porter
+ses huit constantes de couleur en dur et les importe du miroir généré. Les
+**valeurs ne changent pas** — le rendu de l'app est strictement identique, ce
+que verrouille un test de non-régression comparant chaque constante à sa valeur
+attendue. C'est le seul point où cette spec touche à l'application.
+
+**Alternatives écartées.** Faire tourner le générateur sous `flutter test` pour
+accéder au thème compilé : fonctionne, mais détourne le lanceur de tests en
+outil de build, ce qu'un lecteur futur mettra du temps à comprendre. Parser
+`app_theme.dart` à l'expression régulière : le plus rapide, mais laisse la
+double source de vérité intacte et ne fait que la surveiller.
 
 ## 6. Contenu de la v1
 
@@ -193,6 +235,8 @@ correctif après bascule.
 - Les pages-outils et le blog (v2 de FEAT-050).
 - Une page tarifs. Sans structure juridique, rien n'est vendable ; publier une
   grille engagerait commercialement sans pouvoir encaisser.
-- Toute modification du thème de l'application.
+- Toute modification des *valeurs* du thème. Le déménagement des huit
+  constantes vers une source canonique générée (§5) ne change aucune couleur et
+  est verrouillé par un test de non-régression.
 - L'activation commerciale des paliers payants (FEAT-057) et le correctif des
   events sandbox (issue #158), traités séparément.
