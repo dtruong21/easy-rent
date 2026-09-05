@@ -25,6 +25,8 @@
 
 import {HttpsError} from "firebase-functions/v2/https";
 
+import {STAGING_ORIGIN} from "./db_router";
+
 /**
  * Origines servant l'application de production. La clé Stripe live n'est
  * accessible QUE depuis l'une d'elles, en comparaison exacte.
@@ -35,17 +37,28 @@ import {HttpsError} from "firebase-functions/v2/https";
  * jour de la bascule — un paiement prod refusé parce que l'allowlist n'a pas
  * suivi le DNS.
  */
-export const PROD_ORIGINS = [
+export const PROD_ORIGINS: readonly string[] = [
   "https://baillan.com",
   "https://www.baillan.com",
   "https://app.baillan.com",
-] as const;
+];
 
-/** Origines servant l'app en mode test : staging déployé et émulateur local. */
-const TEST_ORIGINS = ["https://stage.baillan.com"] as const;
+/**
+ * Origines servant l'app en mode test. Le littéral staging vient de
+ * [db_router] plutôt que d'être retapé : si l'hôte de staging déménage et
+ * qu'une seule des deux listes suit, le checkout staging casse — ou pire,
+ * l'ancien hôte se retrouve hors des deux listes et bascule en `unknown`.
+ */
+export const TEST_ORIGINS: readonly string[] = [STAGING_ORIGIN];
 
-/** Préfixes d'origine locale (émulateur) — le port varie selon la commande. */
-const LOCAL_ORIGIN_PREFIXES = ["http://localhost:", "http://127.0.0.1:"] as const;
+/**
+ * Origine locale (émulateur), en correspondance STRICTE. Un simple
+ * `startsWith("http://localhost:")` acceptait `http://localhost:0@evil.tld`,
+ * dont l'hôte réel est `evil.tld` : la partie avant `@` est un userinfo, pas
+ * un hôte. Comme l'origine est ensuite réutilisée pour les URLs de retour
+ * Stripe, ça donnait une redirection ouverte sous la marque.
+ */
+const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
 
 /**
  * Environnement Stripe d'un appel.
@@ -65,9 +78,9 @@ export type StripeEnv = "live" | "test" | "unknown";
  */
 export function stripeEnvForOrigin(origin: unknown): StripeEnv {
   if (typeof origin !== "string" || origin === "") return "unknown";
-  if ((PROD_ORIGINS as readonly string[]).includes(origin)) return "live";
-  if ((TEST_ORIGINS as readonly string[]).includes(origin)) return "test";
-  if (LOCAL_ORIGIN_PREFIXES.some((p) => origin.startsWith(p))) return "test";
+  if (PROD_ORIGINS.includes(origin)) return "live";
+  if (TEST_ORIGINS.includes(origin)) return "test";
+  if (LOCAL_ORIGIN_RE.test(origin)) return "test";
   return "unknown";
 }
 
@@ -109,6 +122,7 @@ export function resolveStripeKeyOrThrow(
         "stripe_test_key_not_configured",
       );
     }
+    assertKeyMode(testKey, "test");
     return testKey;
   }
 
@@ -118,5 +132,23 @@ export function resolveStripeKeyOrThrow(
       "stripe_live_key_not_configured",
     );
   }
+  assertKeyMode(liveKey, "live");
   return liveKey;
+}
+
+/**
+ * Refuse une clé dont le mode ne correspond pas à l'environnement résolu.
+ *
+ * Les Functions se déploient à la main et `defineSecret` demande la valeur en
+ * invite interactive : coller la clé live dans `STRIPE_SECRET_KEY_TEST`
+ * rouvrirait #138 en entier, avec CI verte, tests verts et garde-fou vert.
+ * C'est la seule défense contre cette faute de frappe. Stripe préfixe ses
+ * clés secrètes `sk_` et ses clés restreintes `rk_`.
+ */
+function assertKeyMode(key: string, mode: "live" | "test"): void {
+  if (key.startsWith(`sk_${mode}_`) || key.startsWith(`rk_${mode}_`)) return;
+  throw new HttpsError(
+    "failed-precondition",
+    `stripe_key_mode_mismatch_${mode}`,
+  );
 }
