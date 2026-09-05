@@ -105,6 +105,32 @@ FEAT-001 (auth)
 | FEAT-053 | Catégories N/A déclarées par le plan (readiness) — permettre à un plan de déclarer une catégorie hors-sujet (front-matter type `readiness: {accessibility: n/a}`), pour que `/feature-ready` redistribue son poids au lieu de la noter. Corrige deux biais mesurés sur FEAT-052 : ✅ accessibilité **non mérité** (le script grep le plan ; un plan qui *cite* l'a11y s'auto-valide) et ❌ « tests widget » sur une feature sans UI. Effort S (le mécanisme de redistribution existe déjà : `Category.skipped`) | — | 📋 Suivi FEAT-052 (2026-07-17) — à faire seulement si le score prouve son utilité ; sinon le rapport reste advisory et ses limites sont documentées |
 | FEAT-054 | Isolation réelle prod/staging — Firestore, Auth, Storage, Functions (staging partage aujourd'hui tout le plan de données de la prod, cf. `docs/ENVIRONMENTS.md`) | [`backlog/054-firestore-prod-staging-isolation.md`](backlog/054-firestore-prod-staging-isolation.md) | 📋 Cadré (2026-07-23) — priorité proposée **P1** : prérequis silencieux de FEAT-031 (secrets email partagés) et risque RGPD/paiement croissant maintenant que le palier payant (FEAT-044) est en prod ; arbitrage technique (base Firestore nommée vs second projet) délégué à l'ADR `docs/adr/0003-firestore-prod-staging-isolation.md` (architecte, en cours) |
 
+## Priorisation transverse (2026-09-05) — 4 sujets soumis par le propriétaire
+
+| Rang | Sujet | ID | Story | Statut |
+|---|---|---|---|---|
+| 1 | Fix issue #138 (Cloud Functions aveugles à `APP_ENV`, S1) | — (bug fix, pas de FEAT-ID, cf. convention `docs/state/CHANGELOG.md`) | issue GitHub #138 | 🔴 OPEN — fail-secure `APP_ENV` + refus/`sk_test_` forcé dans `createCheckoutSession` ; bloquant dur du rang 2 |
+| 2 | Activation commerciale des paid plans (lever `SUBSCRIPTIONS_ENABLED`) | FEAT-057 | [`backlog/057-activation-commerciale-paid-plans.md`](backlog/057-activation-commerciale-paid-plans.md) | 📋 Cadré 2026-09-05 — **bloqué par #138**, indépendant des sujets 3/4 |
+| 3 | Site vitrine `www.baillan.com` | FEAT-050 | [`backlog/050-marketing-site-seo.md`](backlog/050-marketing-site-seo.md) | 📋 Cadré 2026-07-08 (paniers d'architectes) — ⚠️ doc rédigé sous l'hypothèse `baillan.fr` (domaine non confirmé à l'époque) ; domaine réel confirmé = **`baillan.com`** (2 « l »), à corriger dans le doc avant lancement du chantier (find/replace, pas de changement de décision d'architecture) |
+| 4 | Migration prod → `app.baillan.com` | — (= FEAT-050e) | voir FEAT-050 §6 | Non autonome : dernier ticket de FEAT-050, pas un sujet indépendant (le domaine racine ne peut être « libéré » que si le site vitrine qui doit l'occuper est prêt) |
+
+Séquencement : #138 d'abord (seul sujet dont le coût d'inaction est
+irréversible — un test du paywall depuis staging crée aujourd'hui une vraie
+transaction Stripe live), puis FEAT-057 qu'il débloque. FEAT-050 est
+parallélisable : le fix #138 touche `functions/src/`, le site vitrine un
+stack séparé, aucun fichier partagé. Le rang 4 suit obligatoirement le rang
+3 — libérer la racine avant que le site vitrine soit prêt coûterait un churn
+Auth/PWA pour rien.
+
+Décisions en attente du propriétaire : (a) fix court terme de #138
+(`APP_ENV` fail-secure, 1-2 j) ou jalon 3 de FEAT-054 complet (`dbForRequest`
++ secrets Stripe par environnement, 4-6 j) ; (b) moment de la bascule
+`sk_test_` → `sk_live_`, qui engage de l'argent réel ; (c) ordre relatif des
+rangs 2 et 3 si un seul flux de travail à la fois.
+
+Détail des critères d'acceptation : [`backlog/057-activation-commerciale-paid-plans.md`](backlog/057-activation-commerciale-paid-plans.md)
+pour le rang 2, issue GitHub #138 pour le rang 1.
+
 ## Croissance — SEO & acquisition
 
 | ID | Titre | Story | Statut |
