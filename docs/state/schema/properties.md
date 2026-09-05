@@ -43,6 +43,7 @@ Bien immobilier (appartement, maison, etc). **Création exclusively via callable
 | `loanDurationMonths` | int\|null | durée prêt (mois, FEAT-017) |
 | `loanStartDate` | timestamp\|null | démarrage prêt (FEAT-017) |
 | `loanMonthlyPaymentOverrideCents` | int\|null | override mensualité (FEAT-017) |
+| `colorKey` | string\|null | clé de palette PropertyColorKey (rouille, bordeaux, prune, cobalt, ardoise, sauge, moutarde, rosePoudre) — NB : stocke la clé, jamais la couleur brute, pour l'adapter aux 2 thèmes (clair/sombre). Biens existants : repli hash FNV-1a(id) déterministe, widgets doivent toujours résoudre via `PropertyColorKey.resolve(entityId: property.id, stored: property.colorKey)` (FEAT-044d, 2026-08-12) |
 | `activeLeaseCount` | int | dénorm (CF increment/decrement via createLease/updateLease) — client read-only |
 | `createdAt` | timestamp | immuable |
 | `updatedAt` | timestamp | CF trigger |
@@ -76,6 +77,27 @@ Bien immobilier (appartement, maison, etc). **Création exclusively via callable
 > fortiori les quittances déjà émises — celles-ci sont immuables par les règles.
 > Rattrapage des baux : `functions/scripts/backfill-lease-property-address.mjs`
 > (dry-run par défaut, base à passer explicitement).
+
+> ### Couleur d'identité — `colorKey` (FEAT-044d, 2026-08-12)
+>
+> **On stocke une CLÉ, jamais une couleur brute.** Un code hexadécimal figé
+> aurait été illisible en mode sombre ; la clé est résolue en `Color` via
+> `PropertyColorPalette` selon le thème.
+>
+> **8 teintes** : rouille, bordeaux, prune, cobalt, ardoise, sauge, moutarde,
+> rosePoudre. Choisies pour s'accorder au thème papier/encre/olive — jamais
+> criardes, et volontairement à l'écart de l'olive (couleur primaire) et de
+> l'oxblood (erreurs).
+>
+> **Biens existants** (création avant cette fonctionnalité, ou sans couleur
+> assignée) : repli **déterministe** sur un hash FNV-1a de l'id (non
+> `Object.hashCode` qui n'est pas stable Dart d'une exécution à l'autre).
+> Immédiate, sans rattrapage serveur.
+>
+> **Propagation** (FEAT-044e, visuel) : couleur appliquée aux cartes biens,
+> baux, locataires, quittances. Fond : mélange (Color.alphaBlend) de la teinte
+> avec le token de surface courant (opacité 8 %) — adapte à chaque thème,
+> maintient le contraste AA (WCAG 4,5:1 sur tous les cas).
 
 **Règles Firestore** :
 - `get` : isOwner(landlordId) && isActive(rsc)

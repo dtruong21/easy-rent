@@ -7,8 +7,8 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-08-12 (state-keeper rafraîchissement leases + functions)
-- **Commit ref** : `c185929` (branche `feat/056-multi-tier-subscriptions`)
+- **Dernière mise à jour** : 2026-09-05 (state-keeper rafraîchissement dashboard + properties + functions)
+- **Commit ref** : `169f9aa` (branche `develop`)
 - **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
 
 ### Périmètre réellement re-vérifié

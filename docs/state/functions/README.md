@@ -34,6 +34,7 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 | `deleteAccount` | FEAT-045 | account |
 | `createCheckoutSession` | FEAT-056 (checkout Stripe 3 paliers) | account |
 | `manageSubscription` | FEAT-056 (cancel/reactivate/change_plan actions) | account |
+| `createScenario` | FEAT-056 (création scénario gâtée par quota) | simulator |
 
 ## HTTP / webhooks (1) → shard
 
@@ -68,6 +69,8 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 > ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-08-12) : **19 callables + 8 triggers déployés (`setUpdatedAt` on 7 collections + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables, pas de champ `updatedAt`).
 >
 > Passe 2026-08-12 : table des callables corrigée (19, non 17) — manquaient `createCheckoutSession` + `manageSubscription` (FEAT-056, PR #154). Tests Vitest : 430 cas ; tests rules : 80 cas (l'ancien état disait 209 / 16, largement en retard).
+>
+> Passe 2026-09-05 : rajout de `createScenario` à la table des callables (était documentée en shard simulator.md mais absente de cette table maître — aucun changement au code, juste correction du shard). Refresh domaines dashboard/properties/functions : aucun changement aux callables/triggers/HTTP/scheduled, syncs visuelles seulement (MonthlyCashflow + colorKey properties).
 
 > FEAT-043 (i18n « 5 ans » / citation loi 6/7/1989) : **no impact** sur les Cloud Functions (sync 2026-07-08).
 
