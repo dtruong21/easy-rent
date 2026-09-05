@@ -95,6 +95,10 @@ skills-lock.json
 # scripts/check-entitlements-parity.sh échouerait avant `flutter analyze`.
 # Le committer rend en prime les changements de quotas visibles en revue de PR.
 !lib/features/auth/domain/plan_matrix.g.dart
+# Exception (vitrine Baillan, plan §1) : même raisonnement — ce miroir est
+# produit par tool/gen_theme_tokens.dart, pas build_runner, et
+# scripts/check-theme-tokens.sh a besoin de le trouver dans un clone neuf.
+!lib/core/theme/app_palette.g.dart
 **/*.freezed.dart
 **/*.gr.dart
 **/*.config.dart
