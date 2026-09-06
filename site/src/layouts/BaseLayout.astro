@@ -1,6 +1,7 @@
 ---
 // site/src/layouts/BaseLayout.astro
 import '../styles/tokens.css';
+import { appUrl, getCanonicalUrl } from '../lib/urls';
 
 interface Props {
   title: string;
@@ -8,8 +9,7 @@ interface Props {
   noindex?: boolean;
 }
 const { title, description, noindex = false } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site).href;
-const appUrl = 'https://app.baillan.com';
+const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
 ---
 <!doctype html>
 <html lang="fr">
