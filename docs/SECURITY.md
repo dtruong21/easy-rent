@@ -30,7 +30,8 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 
 | Clé | Format | Où elle DOIT vivre |
 |---|---|---|
-| `STRIPE_SECRET_KEY` | `sk_live_*` / `sk_test_*` | Secret Manager (`firebase functions:secrets:set`) |
+| `STRIPE_SECRET_KEY` | `sk_live_*` | Secret Manager (`firebase functions:secrets:set`) |
+| `STRIPE_SECRET_KEY_TEST` | `sk_test_*` | Secret Manager — servi aux origines staging/émulateur (issue #138) |
 | `REVENUECAT_API_KEY` | clé secrète RevenueCat | Secret Manager |
 | `REVENUECAT_WEBHOOK_AUTH` | jeton d'auth du webhook entrant | Secret Manager |
 | Firebase Admin SDK | `service-account.json` | GitHub Actions secret `FIREBASE_SERVICE_ACCOUNT` (CI uniquement) |
@@ -80,7 +81,9 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 **`STRIPE_SECRET_KEY`** :
 1. Dashboard Stripe → Developers → API keys → « Roll key »
 2. `firebase functions:secrets:set STRIPE_SECRET_KEY` (colle la nouvelle valeur)
-3. Re-déployer les Functions qui la déclarent (`create_checkout_session`) — un secret n'est relu qu'au déploiement d'une nouvelle révision
+3. Re-déployer les Functions qui la déclarent (`create_checkout_session`, `manage_subscription`) — un secret n'est relu qu'au déploiement d'une nouvelle révision
+
+⚠️ `STRIPE_SECRET_KEY` doit porter une clé **live** et `STRIPE_SECRET_KEY_TEST` une clé **test** : `resolveStripeKeyOrThrow` vérifie le préfixe et refuse l'appel en cas d'inversion. Coller une clé live dans le secret de test rouvrirait l'issue #138 — c'est la faute de frappe que cette vérification existe pour attraper.
 4. Stripe laisse une fenêtre de grâce configurable sur l'ancienne clé : surveiller les logs avant de la révoquer définitivement
 
 **`REVENUECAT_API_KEY` / `REVENUECAT_WEBHOOK_AUTH`** :
