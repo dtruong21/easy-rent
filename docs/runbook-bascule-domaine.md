@@ -25,10 +25,10 @@
 ## Prérequis (avant de commencer)
 
 - [x] `baillan.com` acheté, DNS accessible côté registrar (confirmé 2026-09-06).
-- [ ] **#157 mergé dans `develop` puis promu.** Le fix #138 (`stripe_env.ts`,
-      `PROD_ORIGINS`) n'est pas encore sur `develop` ; le resserrage des origines
-      Stripe (§ Phase prod, étape P6) l'exige. Merger #157 d'abord, ou empiler
-      P6 dessus.
+- [x] **#157 mergé dans `develop`** (2026-09-06) — le fix #138 (`stripe_env.ts`,
+      `PROD_ORIGINS`) est sur `develop`, et `develop` a été mergé dans cette
+      branche. Le resserrage P6 est donc **déjà écrit** sur `chore/050e-bascule-domaine`
+      (commit `173ec5a`). Reste à promouvoir `develop` → `main` pour la prod.
 - [ ] Mentions légales de la vitrine complétées — `site/src/pages/mentions-legales.astro`
       porte un encadré « à compléter » (raison sociale, SIREN, adresse,
       directeur de publication) qui bloque volontairement la mise en ligne de
@@ -87,18 +87,16 @@ Ne démarrer qu'une fois la Phase 1 validée et les prérequis cochés (#157, l�
 - [ ] **P4** 👤 Firebase Console → Hosting → site `baillan-marketing` (cible
       `marketing`) → Add custom domain → `baillan.com` **et** `www.baillan.com`
       (configurer `www` en redirection vers l'apex). Vérifier + certificat.
-- [ ] **P5** 💻 Merger #157 (fix #138) s'il ne l'est pas déjà — prérequis de P6.
-- [ ] **P6** 💻 Sur `chore/050e-bascule-domaine`, après merge de #157, resserrer
-      les origines Stripe dans `functions/src/utils/stripe_env.ts` (fichier
-      apporté par #157, donc **cette édition n'existe pas encore** sur la
-      branche) :
-      - `PROD_ORIGINS` → **`["https://app.baillan.com"]` seul**. Retirer
-        `https://baillan.com` et `https://www.baillan.com` : après bascule, ces
-        hôtes servent la vitrine et ne doivent JAMAIS obtenir la clé Stripe live.
-      - Origine de test → `https://app.staging.baillan.com`.
-      - Base URL de retour checkout (`create_checkout_session.ts`,
-        `WEB_APP_BASE_URL` / `webAppBaseUrl` défaut) → `https://app.baillan.com`.
-      - Mettre à jour les tests `stripe_env.test.ts` en conséquence.
+- [x] **P5** 💻 #157 (fix #138) mergé dans `develop` le 2026-09-06 — prérequis de P6 levé.
+- [x] **P6** 💻 **FAIT** sur `chore/050e-bascule-domaine` (commit `173ec5a`) —
+      resserrage des origines Stripe, à déployer via P8 :
+      - `PROD_ORIGINS` = `["https://app.baillan.com"]` seul (baillan.com et
+        www.baillan.com retirés : ils servent la vitrine, jamais la clé live).
+      - Origine de test = `https://app.staging.baillan.com` (suit `STAGING_ORIGIN`,
+        basculé en phase staging).
+      - `WEB_APP_BASE_URL` défaut → `https://app.baillan.com`.
+      - `stripe_env.test.ts` : origines à jour + verrou anti-régression (la
+        vitrine ne peut jamais être `live`). Suite functions 462/462.
 - [ ] **P7** 💻 Merger le commit **phase prod** de `chore/050e-bascule-domaine`
       (`bb32084`) : `env.dart` `publicAppUrl` → `app.baillan.com`, `deploy.yml`
       main `public_url` → `app.baillan.com`, retrait du header noindex transitoire
