@@ -54,17 +54,8 @@
           ]
         },
         {
-          "//": "SEO (FEAT-049) : robots.txt / sitemap.xml — cache court pour propager vite une bascule de domaine. Aucun glob suivant ne matche .txt/.xml, donc pas de collision de clé.",
+          "//": "SEO (FEAT-049) : robots.txt — cache court pour propager vite une bascule de domaine. Le sitemap réel a déménagé sur la vitrine (FEAT-050, cf. site/) ; l'app n'en sert plus (web/sitemap.xml supprimé, robots.txt de l'app en Disallow global).",
           "source": "/robots.txt",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=3600"
-            }
-          ]
-        },
-        {
-          "source": "/sitemap.xml",
           "headers": [
             {
               "key": "Cache-Control",
@@ -147,17 +138,8 @@
           ]
         },
         {
-          "//": "SEO (FEAT-049) : robots.txt / sitemap.xml — cache court pour propager vite une bascule de domaine. Aucun glob suivant ne matche .txt/.xml, donc pas de collision de clé.",
+          "//": "SEO (FEAT-049) : robots.txt — cache court pour propager vite une bascule de domaine. Le sitemap réel a déménagé sur la vitrine (FEAT-050, cf. site/) ; l'app n'en sert plus (web/sitemap.xml supprimé, robots.txt de l'app en Disallow global).",
           "source": "/robots.txt",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=3600"
-            }
-          ]
-        },
-        {
-          "source": "/sitemap.xml",
           "headers": [
             {
               "key": "Cache-Control",
@@ -193,7 +175,7 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "headers": [
         {
-          "//": "Avec cleanUrls, Firebase route headers sur le CHEMIN demandé (/, /about), pas sur le fichier physique (index.html) : **/*.html ne matche donc jamais une clean URL et retombait sur le défaut Firebase (max-age=3600). ** attrape toutes les pages HTML aussi ; il reste placé AVANT /_astro/** et /{robots.txt,sitemap.xml} qui gagnent pour leurs chemins via la sémantique dernière-règle-matchante (cf. commentaire ligne ~76, bloc prod).",
+          "//": "Avec cleanUrls, Firebase route headers sur le CHEMIN demandé (/, /about), pas sur le fichier physique (index.html) : **/*.html ne matche donc jamais une clean URL et retombait sur le défaut Firebase (max-age=3600). ** attrape toutes les pages HTML aussi ; il reste placé AVANT /_astro/** et /{robots.txt,sitemap*.xml} qui gagnent pour leurs chemins via la sémantique dernière-règle-matchante (cf. commentaire ligne ~76, bloc prod).",
           "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
         },
@@ -202,7 +184,8 @@
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
         },
         {
-          "source": "/{robots.txt,sitemap.xml}",
+          "//": "@astrojs/sitemap (Task 7, FEAT-050) génère sitemap-index.xml + sitemap-0.xml, jamais sitemap.xml — le glob doit matcher ces noms réels, sinon les deux fichiers retombent sur le max-age=0 de la règle ** ci-dessus.",
+          "source": "/{robots.txt,sitemap*.xml}",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
         }
       ]

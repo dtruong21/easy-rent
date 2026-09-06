@@ -228,6 +228,14 @@ jobs:
           cache-dependency-path: site/package-lock.json
 
       - name: Build marketing site
+        # SITE_ENV=staging fait basculer site/src/pages/robots.txt.ts (Task 7,
+        # FEAT-050) en Disallow global sur `develop`. La cible d'hébergement
+        # `marketing-stage` sert déjà `X-Robots-Tag: noindex, nofollow` sur
+        # tout (firebase.json) ; ce robots.txt est une deuxième ceinture pour
+        # qu'un explorateur ne perde même pas son temps à récupérer les pages.
+        # Vide sur `main` (prod) : la vitrine reste indexable.
+        env:
+          SITE_ENV: ${{ needs.determine-env.outputs.app_env == 'dev' && 'staging' || '' }}
         run: npm ci --prefix site && npm run build --prefix site
 
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
