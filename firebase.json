@@ -175,6 +175,11 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "headers": [
         {
+          "//": "TRANSITOIRE — à retirer par le runbook de bascule de domaine, quand baillan.com sera réellement branché sur cette cible et les mentions légales complétées (cf. site/src/pages/mentions-legales.astro). En attendant, `main` déploie déjà `hosting:marketing` (deploy.yml) : sans ce header, le site partirait indexable sur baillan-marketing.web.app dès le premier merge.",
+          "source": "**",
+          "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+        },
+        {
           "//": "Avec cleanUrls, Firebase route headers sur le CHEMIN demandé (/, /about), pas sur le fichier physique (index.html) : **/*.html ne matche donc jamais une clean URL et retombait sur le défaut Firebase (max-age=3600). ** attrape toutes les pages HTML aussi ; il reste placé AVANT /_astro/** et /{robots.txt,sitemap*.xml} qui gagnent pour leurs chemins via la sémantique dernière-règle-matchante (cf. commentaire ligne ~76, bloc prod).",
           "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]

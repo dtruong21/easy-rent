@@ -1,43 +1,41 @@
-# Astro Starter Kit: Minimal
+# Site vitrine Baillan (`site/`)
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Site statique Astro, crawlable, destiné à `baillan.com` (FEAT-050). Construit
+et déployé séparément de l'app Flutter (`web/`), sur les cibles Firebase
+Hosting `marketing` (prod) et `marketing-stage` (staging).
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Invariants durs — à ne jamais casser
 
-## 🚀 Project Structure
+1. **Zéro JavaScript exécutable.** Aucune île (`client:*`), aucun `<script>`
+   ajouté à la main, sauf JSON-LD (`type="application/ld+json"`), qui n'exécute
+   rien. C'est la raison d'être du site : il doit rester intégralement
+   crawlable et léger sans dépendre d'un moteur JS côté client.
+2. **`src/styles/tokens.css` est un fichier généré — ne jamais l'éditer à la
+   main.** Source canonique : `config/theme_tokens.json`, à la racine du
+   dépôt. Pour changer une couleur : éditer le JSON puis régénérer avec
+   `dart run tool/gen_theme_tokens.dart` (régénère aussi le miroir Dart de
+   l'app, `lib/core/theme/app_palette.g.dart`). Garde-fou CI :
+   `scripts/check-theme-tokens.sh` — échoue si ce fichier diverge de ce que
+   produit le générateur.
+3. **Version d'Astro épinglée exacte** (`"astro": "7.3.1"` dans
+   `package.json`, sans `^`) — volontaire, pas un oubli. Ne pas la remettre en
+   range sans une raison explicite.
+4. **URL canonique** : toujours via `getCanonicalUrl` /
+   `normalizeServedPath` de `src/lib/urls.ts`, jamais recalculée depuis
+   `Astro.url` directement. `build.format: 'file'` (astro.config.mjs) fait
+   que `Astro.url.pathname` reflète le nom de fichier de sortie
+   (`/index.html`, `/faq.html`), pas l'URL réellement servie une fois
+   `cleanUrls: true` appliqué par Firebase Hosting — `urls.ts` est le seul
+   endroit qui connaît cette règle.
 
-Inside of your Astro project, you'll see the following folders and files:
+## Commandes
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+| Commande | Action |
+| :--- | :--- |
+| `npm ci --prefix site` | Installe les dépendances (utilisé en CI) |
+| `npm run dev --prefix site` | Serveur de dev local (`localhost:4321`) |
+| `npm run build --prefix site` | Build de production dans `site/dist/` |
+| `npm run preview --prefix site` | Prévisualise le build localement |
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Node **>= 22.12.0** requis (`engines.node` dans `package.json`) — Astro 7 ne
+démarre pas sur Node 20.
