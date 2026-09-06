@@ -1,7 +1,97 @@
 ---
 // site/src/pages/index.astro
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const appUrl = 'https://app.baillan.com';
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Baillan',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web, iOS, Android',
+  inLanguage: 'fr',
+  description:
+    'Gestion locative pour bailleurs particuliers : quittances conformes, suivi des loyers, charges et rentabilité.',
+};
 ---
-<BaseLayout title="Baillan — gestion locative" description="La gestion locative sans tableur.">
-  <h1>Baillan</h1>
+<BaseLayout
+  title="Baillan — la gestion locative sans tableur"
+  description="Quittances conformes à la loi de 1989, suivi des loyers et des retards, régularisation des charges et rentabilité réelle. Pour les bailleurs particuliers."
+>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <section class="hero">
+    <h1>La gestion locative enfin sans tableur</h1>
+    <p class="lede">
+      Quittances, loyers, charges et rentabilité dans un seul outil, conçu pour
+      les bailleurs particuliers.
+    </p>
+    <p class="actions">
+      <a class="btn" href={`${appUrl}/signup`}>Commencer gratuitement</a>
+      <a class="btn-ghost" href={`${appUrl}/simulator`}>Essayer le simulateur</a>
+    </p>
+  </section>
+
+  <section class="features">
+    <article>
+      <h2>Quittances conformes</h2>
+      <p>
+        Les mentions imposées par la loi du 6 juillet 1989 sont générées avec le
+        document. Vous obtenez un PDF prêt à envoyer, pas un modèle à compléter.
+      </p>
+    </article>
+    <article>
+      <h2>Loyers et retards</h2>
+      <p>
+        Chaque encaissement met à jour le bail. Vous savez qui a payé, qui doit
+        encore, et depuis combien de temps.
+      </p>
+    </article>
+    <article>
+      <h2>Charges récupérables</h2>
+      <p>
+        La régularisation suit le décret n°87-713 : seules les charges réellement
+        récupérables sont imputées au locataire.
+      </p>
+    </article>
+    <article>
+      <h2>Rentabilité réelle</h2>
+      <p>
+        Le cash-flow déduit les dépenses réelles et la mensualité de crédit. Vous
+        voyez ce que le bien rapporte, pas ce qu'il encaisse.
+      </p>
+    </article>
+  </section>
 </BaseLayout>
+
+<style>
+  .hero { padding: 4.5rem 0 3rem; text-align: center; }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1;
+    letter-spacing: -.02em; margin: 0 0 1rem;
+  }
+  .lede {
+    font-size: 1.15rem; color: var(--color-ink-muted);
+    max-width: 46ch; margin: 0 auto 2rem;
+  }
+  .actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    background: var(--color-olive); color: var(--color-cream);
+    padding: .8rem 1.4rem; border-radius: 7px;
+    font-weight: 650; text-decoration: none;
+  }
+  .btn-ghost {
+    color: var(--color-olive); border: 1px solid var(--color-rule-strong);
+    padding: .8rem 1.4rem; border-radius: 7px; text-decoration: none;
+  }
+  .features {
+    display: grid; gap: 1rem; padding-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+  .features article {
+    background: var(--color-paper); border: 1px solid var(--color-rule);
+    border-radius: 9px; padding: 1.25rem;
+  }
+  .features h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+  .features p { margin: 0; color: var(--color-ink-muted); font-size: .95rem; }
+</style>
