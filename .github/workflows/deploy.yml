@@ -70,7 +70,7 @@ jobs:
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
             echo "hosting_target=stage" >> $GITHUB_OUTPUT
-            echo "public_url=https://stage.baillan.com" >> $GITHUB_OUTPUT
+            echo "public_url=https://app.staging.baillan.com" >> $GITHUB_OUTPUT
             # STAGING : abonnement Pro OUVERT pour poursuivre le développement.
             echo "subscriptions_enabled=true" >> $GITHUB_OUTPUT
             # Rules + indexes sur la base `staging` UNIQUEMENT. Ni `storage`
