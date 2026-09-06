@@ -12,7 +12,7 @@
 > app.staging.baillan.com  → app (noindex)              cible `stage`
 > ```
 >
-> **Nature de ce document** : une partie des étapes est **manuelle** (registrar
+> **Nature de ce document** : une partie des étapes est **manuelle** (Cloudflare
 > DNS, console Firebase, Play Console) — elles ne peuvent pas être faites par un
 > agent et sont marquées 👤. Les étapes de **code** sont préparées sur la branche
 > `chore/050e-bascule-domaine` (2 commits, un par phase) et marquées 💻.
@@ -24,7 +24,8 @@
 
 ## Prérequis (avant de commencer)
 
-- [x] `baillan.com` acheté, DNS accessible côté registrar (confirmé 2026-09-06).
+- [x] `baillan.com` acheté, DNS géré par **Cloudflare** (NS `*.ns.cloudflare.com`),
+      zone accessible (confirmé 2026-09-06).
 - [x] **#157 mergé dans `develop`** (2026-09-06) — le fix #138 (`stripe_env.ts`,
       `PROD_ORIGINS`) est sur `develop`, et `develop` a été mergé dans cette
       branche. Le resserrage P6 est donc **déjà écrit** sur `chore/050e-bascule-domaine`
@@ -40,20 +41,42 @@
 
 ---
 
+## ⚠️ Cloudflare — le piège du nuage orange (à lire avant toute étape DNS)
+
+Le DNS de `baillan.com` est géré par **Cloudflare**. « Cloudflare → DNS » ci-dessous
+désigne le tableau de bord Cloudflare, onglet **DNS → Records** du domaine.
+
+Cloudflare met tout nouvel enregistrement A/CNAME en **Proxied (nuage orange 🟠)**
+par défaut : le trafic passe alors par des IP Cloudflare (`188.114.x`, `104.x`) au
+lieu des IP Firebase. **Firebase ne peut alors ni vérifier le domaine ni émettre le
+certificat SSL** — la console reste « en attente », sans erreur explicite (constaté
+le 2026-07-20).
+
+👉 **Chaque enregistrement lié à Firebase (A, TXT de vérification, CNAME) doit être
+en gris ⚪ « DNS only ».** L'y laisser en permanence : Firebase Hosting a déjà CDN +
+SSL. Si le proxy est un jour réactivé, il FAUT passer SSL/TLS en **Full (strict)**
+(le mode « Flexible » crée des boucles de redirection infinies).
+
+Diagnostic : `dig +short A <hôte> @melissa.ns.cloudflare.com` doit renvoyer une IP
+Firebase (`199.36.158.x` ou similaire), jamais `188.114.x` / `104.x`.
+
 ## Phase 1 — Staging (répéter la bascule à blanc, sans risque prod)
 
 Faire la bascule d'abord sur staging valide toute la mécanique sur un
 environnement jetable avant de toucher la prod.
 
-- [ ] **S1** 👤 Registrar : créer l'entrée DNS de `app.staging.baillan.com`
-      (l'app de staging). Ne pas encore toucher `staging.baillan.com` si elle
-      sert déjà la vitrine via `marketing-stage`.
+- [ ] **S1** 👤 **Après S3** (Firebase donne les enregistrements exacts) :
+      Cloudflare → DNS → ajouter l'entrée de `app.staging.baillan.com` demandée
+      par Firebase, en **nuage gris ⚪ DNS only**. Ne pas toucher
+      `staging.baillan.com` si elle sert déjà la vitrine via `marketing-stage`.
+      (S1 vient après S3 en pratique : c'est Firebase qui dicte quoi créer.)
 - [ ] **S2** 👤 Firebase Console → Authentication → Settings → Authorized
       domains : **ajouter `app.staging.baillan.com`** (et `staging.baillan.com`
       si absent). **Faire ceci AVANT S3.**
 - [ ] **S3** 👤 Firebase Console → Hosting → site `baillan-stage` → Add custom
-      domain → `app.staging.baillan.com`. Suivre les enregistrements A/TXT
-      proposés côté registrar, attendre la vérification + le certificat.
+      domain → `app.staging.baillan.com`. Firebase affiche un **TXT** de
+      vérification puis/ou des **A** : les reporter dans **Cloudflare → DNS en
+      gris ⚪ DNS only** (S1). Attendre « Connected » + le certificat.
 - [ ] **S4** 💻 Merger le commit **phase staging** de `chore/050e-bascule-domaine`
       (`413819a`) : `STAGING_ORIGIN` → `app.staging.baillan.com`, `deploy.yml`
       develop `public_url` → `app.staging.baillan.com`. Le push sur `develop`
@@ -75,10 +98,11 @@ environnement jetable avant de toucher la prod.
 
 Ne démarrer qu'une fois la Phase 1 validée et les prérequis cochés (#157, légal).
 
-- [ ] **P1** 👤 Registrar : préparer les entrées DNS de `app.baillan.com` (app)
-      et de `baillan.com` / `www.baillan.com` (vitrine). L'apex `baillan.com`
-      exige des enregistrements A/AAAA (pas de CNAME sur l'apex) ; `www` sera un
-      301 vers l'apex.
+- [ ] **P1** 👤 **Après P3/P4** : Cloudflare → DNS → créer les entrées dictées
+      par Firebase pour `app.baillan.com` (app) et `baillan.com` /
+      `www.baillan.com` (vitrine), toutes en **gris ⚪ DNS only**. L'apex
+      `baillan.com` prend des A/AAAA (pas de CNAME sur l'apex) ; `www` = 301 vers
+      l'apex (redirection configurée côté Firebase Hosting).
 - [ ] **P2** 👤 Firebase Console → Authentication → Authorized domains :
       **ajouter `app.baillan.com`** (et `baillan.com`, `www.baillan.com`).
       **AVANT P3 et P4.** Ne rien retirer encore.
