@@ -1,5 +1,18 @@
 # SEO — Baillan (PWA Flutter Web + Firebase Hosting)
 
+> **⚠️ Doc en grande partie CADUC depuis FEAT-050 (2026-09-06).** Il décrit
+> l'approche FEAT-049 : enrichir l'`index.html` de l'**app Flutter** pour la
+> rendre indexable. FEAT-050 a **inversé** cette stratégie — la surface
+> crawlable est désormais un **site vitrine Astro séparé** (`site/`, cible
+> Hosting `marketing`, `baillan.com`), et l'**app est `noindex` en
+> permanence** (elle déménage sur `app.baillan.com`). Pour tout ce qui touche
+> le SEO réel du produit, la source de vérité est le code de `site/` et la
+> spec `docs/superpowers/specs/2026-09-05-vitrine-baillan-migration-domaine-design.md`.
+> Les sections ci-dessous restent utiles comme **historique** et comme
+> réserve d'artefacts (JSON-LD, copy) réutilisables sur la vitrine, mais leurs
+> instructions d'application à l'app Flutter ne valent plus. Les annotations
+> « caduc » datées 2026-09-06 signalent les points précis inversés.
+
 > Synthèse de l'audit SEO (FEAT-049). Source de vérité pour l'implémentation.
 > **Fait structurant** : l'UI est rendue en **CanvasKit** (peinte dans un `<canvas>`).
 > Les crawlers n'indexent PAS le canvas → aujourd'hui, pour Google, chaque page
@@ -193,8 +206,11 @@ PAS corrigeable par de la config** — il faut exposer du HTML crawlable.
 <title>Baillan — Gestion locative &amp; quittances de loyer pour bailleurs</title>
 <meta name="description" content="Baillan : la gestion locative simple pour bailleurs particuliers. Quittances de loyer conformes (loi 1989), suivi des loyers, charges et régularisation, simulateur d'investissement. Gratuit, données en Europe.">
 
-<!-- Robots : index,follow en PROD. En STAGING, l'étape CI (APP_ENV=dev) remplace
-     "index, follow" par "noindex, nofollow" (cf. §4.6) — ne jamais laisser noindex en prod. -->
+<!-- ⚠️ CADUC (2026-09-06, FEAT-050) : l'app Flutter est désormais `noindex,
+     nofollow` INCONDITIONNEL (prod comme staging) — son `web/index.html` réel
+     porte donc `noindex`, pas `index, follow`. Cet artefact d'origine visait à
+     rendre l'app indexable (FEAT-049) ; la crawlabilité vit maintenant sur la
+     vitrine `site/`. Ne PAS recopier la ligne ci-dessous dans l'app. -->
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://VOTRE-DOMAINE/">
 
