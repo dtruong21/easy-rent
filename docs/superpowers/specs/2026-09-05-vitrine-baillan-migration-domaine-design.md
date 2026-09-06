@@ -119,14 +119,15 @@ dépend de Flutter, et `dart run` s'effondre sur `type 'InvalidType' is not a
 subtype of type 'FunctionType'`. La méthode retenue est donc différente, et
 meilleure.
 
-Les huit couleurs deviennent une **source canonique unique**,
+Les **19 constantes de couleur** du thème deviennent une **source canonique
+unique**,
 `config/theme_tokens.json`, dont un générateur Dart tire deux miroirs :
 
 ```bash
 dart run tool/gen_theme_tokens.dart
 ```
 
-- `lib/core/theme/app_theme.g.dart` — les constantes consommées par l'app ;
+- `lib/core/theme/app_palette.g.dart` — les constantes consommées par l'app ;
 - `site/src/styles/tokens.css` — les variables CSS de la vitrine.
 
 C'est exactement le patron déjà en service dans le dépôt pour
@@ -143,7 +144,9 @@ diffère de ce qui est versionné — même idiome que `check-db-isolation.sh` e
 confiée à la discipline.
 
 **Conséquence sur l'application, à assumer.** `app_theme.dart` cesse de porter
-ses huit constantes de couleur en dur et les importe du miroir généré. Les
+ses 19 constantes de couleur en dur et les délègue au miroir généré. Ses
+**alias sémantiques** (`acquitte`, `echu`, `consigne`, `archive`) restent
+écrits à la main : ce sont des indirections métier, pas des couleurs. Les
 **valeurs ne changent pas** — le rendu de l'app est strictement identique, ce
 que verrouille un test de non-régression comparant chaque constante à sa valeur
 attendue. C'est le seul point où cette spec touche à l'application.
