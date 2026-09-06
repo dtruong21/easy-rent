@@ -34,9 +34,16 @@ import {
 } from "../entitlements/stripe_prices";
 import {asBag, requireAuthUid} from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
+import {resolveStripeKeyOrThrow, stripeEnvForOrigin} from "../utils/stripe_env";
 
-/** Clé secrète Stripe (serveur uniquement). */
+/** Clé secrète Stripe LIVE (serveur uniquement) — servie aux origines prod. */
 const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
+
+/**
+ * Clé secrète Stripe TEST — servie au staging et à l'émulateur (issue #138).
+ * Sans elle, un appel non-prod est refusé : il n'y a aucun repli sur la live.
+ */
+const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
 
 // Price IDs : plus de `defineString` local. Les six paramètres (3 paliers × 2
 // périodicités) sont déclarés une seule fois dans `entitlements/stripe_prices`,
@@ -209,7 +216,7 @@ export function buildCheckoutSessionParams(args: {
 }
 
 export const createCheckoutSession = onCall(
-  {secrets: [stripeSecret]},
+  {secrets: [stripeSecret, stripeTestSecret]},
   async (request) => {
     const uid = requireAuthUid(request);
     const {level, period} = parseCheckoutRequest(asBag(request.data));
@@ -224,9 +231,25 @@ export const createCheckoutSession = onCall(
         null,
     );
 
+    // Issue #138 : la clé Stripe et les URLs de retour se résolvent par
+    // l'Origin de l'appel, jamais par une constante de déploiement. Un appel
+    // depuis staging obtient la clé test ; une origine inconnue est refusée.
+    const origin = request.rawRequest?.headers?.origin;
+    const stripeKey = resolveStripeKeyOrThrow(
+      origin,
+      stripeSecret.value(),
+      stripeTestSecret.value(),
+    );
+
     const config: CheckoutConfig = {
       prices: readPriceTable(),
-      baseUrl: webAppBaseUrl.value(),
+      // Renvoyer l'utilisateur sur l'hôte d'où il vient : le défaut
+      // `WEB_APP_BASE_URL` (prod) expédiait un acheteur parti de staging vers
+      // baillan.com après paiement. `origin` est déjà validé ci-dessus.
+      baseUrl:
+        stripeEnvForOrigin(origin) === "live" ?
+          webAppBaseUrl.value() :
+          String(origin),
     };
     const email =
       typeof request.auth?.token.email === "string" ?
@@ -241,7 +264,7 @@ export const createCheckoutSession = onCall(
       customerEmail: email,
     });
 
-    const stripe = new Stripe(stripeSecret.value());
+    const stripe = new Stripe(stripeKey);
     const session = await stripe.checkout.sessions.create(params);
 
     // L'URL hostée Stripe vers laquelle le client web redirige.

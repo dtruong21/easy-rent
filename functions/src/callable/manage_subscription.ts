@@ -35,6 +35,7 @@ import {
   type PriceTable,
 } from "../entitlements/stripe_prices";
 import {asBag, requireAuthUid, requireString} from "../utils/callable_helpers";
+import {resolveStripeKeyOrThrow} from "../utils/stripe_env";
 
 import {
   parsePlanSelection,
@@ -43,6 +44,13 @@ import {
 
 /** Clé secrète Stripe (serveur uniquement) — réutilise le secret existant. */
 const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
+
+/**
+ * Clé secrète Stripe TEST — servie au staging et à l'émulateur (issue #138).
+ * Même garantie que sur `createCheckoutSession` : gérer un abonnement depuis
+ * staging ne doit jamais toucher les abonnements réels du compte Stripe live.
+ */
+const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
 
 /**
  * Statuts Stripe d'un abonnement encore « gérable » (la période court, donc on
@@ -231,7 +239,7 @@ function resolveChange(data: Record<string, unknown>): {
 }
 
 export const manageSubscription = onCall(
-  {secrets: [stripeSecret]},
+  {secrets: [stripeSecret, stripeTestSecret]},
   async (request): Promise<ManageSubscriptionResult | ChangePlanResult> => {
     const uid = requireAuthUid(request);
     const data = asBag(request.data);
@@ -246,7 +254,16 @@ export const manageSubscription = onCall(
     // (palier résolu sans action, ou l'inverse) ne soit représentable.
     const change = action === "change_plan" ? resolveChange(data) : null;
 
-    const stripe = new Stripe(stripeSecret.value());
+    // Issue #138 : clé résolue par l'Origin de l'appel. Sans ce garde-fou,
+    // un `cancel`/`change_plan` lancé depuis staging opérait sur les vrais
+    // abonnements du compte Stripe de production.
+    const stripe = new Stripe(
+      resolveStripeKeyOrThrow(
+        request.rawRequest?.headers?.origin,
+        stripeSecret.value(),
+        stripeTestSecret.value(),
+      ),
+    );
 
     const search = await stripe.subscriptions.search({
       query: `metadata['${RC_APP_USER_ID_METADATA_KEY}']:'${uid}'`,
