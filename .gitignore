@@ -118,3 +118,8 @@ firestore-debug.log
 
 # Maquettes de brainstorming (visual companion) — local, jamais versionné
 .superpowers/
+
+# Site vitrine (Astro)
+site/node_modules/
+site/dist/
+site/.astro/
