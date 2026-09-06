@@ -1,4 +1,13 @@
 # L'app Flutter n'a rien d'indexable : CanvasKit peint son texte dans un
 # canvas, invisible aux moteurs. Le contenu référençable vit sur la vitrine.
+#
+# Limite connue, non traitée ici : ce Disallow bloque l'exploration future,
+# mais ne désindexe pas rétroactivement une URL que Google connaît déjà et
+# qui reste liée ailleurs (Google peut la garder en résultat, sans extrait,
+# indéfiniment). Désindexer l'existant demanderait une séquence transitoire
+# (laisser explorer le temps qu'un <meta name="robots" content="noindex">
+# soit vu, puis bloquer) — hors périmètre ici car l'app déménage vers
+# app.baillan.com (nouvelle origine) : cette désindexation relève du runbook
+# de bascule de domaine, pas de ce fichier.
 User-agent: *
 Disallow: /
