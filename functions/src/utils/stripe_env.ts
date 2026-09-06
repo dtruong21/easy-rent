@@ -31,17 +31,14 @@ import {STAGING_ORIGIN} from "./db_router";
  * Origines servant l'application de production. La clé Stripe live n'est
  * accessible QUE depuis l'une d'elles, en comparaison exacte.
  *
- * `app.baillan.com` y figure avant même la migration de domaine (sujet cadré
- * dans `docs/BACKLOG.md`, = FEAT-050e) : le sous-domaine nous appartient, rien
- * ne le sert aujourd'hui, et l'y inscrire d'avance évite l'échec silencieux le
- * jour de la bascule — un paiement prod refusé parce que l'allowlist n'a pas
- * suivi le DNS.
+ * Depuis la bascule de domaine (FEAT-050e), l'app vit sur `app.baillan.com`
+ * SEUL. `baillan.com` et `www.baillan.com` servent désormais la vitrine
+ * statique : ils ne doivent JAMAIS obtenir la clé live — un `createCheckoutSession`
+ * appelé depuis la vitrine est refusé (`origin_not_allowed`). Les y laisser
+ * rouvrirait la faille de #138 sous une autre forme (le domaine marketing
+ * pourrait encaisser).
  */
-export const PROD_ORIGINS: readonly string[] = [
-  "https://baillan.com",
-  "https://www.baillan.com",
-  "https://app.baillan.com",
-];
+export const PROD_ORIGINS: readonly string[] = ["https://app.baillan.com"];
 
 /**
  * Origines servant l'app en mode test. Le littéral staging vient de
