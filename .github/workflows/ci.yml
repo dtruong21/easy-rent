@@ -65,6 +65,9 @@ jobs:
       - name: Check Firestore isolation (ADR 0003)
         run: bash scripts/check-db-isolation.sh
 
+      - name: Check theme token mirrors
+        run: bash scripts/check-theme-tokens.sh
+
   functions:
     name: Functions (lint · build · test)
     runs-on: ubuntu-latest
@@ -95,6 +98,31 @@ jobs:
       - name: Tests
         run: npm test
         working-directory: functions
+
+  site:
+    name: Site vitrine (build Astro)
+    runs-on: ubuntu-latest
+    # Le site marketing (site/, FEAT-050) n'était jusqu'ici construit que dans
+    # deploy.yml, après le merge — une PR qui casse `astro build` passait donc
+    # la CI au vert puis faisait échouer le déploiement, app comprise (job
+    # séquentiel, deploy_targets couplés). Ce job met le build sous CI.
+    steps:
+      - uses: actions/checkout@v4
+
+      # `site/package.json` exige `engines.node: ">=22.12.0"` (Astro 7) — ne
+      # PAS copier le `node-version: "20"` des autres jobs Node de ce fichier,
+      # `npm ci --prefix site` échouerait dès l'installation.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install deps
+        run: npm ci --prefix site
+
+      - name: Build
+        run: npm run build --prefix site
 
   firestore-rules:
     name: Firestore Rules (cross-user)

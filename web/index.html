@@ -39,14 +39,19 @@
   <title>Baillan — Gestion locative &amp; quittances de loyer pour bailleurs</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- ===================== SEO (FEAT-049) =====================
+  <!-- ===================== SEO (FEAT-049/FEAT-050) =====================
        Domaine canonique : baillan.com (domaine custom branché 2026-07-20).
        `www.baillan.com` doit rediriger vers l'apex — une seule URL canonique.
        Le `.web.app` Firebase reste servi mais n'est plus canonique.
        Voir docs/SEO.md.
-       Robots : "index, follow" par défaut (prod). L'étape "noindex staging" de
-       deploy.yml bascule en "noindex, nofollow" sur les builds APP_ENV=dev. -->
-  <meta name="robots" content="index, follow">
+       Robots : "noindex, nofollow" INCONDITIONNEL, prod comme staging. L'app
+       Flutter peint son texte dans un <canvas> (CanvasKit) : rien n'y est
+       jamais indexable, dans aucun environnement. Le contenu réellement
+       crawlable vit sur la vitrine statique (site/, FEAT-050) — c'est elle
+       qui porte désormais "index, follow". `web/robots.txt` applique la même
+       règle en Disallow global, pour la même raison ; les deux doivent rester
+       alignés. -->
+  <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://baillan.com/">
 
   <!-- Open Graph -->

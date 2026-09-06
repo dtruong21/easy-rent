@@ -55,7 +55,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-045 | Suppression compte in-app + /delete-account (loi 6/7/1989) | ✅ done | account | PR #69 |
 | FEAT-048 | FAQ produit publique /faq | ✅ done | account | PR #69 |
 | FEAT-049 | SEO du PWA — quick-wins (Option A) + domaine canonique baillan.com | ✅ done | account | PR #73, #121 |
-| FEAT-050 | Site marketing statique crawlable (Option B) | 📋 planned | account | docs/backlog/050-marketing-site-seo.md |
+| FEAT-050 | Site marketing statique crawlable (Option B) | 🚧 v1 construite (bascule domaine en attente) | account | docs/backlog/050-marketing-site-seo.md |
 | FEAT-051 | Baillan Pro — annonces & diffusion multi-portails | 💡 idea | properties | discovery PR #98, docs/backlog/051-annonces-diffusion-pro.md |
 | FEAT-052 | Feature Readiness Score (`/feature-ready`, advisory) | ✅ done | tooling | PR #100 (`tool/feature_ready.dart`) |
 | FEAT-054 | Isolation prod/staging — base Firestore `staging` (web ; Auth/Storage/Functions restent partagés) | ✅ done | account | PR #145 (impl.), PR #140 (cadrage), ADR 0003 |

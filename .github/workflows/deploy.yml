@@ -65,7 +65,7 @@ jobs:
             # Rules + indexes sur la base de PROD uniquement, plus les rules
             # Storage : le bucket est unique (partagé avec staging), donc il ne
             # se déploie que depuis `main` — jamais depuis `develop`.
-            echo 'deploy_targets=hosting:prod,firestore:(default),storage' >> $GITHUB_OUTPUT
+            echo 'deploy_targets=hosting:prod,hosting:marketing,firestore:(default),storage' >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
@@ -77,7 +77,7 @@ jobs:
             # (bucket partagé) ni `functions` (déploiement unique servant aussi
             # la prod) — les ajouter ici ferait fuir du code non relu en prod à
             # chaque push sur `develop`. Cf. ADR 0003, « Limitations assumées ».
-            echo "deploy_targets=hosting:stage,firestore:staging" >> $GITHUB_OUTPUT
+            echo "deploy_targets=hosting:stage,hosting:marketing-stage,firestore:staging" >> $GITHUB_OUTPUT
           fi
 
   build-and-deploy:
@@ -189,21 +189,66 @@ jobs:
             --build-name=${{ steps.ver.outputs.name }} \
             --build-number=${{ steps.ver.outputs.code }}
 
-      # SEO (FEAT-049) — noindex sur STAGING uniquement. firebase.json est
-      # partagé entre le channel live (prod) et les channels de preview, donc un
-      # header X-Robots-Tag par-canal est impossible : on patche l'artefact
-      # build/web juste avant le deploy sur les builds dev. robots.txt devient
-      # tout-bloquant, le sitemap est retiré, et la <meta robots> passe en
-      # noindex. La PROD (main → app_env=prod) saute cette étape et conserve
-      # "index, follow" + le sitemap — asymétrie de risque volontaire (sûr même
-      # si l'étape est un jour oubliée).
+      # SEO (FEAT-049/FEAT-050) — l'app Flutter n'est plus indexable nulle
+      # part, prod comme staging : `web/robots.txt` (source) est en Disallow
+      # global et `web/index.html` a pour défaut `noindex, nofollow` — les
+      # deux facts que ce step ré-appliquait ci-dessous sont donc déjà vrais
+      # AVANT même que ce step ne tourne, quel que soit l'environnement. La
+      # PROD ne "saute" plus rien : elle sert exactement le même noindex que
+      # staging, ce qui élimine l'asymétrie de risque qu'il y avait avant
+      # FEAT-050 (quand le défaut prod était "index, follow" et que seule
+      # staging le corrigeait ici).
+      # Ce step est donc redondant en pratique (`cp`/`rm -f`/`sed` n'ont plus
+      # rien à changer) et ne reste que comme filet de sécurité idempotent :
+      # si un futur diff réintroduit par erreur un défaut "index, follow"
+      # dans `web/index.html`, ce step continue de forcer le noindex sur les
+      # builds staging (mais pas sur prod, qui n'a plus ce filet — la vraie
+      # garantie prod est le défaut de `web/index.html` lui-même).
+      # firebase.json est par ailleurs partagé entre le channel live et les
+      # channels de preview, donc un header X-Robots-Tag par-canal reste
+      # impossible : `web/robots.staging.txt` documente ce cas côté fichier
+      # servi, même si son contenu (Disallow global) est désormais identique
+      # à celui de `web/robots.txt`.
       - name: Staging — noindex (robots + sitemap + meta)
         if: needs.determine-env.outputs.app_env == 'dev'
         run: |
           cp web/robots.staging.txt build/web/robots.txt
           rm -f build/web/sitemap.xml
           sed -i 's/content="index, follow"/content="noindex, nofollow"/' build/web/index.html
-          echo "Staging noindex appliqué : robots.txt=Disallow, sitemap retiré, meta robots=noindex."
+          echo "Staging noindex vérifié : robots.txt=Disallow, sitemap absent, meta robots=noindex."
+
+      # `site/package.json` (FEAT-050, vitrine Astro) déclare
+      # `engines.node: ">=22.12.0"`. Sans ce step, le job hérite du Node par
+      # défaut du runner `ubuntu-latest` — non garanti, non documenté, et ce
+      # job n'avait jamais utilisé Node avant ce diff. `node-version: "22"`
+      # (majeure seule, comme les jobs Node de `ci.yml`) plutôt qu'un patch
+      # exact : n'importe quelle 22.x que `actions/setup-node` installe est
+      # déjà >= 22.12.0, donc pas besoin de la faire suivre manuellement comme
+      # `flutter-version` ci-dessus. Ne PAS copier `node-version: "20"` des
+      # jobs Node de `ci.yml` — Astro 7 exige >= 22.12.0, "20" échouerait au
+      # premier `npm ci --prefix site`.
+      # Ce step (et « Build marketing site » ci-dessous) est dans le même job
+      # séquentiel que le déploiement Hosting/Firestore/Storage de prod : un
+      # échec ici bloque tout le déploiement de l'app Flutter avec lui, alors
+      # que les deux étaient découplés avant ce diff. Accepté sciemment (cf.
+      # task-3-report.md) : le site marketing partage le même `deploy_targets`
+      # et la même release que l'app.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Build marketing site
+        # SITE_ENV=staging fait basculer site/src/pages/robots.txt.ts (Task 7,
+        # FEAT-050) en Disallow global sur `develop`. La cible d'hébergement
+        # `marketing-stage` sert déjà `X-Robots-Tag: noindex, nofollow` sur
+        # tout (firebase.json) ; ce robots.txt est une deuxième ceinture pour
+        # qu'un explorateur ne perde même pas son temps à récupérer les pages.
+        # Vide sur `main` (prod) : la vitrine reste indexable.
+        env:
+          SITE_ENV: ${{ needs.determine-env.outputs.app_env == 'dev' && 'staging' || '' }}
+        run: npm ci --prefix site && npm run build --prefix site
 
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
       #

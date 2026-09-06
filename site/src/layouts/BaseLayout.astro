@@ -1,0 +1,75 @@
+---
+// site/src/layouts/BaseLayout.astro
+import '../styles/tokens.css';
+import { appUrl, getCanonicalUrl } from '../lib/urls';
+
+interface Props {
+  title: string;
+  description: string;
+  noindex?: boolean;
+}
+const { title, description, noindex = false } = Astro.props;
+const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
+---
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-nav">
+      <a class="brand" href="/">Baillan</a>
+      <nav>
+        <a href="/faq">FAQ</a>
+        <a href="/a-propos">À propos</a>
+        <a class="cta" href={appUrl}>Ouvrir l'app</a>
+      </nav>
+    </header>
+    <main><slot /></main>
+    <footer class="site-footer">
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href={`${appUrl}/privacy`}>Confidentialité</a>
+      <a href={`${appUrl}/terms`}>CGU</a>
+      <a href="/supprimer-mon-compte">Supprimer mon compte</a>
+    </footer>
+  </body>
+</html>
+
+<style>
+  :root { color-scheme: light; }
+  body {
+    margin: 0;
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+  }
+  .site-nav, .site-footer {
+    display: flex; align-items: center; gap: 1.5rem;
+    padding: 1rem clamp(1rem, 5vw, 4rem);
+  }
+  .site-nav { border-bottom: 1px solid var(--color-rule); }
+  .site-nav nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
+  .brand { font-weight: 800; font-size: 1.15rem; text-decoration: none; color: var(--color-ink); }
+  .site-nav a, .site-footer a { color: var(--color-ink-muted); text-decoration: none; }
+  .site-nav a:hover, .site-footer a:hover { color: var(--color-ink); text-decoration: underline; }
+  .site-nav .cta {
+    background: var(--color-olive); color: var(--color-cream);
+    padding: .55rem 1rem; border-radius: 7px; font-weight: 650;
+  }
+  .site-footer {
+    border-top: 1px solid var(--color-rule);
+    margin-top: 4rem; font-size: .9rem; flex-wrap: wrap;
+  }
+  main { max-width: 68rem; margin: 0 auto; padding: 0 clamp(1rem, 5vw, 4rem); }
+</style>
