@@ -193,7 +193,8 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "headers": [
         {
-          "source": "**/*.html",
+          "//": "Avec cleanUrls, Firebase route headers sur le CHEMIN demandé (/, /about), pas sur le fichier physique (index.html) : **/*.html ne matche donc jamais une clean URL et retombait sur le défaut Firebase (max-age=3600). ** attrape toutes les pages HTML aussi ; il reste placé AVANT /_astro/** et /{robots.txt,sitemap.xml} qui gagnent pour leurs chemins via la sémantique dernière-règle-matchante (cf. commentaire ligne ~76, bloc prod).",
+          "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
         },
         {
@@ -217,7 +218,8 @@
           "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
         },
         {
-          "source": "**/*.html",
+          "//": "Avec cleanUrls, **/*.html ne matche jamais une clean URL (Firebase route headers sur le chemin demandé, pas le fichier physique) — retombait sur le défaut Firebase (max-age=3600). ** couvre toute page HTML ; clé Cache-Control distincte du X-Robots-Tag de la règle précédente, donc les deux headers s'appliquent sans conflit.",
+          "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
         }
       ]

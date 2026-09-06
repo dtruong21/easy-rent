@@ -205,6 +205,31 @@ jobs:
           sed -i 's/content="index, follow"/content="noindex, nofollow"/' build/web/index.html
           echo "Staging noindex appliqué : robots.txt=Disallow, sitemap retiré, meta robots=noindex."
 
+      # `site/package.json` (FEAT-050, vitrine Astro) déclare
+      # `engines.node: ">=22.12.0"`. Sans ce step, le job hérite du Node par
+      # défaut du runner `ubuntu-latest` — non garanti, non documenté, et ce
+      # job n'avait jamais utilisé Node avant ce diff. `node-version: "22"`
+      # (majeure seule, comme les jobs Node de `ci.yml`) plutôt qu'un patch
+      # exact : n'importe quelle 22.x que `actions/setup-node` installe est
+      # déjà >= 22.12.0, donc pas besoin de la faire suivre manuellement comme
+      # `flutter-version` ci-dessus. Ne PAS copier `node-version: "20"` des
+      # jobs Node de `ci.yml` — Astro 7 exige >= 22.12.0, "20" échouerait au
+      # premier `npm ci --prefix site`.
+      # Ce step (et « Build marketing site » ci-dessous) est dans le même job
+      # séquentiel que le déploiement Hosting/Firestore/Storage de prod : un
+      # échec ici bloque tout le déploiement de l'app Flutter avec lui, alors
+      # que les deux étaient découplés avant ce diff. Accepté sciemment (cf.
+      # task-3-report.md) : le site marketing partage le même `deploy_targets`
+      # et la même release que l'app.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Build marketing site
+        run: npm ci --prefix site && npm run build --prefix site
+
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
       #
       # Pourquoi PAS l'action FirebaseExtended/action-hosting-deploy@v0 :
@@ -229,9 +254,6 @@ jobs:
       #
       # À retirer / simplifier dès que firebase-tools patche son retry —
       # suivre https://github.com/firebase/firebase-tools/issues
-      - name: Build marketing site
-        run: npm ci --prefix site && npm run build --prefix site
-
       - name: Deploy to Firebase (hosting + Firestore rules/indexes)
         id: firebase_deploy
         env:
