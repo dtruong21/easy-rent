@@ -10,6 +10,12 @@
         ],
         "stage": [
           "baillan-stage"
+        ],
+        "marketing": [
+          "baillan-marketing"
+        ],
+        "marketing-stage": [
+          "baillan-marketing-stage"
         ]
       }
     }

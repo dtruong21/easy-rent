@@ -65,7 +65,7 @@ jobs:
             # Rules + indexes sur la base de PROD uniquement, plus les rules
             # Storage : le bucket est unique (partagé avec staging), donc il ne
             # se déploie que depuis `main` — jamais depuis `develop`.
-            echo 'deploy_targets=hosting:prod,firestore:(default),storage' >> $GITHUB_OUTPUT
+            echo 'deploy_targets=hosting:prod,hosting:marketing,firestore:(default),storage' >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
@@ -77,7 +77,7 @@ jobs:
             # (bucket partagé) ni `functions` (déploiement unique servant aussi
             # la prod) — les ajouter ici ferait fuir du code non relu en prod à
             # chaque push sur `develop`. Cf. ADR 0003, « Limitations assumées ».
-            echo "deploy_targets=hosting:stage,firestore:staging" >> $GITHUB_OUTPUT
+            echo "deploy_targets=hosting:stage,hosting:marketing-stage,firestore:staging" >> $GITHUB_OUTPUT
           fi
 
   build-and-deploy:
@@ -229,6 +229,9 @@ jobs:
       #
       # À retirer / simplifier dès que firebase-tools patche son retry —
       # suivre https://github.com/firebase/firebase-tools/issues
+      - name: Build marketing site
+        run: npm ci --prefix site && npm run build --prefix site
+
       - name: Deploy to Firebase (hosting + Firestore rules/indexes)
         id: firebase_deploy
         env:
