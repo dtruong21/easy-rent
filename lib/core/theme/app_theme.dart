@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_palette.g.dart';
 import '../ui/theme/app_colors.dart';
 import '../ui/theme/app_radii.dart';
 import '../ui/theme/app_spacing.dart';
@@ -22,17 +23,17 @@ class AppTheme {
   const AppTheme._();
 
   // --- Palette Baillan. -----------------------------------------------------
-  static const Color paper = Color(0xFFF7F4ED);
-  static const Color paperDeep = Color(0xFFEFE9DA);
-  static const Color cream = Color(0xFFFCFAF5);
-  static const Color ink = Color(0xFF1B1A17);
-  static const Color inkSurface = Color(0xFF2A2823);
-  static const Color inkMuted = Color(0xFF6B665D);
-  static const Color rule = Color(0xFFE8E2D3);
-  static const Color olive = Color(0xFF3F4A2A);
-  static const Color oliveMid = Color(0xFF5E6A45);
-  static const Color oliveSoft = Color(0xFFB5B89D);
-  static const Color oxblood = Color(0xFF9A3B2F);
+  static const Color paper = AppPalette.paper;
+  static const Color paperDeep = AppPalette.paperDeep;
+  static const Color cream = AppPalette.cream;
+  static const Color ink = AppPalette.ink;
+  static const Color inkSurface = AppPalette.inkSurface;
+  static const Color inkMuted = AppPalette.inkMuted;
+  static const Color rule = AppPalette.rule;
+  static const Color olive = AppPalette.olive;
+  static const Color oliveMid = AppPalette.oliveMid;
+  static const Color oliveSoft = AppPalette.oliveSoft;
+  static const Color oxblood = AppPalette.oxblood;
 
   // --- Extensions Baillan (brand polish, 30 juin 2026) ----------------------
   //
@@ -48,43 +49,43 @@ class AppTheme {
   /// Vert wagon de sceau notarial — état "Acquitté" (quittance émise et payée).
   /// Distinct chromatiquement du primary olive (plus froid, plus profond) pour
   /// éviter la confusion action/état. Contraste 7.92:1 sur paper (AAA).
-  static const Color sealGreen = Color(0xFF2E5339);
+  static const Color sealGreen = AppPalette.sealGreen;
 
   /// Ocre tampon administratif — état "Échu imminent" (paiement dû <7j) ou
   /// brouillon non signé. Évoque l'encre brunie d'un timbre fiscal. Contraste
   /// 5.92:1 sur paper (AA).
-  static const Color ochre = Color(0xFF7E5612);
+  static const Color ochre = AppPalette.ochre;
 
   /// Encre d'encrier — état "Consigné" / mention légale (loi 1989, RGPD).
   /// Seule entorse au "pas de bleu" : bleu d'encrier presque noir, pas un bleu
   /// SaaS. Contraste 10.86:1 sur paper (AAA).
-  static const Color indigoInk = Color(0xFF2A3656);
+  static const Color indigoInk = AppPalette.indigoInk;
 
   /// Papier vergé saturé — surface "Archivé" / zone documents conservés.
   /// Texture distincte de paperDeep sans introduire une nouvelle teinte.
   /// Non utilisable pour texte (le texte ink reste à >13:1).
-  static const Color kraft = Color(0xFFE4D9BD);
+  static const Color kraft = AppPalette.kraft;
 
   /// Pierre — état "Disabled" / placeholder de champ vide. Délibérément sous
   /// le seuil WCAG (2.28:1 sur paper) — c'est exactement le bon ratio pour
   /// un disabled. Séparé d'inkMuted, qui reste un texte secondaire AA lisible.
-  static const Color stone = Color(0xFFA8A39A);
+  static const Color stone = AppPalette.stone;
 
   /// Olive profond — hover / pressed du primary olive. À utiliser à la place
   /// des opacity overlays Material 3 (qui produisent un olive grisé pâteux).
   /// Contraste 10.07:1 sur paper.
-  static const Color oliveDeep = Color(0xFF34401F);
+  static const Color oliveDeep = AppPalette.oliveDeep;
 
   /// Bordure renforcée — card sélectionnée / focus ring outline. rule
   /// (#E8E2D3, 1.18:1) est invisible sur paper ; ruleStrong (~3:1) distingue
   /// une card focus sans recourir à l'olive (réservé au primary).
-  static const Color ruleStrong = Color(0xFFC9C1AB);
+  static const Color ruleStrong = AppPalette.ruleStrong;
 
   /// Brun encre — montants débiteurs en comptabilité (charges, sorties).
   /// Sépare sémantiquement "charge mensuelle" (neutre comptable) de "erreur
   /// système" (oxblood). Évite de dramatiser une opération normale. Contraste
   /// >8.5:1 sur paper.
-  static const Color amountNegative = Color(0xFF6E3A1F);
+  static const Color amountNegative = AppPalette.amountNegative;
 
   // --- Alias sémantiques métier (vocabulaire Baillan) -----------------------
   //

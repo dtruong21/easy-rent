@@ -1,5 +1,18 @@
 # SEO — Baillan (PWA Flutter Web + Firebase Hosting)
 
+> **⚠️ Doc en grande partie CADUC depuis FEAT-050 (2026-09-06).** Il décrit
+> l'approche FEAT-049 : enrichir l'`index.html` de l'**app Flutter** pour la
+> rendre indexable. FEAT-050 a **inversé** cette stratégie — la surface
+> crawlable est désormais un **site vitrine Astro séparé** (`site/`, cible
+> Hosting `marketing`, `baillan.com`), et l'**app est `noindex` en
+> permanence** (elle déménage sur `app.baillan.com`). Pour tout ce qui touche
+> le SEO réel du produit, la source de vérité est le code de `site/` et la
+> spec `docs/superpowers/specs/2026-09-05-vitrine-baillan-migration-domaine-design.md`.
+> Les sections ci-dessous restent utiles comme **historique** et comme
+> réserve d'artefacts (JSON-LD, copy) réutilisables sur la vitrine, mais leurs
+> instructions d'application à l'app Flutter ne valent plus. Les annotations
+> « caduc » datées 2026-09-06 signalent les points précis inversés.
+
 > Synthèse de l'audit SEO (FEAT-049). Source de vérité pour l'implémentation.
 > **Fait structurant** : l'UI est rendue en **CanvasKit** (peinte dans un `<canvas>`).
 > Les crawlers n'indexent PAS le canvas → aujourd'hui, pour Google, chaque page
@@ -28,7 +41,52 @@ canonical / OG / sitemap.
 
 ---
 
+> ## ⚠️ Mise à jour 2026-09-06 (FEAT-050) — le modèle ci-dessous est inversé
+>
+> Ce document décrit l'audit et l'implémentation **Option A** (FEAT-049) : à
+> l'époque, `web/index.html` était la **seule** surface publique (rewrite
+> Firebase `** → /index.html`), donc la seule chose qu'on pouvait rendre
+> crawlable — d'où un défaut `index, follow` en prod et un noindex appliqué
+> seulement côté staging par une étape CI. **FEAT-050 a construit l'Option B**
+> (`site/`, vitrine Astro statique, zéro JS exécutable, cible Hosting
+> `marketing`/`marketing-stage`) et inversé ce modèle :
+>
+> - **Surface crawlable** = le site vitrine (`site/`), pas l'app. `/`, `/faq`,
+>   `/mentions-legales`, etc. sont désormais de vraies pages HTML pré-rendues
+>   du site, **pas** des rewrites vers l'`index.html` de l'app.
+> - **`web/index.html`** (app Flutter) porte `<meta name="robots"
+>   content="noindex, nofollow">` **inconditionnel**, prod comme staging —
+>   vérifié : `grep -n 'name="robots"' web/index.html`. L'étape « Staging —
+>   noindex » de `.github/workflows/deploy.yml` n'est plus le mécanisme
+>   primaire de noindex (elle ne l'était que quand le défaut prod était
+>   `index, follow`) ; elle ne fait plus que ré-appliquer un état déjà vrai
+>   par défaut — un filet idempotent, redondant en pratique.
+> - **`web/robots.txt`** est passé en `Disallow: /` global (l'app n'a plus
+>   rien d'indexable ; l'ancien `Allow: /` + liste de sections privées décrit
+>   en §4.4 est caduc). **`web/sitemap.xml` a été supprimé** : le sitemap
+>   réel est généré par `@astrojs/sitemap` sur `site/` (`sitemap-index.xml` +
+>   `sitemap-0.xml`, cf. `firebase.json` cible `marketing`).
+> - La bascule DNS/domaine (baillan.com → vitrine, app.baillan.com → app),
+>   Firebase Auth et Play Console reste **hors périmètre FEAT-050** — runbook
+>   séparé à venir. En attendant, la cible Hosting `marketing` (prod) sert en
+>   noindex transitoire (cf. `firebase.json`).
+>
+> Le reste de ce document (sections 1 à 8) date d'avant FEAT-050 et garde de
+> la valeur (raisonnement de la décision, JSON-LD, image OG, mots-clés,
+> checklist domaine) mais décrit une architecture qui n'est plus l'actuelle ;
+> les passages les plus susceptibles d'induire en erreur sont annotés inline
+> ci-dessous plutôt que réécrits.
+
+---
+
 ## 1. Ce qu'un crawler voit aujourd'hui
+
+> État à la date de l'audit FEAT-049, avant tout correctif — conservé comme
+> point de départ du raisonnement. Depuis FEAT-050, ces URLs publiques ne sont
+> plus servies par l'app : `/`, `/faq`, `/mentions-legales`, etc. sont de
+> vraies pages HTML pré-rendues du site vitrine (`site/`), et l'app Flutter
+> (ci-dessous) est volontairement `noindex, nofollow` — cf. note 2026-09-06 en
+> tête de document.
 
 Toutes les URLs publiques (`/`, `/faq`, `/privacy`, `/terms`, `/delete-account`,
 `/simulator`) sont réécrites vers le **même** `index.html` (rewrite Firebase
@@ -60,8 +118,8 @@ PAS corrigeable par de la config** — il faut exposer du HTML crawlable.
 
 | Option | Description | Coût | Ce qu'on gagne | Verdict |
 |---|---|---|---|---|
-| **A — Enrichir `index.html`** | `<head>` riche + bloc HTML statique dans `<body>` + robots + sitemap + noindex staging | Faible (~0,5 j) | Métadonnées + **un seul** jeu de copy (la home). Toutes les routes partagent le même `index.html` → **pas** de meta/contenu par-route | ✅ **MAINTENANT** |
-| **B — Site marketing statique séparé** | Pages HTML pré-rendues à la racine (landing/FAQ/outils/guides), app Flutter sous `/app` ou sous-domaine | Moyen/élevé (base-href, liens routeur, redirect auth, domaines OAuth, `start_url` manifest, pipeline contenu) | **Seul** moyen d'avoir du contenu crawlable **par page**, de bons Core Web Vitals, et une vraie i18n-SEO (locale dans l'URL) | ⏭️ **quand le SEO devient un canal de croissance** |
+| **A — Enrichir `index.html`** | `<head>` riche + bloc HTML statique dans `<body>` + robots + sitemap + noindex staging | Faible (~0,5 j) | Métadonnées + **un seul** jeu de copy (la home). Toutes les routes partagent le même `index.html` → **pas** de meta/contenu par-route | ✅ **appliqué (FEAT-049)**, puis **retiré/inversé par FEAT-050** — l'app est repassée `noindex` inconditionnel, cf. note 2026-09-06 |
+| **B — Site marketing statique séparé** | Pages HTML pré-rendues à la racine (landing/FAQ/outils/guides), app Flutter sous `/app` ou sous-domaine | Moyen/élevé (base-href, liens routeur, redirect auth, domaines OAuth, `start_url` manifest, pipeline contenu) | **Seul** moyen d'avoir du contenu crawlable **par page**, de bons Core Web Vitals, et une vraie i18n-SEO (locale dans l'URL) | ✅ **v1 construite (FEAT-050)** — `site/`, cible Hosting `marketing` ; bascule de domaine restant à faire (runbook séparé) |
 | **C — Prerendering / dynamic rendering** | Snapshot du DOM rendu, ou HTML servi aux bots | — | **RIEN** : CanvasKit peint dans un canvas → le snapshot est **vide**. Le dynamic rendering = ré-author du contenu à la main = l'Option B déguisée, en plus fragile, flaggé « contournement » par Google | ❌ **à écarter** |
 
 ### Recommandation
@@ -79,6 +137,12 @@ PAS corrigeable par de la config** — il faut exposer du HTML crawlable.
    débloque réellement le contenu crawlable **par page** (pages-outils, guides) et une
    i18n-SEO réelle. À ce moment-là seulement, les JSON-LD FAQPage / per-route deviennent
    pleinement légitimes.
+
+   > ✅ **Fait (FEAT-050)** : la v1 du site vitrine (`site/`) est construite —
+   > page d'accueil, FAQ, mentions légales, zéro-JS exécutable, sitemap
+   > généré par `@astrojs/sitemap`. Reste hors périmètre FEAT-050 : la
+   > bascule DNS/domaine, Firebase Auth et Play Console (runbook séparé), et
+   > les pages-outils / guides listées en §3 P2.
 
 > ⚠️ **Cloaking.** Le bloc statique (Option A) est une **mitigation**, pas une vraie
 > solution. Le texte injecté DOIT correspondre à ce que voit l'utilisateur (c'est le cas :
@@ -142,8 +206,11 @@ PAS corrigeable par de la config** — il faut exposer du HTML crawlable.
 <title>Baillan — Gestion locative &amp; quittances de loyer pour bailleurs</title>
 <meta name="description" content="Baillan : la gestion locative simple pour bailleurs particuliers. Quittances de loyer conformes (loi 1989), suivi des loyers, charges et régularisation, simulateur d'investissement. Gratuit, données en Europe.">
 
-<!-- Robots : index,follow en PROD. En STAGING, l'étape CI (APP_ENV=dev) remplace
-     "index, follow" par "noindex, nofollow" (cf. §4.6) — ne jamais laisser noindex en prod. -->
+<!-- ⚠️ CADUC (2026-09-06, FEAT-050) : l'app Flutter est désormais `noindex,
+     nofollow` INCONDITIONNEL (prod comme staging) — son `web/index.html` réel
+     porte donc `noindex`, pas `index, follow`. Cet artefact d'origine visait à
+     rendre l'app indexable (FEAT-049) ; la crawlabilité vit maintenant sur la
+     vitrine `site/`. Ne PAS recopier la ligne ci-dessous dans l'app. -->
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://VOTRE-DOMAINE/">
 
@@ -262,6 +329,12 @@ produit. Flutter monte par-dessus au boot ; le crawler l'a déjà lu.
 
 ### 4.4 `web/robots.txt` — PRODUCTION
 
+> ⚠️ **Caduc depuis FEAT-050** (cf. note 2026-09-06 en tête de document). Le
+> `web/robots.txt` réel est désormais `Disallow: /` global, sans `Allow: /` ni
+> liste de sections privées : l'app n'a plus aucune page publique à faire
+> explorer, la vitrine (`site/`) portant tout le crawlable. Gabarit ci-dessous
+> conservé pour l'historique de la décision FEAT-049.
+
 ```
 # robots.txt — Baillan (PRODUCTION)
 # Domaine : remplacer VOTRE-DOMAINE par le domaine custom (unique occurrence : ligne Sitemap).
@@ -299,6 +372,12 @@ Disallow: /
 ```
 
 ### 4.6 `web/sitemap.xml`
+
+> ⚠️ **Supprimé depuis FEAT-050** (cf. note 2026-09-06 en tête de document).
+> `web/sitemap.xml` n'existe plus : le sitemap réel est généré par
+> `@astrojs/sitemap` sur `site/` (`sitemap-index.xml` + `sitemap-0.xml`, servi
+> par la cible Hosting `marketing`). Gabarit ci-dessous conservé pour
+> l'historique de la décision FEAT-049.
 
 Routes **publiques** uniquement (cf. `docs/state/routes/README.md`). Pas de hreflang (locale
 FR/EN = choix runtime, pas dans l'URL — FEAT-043). `/simulator` **exclu** : en
@@ -342,7 +421,14 @@ ne matche `.txt`/`.xml`, donc aucun conflit de clé) :
 }
 ```
 
-### 4.8 `.github/workflows/deploy.yml` — noindex staging (mécanisme PRIMAIRE)
+### 4.8 `.github/workflows/deploy.yml` — noindex staging (mécanisme PRIMAIRE À L'ÉPOQUE)
+
+> ⚠️ **Rôle changé depuis FEAT-050** (cf. note 2026-09-06 en tête de document).
+> Cette étape n'est plus le mécanisme primaire : `web/index.html` est
+> désormais `noindex, nofollow` **par défaut**, prod comme staging, donc
+> l'étape ne fait plus que ré-appliquer un état déjà vrai — un filet
+> idempotent redondant. Le contenu ci-dessous décrit son rôle et son
+> raisonnement d'origine (FEAT-049), toujours vrais historiquement.
 
 `firebase.json` est **partagé** entre live et channels → la seule différenciation fiable
 par canal est un **swap de fichier au build**. Ajouter cette étape **après** « Build web
@@ -358,12 +444,14 @@ par canal est un **swap de fichier au build**. Ajouter cette étape **après** �
     sed -i 's/content="index, follow"/content="noindex, nofollow"/' build/web/index.html
 ```
 
-> **Asymétrie de risque assumée** : le `robots.txt` staging (`Disallow: /`) est le
-> garde-fou robuste. La `<meta robots>` prod est `index, follow` **par défaut** (sûr
-> même si l'étape CI est oubliée) ; l'étape ci-dessus la flippe en `noindex` uniquement
-> sur les builds dev. `Disallow: /` bloque le crawl mais pas l'indexation d'une URL
-> connue par ailleurs ; pour du staging jamais lié (hash aléatoire, `--expires 7d`),
-> c'est pragmatiquement suffisant.
+> **Asymétrie de risque assumée (historique, FEAT-049)** : le `robots.txt` staging
+> (`Disallow: /`) était le garde-fou robuste. La `<meta robots>` prod était
+> `index, follow` **par défaut** (sûr même si l'étape CI était oubliée) ;
+> l'étape ci-dessus la flippait en `noindex` uniquement sur les builds dev.
+> `Disallow: /` bloque le crawl mais pas l'indexation d'une URL connue par
+> ailleurs ; pour du staging jamais lié (hash aléatoire, `--expires 7d`),
+> c'était pragmatiquement suffisant. **Depuis FEAT-050, le défaut prod
+> lui-même est `noindex, nofollow`** — l'asymétrie décrite ici n'existe plus.
 
 ---
 

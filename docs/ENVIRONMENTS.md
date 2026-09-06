@@ -36,7 +36,7 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 
 | Composant | Séparé dev/prod ? | Détail |
 |---|---|---|
-| **Hosting** | ✅ Oui | Deux sites : `easy-rent-54cd4` et `baillan-stage` |
+| **Hosting** | ✅ Oui | Quatre sites : app (`easy-rent-54cd4`, `baillan-stage`) + vitrine (`baillan-marketing`, `baillan-marketing-stage`, FEAT-050) |
 | **Domaine** | ✅ Oui | `baillan.com` vs `stage.baillan.com` |
 | **Indexation SEO** | ✅ Oui | `noindex` + robots bloquant sur staging |
 | **Firestore (données)** | ✅ **Oui** | Base `staging` vs `(default)` (prod) — ADR 0003 |
@@ -51,10 +51,19 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 Deux sites Firebase, chacun déployé sur son canal **live** via une cible
 `.firebaserc` :
 
-| Branche | Cible | Site | URL |
-|---|---|---|---|
-| `main` | `prod` | `easy-rent-54cd4` | https://baillan.com |
-| `develop` | `stage` | `baillan-stage` | https://stage.baillan.com |
+| Branche | Cible | Site | URL | Sert |
+|---|---|---|---|---|
+| `main` | `prod` | `easy-rent-54cd4` | https://baillan.com (à basculer) | app Flutter |
+| `develop` | `stage` | `baillan-stage` | https://stage.baillan.com | app Flutter |
+| `main` | `marketing` | `baillan-marketing` | (domaine non branché) | vitrine Astro (FEAT-050) |
+| `develop` | `marketing-stage` | `baillan-marketing-stage` | baillan-marketing-stage.web.app | vitrine Astro |
+
+> **FEAT-050** a ajouté les deux cibles `marketing`. La vitrine est un site
+> **Astro statique** (`site/`), servi depuis `site/dist` — distinct de l'app
+> Flutter (`build/web`). À terme (bascule de domaine, runbook séparé) : la
+> vitrine prend `baillan.com`, l'app déménage sur `app.baillan.com`. En
+> attendant, `marketing` prod sert un `X-Robots-Tag: noindex` **transitoire**
+> (retiré par le runbook) et son domaine n'est pas encore branché.
 
 ```json
 // .firebaserc
@@ -62,7 +71,10 @@ Deux sites Firebase, chacun déployé sur son canal **live** via une cible
   "projects": { "default": "easy-rent-54cd4" },
   "targets": {
     "easy-rent-54cd4": {
-      "hosting": { "prod": ["easy-rent-54cd4"], "stage": ["baillan-stage"] }
+      "hosting": {
+        "prod": ["easy-rent-54cd4"], "stage": ["baillan-stage"],
+        "marketing": ["baillan-marketing"], "marketing-stage": ["baillan-marketing-stage"]
+      }
     }
   }
 }
@@ -171,13 +183,20 @@ npm --prefix functions run test:rules   # émulateur, projet demo-easyrent
 
 ## 🚫 SEO — noindex sur staging
 
-`stage.baillan.com` est un domaine réellement crawlable : le `noindex` n'est pas
-optionnel. Le workflow l'applique sur `build/web` juste avant le deploy quand
-`APP_ENV=dev` :
+**Depuis FEAT-050, l'app Flutter est `noindex` en permanence**, dans tous les
+environnements : `web/robots.txt` est `Disallow: /` global, `web/sitemap.xml`
+supprimé, `<meta name="robots" content="noindex, nofollow">` inconditionnel.
+Son contenu n'est de toute façon pas indexable (CanvasKit peint le texte dans un
+canvas) ; la surface crawlable est la **vitrine** (`baillan.com`, cible
+`marketing`).
 
-- `web/robots.staging.txt` → `robots.txt` (tout-bloquant)
-- `sitemap.xml` retiré
-- `<meta name="robots" content="noindex">`
+L'étape staging du workflow (`APP_ENV=dev` : `web/robots.staging.txt` →
+`robots.txt`, `sitemap.xml` retiré, meta `noindex`) subsiste comme **filet
+idempotent** — elle ne change plus rien puisque le défaut est déjà `noindex`.
+
+La **vitrine de staging** (`marketing-stage`) est `noindex` par un
+`X-Robots-Tag: noindex, nofollow` servi sur `**` (config Hosting), et son
+`robots.txt` répond `Disallow: /` quand `SITE_ENV=staging`.
 
 ## 🔐 Secrets
 
@@ -205,8 +224,8 @@ Détail et rotation : [`SECURITY.md`](SECURITY.md).
 
 | Push sur | Cibles `--only` | `APP_ENV` | Résultat |
 |---|---|---|---|
-| `develop` | `hosting:stage,firestore:staging` | `dev` | https://stage.baillan.com (noindex) |
-| `main` | `hosting:prod,firestore:(default),storage` | `prod` | https://baillan.com |
+| `develop` | `hosting:stage,hosting:marketing-stage,firestore:staging` | `dev` | app + vitrine staging (noindex) |
+| `main` | `hosting:prod,hosting:marketing,firestore:(default),storage` | `prod` | app + vitrine prod |
 
 Le workflow ([`deploy.yml`](../.github/workflows/deploy.yml)) résout les cibles
 depuis la branche (sortie `deploy_targets` du job `determine-env`), ou via

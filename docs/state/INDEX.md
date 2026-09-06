@@ -9,7 +9,7 @@
 
 - **Dernière mise à jour** : 2026-09-05 (state-keeper rafraîchissement dashboard + properties + functions)
 - **Commit ref** : `169f9aa` (branche `develop`)
-- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 planifié) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
+- **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 vitrine v1 construite, bascule domaine en attente) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
 
 ### Périmètre réellement re-vérifié
 
@@ -27,13 +27,16 @@
 | `config/entitlements.json` (source canonique quotas) | ✅ **lu 2026-08-02** — 3 paliers, quotas par palier, statuts `purchasable`/`priceIndicative`, features matrix |
 | Domaine `leases` (schéma/functions) — `propertyAddress` composée | ✅ **re-vérifié 2026-08-12** — `createLease` compose rue+CP+ville via `composePropertyAddress()`, immuable après création (loi 6/7/1989). Repository Dart : `listActiveLeasesForProperty()` nouveau, statut retard dérivé requiert invalidation providers. Script backfill existe. |
 | `functions/` décompte précis | ✅ **re-compté 2026-08-12** — 19 callables (non 17), 8 triggers, 1 HTTP, 2 scheduled. Tests : 430 (non 209), rules : 80 (non 16). README/leases mis à jour. |
-| `THEME.md`, `DESIGN_TOKENS.md`, `DEPENDENCIES.md` | ⚠️ **non revus** — `DEPENDENCIES.md` ignore notamment `stripe@^22.3.2` |
+| `THEME.md`, `DESIGN_TOKENS.md` | ✅ **revus 2026-09-06** (FEAT-050) — source canonique `config/theme_tokens.json` + génération app/vitrine |
+| `DEPENDENCIES.md` | ⚠️ **non revu** — ignore notamment `stripe@^22.3.2` |
 
+> **Passe 2026-09-06** (FEAT-050 vitrine) : site vitrine Astro livré sur `develop` (PR #160). Rafraîchi : `THEME.md`/`DESIGN_TOKENS.md` (source canonique `config/theme_tokens.json` + 2 miroirs générés app/vitrine, garde-fou `check-theme-tokens.sh`), `FEATURES.md` + INDEX (FEAT-050 = vitrine v1 construite, bascule domaine en attente), Stack hosting (4 cibles, job CI `site`). Fix CI au passage (PR #161) : test `monthly_cashflow_chart` daté en dur, désormais now-relatif. Non couvert ici : `docs/ENVIRONMENTS.md` (topologie hosting, hors `docs/state/`) et la bascule de domaine (runbook séparé).
+> 
 > **Passe 2026-08-12** (détecteur dérive : leases + functions) : vérifié code contre pistes du détecteur. Corrections : (1) `schema/leases.md` : `propertyAddress` n'est pas un snapshot brut de properties.address, mais une adresse COMPLÈTE composée via `composePropertyAddress()` — immuable, non mutable. Ajout section immutable fields. (2) `functions/README.md` : table callables corrigée 17→19 (manquaient createCheckoutSession/manageSubscription, FEAT-056). Tests re-comptés : 430 functions + 80 rules (état disait 209 + 16). (3) `functions/leases.md` : ajout helper `composePropertyAddress()`, clarification `listActiveLeasesForProperty()` repository, documentation pattern d'invalidation providers (statut retard dérivé). INDEX rafraîchi. Aucun écart majeur détecté en domaine account/routes ; shards reputés à jour du 2026-08-11 confirmés.
 > 
 > **Passe 2026-08-11** (correctifs post-recette) : documenté 4 bug fixes déployés en staging (commits 2e3c762, d7d56cc, 49d6069, c302210) — `finalizeAnonymousUpgrade` renseigne email/nom, `LandlordProfile.email` nullable, navigation reset à branche, storage.rules 50 Mio. Tous les shards `account`, `routes/README` mis à jour. CHANGELOG.md détaillé (4 entrées précédent FEAT-056).
 > 
-> **Passe 2026-08-02** (FEAT-056) a corrigé 2 dérives détectées dans `functions/account.md` : (1) callable `manage_subscription` manquant, (2) fausse affirmation que `/pro/success` et `/pro/cancel` « n'existent pas ». Mise à jour : tous les shards account + properties/leases/expenses-documents/simulator pour documenter quotas différenciés et la callable CF-exclusive `createScenario`. Restent ⚠️ les fichiers `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES`, non revus.
+> **Passe 2026-08-02** (FEAT-056) a corrigé 2 dérives détectées dans `functions/account.md` : (1) callable `manage_subscription` manquant, (2) fausse affirmation que `/pro/success` et `/pro/cancel` « n'existent pas ». Mise à jour : tous les shards account + properties/leases/expenses-documents/simulator pour documenter quotas différenciés et la callable CF-exclusive `createScenario`. Restait ⚠️ `THEME`/`DESIGN_TOKENS`/`DEPENDENCIES` non revus (THEME/DESIGN_TOKENS revus depuis, cf. passe 2026-09-06).
 
 ## Comment charger l'état (règle tokens)
 
@@ -75,7 +78,7 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 - **Auth** : Firebase Auth natif (email/password + Google + Apple + anonyme).
 - **Backend** : Firestore (11 collections, camelCase, soft-delete + **37 index composites**, règles 3 couches) + Cloud Functions Node 20 (**17 callables + 9 triggers + 1 HTTP + 2 scheduled**).
 - **Paiement** : Stripe Checkout (web) + RevenueCat comme plan de gestion (entitlement `pro`) → webhook serveur-autoritaire. **Back-end seul : aucune UI, aucun `purchases_flutter`.**
-- **Storage** : Firebase Storage (signed URLs 5 min ; documents ≤ 10 MiB, quota free 10). **PDF** : `pdf` + `share_plus` (quittance loi 6/07/1989). **Hosting** : Firebase **multi-site** (`prod` → baillan.com, `stage` → stage.baillan.com) ; ⚠️ **les deux partagent Firestore/Auth/Storage du même projet — un test sur staging écrit en prod**. **CI** : GitHub Actions (format + analyze + tests Flutter, + job `functions` lint/build/test).
+- **Storage** : Firebase Storage (signed URLs 5 min ; documents ≤ 10 MiB, quota free 10). **PDF** : `pdf` + `share_plus` (quittance loi 6/07/1989). **Hosting** : Firebase **multi-site**, 4 cibles (`prod` → baillan.com, `stage` → stage.baillan.com pour l'app Flutter ; `marketing` → baillan-marketing, `marketing-stage` → baillan-marketing-stage pour la vitrine Astro FEAT-050) — déploiements scopés `--only` obligatoires. ⚠️ **app : prod/stage partagent Firestore/Auth/Storage du même projet — un test sur staging écrit en prod**. **CI** : GitHub Actions (format + analyze + tests Flutter, + jobs `functions` lint/build/test, `firestore-rules`, `site` build Astro).
 
 ## Quand mettre à jour cet état
 

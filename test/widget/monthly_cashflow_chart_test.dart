@@ -42,15 +42,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Fakes — DashboardRepository (loyers encaissés) + ExpensesRepository
 // ---------------------------------------------------------------------------
 
-List<MonthlyCollectedRent> _makeRent(int count, {bool empty = false}) => [
-  for (int i = 1; i <= count; i++)
-    MonthlyCollectedRent(
-      year: 2026,
-      month: ((i - 1) % 12) + 1,
-      collectedCents: empty ? 0 : 65000 * i,
-      hasPayments: !empty,
-    ),
-];
+// Les mois de loyers sont calculés relativement à maintenant, pas datés en
+// dur : le provider fenêtre les dépenses sur les `count` derniers mois à partir
+// de `DateTime.now()`, et n'associe une dépense à une barre que si son mois est
+// À LA FOIS dans cette fenêtre ET présent ici. Une année codée en dur (2026)
+// finit par sortir de la fenêtre à mesure que le temps passe — l'intersection
+// se vide et les tests de dépenses cassent sans que le code ait changé.
+List<MonthlyCollectedRent> _makeRent(int count, {bool empty = false}) {
+  final now = DateTime.now();
+  return [
+    // i = count → le mois le plus ancien ; i = 1 → le mois courant.
+    for (int i = count; i >= 1; i--)
+      () {
+        final d = DateTime(now.year, now.month - (i - 1), 1);
+        return MonthlyCollectedRent(
+          year: d.year,
+          month: d.month,
+          collectedCents: empty ? 0 : 65000 * i,
+          hasPayments: !empty,
+        );
+      }(),
+  ];
+}
 
 /// Fake qui respecte le paramètre `months` (comme le vrai repo) — utilisé
 /// pour les tests génériques de format/période/chargement/erreur.
@@ -585,6 +598,14 @@ void main() {
     });
 
     testWidgets('au moins une dépense → pas de mention', (tester) async {
+      // La dépense doit tomber dans la fenêtre par défaut du graphique (6
+      // mois) : une date en dur finit par en sortir à mesure que le temps
+      // passe, la mention réapparaît alors et le test casse sans que le code
+      // ait changé. On la calcule donc relativement à maintenant, comme les
+      // autres tests de ce fichier (cf. `monthDate`). 2 mois en arrière, le 15,
+      // reste dans la fenêtre quel que soit le mois courant.
+      final now = DateTime.now();
+      final recentExpenseDate = DateTime(now.year, now.month - 2, 15);
       await tester.pumpWidget(
         _wrap(
           _PeriodAwareDashboardRepository(),
@@ -592,7 +613,7 @@ void main() {
             _expense(
               id: 'e1',
               amountCents: 12000,
-              expenseDate: DateTime(2026, 3, 15),
+              expenseDate: recentExpenseDate,
             ),
           ]),
         ),

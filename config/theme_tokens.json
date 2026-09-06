@@ -1,0 +1,24 @@
+{
+  "_comment": "SOURCE CANONIQUE des couleurs Baillan. Générer les miroirs : dart run tool/gen_theme_tokens.dart",
+  "colors": {
+    "paper": "#F7F4ED",
+    "paperDeep": "#EFE9DA",
+    "cream": "#FCFAF5",
+    "ink": "#1B1A17",
+    "inkSurface": "#2A2823",
+    "inkMuted": "#6B665D",
+    "rule": "#E8E2D3",
+    "olive": "#3F4A2A",
+    "oliveMid": "#5E6A45",
+    "oliveSoft": "#B5B89D",
+    "oxblood": "#9A3B2F",
+    "sealGreen": "#2E5339",
+    "ochre": "#7E5612",
+    "indigoInk": "#2A3656",
+    "kraft": "#E4D9BD",
+    "stone": "#A8A39A",
+    "oliveDeep": "#34401F",
+    "ruleStrong": "#C9C1AB",
+    "amountNegative": "#6E3A1F"
+  }
+}
