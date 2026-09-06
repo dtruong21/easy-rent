@@ -30,7 +30,16 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-08-11)
+## Changements (2026-08-03 → 2026-09-06)
+
+### FEAT-050 — Site vitrine baillan.com (v1) (2026-09-06, PR #160)
+- Site statique Astro dans `site/`, crawlable (HTML sans JS exécutable) — l'app Flutter reste inindexable (CanvasKit peint le texte dans un canvas). 5 pages FR : accueil, FAQ (20 Q/R recopiées de l'app + JSON-LD FAQPage), à propos, mentions légales (encadré « à compléter » : structure juridique inexistante), suppression de compte.
+- **Écosystème couleur unique** : les 19 couleurs deviennent une source canonique `config/theme_tokens.json` → générateur Dart `tool/gen_theme_tokens.dart` → 2 miroirs générés `lib/core/theme/app_palette.g.dart` (délégué par `AppTheme`, valeurs inchangées, verrouillées par test) et `site/src/styles/tokens.css`. Garde-fou CI `scripts/check-theme-tokens.sh`.
+- **Firebase Hosting** : 2 cibles ajoutées (`marketing` prod, `marketing-stage`), déploiements scopés `--only`. Cible marketing prod en `X-Robots-Tag: noindex` **transitoire** (retiré par le futur runbook de bascule). App passée en noindex global (`web/robots.txt` `Disallow: /`, `web/sitemap.xml` supprimé, meta robots `noindex` inconditionnel). Job CI `site` (build Astro) ajouté.
+- **Hors périmètre** (runbook séparé) : bascule de domaine — DNS, domaines autorisés Firebase Auth, URL Play Console, resserrage `PROD_ORIGINS`. Passe de fond `docs/SEO.md` et `docs/ENVIRONMENTS.md` encore à faire.
+
+### PR #161 — FIX: test du graphique de cash-flow indépendant de la date (2026-09-06, commit 66e60fe)
+- `monthly_cashflow_chart_test.dart` échouait depuis que le calendrier a dépassé août 2026, sans changement de code de production : le fake de loyers `_makeRent` datait ses mois en dur (`2026, mois 1..6`) alors que `monthlyCashflowProvider` fenêtre les dépenses relativement à `DateTime.now()`. L'intersection s'est vidée du mois de la dépense de test, la mention « Aucune dépense saisie » réapparaissait. `_makeRent` rendu now-relatif. Bombe à retardement qui cassait toute PR vers `develop`.
 
 ### PR — FIX: navigation — tout changement d'onglet ramène à la racine (2026-08-11, commit 49d6069)
 - Renversement de décision produit (2026-08-11). Depuis FEAT-026 (2026-07-03), changer d'onglet conservait l'état de la branche (pile navigation, position scroll, filtres) via `indexedStack`. Le propriétaire la juge fautive sur TOUS les onglets (pas seulement Profil comme ponctuellement testé le 2026-08-10) : cliquer Profil puis Home puis Profil rouvrait la sous-page au lieu du hub.
