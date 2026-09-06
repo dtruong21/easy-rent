@@ -23,7 +23,7 @@ vi.mock("firebase-admin", async () => {
 describe("isStagingOrigin — routage par Origin", () => {
   it("Origin staging exact → dev", () => {
     expect(isStagingOrigin(STAGING_ORIGIN)).toBe(true);
-    expect(isStagingOrigin("https://stage.baillan.com")).toBe(true);
+    expect(isStagingOrigin("https://app.staging.baillan.com")).toBe(true);
   });
 
   it("Origin prod → default (jamais mal-router la prod)", () => {
@@ -37,10 +37,10 @@ describe("isStagingOrigin — routage par Origin", () => {
   });
 
   it("variantes proches NON routées (trailing slash, sous-domaine, http)", () => {
-    expect(isStagingOrigin("https://stage.baillan.com/")).toBe(false);
-    expect(isStagingOrigin("http://stage.baillan.com")).toBe(false);
-    expect(isStagingOrigin("https://stage.baillan.com.evil.tld")).toBe(false);
-    expect(isStagingOrigin("https://www.stage.baillan.com")).toBe(false);
+    expect(isStagingOrigin("https://app.staging.baillan.com/")).toBe(false);
+    expect(isStagingOrigin("http://app.staging.baillan.com")).toBe(false);
+    expect(isStagingOrigin("https://app.staging.baillan.com.evil.tld")).toBe(false);
+    expect(isStagingOrigin("https://www.app.staging.baillan.com")).toBe(false);
   });
 });
 

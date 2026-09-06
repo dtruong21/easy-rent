@@ -1,7 +1,7 @@
 /**
  * Routage de la base Firestore par environnement (ADR 0003 — isolation
- * prod/staging). Prod (`baillan.com`) → base `(default)` ; staging déployé
- * (`stage.baillan.com`) → base nommée `dev`, physiquement séparée.
+ * prod/staging). Prod (app : `app.baillan.com`) → base `(default)` ; staging
+ * déployé (app : `app.staging.baillan.com`) → base nommée `dev`, séparée.
  *
  * Deux entrées selon la nature de l'appel :
  * - **Callables** (navigateur) → routage par l'en-tête **Origin** ([dbForRequest]).
@@ -31,7 +31,7 @@ import type {CallableRequest} from "firebase-functions/v2/https";
 export const STAGING_DATABASE_ID = "staging";
 
 /** Origin du site staging — la SEULE origine routée vers la base `dev`. */
-export const STAGING_ORIGIN = "https://stage.baillan.com";
+export const STAGING_ORIGIN = "https://app.staging.baillan.com";
 
 /**
  * Base Firestore pour un drapeau env.

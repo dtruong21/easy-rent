@@ -25,7 +25,7 @@ describe("stripeEnvForOrigin — allowlist positive de la prod", () => {
   });
 
   it("origin staging → test, jamais live", () => {
-    expect(stripeEnvForOrigin("https://stage.baillan.com")).toBe<StripeEnv>(
+    expect(stripeEnvForOrigin("https://app.staging.baillan.com")).toBe<StripeEnv>(
       "test",
     );
   });
@@ -92,13 +92,13 @@ describe("resolveStripeKeyOrThrow — seule porte vers sk_live", () => {
 
   it("origine staging → clé test, JAMAIS la live (régression #138)", () => {
     expect(
-      resolveStripeKeyOrThrow("https://stage.baillan.com", LIVE, TEST),
+      resolveStripeKeyOrThrow("https://app.staging.baillan.com", LIVE, TEST),
     ).toBe(TEST);
   });
 
   it("origine staging sans clé test posée → refus, pas de repli sur la live", () => {
     expect(() =>
-      resolveStripeKeyOrThrow("https://stage.baillan.com", LIVE, ""),
+      resolveStripeKeyOrThrow("https://app.staging.baillan.com", LIVE, ""),
     ).toThrowError(/stripe_test_key_not_configured/);
   });
 
@@ -125,7 +125,7 @@ describe("assertion de mode — la clé doit correspondre à l'environnement", (
   it("clé live collée dans le secret de test → refus", () => {
     expect(() =>
       resolveStripeKeyOrThrow(
-        "https://stage.baillan.com",
+        "https://app.staging.baillan.com",
         "sk_live_xxx",
         "sk_live_COLLEE_PAR_ERREUR",
       ),
@@ -148,7 +148,7 @@ describe("assertion de mode — la clé doit correspondre à l'environnement", (
     ).toBe("rk_live_x");
     expect(
       resolveStripeKeyOrThrow(
-        "https://stage.baillan.com",
+        "https://app.staging.baillan.com",
         "rk_live_x",
         "rk_test_x",
       ),
