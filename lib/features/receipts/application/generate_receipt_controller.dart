@@ -108,9 +108,7 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
 ///
 /// La clé isole l'état par paiement ; le `paymentId` reste par ailleurs passé
 /// à [GenerateReceiptController.submitFromPayment] pour la génération.
-final generateReceiptControllerProvider =
-    StateNotifierProvider.autoDispose.family<
-      GenerateReceiptController,
-      ReceiptGenerationState,
-      String
-    >((ref, _) => GenerateReceiptController(ref));
+final generateReceiptControllerProvider = StateNotifierProvider.autoDispose
+    .family<GenerateReceiptController, ReceiptGenerationState, String>(
+      (ref, _) => GenerateReceiptController(ref),
+    );

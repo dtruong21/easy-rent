@@ -39,47 +39,53 @@ class GenerateReceiptButton extends ConsumerWidget {
       orElse: () => false,
     );
 
-    ref.listen<ReceiptGenerationState>(generateReceiptControllerProvider(paymentId), (
-      _,
-      next,
-    ) {
-      if (!context.mounted) return;
-      next.whenOrNull(
-        success: (result) {
-          showDialog<void>(
-            context: context,
-            builder: (_) => ReceiptPreviewDialog(result: result),
-          ).then((_) {
-            if (context.mounted) {
-              ref.read(generateReceiptControllerProvider(paymentId).notifier).reset();
-            }
-          });
-        },
-        profileIncomplete: (missing) {
-          showDialog<void>(
-            context: context,
-            builder: (_) => ProfileIncompleteDialog(missing: missing),
-          ).then((_) {
-            if (context.mounted) {
-              ref.read(generateReceiptControllerProvider(paymentId).notifier).reset();
-            }
-          });
-        },
-        error: (message) {
-          _log.warning('generate receipt error: $message');
-          final errorMessage = ReceiptActionError.fromCode(
-            message,
-          ).message(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-            ),
-          );
-          ref.read(generateReceiptControllerProvider(paymentId).notifier).reset();
-        },
-      );
-    });
+    ref.listen<ReceiptGenerationState>(
+      generateReceiptControllerProvider(paymentId),
+      (_, next) {
+        if (!context.mounted) return;
+        next.whenOrNull(
+          success: (result) {
+            showDialog<void>(
+              context: context,
+              builder: (_) => ReceiptPreviewDialog(result: result),
+            ).then((_) {
+              if (context.mounted) {
+                ref
+                    .read(generateReceiptControllerProvider(paymentId).notifier)
+                    .reset();
+              }
+            });
+          },
+          profileIncomplete: (missing) {
+            showDialog<void>(
+              context: context,
+              builder: (_) => ProfileIncompleteDialog(missing: missing),
+            ).then((_) {
+              if (context.mounted) {
+                ref
+                    .read(generateReceiptControllerProvider(paymentId).notifier)
+                    .reset();
+              }
+            });
+          },
+          error: (message) {
+            _log.warning('generate receipt error: $message');
+            final errorMessage = ReceiptActionError.fromCode(
+              message,
+            ).message(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                backgroundColor: Theme.of(context).colorScheme.errorContainer,
+              ),
+            );
+            ref
+                .read(generateReceiptControllerProvider(paymentId).notifier)
+                .reset();
+          },
+        );
+      },
+    );
 
     return IconButton(
       key: Key('btn_generate_receipt_$paymentId'),
