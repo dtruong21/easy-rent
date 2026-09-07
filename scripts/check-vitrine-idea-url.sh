@@ -5,12 +5,12 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-url=$(grep -oE "ideaFormUrl = '[^']*'" site/src/lib/links.ts | sed "s/.*= '//;s/'//")
-
 if [ "${SITE_ENV:-}" = "staging" ]; then
-  echo "ℹ️  SITE_ENV=staging — placeholder Tally toléré ($url)."
+  echo "ℹ️  SITE_ENV=staging — placeholder Tally toléré."
   exit 0
 fi
+
+url=$(grep -oE "ideaFormUrl = '[^']*'" site/src/lib/links.ts | sed "s/.*= '//;s/'//" || true)
 
 case "$url" in
   https://tally.so/|https://tally.so|"")
