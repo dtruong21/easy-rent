@@ -61,12 +61,21 @@ const jsonLd = {
         src="/screenshots/simulateur-resultats.svg"
         alt="Résultats du simulateur Baillan : mensualité de crédit 502 €, loyer net annuel 9 690 €, cash-flow mensuel +347,88 €, rendement net 7,60 %."
         width="1200" height="720" loading="lazy" />
-      <figcaption>Un exemple réel : 118 000 € financés, 850 € de loyer.</figcaption>
+      <figcaption>Un exemple réel : 118 000 € d'achat, 83 000 € empruntés, 850 € de loyer.</figcaption>
     </figure>
 
     <p class="sim-cta">
       <a class="btn" href={`${appUrl}/simulator`}>Essayer le simulateur</a>
     </p>
+  </section>
+
+  <section class="steps">
+    <h2>Comment ça marche</h2>
+    <ol class="steps-grid">
+      <li><span class="step-n">1</span><b>Ajoutez un bien</b><span>Adresse, loyer, crédit — en une minute.</span></li>
+      <li><span class="step-n">2</span><b>Suivez</b><span>Loyers encaissés, retards, charges récupérables.</span></li>
+      <li><span class="step-n">3</span><b>Pilotez</b><span>Quittances conformes et cash-flow réel, à jour.</span></li>
+    </ol>
   </section>
 
   <section class="features">
@@ -98,15 +107,6 @@ const jsonLd = {
         voyez ce que le bien rapporte, pas ce qu'il encaisse.
       </p>
     </article>
-  </section>
-
-  <section class="steps">
-    <h2>Comment ça marche</h2>
-    <ol class="steps-grid">
-      <li><span class="step-n">1</span><b>Ajoutez un bien</b><span>Adresse, loyer, crédit — en une minute.</span></li>
-      <li><span class="step-n">2</span><b>Suivez</b><span>Loyers encaissés, retards, charges récupérables.</span></li>
-      <li><span class="step-n">3</span><b>Pilotez</b><span>Quittances conformes et cash-flow réel, à jour.</span></li>
-    </ol>
   </section>
 
   <section class="who">
@@ -153,7 +153,7 @@ const jsonLd = {
   .features h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
   .features p { margin: 0; color: var(--color-ink-muted); font-size: .95rem; }
 
-  .sim { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; }
+  .sim { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); text-align: center; }
   .sim-label { font-size: .75rem; letter-spacing: 1px; text-transform: uppercase; color: var(--color-oxblood); font-weight: 700; margin: 0 0 .5rem; }
   .sim h2 { font-size: clamp(1.5rem,3.5vw,2rem); margin: 0 auto .6rem; max-width: 20ch; }
   .sim-sub { color: var(--color-ink-muted); max-width: 48ch; margin: 0 auto 1.6rem; line-height: 1.55; }
@@ -169,17 +169,17 @@ const jsonLd = {
   .sim-shot img { width: 100%; height: auto; border: 1px solid var(--color-rule-strong); border-radius: 12px; display: block; }
   .sim-shot figcaption { font-size: .8rem; font-style: italic; color: var(--color-ink-muted); margin-top: .6rem; }
 
-  .steps { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); background: var(--color-paper); }
+  .steps { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
   .steps h2, .who h2 { text-align: center; font-size: clamp(1.4rem,3vw,1.8rem); margin: 0 0 1.6rem; }
   .steps-grid { list-style: none; padding: 0; margin: 0 auto; max-width: 52rem; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
   .steps-grid li { display: flex; flex-direction: column; gap: .3rem; background: var(--color-cream); border: 1px solid var(--color-rule); border-radius: 10px; padding: 1.1rem; }
   .step-n { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--color-olive); color: var(--color-cream); font-weight: 700; font-size: .85rem; margin-bottom: .3rem; }
   .steps-grid b { font-size: .98rem; }
   .steps-grid span:last-child { color: var(--color-ink-muted); font-size: .88rem; line-height: 1.45; }
-  .who { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; }
+  .who { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); text-align: center; }
   .who p { color: var(--color-ink-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; }
 
-  .idea { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; background: var(--color-kraft); }
+  .idea { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); text-align: center; background: var(--color-kraft); }
   .idea h2 { font-size: clamp(1.4rem,3vw,1.8rem); margin: 0 0 .6rem; }
   .idea p { color: var(--color-ink); max-width: 44ch; margin: 0 auto 1.4rem; line-height: 1.55; }
 </style>
