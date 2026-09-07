@@ -2,6 +2,7 @@
 // site/src/pages/index.astro
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { appUrl } from '../lib/urls';
+import { ideaFormUrl } from '../lib/links';
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -111,6 +112,12 @@ const jsonLd = {
     <h2>Pensé pour les bailleurs particuliers</h2>
     <p>De un à quelques biens. Pour arrêter le tableur sans passer à une usine à gaz — l'essentiel de la gestion locative, fait correctement.</p>
   </section>
+
+  <section class="idea">
+    <h2>Baillan se construit avec vous</h2>
+    <p>Une idée, un manque, une gêne ? Les retours arrivent directement chez la personne qui écrit le code.</p>
+    <a class="btn" href={ideaFormUrl} target="_blank" rel="noopener">Proposer une idée →</a>
+  </section>
 </BaseLayout>
 
 <style>
@@ -169,4 +176,8 @@ const jsonLd = {
   .steps-grid span:last-child { color: var(--color-ink-muted); font-size: .88rem; line-height: 1.45; }
   .who { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; }
   .who p { color: var(--color-ink-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; }
+
+  .idea { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; background: var(--color-kraft); }
+  .idea h2 { font-size: clamp(1.4rem,3vw,1.8rem); margin: 0 0 .6rem; }
+  .idea p { color: var(--color-ink); max-width: 44ch; margin: 0 auto 1.4rem; line-height: 1.55; }
 </style>

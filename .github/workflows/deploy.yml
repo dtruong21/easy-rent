@@ -250,6 +250,22 @@ jobs:
           SITE_ENV: ${{ needs.determine-env.outputs.app_env == 'dev' && 'staging' || '' }}
         run: npm ci --prefix site && npm run build --prefix site
 
+      # Garde-fou (Task 5, FEAT-050) : l'URL du formulaire Tally d'idées ne
+      # doit plus être le placeholder `https://tally.so/` (racine, sans
+      # formulaire) une fois en PRODUCTION. Le même SITE_ENV que le build
+      # ci-dessus est repassé ici : staging tolère le placeholder, prod
+      # l'exige renseigné (site/src/lib/links.ts). Volontairement APRÈS le
+      # build (pas avant) — ce n'est pas un pré-requis de compilation, juste
+      # un refus explicite de déployer un lien mort en prod plutôt qu'un
+      # échec silencieux du script check-vitrine-idea-url.sh découvert plus
+      # tard. Câblé ici et PAS dans le job `site` de ci.yml : ce dernier
+      # tourne sur chaque PR en mode prod et bloquerait toute PR tant que
+      # l'URL Tally réelle n'existe pas.
+      - name: Check idea form URL (prod enforces, staging tolerates)
+        env:
+          SITE_ENV: ${{ needs.determine-env.outputs.app_env == 'dev' && 'staging' || '' }}
+        run: bash scripts/check-vitrine-idea-url.sh
+
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
       #
       # Pourquoi PAS l'action FirebaseExtended/action-hosting-deploy@v0 :
