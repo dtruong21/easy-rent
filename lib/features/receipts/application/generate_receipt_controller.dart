@@ -96,8 +96,19 @@ class GenerateReceiptController extends StateNotifier<ReceiptGenerationState> {
   }
 }
 
-final generateReceiptControllerProvider =
-    StateNotifierProvider.autoDispose<
-      GenerateReceiptController,
-      ReceiptGenerationState
-    >((ref) => GenerateReceiptController(ref));
+/// Provider **keyé par `paymentId`** : chaque bouton "Générer une quittance"
+/// d'une ligne de paiement possède sa propre instance d'état.
+///
+/// Sans ce `family`, un provider global unique était partagé par toutes les
+/// lignes de la liste de paiements. Conséquences observées (recette) :
+/// - `submitting` allumait le spinner sur CHAQUE ligne, pas seulement celle
+///   cliquée ;
+/// - au `success`, le `ref.listen` de chaque bouton monté ouvrait un
+///   `ReceiptPreviewDialog` — d'où N dialogues empilés et N clics pour fermer.
+///
+/// La clé isole l'état par paiement ; le `paymentId` reste par ailleurs passé
+/// à [GenerateReceiptController.submitFromPayment] pour la génération.
+final generateReceiptControllerProvider = StateNotifierProvider.autoDispose
+    .family<GenerateReceiptController, ReceiptGenerationState, String>(
+      (ref, _) => GenerateReceiptController(ref),
+    );

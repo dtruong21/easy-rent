@@ -32,6 +32,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #165 — FIX: génération de quittance — spinner et aperçu scopés au paiement cliqué (2026-09-07, commit 195cded)
+- `generateReceiptControllerProvider` était un `StateNotifierProvider` **global** partagé par tous les boutons « Générer une quittance » de la liste de paiements (un `GenerateReceiptButton` par ligne), qui faisaient à la fois `watch` et `listen` dessus. Deux bugs recette : (1) au clic, `submitting` allumait le spinner sur **chaque** ligne du bloc ; (2) au `success`, le `ref.listen` de **chaque** bouton monté ouvrait un `ReceiptPreviewDialog`, d'où autant de dialogues empilés que de lignes visibles et plusieurs clics pour tout fermer.
+- Correctif : provider passé en `.family` keyé par `paymentId` — chaque ligne a sa propre instance d'état ; spinner et dialogue sont scopés au paiement réellement cliqué. `submitFromPeriod` (défini mais jamais appelé) conservé tel quel.
+- Tests : 2 cas ajoutés (`test/widget/generate_receipt_button_test.dart`) montent deux boutons côte à côte et vérifient un seul spinner + un seul `dialog_receipt_preview` ; ils échouaient avant (2 dialogues détectés), passent après.
+
 ### FEAT-050 — Site vitrine baillan.com (v1) (2026-09-06, PR #160)
 - Site statique Astro dans `site/`, crawlable (HTML sans JS exécutable) — l'app Flutter reste inindexable (CanvasKit peint le texte dans un canvas). 5 pages FR : accueil, FAQ (20 Q/R recopiées de l'app + JSON-LD FAQPage), à propos, mentions légales (encadré « à compléter » : structure juridique inexistante), suppression de compte.
 - **Écosystème couleur unique** : les 19 couleurs deviennent une source canonique `config/theme_tokens.json` → générateur Dart `tool/gen_theme_tokens.dart` → 2 miroirs générés `lib/core/theme/app_palette.g.dart` (délégué par `AppTheme`, valeurs inchangées, verrouillées par test) et `site/src/styles/tokens.css`. Garde-fou CI `scripts/check-theme-tokens.sh`.
