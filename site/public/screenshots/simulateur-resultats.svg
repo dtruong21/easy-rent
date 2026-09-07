@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img"
+     aria-label="Résultats du simulateur Baillan : mensualité de crédit 502,12 €, loyer net annuel 9 690 €, cash-flow mensuel +347,88 €, rendement brut 8,00 %, rendement net 7,60 %.">
+  <defs>
+    <style>
+      .lbl { fill:#a49e92; font:600 20px -apple-system,'Segoe UI',Roboto,sans-serif; letter-spacing:.5px; text-transform:uppercase; }
+      .val { fill:#f3efe6; font:700 40px -apple-system,'Segoe UI',Roboto,sans-serif; }
+      .pos { fill:#9ec488; }
+      .cap { fill:#8f8778; font:italic 20px Georgia,serif; }
+    </style>
+  </defs>
+  <!-- cadre -->
+  <rect x="0" y="0" width="1200" height="720" rx="18" fill="#1b1a17"/>
+  <rect x="0" y="0" width="1200" height="52" rx="18" fill="#2a2823"/>
+  <rect x="0" y="34" width="1200" height="18" fill="#2a2823"/>
+  <circle cx="34" cy="26" r="7" fill="#6b665d"/>
+  <circle cx="60" cy="26" r="7" fill="#6b665d"/>
+  <circle cx="86" cy="26" r="7" fill="#6b665d"/>
+  <text x="600" y="33" text-anchor="middle" fill="#a49e92" font="600 20px -apple-system,sans-serif" style="font:600 20px -apple-system,'Segoe UI',sans-serif">Résultats estimés</text>
+
+  <!-- carte 1 -->
+  <rect x="40" y="86" width="550" height="140" rx="12" fill="#21201c" stroke="#34322b"/>
+  <text x="72" y="130" class="lbl">Mensualité de crédit</text>
+  <text x="72" y="185" class="val">502,12 €</text>
+  <!-- carte 2 -->
+  <rect x="610" y="86" width="550" height="140" rx="12" fill="#21201c" stroke="#34322b"/>
+  <text x="642" y="130" class="lbl">Loyer net annuel</text>
+  <text x="642" y="185" class="val">9 690 €</text>
+  <!-- carte 3 : cash-flow (positif) -->
+  <rect x="40" y="246" width="550" height="140" rx="12" fill="#21201c" stroke="#3f4a2a" stroke-width="2"/>
+  <text x="72" y="290" class="lbl">Cash-flow mensuel</text>
+  <text x="72" y="345" class="val pos">+347,88 €</text>
+  <!-- carte 4 : rendement net (positif) -->
+  <rect x="610" y="246" width="550" height="140" rx="12" fill="#21201c" stroke="#34322b"/>
+  <text x="642" y="290" class="lbl">Rendement net</text>
+  <text x="642" y="345" class="val pos">7,60 %</text>
+  <!-- carte 5 -->
+  <rect x="40" y="406" width="550" height="140" rx="12" fill="#21201c" stroke="#34322b"/>
+  <text x="72" y="450" class="lbl">Rendement brut</text>
+  <text x="72" y="505" class="val">8,00 %</text>
+  <!-- carte 6 -->
+  <rect x="610" y="406" width="550" height="140" rx="12" fill="#21201c" stroke="#34322b"/>
+  <text x="642" y="450" class="lbl">Coût total du crédit</text>
+  <text x="642" y="505" class="val">120 509 €</text>
+
+  <text x="600" y="612" text-anchor="middle" class="cap">Le crédit et les dépenses déduits — le cash-flow réel, mois par mois.</text>
+</svg>
