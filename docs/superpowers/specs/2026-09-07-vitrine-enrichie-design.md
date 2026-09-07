@@ -25,7 +25,7 @@ propos + légal. Le propriétaire la juge « trop plate ». Deux objectifs :
 | Point | Décision |
 |---|---|
 | Style visuel | **SaaS/direct** (sans serif, produit en avant), palette de l'app — PAS l'éditorial « magazine » (écarté par le propriétaire) |
-| Canal d'idées | **Bouton vers un formulaire externe** (Tally ou Google Form), pas de backend |
+| Canal d'idées | **Bouton vers un formulaire Tally** (choisi le 2026-09-07), pas de backend |
 | Captures | **Vraies captures du simulateur**, prises sur l'app, avec exemple **cash-flow positif** |
 | Contrainte | Reste **zéro-JS exécutable** (seul le JSON-LD est admis), statique Astro |
 
@@ -118,7 +118,7 @@ lourds non compressés.
 
 Section « Proposez une idée » : un bloc court (« Baillan se construit avec
 vous — les retours arrivent directement chez la personne qui écrit le code »)
-et un **bouton vers un formulaire externe** (Tally ou Google Form).
+et un **bouton vers un formulaire Tally** (outil choisi le 2026-09-07).
 
 - **Pas de backend, pas de collecte côté vitrine** — cohérent avec le zéro-JS.
 - L'URL du formulaire est une **constante de configuration** dans le site
@@ -130,8 +130,8 @@ et un **bouton vers un formulaire externe** (Tally ou Google Form).
   rel="noopener"`).
 
 Aucune donnée personnelle ne transite par la vitrine ; le formulaire externe
-porte sa propre politique de confidentialité (à vérifier côté RGPD au moment
-de choisir Tally vs Google Form — hors périmètre de cette spec).
+(Tally) porte sa propre politique de confidentialité (conformité RGPD à
+vérifier au moment de créer le formulaire — hors périmètre de cette spec).
 
 ## 6. Contraintes visuelles et techniques
 
@@ -175,5 +175,5 @@ de choisir Tally vs Google Form — hors périmètre de cette spec).
 - **Board public votable** (type Canny) — écarté : modération, spam, backend
   lecture+écriture, trop lourd.
 - **Anglais / i18n-SEO**, pages-outils, blog — restent la v2 de FEAT-050.
-- **Choix Tally vs Google Form et sa conformité RGPD** — décision produit
-  séparée ; la spec ne fait que réserver l'emplacement et la constante d'URL.
+- **Conformité RGPD du formulaire Tally** — à vérifier à la création du
+  formulaire ; la spec ne fait que réserver l'emplacement et la constante d'URL.
