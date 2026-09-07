@@ -22,10 +22,11 @@ const jsonLd = {
   <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
 
   <section class="hero">
-    <h1>La gestion locative enfin sans tableur</h1>
+    <p class="hero-pill">Gestion locative pour bailleurs particuliers</p>
+    <h1>La gestion locative,<br>enfin sans tableur</h1>
     <p class="lede">
-      Quittances, loyers, charges et rentabilité dans un seul outil, conçu pour
-      les bailleurs particuliers.
+      Quittances conformes, suivi des loyers et des charges — et un simulateur
+      de rentabilité qui dit la vérité sur ce que rapporte vraiment un bien.
     </p>
     <p class="actions">
       <a class="btn" href={`${appUrl}/signup`}>Commencer gratuitement</a>
@@ -122,6 +123,7 @@ const jsonLd = {
 
 <style>
   .hero { padding: 4.5rem 0 3rem; text-align: center; }
+  .hero-pill { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .3px; color: var(--color-olive); background: var(--color-kraft); padding: .3rem .8rem; border-radius: 999px; margin-bottom: 1rem; }
   h1 {
     font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1;
     letter-spacing: -.02em; margin: 0 0 1rem;
