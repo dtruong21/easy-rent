@@ -97,6 +97,20 @@ const jsonLd = {
       </p>
     </article>
   </section>
+
+  <section class="steps">
+    <h2>Comment ça marche</h2>
+    <ol class="steps-grid">
+      <li><span class="step-n">1</span><b>Ajoutez un bien</b><span>Adresse, loyer, crédit — en une minute.</span></li>
+      <li><span class="step-n">2</span><b>Suivez</b><span>Loyers encaissés, retards, charges récupérables.</span></li>
+      <li><span class="step-n">3</span><b>Pilotez</b><span>Quittances conformes et cash-flow réel, à jour.</span></li>
+    </ol>
+  </section>
+
+  <section class="who">
+    <h2>Pensé pour les bailleurs particuliers</h2>
+    <p>De un à quelques biens. Pour arrêter le tableur sans passer à une usine à gaz — l'essentiel de la gestion locative, fait correctement.</p>
+  </section>
 </BaseLayout>
 
 <style>
@@ -145,4 +159,14 @@ const jsonLd = {
   .sim-shot { margin: 0 auto 1.5rem; max-width: 34rem; }
   .sim-shot img { width: 100%; height: auto; border: 1px solid var(--color-rule-strong); border-radius: 12px; display: block; }
   .sim-shot figcaption { font-size: .8rem; font-style: italic; color: var(--color-ink-muted); margin-top: .6rem; }
+
+  .steps { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); background: var(--color-paper); }
+  .steps h2, .who h2 { text-align: center; font-size: clamp(1.4rem,3vw,1.8rem); margin: 0 0 1.6rem; }
+  .steps-grid { list-style: none; padding: 0; margin: 0 auto; max-width: 52rem; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+  .steps-grid li { display: flex; flex-direction: column; gap: .3rem; background: var(--color-cream); border: 1px solid var(--color-rule); border-radius: 10px; padding: 1.1rem; }
+  .step-n { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--color-olive); color: var(--color-cream); font-weight: 700; font-size: .85rem; margin-bottom: .3rem; }
+  .steps-grid b { font-size: .98rem; }
+  .steps-grid span:last-child { color: var(--color-ink-muted); font-size: .88rem; line-height: 1.45; }
+  .who { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; }
+  .who p { color: var(--color-ink-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; }
 </style>
