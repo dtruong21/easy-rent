@@ -25,4 +25,14 @@ export function getCanonicalUrl(pathname: string, site: URL | undefined): string
 }
 
 // URL de l'app web (PWA Flutter), distincte du site vitrine construit ici.
-export const appUrl = 'https://app.baillan.com';
+//
+// Dépend de l'environnement, même mécanisme que `robots.txt.ts` : la vitrine est
+// un build statique servi sur DEUX hôtes (prod `baillan.com`, staging
+// `stage.baillan.com`). `SITE_ENV=staging` est posé par l'étape « Build marketing
+// site » de `.github/workflows/deploy.yml` sur `develop` ; sans lui (build prod),
+// on retombe sur l'app de prod. Sans ce discriminant, la vitrine de staging
+// enverrait ses visiteurs vers l'app de PROD (« Ouvrir l'app », /signup, footer…).
+export const appUrl =
+  import.meta.env.SITE_ENV === 'staging'
+    ? 'https://app.staging.baillan.com'
+    : 'https://app.baillan.com';
