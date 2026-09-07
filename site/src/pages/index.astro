@@ -32,6 +32,41 @@ const jsonLd = {
     </p>
   </section>
 
+  <section class="sim">
+    <p class="sim-label">Le simulateur</p>
+    <h2>Le vrai rendement, pas le brut flatteur</h2>
+    <p class="sim-sub">
+      La plupart des outils s'arrêtent au rendement brut. Baillan déduit la
+      mensualité de crédit et les dépenses, et vous donne le cash-flow réel —
+      mois par mois.
+    </p>
+
+    <div class="cmp">
+      <div class="cmp-card">
+        <p class="cmp-h">Les autres outils</p>
+        <p class="cmp-big muted">8,0 %</p>
+        <p class="cmp-s">rendement brut — s'arrête là</p>
+      </div>
+      <div class="cmp-card win">
+        <p class="cmp-h">Baillan</p>
+        <p class="cmp-big good">+348 €/mois</p>
+        <p class="cmp-s">cash-flow réel · rendement net 7,6 % · crédit déduit</p>
+      </div>
+    </div>
+
+    <figure class="sim-shot">
+      <img
+        src="/screenshots/simulateur-resultats.svg"
+        alt="Résultats du simulateur Baillan : mensualité de crédit 502 €, loyer net annuel 9 690 €, cash-flow mensuel +347,88 €, rendement net 7,60 %."
+        width="1200" height="720" loading="lazy" />
+      <figcaption>Un exemple réel : 118 000 € financés, 850 € de loyer.</figcaption>
+    </figure>
+
+    <p class="sim-cta">
+      <a class="btn" href={`${appUrl}/simulator`}>Essayer le simulateur</a>
+    </p>
+  </section>
+
   <section class="features">
     <article>
       <h2>Quittances conformes</h2>
@@ -94,4 +129,20 @@ const jsonLd = {
   }
   .features h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
   .features p { margin: 0; color: var(--color-ink-muted); font-size: .95rem; }
+
+  .sim { padding: 3.5rem clamp(1rem,5vw,4rem); border-top: 1px solid var(--color-rule); text-align: center; }
+  .sim-label { font-size: .75rem; letter-spacing: 1px; text-transform: uppercase; color: var(--color-oxblood); font-weight: 700; margin: 0 0 .5rem; }
+  .sim h2 { font-size: clamp(1.5rem,3.5vw,2rem); margin: 0 auto .6rem; max-width: 20ch; }
+  .sim-sub { color: var(--color-ink-muted); max-width: 48ch; margin: 0 auto 1.6rem; line-height: 1.55; }
+  .cmp { display: flex; gap: .75rem; max-width: 34rem; margin: 0 auto 1.5rem; flex-wrap: wrap; }
+  .cmp-card { flex: 1 1 14rem; border: 1px solid var(--color-rule); border-radius: 10px; padding: 1rem; background: var(--color-cream); text-align: left; }
+  .cmp-card.win { border: 1.5px solid var(--color-olive); background: #fff; }
+  .cmp-h { margin: 0 0 .4rem; font-size: .7rem; letter-spacing: .4px; text-transform: uppercase; color: var(--color-ink-muted); font-weight: 700; }
+  .cmp-big { font-size: 1.6rem; font-weight: 800; margin: .2rem 0; letter-spacing: -.5px; }
+  .cmp-big.muted { color: var(--color-ink-muted); }
+  .cmp-big.good { color: var(--color-seal-green); }
+  .cmp-s { color: var(--color-ink-muted); font-size: .8rem; margin: 0; line-height: 1.4; }
+  .sim-shot { margin: 0 auto 1.5rem; max-width: 34rem; }
+  .sim-shot img { width: 100%; height: auto; border: 1px solid var(--color-rule-strong); border-radius: 12px; display: block; }
+  .sim-shot figcaption { font-size: .8rem; font-style: italic; color: var(--color-ink-muted); margin-top: .6rem; }
 </style>
