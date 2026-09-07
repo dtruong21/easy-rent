@@ -62,28 +62,39 @@ Firebase (`199.36.158.x` ou similaire), jamais `188.114.x` / `104.x`.
 
 ## Phase 1 — Staging (répéter la bascule à blanc, sans risque prod)
 
+> ✅ **PHASE 1 VALIDÉE le 2026-09-07.** `app.staging.baillan.com` sert l'app
+> (CNAME Cloudflare gris → baillan-stage.web.app, cert SSL OK). Functions
+> déployées manuellement avec `STAGING_ORIGIN=app.staging.baillan.com` (+ #157).
+> Connexion Google/Apple OK ; création d'un bien confirmée dans la base Firestore
+> `staging`, pas prod → routage par Origin prouvé.
+>
+> ⚠️ **Effet de bord à traiter (S6) :** `stage.baillan.com`, s'il sert encore
+> l'ancienne app, n'est plus reconnu comme staging par les Functions — ses
+> callables routent désormais vers la base **prod**. Le retirer / rediriger
+> vers `app.staging.baillan.com` n'est donc plus optionnel mais recommandé.
+
 Faire la bascule d'abord sur staging valide toute la mécanique sur un
 environnement jetable avant de toucher la prod.
 
-- [ ] **S1** 👤 **Après S3** (Firebase donne les enregistrements exacts) :
+- [x] **S1** 👤 **Après S3** (Firebase donne les enregistrements exacts) :
       Cloudflare → DNS → ajouter l'entrée de `app.staging.baillan.com` demandée
       par Firebase, en **nuage gris ⚪ DNS only**. Ne pas toucher
       `staging.baillan.com` si elle sert déjà la vitrine via `marketing-stage`.
       (S1 vient après S3 en pratique : c'est Firebase qui dicte quoi créer.)
-- [ ] **S2** 👤 Firebase Console → Authentication → Settings → Authorized
+- [x] **S2** 👤 Firebase Console → Authentication → Settings → Authorized
       domains : **ajouter `app.staging.baillan.com`** (et `staging.baillan.com`
       si absent). **Faire ceci AVANT S3.**
-- [ ] **S3** 👤 Firebase Console → Hosting → site `baillan-stage` → Add custom
+- [x] **S3** 👤 Firebase Console → Hosting → site `baillan-stage` → Add custom
       domain → `app.staging.baillan.com`. Firebase affiche un **TXT** de
       vérification puis/ou des **A** : les reporter dans **Cloudflare → DNS en
       gris ⚪ DNS only** (S1). Attendre « Connected » + le certificat.
-- [ ] **S4** 💻 Merger le commit **phase staging** de `chore/050e-bascule-domaine`
+- [x] **S4** 💻 Merger le commit **phase staging** de `chore/050e-bascule-domaine`
       (`413819a`) : `STAGING_ORIGIN` → `app.staging.baillan.com`, `deploy.yml`
       develop `public_url` → `app.staging.baillan.com`. Le push sur `develop`
       redéploie staging avec la nouvelle origine.
       ⚠️ Ne merger qu'une fois S3 vérifié — sinon le routage Firestore de staging
       (qui compare l'`Origin`) cesse de reconnaître staging.
-- [ ] **S5** ✅ Vérifier sur `app.staging.baillan.com` : connexion Google/Apple,
+- [x] **S5** ✅ Vérifier sur `app.staging.baillan.com` : connexion Google/Apple,
       un paiement Stripe de test (mode test, via l'émulateur idéalement),
       création d'un bien → confirme que l'écriture va bien dans la base
       `staging` et non `(default)`. Vérifier que `staging.baillan.com` sert
