@@ -8,7 +8,7 @@
 > www.baillan.com      → 301 vers baillan.com
 > app.baillan.com      → app Flutter (noindex)          cible Hosting `prod`
 >
-> staging.baillan.com      → vitrine (noindex)          cible `marketing-stage`
+> stage.baillan.com        → vitrine (noindex)          cible `marketing-stage`
 > app.staging.baillan.com  → app (noindex)              cible `stage`
 > ```
 >
@@ -79,7 +79,8 @@ environnement jetable avant de toucher la prod.
 - [x] **S1** 👤 **Après S3** (Firebase donne les enregistrements exacts) :
       Cloudflare → DNS → ajouter l'entrée de `app.staging.baillan.com` demandée
       par Firebase, en **nuage gris ⚪ DNS only**. Ne pas toucher
-      `staging.baillan.com` si elle sert déjà la vitrine via `marketing-stage`.
+      `stage.baillan.com` (il sert encore l'app pour l'instant ; il passera à la
+      vitrine en S6).
       (S1 vient après S3 en pratique : c'est Firebase qui dicte quoi créer.)
 - [x] **S2** 👤 Firebase Console → Authentication → Settings → Authorized
       domains : **ajouter `app.staging.baillan.com`** (et `staging.baillan.com`
@@ -97,11 +98,20 @@ environnement jetable avant de toucher la prod.
 - [x] **S5** ✅ Vérifier sur `app.staging.baillan.com` : connexion Google/Apple,
       un paiement Stripe de test (mode test, via l'émulateur idéalement),
       création d'un bien → confirme que l'écriture va bien dans la base
-      `staging` et non `(default)`. Vérifier que `staging.baillan.com` sert
-      toujours la vitrine en `noindex`.
-- [ ] **S6** 👤 (optionnel) Retirer l'ancien domaine `stage.baillan.com` du site
-      `baillan-stage` une fois `app.staging.baillan.com` stable, ou le laisser en
-      301 le temps de la transition.
+      `staging` et non `(default)`.
+- [ ] **S6** 👤 **Repointer `stage.baillan.com` vers la vitrine de staging**
+      (décision 2026-09-07 : on réutilise l'hôte libéré plutôt que de créer
+      `staging.baillan.com`). Cela sert la vitrine ET supprime le risque de
+      routage (stage.baillan.com ne sert plus l'app, donc plus de callable routée
+      vers prod). Étapes :
+      1. Firebase Console → Hosting → site **`baillan-stage`** → retirer le custom
+         domain `stage.baillan.com`.
+      2. Firebase Console → Hosting → site **`baillan-marketing-stage`** → Add
+         custom domain → `stage.baillan.com` ; Firebase donne un CNAME.
+      3. Cloudflare → DNS : changer le CNAME de `stage` pour cibler
+         **`baillan-marketing-stage.web.app`**, en **gris ⚪ DNS only**.
+      4. Vérifier : `stage.baillan.com` sert la vitrine en `noindex`
+         (`curl -sI https://stage.baillan.com | grep -i x-robots-tag`).
 
 ---
 
