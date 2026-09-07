@@ -68,10 +68,10 @@ Firebase (`199.36.158.x` ou similaire), jamais `188.114.x` / `104.x`.
 > Connexion Google/Apple OK ; création d'un bien confirmée dans la base Firestore
 > `staging`, pas prod → routage par Origin prouvé.
 >
-> ⚠️ **Effet de bord à traiter (S6) :** `stage.baillan.com`, s'il sert encore
-> l'ancienne app, n'est plus reconnu comme staging par les Functions — ses
-> callables routent désormais vers la base **prod**. Le retirer / rediriger
-> vers `app.staging.baillan.com` n'est donc plus optionnel mais recommandé.
+> **S6 fait le 2026-09-07 :** `stage.baillan.com` repointé sur la vitrine
+> (`baillan-marketing-stage`, CNAME Cloudflare gris, `x-robots-tag: noindex`
+> vérifié). Plus aucune callable ne part de `stage.baillan.com` → risque de
+> routage vers prod supprimé. **PHASE 1 CLOSE.**
 
 Faire la bascule d'abord sur staging valide toute la mécanique sur un
 environnement jetable avant de toucher la prod.
@@ -99,7 +99,7 @@ environnement jetable avant de toucher la prod.
       un paiement Stripe de test (mode test, via l'émulateur idéalement),
       création d'un bien → confirme que l'écriture va bien dans la base
       `staging` et non `(default)`.
-- [ ] **S6** 👤 **Repointer `stage.baillan.com` vers la vitrine de staging**
+- [x] **S6** 👤 **Repointer `stage.baillan.com` vers la vitrine de staging**
       (décision 2026-09-07 : on réutilise l'hôte libéré plutôt que de créer
       `staging.baillan.com`). Cela sert la vitrine ET supprime le risque de
       routage (stage.baillan.com ne sert plus l'app, donc plus de callable routée
