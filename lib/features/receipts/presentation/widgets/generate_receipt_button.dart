@@ -33,13 +33,13 @@ class GenerateReceiptButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(generateReceiptControllerProvider);
+    final state = ref.watch(generateReceiptControllerProvider(paymentId));
     final isSubmitting = state.maybeWhen(
       submitting: () => true,
       orElse: () => false,
     );
 
-    ref.listen<ReceiptGenerationState>(generateReceiptControllerProvider, (
+    ref.listen<ReceiptGenerationState>(generateReceiptControllerProvider(paymentId), (
       _,
       next,
     ) {
@@ -51,7 +51,7 @@ class GenerateReceiptButton extends ConsumerWidget {
             builder: (_) => ReceiptPreviewDialog(result: result),
           ).then((_) {
             if (context.mounted) {
-              ref.read(generateReceiptControllerProvider.notifier).reset();
+              ref.read(generateReceiptControllerProvider(paymentId).notifier).reset();
             }
           });
         },
@@ -61,7 +61,7 @@ class GenerateReceiptButton extends ConsumerWidget {
             builder: (_) => ProfileIncompleteDialog(missing: missing),
           ).then((_) {
             if (context.mounted) {
-              ref.read(generateReceiptControllerProvider.notifier).reset();
+              ref.read(generateReceiptControllerProvider(paymentId).notifier).reset();
             }
           });
         },
@@ -76,7 +76,7 @@ class GenerateReceiptButton extends ConsumerWidget {
               backgroundColor: Theme.of(context).colorScheme.errorContainer,
             ),
           );
-          ref.read(generateReceiptControllerProvider.notifier).reset();
+          ref.read(generateReceiptControllerProvider(paymentId).notifier).reset();
         },
       );
     });
@@ -94,7 +94,7 @@ class GenerateReceiptButton extends ConsumerWidget {
       onPressed: isSubmitting
           ? null
           : () => ref
-                .read(generateReceiptControllerProvider.notifier)
+                .read(generateReceiptControllerProvider(paymentId).notifier)
                 .submitFromPayment(paymentId: paymentId, leaseId: leaseId),
     );
   }
