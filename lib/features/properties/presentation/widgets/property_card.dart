@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/cards/card_action_button.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
@@ -157,42 +158,24 @@ class _PropertyCardFooter extends StatelessWidget {
       runSpacing: 4,
       children: [
         if (activeLeaseId != null)
-          OutlinedButton.icon(
+          CardActionButton(
             key: Key('card_view_lease_$propertyId'),
             onPressed: () => context.push('/leases/$activeLeaseId'),
-            icon: const Icon(Icons.description_outlined, size: 16),
-            label: Text(l10n.propertiesViewLease),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: Theme.of(context).textTheme.labelSmall,
-            ),
+            icon: Icons.description_outlined,
+            label: l10n.propertiesViewLease,
           )
         else
-          OutlinedButton.icon(
+          CardActionButton(
             key: Key('card_create_lease_$propertyId'),
             onPressed: () => context.push('/leases/new?propertyId=$propertyId'),
-            icon: const Icon(Icons.add, size: 16),
-            label: Text(l10n.propertiesCreateLease),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: Theme.of(context).textTheme.labelSmall,
-            ),
+            icon: Icons.add,
+            label: l10n.propertiesCreateLease,
           ),
-        OutlinedButton.icon(
+        CardActionButton(
           key: Key('card_edit_property_$propertyId'),
           onPressed: () => context.push('/properties/$propertyId/edit'),
-          icon: const Icon(Icons.edit_outlined, size: 16),
-          label: Text(l10n.commonEdit),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: Theme.of(context).textTheme.labelSmall,
-          ),
+          icon: Icons.edit_outlined,
+          label: l10n.commonEdit,
         ),
       ],
     );

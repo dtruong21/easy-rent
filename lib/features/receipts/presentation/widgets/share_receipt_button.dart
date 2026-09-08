@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/cards/card_action_button.dart';
 import '../../application/share_receipt_controller.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipt_action_error.dart';
@@ -66,8 +67,8 @@ class ShareReceiptButton extends ConsumerWidget {
 
     if (isPreparing) {
       return const SizedBox(
-        width: 40,
-        height: 40,
+        width: kCardActionButtonHeight,
+        height: kCardActionButtonHeight,
         child: Center(
           child: SizedBox(
             width: 18,
@@ -78,6 +79,13 @@ class ShareReceiptButton extends ConsumerWidget {
       );
     }
 
+    // Style commun aux boutons de partage : même cible tactile 40 que les
+    // autres actions de la carte (voir [CardActionIconButton]) → rangée alignée.
+    final shareIconStyle = IconButton.styleFrom(
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      minimumSize: const Size(kCardActionButtonHeight, kCardActionButtonHeight),
+    );
+
     final l10n = context.l10n;
 
     if (isInvalid) {
@@ -86,6 +94,7 @@ class ShareReceiptButton extends ConsumerWidget {
         icon: Icon(Icons.share_outlined, color: theme.colorScheme.outline),
         tooltip: l10n.receiptsShareTooltipInvalid,
         onPressed: null,
+        style: shareIconStyle,
       );
     }
 
@@ -95,6 +104,7 @@ class ShareReceiptButton extends ConsumerWidget {
         icon: Icon(Icons.share_outlined, color: theme.colorScheme.outline),
         tooltip: l10n.receiptsShareTooltipNoEmail,
         onPressed: null,
+        style: shareIconStyle,
       );
     }
 
@@ -110,6 +120,7 @@ class ShareReceiptButton extends ConsumerWidget {
       key: Key('btn_share_receipt_${receipt.id}'),
       icon: icon,
       tooltip: tooltip,
+      style: shareIconStyle,
       onPressed: () {
         ref
             .read(shareReceiptControllerProvider(receipt.id).notifier)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/cards/card_action_button.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
@@ -172,27 +173,15 @@ class _LeaseCardFooter extends StatelessWidget {
       spacing: 8,
       runSpacing: 4,
       children: [
-        OutlinedButton.icon(
+        CardActionButton(
           onPressed: () => context.push('/leases/$leaseId/receipts'),
-          icon: const Icon(Icons.receipt_long_outlined, size: 16),
-          label: Text(context.l10n.leasesCardReceiptsButton),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: Theme.of(context).textTheme.labelSmall,
-          ),
+          icon: Icons.receipt_long_outlined,
+          label: context.l10n.leasesCardReceiptsButton,
         ),
-        OutlinedButton.icon(
+        CardActionButton(
           onPressed: () => context.push('/leases/$leaseId/payments/new'),
-          icon: const Icon(Icons.add, size: 16),
-          label: Text(context.l10n.leasesCardPaymentButton),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: Theme.of(context).textTheme.labelSmall,
-          ),
+          icon: Icons.add,
+          label: context.l10n.leasesCardPaymentButton,
         ),
       ],
     );
