@@ -49,14 +49,17 @@ class ShareReceiptButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shareState = ref.watch(shareReceiptControllerProvider);
+    final shareState = ref.watch(shareReceiptControllerProvider(receipt.id));
     final isPreparing = shareState is ShareReceiptPreparing;
     final isInvalid = receipt.isVoided || receipt.isStale;
     final hasEmail = tenantEmail != null && tenantEmail!.isNotEmpty;
     final theme = Theme.of(context);
 
     // Listener pour les feedbacks post-transition.
-    ref.listen<ShareReceiptState>(shareReceiptControllerProvider, (_, next) {
+    ref.listen<ShareReceiptState>(shareReceiptControllerProvider(receipt.id), (
+      _,
+      next,
+    ) {
       if (!context.mounted) return;
       _handleStateChange(context, ref, next, theme);
     });
@@ -109,7 +112,7 @@ class ShareReceiptButton extends ConsumerWidget {
       tooltip: tooltip,
       onPressed: () {
         ref
-            .read(shareReceiptControllerProvider.notifier)
+            .read(shareReceiptControllerProvider(receipt.id).notifier)
             .initiate(
               receipt: receipt,
               leaseId: leaseId,
@@ -128,7 +131,9 @@ class ShareReceiptButton extends ConsumerWidget {
     ShareReceiptState state,
     ThemeData theme,
   ) {
-    final notifier = ref.read(shareReceiptControllerProvider.notifier);
+    final notifier = ref.read(
+      shareReceiptControllerProvider(receipt.id).notifier,
+    );
 
     switch (state) {
       case ShareReceiptConfirmingResend():
@@ -180,7 +185,7 @@ class ShareReceiptButton extends ConsumerWidget {
         previousMaskedEmail: state.previousMaskedEmail,
         onConfirm: () {
           ref
-              .read(shareReceiptControllerProvider.notifier)
+              .read(shareReceiptControllerProvider(receipt.id).notifier)
               .confirmResend(
                 receipt: receipt,
                 leaseId: leaseId,
@@ -193,9 +198,9 @@ class ShareReceiptButton extends ConsumerWidget {
       ),
     );
     // Si l'utilisateur annule (pop sans confirmer), on remet idle.
-    if (ref.read(shareReceiptControllerProvider)
+    if (ref.read(shareReceiptControllerProvider(receipt.id))
         is ShareReceiptConfirmingResend) {
-      ref.read(shareReceiptControllerProvider.notifier).reset();
+      ref.read(shareReceiptControllerProvider(receipt.id).notifier).reset();
     }
   }
 }

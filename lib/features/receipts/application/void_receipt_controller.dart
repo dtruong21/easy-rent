@@ -78,7 +78,15 @@ class VoidReceiptController extends StateNotifier<VoidReceiptState> {
   void reset() => state = const VoidReceiptIdle();
 }
 
-final voidReceiptControllerProvider =
-    StateNotifierProvider.autoDispose<VoidReceiptController, VoidReceiptState>(
-      (ref) => VoidReceiptController(ref),
+/// Provider **keyé par `receiptId`** : chaque quittance de la liste a sa propre
+/// instance d'état d'annulation.
+///
+/// Sans ce `family`, un provider global unique était partagé par toutes les
+/// cartes/menus de quittance montés (grille et timeline). Au clic « annuler »,
+/// l'état `submitting` désactivait le bouton sur CHAQUE ligne, et le
+/// `ref.listen` de chaque widget monté déclenchait un SnackBar au succès — un
+/// par ligne. La clé isole l'état par quittance.
+final voidReceiptControllerProvider = StateNotifierProvider.autoDispose
+    .family<VoidReceiptController, VoidReceiptState, String>(
+      (ref, _) => VoidReceiptController(ref),
     );

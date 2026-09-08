@@ -101,7 +101,7 @@ class _DesktopActionsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final voidState = ref.watch(voidReceiptControllerProvider);
+    final voidState = ref.watch(voidReceiptControllerProvider(receipt.id));
     final isVoiding = voidState is VoidReceiptSubmitting;
 
     _listenVoidState(context, ref, theme);
@@ -137,7 +137,10 @@ class _DesktopActionsRow extends ConsumerWidget {
   }
 
   void _listenVoidState(BuildContext context, WidgetRef ref, ThemeData theme) {
-    ref.listen<VoidReceiptState>(voidReceiptControllerProvider, (_, next) {
+    ref.listen<VoidReceiptState>(voidReceiptControllerProvider(receipt.id), (
+      _,
+      next,
+    ) {
       if (!context.mounted) return;
       if (next is VoidReceiptSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,7 +149,7 @@ class _DesktopActionsRow extends ConsumerWidget {
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
-        ref.read(voidReceiptControllerProvider.notifier).reset();
+        ref.read(voidReceiptControllerProvider(receipt.id).notifier).reset();
       } else if (next is VoidReceiptError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -156,7 +159,7 @@ class _DesktopActionsRow extends ConsumerWidget {
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );
-        ref.read(voidReceiptControllerProvider.notifier).reset();
+        ref.read(voidReceiptControllerProvider(receipt.id).notifier).reset();
       }
     });
   }
@@ -170,13 +173,14 @@ class _DesktopActionsRow extends ConsumerWidget {
       builder: (dialogCtx) => Consumer(
         builder: (context, ref, _) {
           final isVoiding =
-              ref.watch(voidReceiptControllerProvider) is VoidReceiptSubmitting;
+              ref.watch(voidReceiptControllerProvider(receipt.id))
+                  is VoidReceiptSubmitting;
           return VoidReceiptDialog(
             isSubmitting: isVoiding,
             onConfirm: (reason) {
               Navigator.of(dialogCtx).pop();
               ref
-                  .read(voidReceiptControllerProvider.notifier)
+                  .read(voidReceiptControllerProvider(receipt.id).notifier)
                   .voidReceipt(
                     receiptId: receipt.id,
                     reason: reason,
@@ -218,7 +222,10 @@ class _MobileActionsMenu extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
 
-    ref.listen<VoidReceiptState>(voidReceiptControllerProvider, (_, next) {
+    ref.listen<VoidReceiptState>(voidReceiptControllerProvider(receipt.id), (
+      _,
+      next,
+    ) {
       if (!context.mounted) return;
       if (next is VoidReceiptSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -227,7 +234,7 @@ class _MobileActionsMenu extends ConsumerWidget {
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
-        ref.read(voidReceiptControllerProvider.notifier).reset();
+        ref.read(voidReceiptControllerProvider(receipt.id).notifier).reset();
       } else if (next is VoidReceiptError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -237,7 +244,7 @@ class _MobileActionsMenu extends ConsumerWidget {
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );
-        ref.read(voidReceiptControllerProvider.notifier).reset();
+        ref.read(voidReceiptControllerProvider(receipt.id).notifier).reset();
       }
     });
 
@@ -294,7 +301,7 @@ class _MobileActionsMenu extends ConsumerWidget {
         await _openPdf(context, ref, theme);
       case _ReceiptActionKind.share:
         ref
-            .read(shareReceiptControllerProvider.notifier)
+            .read(shareReceiptControllerProvider(receipt.id).notifier)
             .initiate(
               receipt: receipt,
               leaseId: leaseId,
@@ -317,13 +324,14 @@ class _MobileActionsMenu extends ConsumerWidget {
       builder: (dialogCtx) => Consumer(
         builder: (context, ref, _) {
           final isVoiding =
-              ref.watch(voidReceiptControllerProvider) is VoidReceiptSubmitting;
+              ref.watch(voidReceiptControllerProvider(receipt.id))
+                  is VoidReceiptSubmitting;
           return VoidReceiptDialog(
             isSubmitting: isVoiding,
             onConfirm: (reason) {
               Navigator.of(dialogCtx).pop();
               ref
-                  .read(voidReceiptControllerProvider.notifier)
+                  .read(voidReceiptControllerProvider(receipt.id).notifier)
                   .voidReceipt(
                     receiptId: receipt.id,
                     reason: reason,

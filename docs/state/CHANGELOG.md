@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #166 — FIX: annulation et partage de quittance — état scopé par quittance (2026-09-08, commit 54a2bd9)
+- Audit demandé après #165 : le **même anti-pattern** (provider-contrôleur global consommé par un widget rendu par ligne) existait pour `voidReceiptControllerProvider` (annuler) et `shareReceiptControllerProvider` (partager). Dans les deux vues liste (`receipts_card_view` = `CardGrid.builder`, `receipts_timeline_view` = `ListView.builder`), N `ReceiptCard`/`ReceiptActionsMenu`/`ShareReceiptButton` sont montés : annuler mettait le bouton en attente sur chaque carte + un SnackBar par carte ; partager allumait le spinner sur tous les boutons de partage.
+- Correctif : les deux providers passent en `.family` keyés par `receiptId` ; tous les `watch`/`listen`/`read` des 3 widgets keyés par `receipt.id`. État isolé par quittance.
+- Audit : reste de l'app sain — `deleteDocumentController`/`updateDocumentCategoryController` déjà `.family` keyés ; les `*FormController` sont sur des écrans mono-instance ; locale/theme/rail/viewMode/anonExpiry non concernés.
+- Tests : `share_receipt_button_test` (2 boutons → 1 spinner), `void_receipt_controller_test` (nouveau) + `share_receipt_controller_test` (actionner r-1 laisse r-2 idle) ; existants adaptés à la clé `family`.
+
 ### PR #165 — FIX: génération de quittance — spinner et aperçu scopés au paiement cliqué (2026-09-07, commit 195cded)
 - `generateReceiptControllerProvider` était un `StateNotifierProvider` **global** partagé par tous les boutons « Générer une quittance » de la liste de paiements (un `GenerateReceiptButton` par ligne), qui faisaient à la fois `watch` et `listen` dessus. Deux bugs recette : (1) au clic, `submitting` allumait le spinner sur **chaque** ligne du bloc ; (2) au `success`, le `ref.listen` de **chaque** bouton monté ouvrait un `ReceiptPreviewDialog`, d'où autant de dialogues empilés que de lignes visibles et plusieurs clics pour tout fermer.
 - Correctif : provider passé en `.family` keyé par `paymentId` — chaque ligne a sa propre instance d'état ; spinner et dialogue sont scopés au paiement réellement cliqué. `submitFromPeriod` (défini mais jamais appelé) conservé tel quel.
