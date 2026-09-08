@@ -5728,5 +5728,23 @@
   "simulatorCompareEffortPerYearSuffix": "/year",
   "@simulatorCompareEffortPerYearSuffix": {
     "description": "FEAT-055 — Suffix appended to the formatted 'savings effort' euro amount to indicate the value is annual."
-  }
+  },
+  "dashboardActionPanelTitle": "To handle / Upcoming",
+  "dashboardActionLateSectionTitle": "Late rents",
+  "dashboardActionEndingSectionTitle": "Leases ending soon",
+  "dashboardActionLateBadge": "late",
+  "dashboardActionEndingDate": "Ends {date}",
+  "@dashboardActionEndingDate": { "placeholders": { "date": { "type": "String" } } },
+  "dashboardActionAllClear": "All up to date",
+  "dashboardActionViewAll": "View all ({count})",
+  "@dashboardActionViewAll": { "placeholders": { "count": { "type": "int" } } },
+  "dashboardActionDetailUnavailable": "Details unavailable",
+  "dashboardCollectionTitle": "This month's collection",
+  "dashboardCollectionSummary": "{collected} collected of {due} expected",
+  "@dashboardCollectionSummary": { "placeholders": { "collected": { "type": "String" }, "due": { "type": "String" } } },
+  "dashboardCollectionOutstanding": "{amount} outstanding",
+  "@dashboardCollectionOutstanding": { "placeholders": { "amount": { "type": "String" } } },
+  "dashboardCollectionAllPaid": "Everything collected this month",
+  "dashboardCashflowCollapsibleTitle": "Monthly cash flow — details",
+  "dashboardCashflowCollapsibleSubtitle": "Most useful when you record loan and expenses."
 }
