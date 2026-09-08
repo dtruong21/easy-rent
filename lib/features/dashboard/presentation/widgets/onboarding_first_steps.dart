@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/theme/app_icon_size.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 
 /// Checklist d'onboarding "Premiers pas".
@@ -27,7 +28,7 @@ class OnboardingFirstSteps extends StatelessWidget {
           children: [
             Icon(
               Icons.rocket_launch_outlined,
-              size: 48,
+              size: AppIconSize.hero,
               color: theme.colorScheme.primary,
             ),
             SizedBox(height: spacing.md),

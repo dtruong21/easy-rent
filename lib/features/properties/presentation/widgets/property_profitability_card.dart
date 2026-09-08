@@ -9,6 +9,7 @@ import '../../../../core/utils/money_format.dart';
 import '../../application/active_lease_provider.dart';
 import '../../application/property_detail_provider.dart';
 import '../../application/property_real_charges_provider.dart';
+import '../../../../core/ui/theme/app_colors.dart';
 import '../../domain/property.dart';
 
 /// Carte de rentabilité affichée sur [PropertyDetailPage].
@@ -296,9 +297,11 @@ class _YieldKpiChip extends StatelessWidget {
 
   Color _color(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors =
+        Theme.of(context).extension<AppColors>() ?? AppColors.light;
     if (percent < 5) return colors.error;
-    if (percent < 7) return Colors.orange.shade700;
-    return Colors.green.shade700;
+    if (percent < 7) return appColors.warning.solid;
+    return appColors.success.solid;
   }
 
   @override
@@ -342,8 +345,10 @@ class _CashflowChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPositive = cents >= 0;
+    final appColors =
+        Theme.of(context).extension<AppColors>() ?? AppColors.light;
     final color = isPositive
-        ? Colors.green.shade700
+        ? appColors.success.solid
         : Theme.of(context).colorScheme.error;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -32,6 +32,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #168 — Design system : harmonisation boutons et icônes (2026-09-08, commit 45b66f9)
+- Audit design-system (« icônes/boutons pas alignés ou hors système ») + correctif à la racine. Le thème centralisait `FilledButton` + couleurs mais laissait des trous → style ad-hoc par écran.
+- **Boutons** : ajout `outlinedButtonTheme` + `textButtonTheme` dans `AppTheme` (rayon 4, gabarit, texte olive w600, même langage que FilledButton) → boutons secondaires/tertiaires cohérents sans toucher les sites d'appel (17 `OutlinedButton.styleFrom` inline divergents rendus superflus).
+- **Icônes** : nouveau jeton `lib/core/ui/theme/app_icon_size.dart` (`AppIconSize` xs/sm/md/lg/xl/hero). Aberrations normalisées : `size: 11` → xs (14) ; états vides à 48 **et** 56 unifiés à hero (48) sur 5 écrans.
+- **Couleurs** : seuils rendement/cash-flow vert/orange en dur (`Colors.green/orange.shade700`) → jetons `AppColors.success/warning.solid` (carte rentabilité bien + résultats simulateur), repli `?? AppColors.light`.
+- Hors périmètre (documenté) : PdfColors, ombres/scrims alpha, teal « charges récupérables » (couleur catégorielle), migration des 510 `SizedBox`/247 `EdgeInsets` littéraux vers `AppSpacing`.
+- Tests : suite complète verte (2862), `flutter analyze` clean.
+
 ### PR #166 — FIX: annulation et partage de quittance — état scopé par quittance (2026-09-08, commit 54a2bd9)
 - Audit demandé après #165 : le **même anti-pattern** (provider-contrôleur global consommé par un widget rendu par ligne) existait pour `voidReceiptControllerProvider` (annuler) et `shareReceiptControllerProvider` (partager). Dans les deux vues liste (`receipts_card_view` = `CardGrid.builder`, `receipts_timeline_view` = `ListView.builder`), N `ReceiptCard`/`ReceiptActionsMenu`/`ShareReceiptButton` sont montés : annuler mettait le bouton en attente sur chaque carte + un SnackBar par carte ; partager allumait le spinner sur tous les boutons de partage.
 - Correctif : les deux providers passent en `.family` keyés par `receiptId` ; tous les `watch`/`listen`/`read` des 3 widgets keyés par `receipt.id`. État isolé par quittance.
