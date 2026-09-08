@@ -46,7 +46,20 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
 </html>
 
 <style>
-  :root { color-scheme: light; }
+  :root {
+    color-scheme: light;
+    /* Échelle d'espacement de la vitrine (pas des jetons de couleur — locale
+       au gabarit). --space-page : air haut/bas de chaque page ; --space-section
+       : rythme entre les grandes sections de la landing. */
+    --space-page: clamp(2.5rem, 6vw, 4rem);
+    --space-section: clamp(4rem, 8vw, 7rem);
+  }
+  /* Défilement fluide + décalage d'ancre sous la nav collante. Le fluide est
+     désactivé si l'utilisateur a demandé moins d'animations. */
+  html { scroll-padding-top: 4.5rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
   body {
     margin: 0;
     background: var(--color-cream);
@@ -58,7 +71,13 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     display: flex; align-items: center; gap: 1.5rem;
     padding: 1rem clamp(1rem, 5vw, 4rem);
   }
-  .site-nav { border-bottom: 1px solid var(--color-rule); }
+  /* Nav collante : reste visible au défilement (ressenti « app »). Fond opaque
+     pour masquer le contenu qui passe dessous. */
+  .site-nav {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--color-cream);
+    border-bottom: 1px solid var(--color-rule);
+  }
   .site-nav nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
   .brand { font-weight: 800; font-size: 1.15rem; text-decoration: none; color: var(--color-ink); }
   .site-nav a, .site-footer a { color: var(--color-ink-muted); text-decoration: none; }
@@ -71,5 +90,8 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     border-top: 1px solid var(--color-rule);
     margin-top: 4rem; font-size: .9rem; flex-wrap: wrap;
   }
-  main { max-width: 68rem; margin: 0 auto; padding: 0 clamp(1rem, 5vw, 4rem); }
+  main {
+    max-width: 68rem; margin: 0 auto;
+    padding: var(--space-page) clamp(1rem, 5vw, 4rem);
+  }
 </style>

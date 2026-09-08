@@ -122,7 +122,7 @@ const jsonLd = {
 </BaseLayout>
 
 <style>
-  .hero { padding: 4.5rem 0 3rem; text-align: center; }
+  .hero { padding: clamp(1.5rem, 4vw, 3rem) 0 clamp(2.5rem, 5vw, 3.5rem); text-align: center; }
   .hero-pill { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .3px; color: var(--color-olive); background: var(--color-kraft); padding: .3rem .8rem; border-radius: 999px; margin-bottom: 1rem; }
   h1 {
     font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1;
@@ -143,7 +143,9 @@ const jsonLd = {
     padding: .8rem 1.4rem; border-radius: 7px; text-decoration: none;
   }
   .features {
-    display: grid; gap: 1rem; padding-bottom: 2rem;
+    display: grid; gap: 1rem;
+    padding: var(--space-section) 0;
+    border-top: 1px solid var(--color-rule);
     grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   }
   .features article {
@@ -153,7 +155,7 @@ const jsonLd = {
   .features h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
   .features p { margin: 0; color: var(--color-ink-muted); font-size: .95rem; }
 
-  .sim { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); text-align: center; }
+  .sim { padding: var(--space-section) 0; border-top: 1px solid var(--color-rule); text-align: center; }
   .sim-label { font-size: .75rem; letter-spacing: 1px; text-transform: uppercase; color: var(--color-oxblood); font-weight: 700; margin: 0 0 .5rem; }
   .sim h2 { font-size: clamp(1.5rem,3.5vw,2rem); margin: 0 auto .6rem; max-width: 20ch; }
   .sim-sub { color: var(--color-ink-muted); max-width: 48ch; margin: 0 auto 1.6rem; line-height: 1.55; }
@@ -169,17 +171,17 @@ const jsonLd = {
   .sim-shot img { width: 100%; height: auto; border: 1px solid var(--color-rule-strong); border-radius: 12px; display: block; }
   .sim-shot figcaption { font-size: .8rem; font-style: italic; color: var(--color-ink-muted); margin-top: .6rem; }
 
-  .steps { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
+  .steps { padding: var(--space-section) 0; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
   .steps h2, .who h2 { text-align: center; font-size: clamp(1.4rem,3vw,1.8rem); margin: 0 0 1.6rem; }
   .steps-grid { list-style: none; padding: 0; margin: 0 auto; max-width: 52rem; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
   .steps-grid li { display: flex; flex-direction: column; gap: .3rem; background: var(--color-cream); border: 1px solid var(--color-rule); border-radius: 10px; padding: 1.1rem; }
   .step-n { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--color-olive); color: var(--color-cream); font-weight: 700; font-size: .85rem; margin-bottom: .3rem; }
   .steps-grid b { font-size: .98rem; }
   .steps-grid span:last-child { color: var(--color-ink-muted); font-size: .88rem; line-height: 1.45; }
-  .who { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); text-align: center; }
+  .who { padding: var(--space-section) 0; border-top: 1px solid var(--color-rule); text-align: center; }
   .who p { color: var(--color-ink-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; }
 
-  .idea { padding: 3.5rem 0; border-top: 1px solid var(--color-rule); text-align: center; background: var(--color-kraft); }
+  .idea { padding: var(--space-section) 0; border-top: 1px solid var(--color-rule); text-align: center; background: var(--color-kraft); }
   .idea h2 { font-size: clamp(1.4rem,3vw,1.8rem); margin: 0 0 .6rem; }
   .idea p { color: var(--color-ink); max-width: 44ch; margin: 0 auto 1.4rem; line-height: 1.55; }
 </style>
