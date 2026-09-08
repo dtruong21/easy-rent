@@ -7,8 +7,11 @@ import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/presentation/dashboard_page.dart';
+import 'package:easyrent/features/dashboard/presentation/widgets/action_items_panel.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/kpi_card.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/shortcuts_row.dart';
+import 'package:easyrent/features/leases/application/leases_list_provider.dart';
+import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/pwa/application/install_prompt_controller.dart';
@@ -170,6 +173,15 @@ class _FakeInstallController extends InstallPromptController {
   _FakeInstallController() : super(InstallPromptStorage());
 }
 
+/// Fake pour [leasesListProvider] — [ActionItemsPanel] (câblé à la place de
+/// `MonthlyCashflowChart`, cf. Task 6) le `ref.watch` en interne. Liste vide
+/// par défaut : ces tests ne portent pas sur le panneau d'action lui-même
+/// (déjà couvert par `action_items_panel_test.dart`).
+class _FakeLeasesNotifier extends LeasesListNotifier {
+  @override
+  Future<List<LeaseListItem>> build() async => const <LeaseListItem>[];
+}
+
 // ---------------------------------------------------------------------------
 // Helper de rendu
 // ---------------------------------------------------------------------------
@@ -210,6 +222,7 @@ Widget _wrap({bool onboarding = false, int retards = 0}) {
       ),
       authRepositoryProvider.overrideWithValue(_FakeAuthRepo()),
       installPromptStorageProvider.overrideWith((_) => InstallPromptStorage()),
+      leasesListProvider.overrideWith(() => _FakeLeasesNotifier()),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -263,6 +276,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Bonjour'), findsOneWidget);
     });
+
+    testWidgets(
+      'affiche le panneau actionnable à la place du graphe cash-flow',
+      (tester) async {
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
+        expect(find.byType(ActionItemsPanel), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'mobile : affiche ShortcutsRow réduite au seul CTA simulateur (FEAT-026)',
@@ -324,7 +346,15 @@ void main() {
       tester,
     ) async {
       // Le repo retourne [] pour fetchLastMonthsCollectedRent → isEmpty = true.
+      // Le graphe est désormais replié par défaut (CollapsibleCashflowSection,
+      // Task 5/6) : il faut déplier la carte avant que le chart (et donc son
+      // empty state) ne soit construit.
       await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      final tile = find.text('Cash-flow mensuel — détail');
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
       await tester.pumpAndSettle();
       expect(find.text("Pas encore d'historique"), findsOneWidget);
       expect(

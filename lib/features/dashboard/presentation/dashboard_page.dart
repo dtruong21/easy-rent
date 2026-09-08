@@ -12,9 +12,10 @@ import '../../pwa/application/install_prompt_controller.dart';
 import '../../pwa/presentation/install_prompt_banner.dart';
 import '../application/dashboard_provider.dart';
 import '../domain/dashboard_snapshot.dart';
+import 'widgets/action_items_panel.dart';
+import 'widgets/collapsible_cashflow_section.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/kpi_grid.dart';
-import 'widgets/monthly_cashflow_chart.dart';
 import 'widgets/onboarding_first_steps.dart';
 import 'widgets/portfolio_yield_section.dart';
 import 'widgets/recent_activity_section.dart';
@@ -29,7 +30,8 @@ import 'widgets/shortcuts_row.dart';
 /// - Contenu conditionnel :
 ///   - Onboarding si 0 biens/locataires/baux → [OnboardingFirstSteps]
 ///   - Sinon : [SectionHeader] « Vue d'ensemble » + [KpiGrid] +
-///     [PortfolioYieldSection] + [MonthlyCashflowChart] + [RecentActivitySection]
+///     [PortfolioYieldSection] + [ActionItemsPanel] +
+///     [CollapsibleCashflowSection] + [RecentActivitySection]
 /// - [ShortcutsRow] (mobile uniquement, en bas) — réduite au seul CTA
 ///   simulateur : sur desktop le simulateur est épinglé au rail de
 ///   navigation (FEAT-026), le raccourci y serait redondant ; Biens/
@@ -206,7 +208,9 @@ class _DataView extends StatelessWidget {
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
-        const MonthlyCashflowChart(),
+        ActionItemsPanel(loyers: snapshot.loyers),
+        SizedBox(height: spacing.xl),
+        const CollapsibleCashflowSection(),
         SizedBox(height: spacing.xl),
         RecentActivitySection(items: snapshot.activity),
       ],

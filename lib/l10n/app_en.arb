@@ -5730,21 +5730,63 @@
     "description": "FEAT-055 — Suffix appended to the formatted 'savings effort' euro amount to indicate the value is annual."
   },
   "dashboardActionPanelTitle": "To handle / Upcoming",
+  "@dashboardActionPanelTitle": {
+    "description": "Dashboard actionable panel (replaces the cash-flow chart at its former spot) — title of the ActionItemsPanel card."
+  },
   "dashboardActionLateSectionTitle": "Late rents",
+  "@dashboardActionLateSectionTitle": {
+    "description": "Dashboard actionable panel — heading of the sub-section listing leases with a late rent payment."
+  },
   "dashboardActionEndingSectionTitle": "Leases ending soon",
+  "@dashboardActionEndingSectionTitle": {
+    "description": "Dashboard actionable panel — heading of the sub-section listing leases ending within the renewal window."
+  },
   "dashboardActionLateBadge": "late",
+  "@dashboardActionLateBadge": {
+    "description": "Dashboard actionable panel — small trailing badge label on a late-rent row."
+  },
   "dashboardActionEndingDate": "Ends {date}",
-  "@dashboardActionEndingDate": { "placeholders": { "date": { "type": "String" } } },
+  "@dashboardActionEndingDate": {
+    "description": "Dashboard actionable panel — subtitle of an ending-lease row, giving its formatted end date.",
+    "placeholders": { "date": { "type": "String" } }
+  },
   "dashboardActionAllClear": "All up to date",
+  "@dashboardActionAllClear": {
+    "description": "Dashboard actionable panel — empty-state message shown when there are neither late rents nor leases ending soon."
+  },
   "dashboardActionViewAll": "View all ({count})",
-  "@dashboardActionViewAll": { "placeholders": { "count": { "type": "int" } } },
+  "@dashboardActionViewAll": {
+    "description": "Dashboard actionable panel — 'view all' link shown under a section when it has more rows than the panel displays inline.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "dashboardActionDetailUnavailable": "Details unavailable",
+  "@dashboardActionDetailUnavailable": {
+    "description": "Dashboard actionable panel — fallback message shown when the underlying leases provider fails to load."
+  },
   "dashboardCollectionTitle": "This month's collection",
+  "@dashboardCollectionTitle": {
+    "description": "Dashboard actionable panel — heading of the collection-progress banner (encaissé / attendu) at the top of the panel."
+  },
   "dashboardCollectionSummary": "{collected} collected of {due} expected",
-  "@dashboardCollectionSummary": { "placeholders": { "collected": { "type": "String" }, "due": { "type": "String" } } },
+  "@dashboardCollectionSummary": {
+    "description": "Dashboard actionable panel — collection banner summary line, formatted amounts already localized.",
+    "placeholders": { "collected": { "type": "String" }, "due": { "type": "String" } }
+  },
   "dashboardCollectionOutstanding": "{amount} outstanding",
-  "@dashboardCollectionOutstanding": { "placeholders": { "amount": { "type": "String" } } },
+  "@dashboardCollectionOutstanding": {
+    "description": "Dashboard actionable panel — collection banner, shown when the collected amount is below what's due this month.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
   "dashboardCollectionAllPaid": "Everything collected this month",
+  "@dashboardCollectionAllPaid": {
+    "description": "Dashboard actionable panel — collection banner, shown when the full amount due has been collected this month."
+  },
   "dashboardCashflowCollapsibleTitle": "Monthly cash flow — details",
-  "dashboardCashflowCollapsibleSubtitle": "Most useful when you record loan and expenses."
+  "@dashboardCashflowCollapsibleTitle": {
+    "description": "Dashboard — title of the collapsible tile (closed by default) wrapping the monthly cash-flow chart below the actionable panel."
+  },
+  "dashboardCashflowCollapsibleSubtitle": "Most useful when you record loan and expenses.",
+  "@dashboardCashflowCollapsibleSubtitle": {
+    "description": "Dashboard — subtitle of the collapsible cash-flow tile, hinting why the chart is more informative once loan/expenses are recorded."
+  }
 }
