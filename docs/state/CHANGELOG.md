@@ -32,6 +32,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #171 — Dashboard : panneau « À traiter / À venir » à la place du graphe cash-flow (2026-09-08, commit 9b5682c)
+- Le graphe cash-flow (peu utile sans crédit/dépenses saisis) est remplacé par un panneau actionnable `ActionItemsPanel` : bandeau encaissements du mois (encaissé/attendu/reste dû + barre), loyers en retard (tap → `/leases?filter=late`), baux finissant < 60 j (tap → `/leases?filter=renewable`), max 3/catégorie + « Voir tout », état vide « Tout est à jour ✓ ».
+- Graphe déplacé plus bas dans `CollapsibleCashflowSection` (ExpansionTile fermé par défaut, lazy — `MonthlyCashflowChart` inchangé). Nouvel ordre : KPI → rentabilité portfolio → panneau → graphe repliable → activité récente.
+- Zéro nouvelle requête Firestore : dérive `leasesListProvider` (même source que l'écran Baux) + `LoyersMoisKpi`. Helper `isLeaseRenewable` (seuil 60 j) extrait de `leases_filter_provider` et partagé → panneau et filtre « renouvelable » montrent les mêmes items. Priorité FEAT-028 (late > renewable) respectée.
+- i18n FR + EN (14 clés). Développé en TDD (6 tâches, revues + revue finale whole-branch APPROVE). Suite complète verte (2874).
+- Différé v2 : régularisations de charges dues. Suivi séparé : réconcilier le KPI « Baux à renouveler » (encore 30 j) avec la fenêtre 60 j.
+
 ### PR #170 — FIX: espaces manquants autour du lien de confidentialité (vitrine) (2026-09-08)
 - Le lien « politique de confidentialité » apparaissait collé au texte sur la vitrine (« La<a>…</a>détaille » à propos ; « dans la<a>… » mentions légales).
 - Cause : `<a>` inline placé sur sa propre ligne → Astro (whitespace type JSX) trim les sauts de ligne autour de l'élément, supprimant les espaces au build.

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../domain/lease.dart';
 import '../domain/lease_filter.dart';
 import '../domain/lease_list_item.dart';
+import '../domain/lease_renewal.dart';
 import '../domain/lease_status.dart';
 import 'leases_list_provider.dart';
 
@@ -36,21 +36,14 @@ final filteredLeasesProvider = Provider<AsyncValue<List<LeaseListItem>>>((ref) {
         LeaseFilter.active =>
           lease.status == LeaseStatus.active &&
               !item.isLate &&
-              !_isRenewable(lease, now),
+              !isLeaseRenewable(lease, now),
         LeaseFilter.renewable =>
           lease.status == LeaseStatus.active &&
               !item.isLate &&
-              _isRenewable(lease, now),
+              isLeaseRenewable(lease, now),
         LeaseFilter.late => lease.status == LeaseStatus.active && item.isLate,
         LeaseFilter.terminated => lease.status == LeaseStatus.terminated,
       };
     }).toList();
   });
 });
-
-/// Retourne `true` si le bail est actif et sa date de fin est dans moins de 60 jours.
-bool _isRenewable(Lease lease, DateTime now) {
-  final end = lease.endDate;
-  if (end == null) return false;
-  return end.difference(now).inDays < 60;
-}
