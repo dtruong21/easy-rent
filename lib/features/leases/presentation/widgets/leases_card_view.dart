@@ -22,7 +22,7 @@ class LeasesCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     return CardGrid.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      mainAxisExtent: 208,
+      mainAxisExtent: 220,
       itemCount: leases.length,
       itemBuilder: (context, index) {
         final item = leases[index];
@@ -43,7 +43,7 @@ class _LeasesCardViewLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return CardGrid(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      mainAxisExtent: 208,
+      mainAxisExtent: 220,
       children: List.generate(6, (_) => const CardSkeleton()),
     );
   }

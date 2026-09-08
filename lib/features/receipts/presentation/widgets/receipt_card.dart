@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/cards/card_action_button.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_density.dart';
 import '../../../../core/ui/cards/entity_card_header.dart';
@@ -279,18 +280,13 @@ class _ReceiptCardFooter extends ConsumerWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton.icon(
+        CardActionButton(
           key: Key('btn_pdf_card_${receipt.id}'),
           onPressed: onOpenPdf,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-          label: Text(l10n.receiptsOpenPdfButtonShort),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: theme.textTheme.labelSmall,
-          ),
+          icon: Icons.picture_as_pdf_outlined,
+          label: l10n.receiptsOpenPdfButtonShort,
         ),
         ShareReceiptButton(
           receipt: receipt,
@@ -301,19 +297,12 @@ class _ReceiptCardFooter extends ConsumerWidget {
           landlordFullName: landlordFullName,
         ),
         if (!receipt.isVoided)
-          IconButton(
+          CardActionIconButton(
             key: Key('btn_void_card_${receipt.id}'),
-            icon: Icon(
-              Icons.cancel_outlined,
-              color: theme.colorScheme.error,
-              size: 20,
-            ),
+            icon: const Icon(Icons.cancel_outlined, size: 20),
+            color: theme.colorScheme.error,
             tooltip: l10n.receiptsVoidTooltip,
             onPressed: isVoiding ? null : onVoid,
-            style: IconButton.styleFrom(
-              minimumSize: const Size(32, 32),
-              padding: EdgeInsets.zero,
-            ),
           ),
       ],
     );

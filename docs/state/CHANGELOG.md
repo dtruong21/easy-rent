@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #169 — FIX: boutons d'action de carte alignés et confortables (2026-09-08, commit 7b021bb)
+- Retour recette : actions d'une carte de quittance (PDF/partage/annuler) désalignées ; « View lease »/« Edit » des cartes de bien sans padding vertical → cibles tactiles ~28 px, désagréables sur mobile.
+- Cause : les 4 pieds de carte (bien/bail/locataire/quittance) copiaient le même `OutlinedButton.styleFrom` compact (`minimumSize: Size.zero`, `tapTargetSize.shrinkWrap`) ; la carte quittance mêlait ce bouton texte à des IconButton de hauteurs différentes.
+- Correctif : composant partagé `CardActionButton`/`CardActionIconButton` (`lib/core/ui/cards/card_action_button.dart`), hauteur commune 40 px (`kCardActionButtonHeight`). Migration des 4 pieds + `ShareReceiptButton`. `mainAxisExtent` des grilles remonté (208→220, 232→244) pour éviter l'overflow.
+- Tests : suite complète verte (2862).
+
 ### PR #168 — Design system : harmonisation boutons et icônes (2026-09-08, commit 45b66f9)
 - Audit design-system (« icônes/boutons pas alignés ou hors système ») + correctif à la racine. Le thème centralisait `FilledButton` + couleurs mais laissait des trous → style ad-hoc par écran.
 - **Boutons** : ajout `outlinedButtonTheme` + `textButtonTheme` dans `AppTheme` (rayon 4, gabarit, texte olive w600, même langage que FilledButton) → boutons secondaires/tertiaires cohérents sans toucher les sites d'appel (17 `OutlinedButton.styleFrom` inline divergents rendus superflus).
