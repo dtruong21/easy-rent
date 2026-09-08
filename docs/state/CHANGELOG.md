@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #170 — FIX: espaces manquants autour du lien de confidentialité (vitrine) (2026-09-08)
+- Le lien « politique de confidentialité » apparaissait collé au texte sur la vitrine (« La<a>…</a>détaille » à propos ; « dans la<a>… » mentions légales).
+- Cause : `<a>` inline placé sur sa propre ligne → Astro (whitespace type JSX) trim les sauts de ligne autour de l'élément, supprimant les espaces au build.
+- Correctif : espace explicite `{' '}` autour du lien (`site/src/pages/a-propos.astro`, `site/src/pages/mentions-legales.astro`).
+- Audit du HTML construit de toutes les pages : aucun autre lien de prose collé (les `</a><a>` de nav/footer sont des éléments flex, non concernés).
+
 ### PR #169 — FIX: boutons d'action de carte alignés et confortables (2026-09-08, commit 7b021bb)
 - Retour recette : actions d'une carte de quittance (PDF/partage/annuler) désalignées ; « View lease »/« Edit » des cartes de bien sans padding vertical → cibles tactiles ~28 px, désagréables sur mobile.
 - Cause : les 4 pieds de carte (bien/bail/locataire/quittance) copiaient le même `OutlinedButton.styleFrom` compact (`minimumSize: Size.zero`, `tapTargetSize.shrinkWrap`) ; la carte quittance mêlait ce bouton texte à des IconButton de hauteurs différentes.
