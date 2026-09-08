@@ -127,12 +127,13 @@ class _MockWebShare implements WebShareService {
 // ---------------------------------------------------------------------------
 
 Receipt _makeReceipt({
+  String id = 'r-1',
   bool isVoided = false,
   bool isStale = false,
   DateTime? sentAt,
   String? sentToEmail,
 }) => Receipt(
-  id: 'r-1',
+  id: id,
   landlordId: 'landlord-1',
   leaseId: 'lease-1',
   paymentIds: ['pay-1'],
@@ -184,6 +185,47 @@ Widget _buildWidget({
     overrides: [
       if (repo != null) receiptsRepositoryProvider.overrideWithValue(repo),
       if (webShare != null) webShareServiceProvider.overrideWithValue(webShare),
+    ],
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
+  );
+}
+
+/// Deux boutons de partage (deux quittances distinctes) montés côte à côte,
+/// comme dans une liste de quittances. Sert à prouver que l'état de partage est
+/// isolé par quittance : partager une ligne ne doit pas allumer le spinner des
+/// autres.
+Widget _buildTwoButtons({
+  required ReceiptsRepository repo,
+  required WebShareService webShare,
+}) {
+  ShareReceiptButton button(String id) => ShareReceiptButton(
+    receipt: _makeReceipt(id: id),
+    leaseId: 'lease-1',
+    tenantEmail: 'loc@example.com',
+    tenantFirstName: 'Jean',
+    propertyAddress: '12 rue de la Paix',
+    landlordFullName: 'Marie Martin',
+  );
+
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, _) =>
+            Scaffold(body: Column(children: [button('r-1'), button('r-2')])),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      receiptsRepositoryProvider.overrideWithValue(repo),
+      webShareServiceProvider.overrideWithValue(webShare),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -394,7 +436,7 @@ void main() {
             receiptsRepositoryProvider.overrideWithValue(const _FakeRepo()),
             // Override du controller pour injecter directement l'état erreur.
             shareReceiptControllerProvider.overrideWith(
-              (ref) => _ErrorController(ref),
+              (ref, _) => _ErrorController(ref),
             ),
           ],
           child: MaterialApp.router(
@@ -416,6 +458,34 @@ void main() {
       // reconvertit via ReceiptActionErrorL10n. Un code non reconnu retombe
       // sur le message générique `unknown`.
       expect(find.textContaining('Une erreur est survenue'), findsOneWidget);
+    });
+  });
+
+  group('ShareReceiptButton — isolation par quittance (bug multi-lignes)', () {
+    testWidgets('partager une quittance → spinner UNIQUEMENT sur cette ligne', (
+      tester,
+    ) async {
+      // Partage bloqué : le bouton cliqué reste en "preparing" (spinner) le
+      // temps de l'assertion.
+      final completer = Completer<void>();
+      await tester.pumpWidget(
+        _buildTwoButtons(
+          repo: const _FakeRepo(),
+          webShare: _MockWebShare(canShare: true, shareCompleter: completer),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('btn_share_receipt_r-1')));
+      await tester.pump();
+
+      // Un seul spinner (r-1), pas un par ligne.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // r-2 garde son icône de partage au repos.
+      expect(find.byKey(const Key('btn_share_receipt_r-2')), findsOneWidget);
+
+      completer.complete();
+      await tester.pumpAndSettle();
     });
   });
 }

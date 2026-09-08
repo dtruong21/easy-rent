@@ -182,7 +182,7 @@ void main() {
       final container = _makeContainer(repo: repo, webShare: _MockWebShare());
       addTearDown(container.dispose);
       expect(
-        container.read(shareReceiptControllerProvider),
+        container.read(shareReceiptControllerProvider('r-1')),
         isA<ShareReceiptIdle>(),
       );
     });
@@ -193,7 +193,7 @@ void main() {
       final container = _makeContainer(repo: repo, webShare: _MockWebShare());
       addTearDown(container.dispose);
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -203,7 +203,7 @@ void main() {
             landlordFullName: _shareParams.landlordFullName,
           );
       expect(
-        container.read(shareReceiptControllerProvider),
+        container.read(shareReceiptControllerProvider('r-1')),
         isA<ShareReceiptTenantNoEmail>(),
       );
     });
@@ -220,7 +220,7 @@ void main() {
           sentToEmail: 'loc@example.com',
         );
         await container
-            .read(shareReceiptControllerProvider.notifier)
+            .read(shareReceiptControllerProvider('r-1').notifier)
             .initiate(
               receipt: receipt,
               leaseId: _shareParams.leaseId,
@@ -229,7 +229,7 @@ void main() {
               propertyAddress: _shareParams.propertyAddress,
               landlordFullName: _shareParams.landlordFullName,
             );
-        final state = container.read(shareReceiptControllerProvider);
+        final state = container.read(shareReceiptControllerProvider('r-1'));
         expect(state, isA<ShareReceiptConfirmingResend>());
       },
     );
@@ -243,7 +243,7 @@ void main() {
         sentToEmail: 'loc@example.com',
       );
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: receipt,
             leaseId: _shareParams.leaseId,
@@ -252,7 +252,7 @@ void main() {
             propertyAddress: _shareParams.propertyAddress,
             landlordFullName: _shareParams.landlordFullName,
           );
-      final state = container.read(shareReceiptControllerProvider);
+      final state = container.read(shareReceiptControllerProvider('r-1'));
       if (state case ShareReceiptConfirmingResend(
         :final previousSharedAt,
         :final previousMaskedEmail,
@@ -275,7 +275,7 @@ void main() {
       );
       addTearDown(container.dispose);
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -284,7 +284,7 @@ void main() {
             propertyAddress: _shareParams.propertyAddress,
             landlordFullName: _shareParams.landlordFullName,
           );
-      final state = container.read(shareReceiptControllerProvider);
+      final state = container.read(shareReceiptControllerProvider('r-1'));
       expect(state, isA<ShareReceiptShared>());
       if (state case ShareReceiptShared(:final usedNativeShare)) {
         expect(usedNativeShare, true);
@@ -302,7 +302,7 @@ void main() {
       );
       addTearDown(container.dispose);
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -312,7 +312,7 @@ void main() {
             landlordFullName: _shareParams.landlordFullName,
           );
       expect(
-        container.read(shareReceiptControllerProvider),
+        container.read(shareReceiptControllerProvider('r-1')),
         isA<ShareReceiptIdle>(),
       );
     });
@@ -328,7 +328,7 @@ void main() {
       );
       addTearDown(container.dispose);
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -337,7 +337,7 @@ void main() {
             propertyAddress: _shareParams.propertyAddress,
             landlordFullName: _shareParams.landlordFullName,
           );
-      final state = container.read(shareReceiptControllerProvider);
+      final state = container.read(shareReceiptControllerProvider('r-1'));
       expect(state, isA<ShareReceiptError>());
       if (state case ShareReceiptError(:final message)) {
         // FEAT-043 (i18n) : le controller ne stocke plus le message brut de
@@ -362,7 +362,7 @@ void main() {
       // Note : launchUrl lancera probablement une exception en VM (no platform).
       // On capture l'état final — si l'exception n'est pas fatale, on reste en error.
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -372,7 +372,7 @@ void main() {
             landlordFullName: _shareParams.landlordFullName,
           );
       // En VM, launchUrl lève une exception → état error (comportement attendu).
-      final state = container.read(shareReceiptControllerProvider);
+      final state = container.read(shareReceiptControllerProvider('r-1'));
       // Le state est soit shared (si launchUrl ne lève pas), soit error (VM).
       // On vérifie seulement qu'il n'est pas en preparing.
       expect(state, isNot(isA<ShareReceiptPreparing>()));
@@ -392,7 +392,7 @@ void main() {
         sentToEmail: 'loc@example.com',
       );
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .confirmResend(
             receipt: receipt,
             leaseId: _shareParams.leaseId,
@@ -402,7 +402,7 @@ void main() {
             landlordFullName: _shareParams.landlordFullName,
           );
       expect(
-        container.read(shareReceiptControllerProvider),
+        container.read(shareReceiptControllerProvider('r-1')),
         isA<ShareReceiptShared>(),
       );
     });
@@ -413,7 +413,7 @@ void main() {
       final container = _makeContainer(repo: repo, webShare: _MockWebShare());
       addTearDown(container.dispose);
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -423,9 +423,9 @@ void main() {
             landlordFullName: _shareParams.landlordFullName,
           );
       // était tenantNoEmail
-      container.read(shareReceiptControllerProvider.notifier).reset();
+      container.read(shareReceiptControllerProvider('r-1').notifier).reset();
       expect(
-        container.read(shareReceiptControllerProvider),
+        container.read(shareReceiptControllerProvider('r-1')),
         isA<ShareReceiptIdle>(),
       );
     });
@@ -441,7 +441,7 @@ void main() {
       );
       addTearDown(container.dispose);
       await container
-          .read(shareReceiptControllerProvider.notifier)
+          .read(shareReceiptControllerProvider('r-1').notifier)
           .initiate(
             receipt: _makeReceipt(),
             leaseId: _shareParams.leaseId,
@@ -450,7 +450,7 @@ void main() {
             propertyAddress: _shareParams.propertyAddress,
             landlordFullName: _shareParams.landlordFullName,
           );
-      final state = container.read(shareReceiptControllerProvider);
+      final state = container.read(shareReceiptControllerProvider('r-1'));
       if (state case ShareReceiptShared(
         :final sharedAt,
         :final sharedToEmail,
@@ -460,6 +460,35 @@ void main() {
       } else {
         fail('attendait ShareReceiptShared');
       }
+    });
+  });
+
+  group('isolation par quittance (family)', () {
+    test('partager r-1 ne change pas l\'état de r-2', () async {
+      final container = _makeContainer(repo: repo, webShare: _MockWebShare());
+      addTearDown(container.dispose);
+
+      // r-1 : email vide → transition immédiate vers tenantNoEmail.
+      await container
+          .read(shareReceiptControllerProvider('r-1').notifier)
+          .initiate(
+            receipt: _makeReceipt(),
+            leaseId: _shareParams.leaseId,
+            tenantEmail: '',
+            tenantFirstName: _shareParams.tenantFirstName,
+            propertyAddress: _shareParams.propertyAddress,
+            landlordFullName: _shareParams.landlordFullName,
+          );
+
+      expect(
+        container.read(shareReceiptControllerProvider('r-1')),
+        isA<ShareReceiptTenantNoEmail>(),
+      );
+      // r-2 reste au repos — l'état de r-1 n'a pas débordé.
+      expect(
+        container.read(shareReceiptControllerProvider('r-2')),
+        isA<ShareReceiptIdle>(),
+      );
     });
   });
 }

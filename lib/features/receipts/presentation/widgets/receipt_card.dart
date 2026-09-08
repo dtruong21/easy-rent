@@ -112,7 +112,10 @@ class ReceiptCard extends ConsumerWidget {
   }
 
   void _listenVoidState(BuildContext context, WidgetRef ref, ThemeData theme) {
-    ref.listen<VoidReceiptState>(voidReceiptControllerProvider, (_, next) {
+    ref.listen<VoidReceiptState>(voidReceiptControllerProvider(receipt.id), (
+      _,
+      next,
+    ) {
       if (!context.mounted) return;
       if (next is VoidReceiptSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +124,7 @@ class ReceiptCard extends ConsumerWidget {
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
-        ref.read(voidReceiptControllerProvider.notifier).reset();
+        ref.read(voidReceiptControllerProvider(receipt.id).notifier).reset();
       } else if (next is VoidReceiptError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -131,7 +134,7 @@ class ReceiptCard extends ConsumerWidget {
             backgroundColor: theme.colorScheme.errorContainer,
           ),
         );
-        ref.read(voidReceiptControllerProvider.notifier).reset();
+        ref.read(voidReceiptControllerProvider(receipt.id).notifier).reset();
       }
     });
   }
@@ -145,13 +148,14 @@ class ReceiptCard extends ConsumerWidget {
       builder: (dialogCtx) => Consumer(
         builder: (context, ref, _) {
           final isVoiding =
-              ref.watch(voidReceiptControllerProvider) is VoidReceiptSubmitting;
+              ref.watch(voidReceiptControllerProvider(receipt.id))
+                  is VoidReceiptSubmitting;
           return VoidReceiptDialog(
             isSubmitting: isVoiding,
             onConfirm: (reason) {
               Navigator.of(dialogCtx).pop();
               ref
-                  .read(voidReceiptControllerProvider.notifier)
+                  .read(voidReceiptControllerProvider(receipt.id).notifier)
                   .voidReceipt(
                     receiptId: receipt.id,
                     reason: reason,
@@ -269,7 +273,7 @@ class _ReceiptCardFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final voidState = ref.watch(voidReceiptControllerProvider);
+    final voidState = ref.watch(voidReceiptControllerProvider(receipt.id));
     final isVoiding = voidState is VoidReceiptSubmitting;
 
     return Wrap(
