@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/ui/theme/app_icon_size.dart';
+
 import '../../../core/i18n/l10n_extensions.dart';
 import '../data/auth_repository.dart';
 import 'widgets/reset_password_form.dart';
@@ -95,7 +97,11 @@ class _InvalidLinkView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.link_off_outlined, size: 56, color: theme.colorScheme.error),
+        Icon(
+          Icons.link_off_outlined,
+          size: AppIconSize.hero,
+          color: theme.colorScheme.error,
+        ),
         const SizedBox(height: 24),
         Text(
           l10n.authInvalidLinkTitle,

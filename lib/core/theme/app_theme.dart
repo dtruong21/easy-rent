@@ -352,6 +352,31 @@ class AppTheme {
         ),
       ),
 
+      // OutlinedButton : le geste secondaire — même langage que FilledButton
+      // (rayon 4, même gabarit), contour discret, texte olive. Sans ce thème,
+      // chaque écran redéfinissait son propre `styleFrom` → boutons secondaires
+      // incohérents d'un écran à l'autre.
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.outline),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+
+      // TextButton : le geste tertiaire — texte olive, gabarit compact, même
+      // rayon que les autres boutons.
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surfaceContainerHigh,
