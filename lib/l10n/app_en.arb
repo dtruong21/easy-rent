@@ -2767,7 +2767,7 @@
   "@dashboardKpiRenewalsLabel": {
     "description": "KPI card label: count of leases due for renewal soon (KpiGrid, key kpi_renouvellements)."
   },
-  "dashboardKpiRenewalsSubtitle": "within the next 30 days",
+  "dashboardKpiRenewalsSubtitle": "within the next 60 days",
   "@dashboardKpiRenewalsSubtitle": {
     "description": "KPI card subtitle clarifying the renewal window for the renewals KPI."
   },

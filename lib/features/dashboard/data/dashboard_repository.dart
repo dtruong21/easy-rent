@@ -7,6 +7,7 @@ import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../leases/domain/lease.dart';
 import '../../leases/domain/lease_lateness.dart';
+import '../../leases/domain/lease_renewal.dart';
 import '../../payments/domain/payment.dart';
 import '../domain/activity_item.dart';
 import '../domain/dashboard_kpi.dart';
@@ -170,7 +171,14 @@ class FirestoreDashboardRepository implements DashboardRepository {
   Future<RenouvellementsKpi> fetchRenouvellements() async {
     final uid = _uid;
     final today = DateTime.now();
-    final in30Days = today.add(const Duration(days: 30));
+    // Même fenêtre que le filtre `renewable` (donc que le drill-down de ce KPI)
+    // et que le panneau d'actions « baux finissant » : `kLeaseRenewalWindowDays`
+    // jours, borne haute STRICTE pour coller à `isLeaseRenewable` (`inDays < 60`).
+    // Sinon le compteur diffère de la liste affichée juste en dessous (ancien
+    // bug : fenêtre 30 j côté KPI vs 60 j côté liste/panneau).
+    final windowEnd = today.add(
+      const Duration(days: kLeaseRenewalWindowDays),
+    );
 
     final qs = await _firestore
         .collection('leases')
@@ -178,7 +186,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
         .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .where('endDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
-        .where('endDate', isLessThanOrEqualTo: Timestamp.fromDate(in30Days))
+        .where('endDate', isLessThan: Timestamp.fromDate(windowEnd))
         .get();
     _log.fine('fetchRenouvellements: count=${qs.docs.length}');
     return RenouvellementsKpi(count: qs.docs.length);
