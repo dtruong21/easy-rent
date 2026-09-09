@@ -77,6 +77,19 @@ bool isLeaseLate({
 /// Représente un mois calendaire (année + mois, sans jour).
 typedef _YearMonth = ({int year, int month});
 
+/// Date d'échéance du mois [month]/[year] pour un jour d'échéance [paymentDay],
+/// clampée au dernier jour du mois si celui-ci est plus court. Publique pour
+/// être réutilisée (indicateur de ponctualité des paiements).
+DateTime leaseDueDate({
+  required int paymentDay,
+  required int year,
+  required int month,
+}) {
+  final lastDay = _lastDayOfMonth(year, month);
+  final day = paymentDay > lastDay ? lastDay : paymentDay;
+  return DateTime(year, month, day);
+}
+
 /// Calcule le « mois dû courant » : le mois calendaire le plus récent tel
 /// que son échéance + [graceDays] est `<= now`, en partant du premier mois
 /// éligible (celui dont l'échéance tombe le jour de démarrage du bail ou
@@ -128,11 +141,8 @@ _YearMonth _firstEligibleDueMonth(DateTime startDate, int paymentDay) {
 
 /// Date d'échéance du mois [ym] pour un jour d'échéance [paymentDay],
 /// clampé au dernier jour du mois si celui-ci est plus court.
-DateTime _dueDateFor(_YearMonth ym, int paymentDay) {
-  final lastDay = _lastDayOfMonth(ym.year, ym.month);
-  final day = paymentDay > lastDay ? lastDay : paymentDay;
-  return DateTime(ym.year, ym.month, day);
-}
+DateTime _dueDateFor(_YearMonth ym, int paymentDay) =>
+    leaseDueDate(paymentDay: paymentDay, year: ym.year, month: ym.month);
 
 /// Dernier jour du mois [month] de l'année [year] (28-31).
 int _lastDayOfMonth(int year, int month) {
