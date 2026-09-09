@@ -32,6 +32,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #172 — FIX Dashboard : KPI « Baux à renouveler » aligné sur la fenêtre 60 j (2026-09-09, commit 1ad8662)
+- Le KPI comptait les baux finissant sous **30 j** alors que son drill-down (`/leases?filter=renewable`) et le panneau « baux finissant » (PR #171) utilisent **60 j** (`isLeaseRenewable`) : le compteur pouvait différer de la liste affichée juste en dessous. Suivi laissé ouvert par la PR #171, désormais fermé.
+- `kLeaseRenewalWindowDays = 60` introduit dans `lease_renewal.dart` comme seuil unique ; `isLeaseRenewable` s'y réfère.
+- `fetchRenouvellements` interroge la fenêtre 60 j (via la constante) avec borne haute **stricte** (`isLessThan`) pour coller à `isLeaseRenewable` (`inDays < 60`). Borne basse `endDate >= today` conservée (un bail déjà expiré n'est pas « à renouveler » — il ressort en retard).
+- Sous-titre du KPI : « 30 prochains jours » → « 60 » (FR + EN).
+- Tests de bornes ajoutés (`fetchRenouvellements` : 45 j compté, 59 j inclus / 61 j exclu, expiré et terminé exclus), écrits en TDD. `flutter analyze` clean, suite complète verte (2879).
+
 ### PR #171 — Dashboard : panneau « À traiter / À venir » à la place du graphe cash-flow (2026-09-08, commit 9b5682c)
 - Le graphe cash-flow (peu utile sans crédit/dépenses saisis) est remplacé par un panneau actionnable `ActionItemsPanel` : bandeau encaissements du mois (encaissé/attendu/reste dû + barre), loyers en retard (tap → `/leases?filter=late`), baux finissant < 60 j (tap → `/leases?filter=renewable`), max 3/catégorie + « Voir tout », état vide « Tout est à jour ✓ ».
 - Graphe déplacé plus bas dans `CollapsibleCashflowSection` (ExpansionTile fermé par défaut, lazy — `MonthlyCashflowChart` inchangé). Nouvel ordre : KPI → rentabilité portfolio → panneau → graphe repliable → activité récente.
