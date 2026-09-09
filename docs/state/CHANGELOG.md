@@ -32,6 +32,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #174 — Dashboard : KPI patrimoniaux (occupation, patrimoine) + retrait des doublons (2026-09-09, commit b2d08d5)
+- La grille KPI faisait doublon avec le panneau « À traiter / À venir » (#171). Nouvelle grille : **Taux d'occupation · Patrimoine · Documents en attente**. Loyers/retards/renouvellements retirés.
+- Occupation = biens loués/total (ton warning si vacant) ; Patrimoine = Σ prix d'achat renseignés (montant à l'achat, factuel) ; tap → `/properties`. Cas dégradés gérés (0 bien, prix manquants).
+- `dashboardPortfolioKpisProvider` dérive `propertiesListItemsProvider` (`activeLeaseId` + `purchasePriceCents`) — zéro nouvelle requête Firestore. `KpiGrid` passe en `ConsumerWidget`.
+- i18n FR/EN. TDD (3 tâches). Suite complète verte (2875).
+- Effet de bord : le KPI « Baux à renouveler » disparaît → `DashboardRepository.fetchRenouvellements` (30j) probablement orphelin, à nettoyer séparément.
+- Différé (spec B) : indicateur factuel de fiabilité de paiement locataire (alternative légale à la notation).
+
 ### PR #171 — Dashboard : panneau « À traiter / À venir » à la place du graphe cash-flow (2026-09-08, commit 9b5682c)
 - Le graphe cash-flow (peu utile sans crédit/dépenses saisis) est remplacé par un panneau actionnable `ActionItemsPanel` : bandeau encaissements du mois (encaissé/attendu/reste dû + barre), loyers en retard (tap → `/leases?filter=late`), baux finissant < 60 j (tap → `/leases?filter=renewable`), max 3/catégorie + « Voir tout », état vide « Tout est à jour ✓ ».
 - Graphe déplacé plus bas dans `CollapsibleCashflowSection` (ExpansionTile fermé par défaut, lazy — `MonthlyCashflowChart` inchangé). Nouvel ordre : KPI → rentabilité portfolio → panneau → graphe repliable → activité récente.
