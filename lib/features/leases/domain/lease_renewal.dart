@@ -6,8 +6,7 @@ import 'lease.dart';
 /// Seuil unique partagé par tous les consommateurs de la notion « à renouveler »
 /// pour qu'ils ne divergent jamais :
 /// - le filtre `renewable` de la liste des baux ;
-/// - le panneau d'actions « baux finissant » du dashboard ;
-/// - le KPI « Baux à renouveler » (`fetchRenouvellements`).
+/// - le panneau d'actions « baux finissant » du dashboard.
 const int kLeaseRenewalWindowDays = 60;
 
 /// `true` si le bail a une date de fin dans moins de [kLeaseRenewalWindowDays]

@@ -64,10 +64,6 @@ class _FakeDashboardRepo implements DashboardRepository {
   Future<RetardsKpi> fetchRetards() async => RetardsKpi(count: retards);
 
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
 

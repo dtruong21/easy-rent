@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #176 — FIX Dashboard : suppression du KPI renouvellements orphelin (requête Firestore morte) (2026-09-09, commit a9f2c7e)
+- La PR #174 a retiré le KPI « Baux à renouveler » de l'UI mais `fetchRenouvellements()` restait dans le fan-in de `DashboardController.build()` : une requête Firestore sur `leases` (fenêtre 60 j) partait à **chaque** chargement du dashboard, résultat jamais lu (`DashboardSnapshot.renouvellements` sans consommateur UI). Requête gaspillée + champ mort — nettoyage signalé par #174.
+- Retire `RenouvellementsKpi`, `fetchRenouvellements` (interface + impl Firestore), le champ `DashboardSnapshot.renouvellements` (+ `empty()`), le fan-in/construction du snapshot dans `dashboard_provider.dart`, et l'import `lease_renewal` devenu inutile dans le repository.
+- **Inchangé** : `kLeaseRenewalWindowDays` / `isLeaseRenewable` restent consommés par le filtre de la liste des baux et le panneau « baux finissant » (#171). Seul le consommateur KPI mort est retiré.
+- 3 groupes de tests portant sur `fetchRenouvellements`/`RenouvellementsKpi` retirés (dont la « fenêtre 60 j » de #172), fakes de repository nettoyés (7 fichiers). Suite complète verte (2885, −9 tests), `flutter analyze` clean.
+
 ### PR #175 — Fiche bail : indicateur de ponctualité de paiement (factuel, responsive) (2026-09-09, commit 56d7531)
 - Alternative légale à la « notation de locataire » (écartée : risque RGPD/profilage/discrimination). Indicateur **purement factuel** en tête de la section « Paiements » de la fiche bail : parmi les paiements enregistrés, X/Y à l'heure · N en retard · % (le % seulement si ≥ 3 paiements). Privé au bailleur, jamais partagé, aucun score/lettre/étoiles, aucune agrégation inter-locataires.
 - `leaseDueDate({paymentDay, year, month})` extrait de `lease_lateness.dart` (échéance = `min(paymentDay, dernier jour du mois)`), réutilisé sans dupliquer le clamp. Helper pur `computePaymentPunctuality(payments, {paymentDay, graceDays})` → `PaymentPunctuality {total, onTime}` (+ `late`, `hasPayments`, `onTimePercent`). À l'heure = `paidAt ≤ échéance + 5 j` (`kDefaultLeaseGraceDays`, même définition que `lease_lateness`) ; soft-deleted ignorés.

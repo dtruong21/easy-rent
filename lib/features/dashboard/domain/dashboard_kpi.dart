@@ -20,12 +20,6 @@ class RetardsKpi with _$RetardsKpi {
   const factory RetardsKpi({required int count}) = _RetardsKpi;
 }
 
-/// KPI "Baux à renouveler" : baux actifs dont l'échéance est dans 30j.
-@freezed
-class RenouvellementsKpi with _$RenouvellementsKpi {
-  const factory RenouvellementsKpi({required int count}) = _RenouvellementsKpi;
-}
-
 /// KPI "Documents en attente" : documents de catégorie 'autre'.
 ///
 /// Proxy MVP — à raffiner P1 via un workflow d'attente explicite.

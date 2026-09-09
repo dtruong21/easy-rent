@@ -7,7 +7,7 @@ part 'dashboard_snapshot.freezed.dart';
 
 /// Snapshot complet du dashboard bailleur.
 ///
-/// Agrège les 4 KPI, l'activité récente (5 items) et l'indicateur
+/// Agrège les 3 KPI, l'activité récente (5 items) et l'indicateur
 /// d'onboarding.
 ///
 /// Le cash flow mensuel du graphique « Cash-flow mensuel » ne fait PAS
@@ -16,13 +16,12 @@ part 'dashboard_snapshot.freezed.dart';
 /// période du graphique ne recharge pas les KPI/activité.
 ///
 /// [isOnboarding] est `true` quand le bailleur n'a aucun bien, locataire ni bail.
-/// Dans ce cas, les 4 KPI sont vides — on affiche l'onboarding.
+/// Dans ce cas, les 3 KPI sont vides — on affiche l'onboarding.
 @freezed
 class DashboardSnapshot with _$DashboardSnapshot {
   const factory DashboardSnapshot({
     required LoyersMoisKpi loyers,
     required RetardsKpi retards,
-    required RenouvellementsKpi renouvellements,
     required DocsPendingKpi docs,
     required List<ActivityItem> activity,
     required bool isOnboarding,
@@ -35,7 +34,6 @@ class DashboardSnapshot with _$DashboardSnapshot {
       DashboardSnapshot(
         loyers: const LoyersMoisKpi(encaissedCents: 0, dueCents: 0),
         retards: const RetardsKpi(count: 0),
-        renouvellements: const RenouvellementsKpi(count: 0),
         docs: const DocsPendingKpi(count: 0),
         activity: const [],
         isOnboarding: isOnboarding,

@@ -12,7 +12,6 @@ void main() {
       expect(snapshot.loyers.encaissedCents, 0);
       expect(snapshot.loyers.dueCents, 0);
       expect(snapshot.retards.count, 0);
-      expect(snapshot.renouvellements.count, 0);
       expect(snapshot.docs.count, 0);
       expect(snapshot.activity, isEmpty);
     });
