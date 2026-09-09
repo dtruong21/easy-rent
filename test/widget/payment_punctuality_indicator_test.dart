@@ -73,6 +73,19 @@ void main() {
     expect(find.byKey(const Key('payment_punctuality_sheet')), findsOneWidget);
   });
 
+  testWidgets('largeur tablette (~700px) → ligne complète sans overflow', (
+    tester,
+  ) async {
+    // ≥3 paiements dont au moins un en retard : le libellé le plus long
+    // possible ("N/M à l'heure · K en retard · P %") doit s'ellipser plutôt
+    // que déborder (RenderFlex overflow) à une largeur tablette.
+    final onTime2 = _pay(DateTime(2026, 5, 1), DateTime(2026, 5, 2));
+    await tester.pumpWidget(_wrap([onTime, late, onTime2], width: 700));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('payment_punctuality_line')), findsOneWidget);
+  });
+
   testWidgets('aucun paiement → texte neutre, pas de pill/ligne', (
     tester,
   ) async {

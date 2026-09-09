@@ -31,10 +31,7 @@ class PaymentPunctualityIndicator extends ConsumerWidget {
 
     final k = computePaymentPunctuality(payments, paymentDay: paymentDay);
     if (!k.hasPayments) {
-      return Text(
-        l10n.paymentsPunctualityEmpty,
-        style: theme.textTheme.bodySmall?.copyWith(color: colors.neutral.solid),
-      );
+      return const SizedBox.shrink();
     }
 
     final tone = k.late > 0 ? colors.warning : colors.success;
@@ -85,10 +82,14 @@ class PaymentPunctualityIndicator extends ConsumerWidget {
             color: tone.solid,
           ),
           const SizedBox(width: 6),
-          Text(
-            parts.join(' · '),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          Flexible(
+            child: Text(
+              parts.join(' · '),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
