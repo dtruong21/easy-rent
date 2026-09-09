@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #175 — Fiche bail : indicateur de ponctualité de paiement (factuel, responsive) (2026-09-09, commit 56d7531)
+- Alternative légale à la « notation de locataire » (écartée : risque RGPD/profilage/discrimination). Indicateur **purement factuel** en tête de la section « Paiements » de la fiche bail : parmi les paiements enregistrés, X/Y à l'heure · N en retard · % (le % seulement si ≥ 3 paiements). Privé au bailleur, jamais partagé, aucun score/lettre/étoiles, aucune agrégation inter-locataires.
+- `leaseDueDate({paymentDay, year, month})` extrait de `lease_lateness.dart` (échéance = `min(paymentDay, dernier jour du mois)`), réutilisé sans dupliquer le clamp. Helper pur `computePaymentPunctuality(payments, {paymentDay, graceDays})` → `PaymentPunctuality {total, onTime}` (+ `late`, `hasPayments`, `onTimePercent`). À l'heure = `paidAt ≤ échéance + 5 j` (`kDefaultLeaseGraceDays`, même définition que `lease_lateness`) ; soft-deleted ignorés.
+- Widget `PaymentPunctualityIndicator` responsive : ≥ 600 px ligne complète, < 600 px pill compact dans la même rangée (aucun scroll ajouté), tap → feuille de détail (méthode + note de confidentialité). Ligne et pill ellipsés (anti-overflow). Aucun paiement → rien (l'état vide de la section porte déjà le message).
+- **Zéro nouvelle requête Firestore** : réutilise `leasePaymentsProvider` + `lease.paymentDay`. Jetons de design uniquement, i18n FR/EN. TDD (4 tâches). `flutter analyze` clean, suite complète verte (2894).
+
 ### PR #174 — Dashboard : KPI patrimoniaux (occupation, patrimoine) + retrait des doublons (2026-09-09, commit b2d08d5)
 - La grille KPI faisait doublon avec le panneau « À traiter / À venir » (#171). Nouvelle grille : **Taux d'occupation · Patrimoine · Documents en attente**. Loyers/retards/renouvellements retirés.
 - Occupation = biens loués/total (ton warning si vacant) ; Patrimoine = Σ prix d'achat renseignés (montant à l'achat, factuel) ; tap → `/properties`. Cas dégradés gérés (0 bien, prix manquants).
