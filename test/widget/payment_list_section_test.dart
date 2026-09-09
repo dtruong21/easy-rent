@@ -209,8 +209,8 @@ void main() {
       await tester.pumpWidget(_buildSection(lease: lease, payments: []));
       await tester.pumpAndSettle();
       // Hint "Aucun paiement enregistré. Cliquez sur..." visible (l'indicateur
-      // de ponctualité affiche aussi "Aucun paiement enregistré" en tête de
-      // section — on cible donc le texte complet du hint, pas le préfixe partagé).
+      // de ponctualité ne rend rien — SizedBox.shrink() — pour le cas vide,
+      // donc pas de risque de collision avec le hint ci-dessous).
       expect(find.textContaining('Cliquez sur'), findsOneWidget);
     });
 

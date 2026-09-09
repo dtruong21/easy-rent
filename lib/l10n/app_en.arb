@@ -5811,8 +5811,6 @@
   "@paymentsPunctualityLate": { "description": "Payments: late count (full)", "placeholders": { "count": { "type": "int" } } },
   "paymentsPunctualityLateShort": "{count} late",
   "@paymentsPunctualityLateShort": { "description": "Payments: late count (compact pill)", "placeholders": { "count": { "type": "int" } } },
-  "paymentsPunctualityEmpty": "No payment recorded",
-  "@paymentsPunctualityEmpty": { "description": "Payments: punctuality empty state" },
   "paymentsPunctualitySheetTitle": "Payment punctuality",
   "@paymentsPunctualitySheetTitle": { "description": "Payments: punctuality detail sheet title" },
   "paymentsPunctualityMethod": "On time = paid within 5 days of the due date.",

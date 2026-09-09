@@ -57,10 +57,14 @@ class PaymentPunctualityIndicator extends ConsumerWidget {
               color: tone.onSurface,
             ),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: tone.onSurface,
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: tone.onSurface,
+                ),
               ),
             ),
           ],

@@ -1344,7 +1344,6 @@
   "@paymentsPunctualityLate": { "placeholders": { "count": { "type": "int" } } },
   "paymentsPunctualityLateShort": "{count} retard",
   "@paymentsPunctualityLateShort": { "placeholders": { "count": { "type": "int" } } },
-  "paymentsPunctualityEmpty": "Aucun paiement enregistré",
   "paymentsPunctualitySheetTitle": "Ponctualité des paiements",
   "paymentsPunctualityMethod": "À l'heure = réglé sous 5 jours après l'échéance.",
   "paymentsPunctualityPrivacy": "Donnée privée, tirée de vos enregistrements. Jamais partagée.",

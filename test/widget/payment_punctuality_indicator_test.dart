@@ -94,4 +94,27 @@ void main() {
     expect(find.byKey(const Key('payment_punctuality_pill')), findsNothing);
     expect(find.byKey(const Key('payment_punctuality_line')), findsNothing);
   });
+
+  testWidgets(
+    'pill compact sur mobile étroit (~360px) avec long libellé → pas d\'overflow',
+    (tester) async {
+      // 30 paiements dont 6 en retard → libellé long ("24/30 · 6 retard"),
+      // rendu dans le header (titre de section + bouton "Ajouter") à une
+      // largeur mobile étroite : la pill doit s'ellipser plutôt que déborder.
+      final many = List<Payment>.generate(30, (i) {
+        final periodStart = DateTime(2026, 1 + i, 1);
+        // paymentDay: 5 (voir _wrap) → échéance le 5 du mois de periodStart.
+        final due = DateTime(periodStart.year, periodStart.month, 5);
+        final isLate = i < 6;
+        final paidAt = isLate
+            ? due.add(const Duration(days: 20))
+            : due.add(const Duration(days: 1));
+        return _pay(periodStart, paidAt);
+      });
+      await tester.pumpWidget(_wrap(many, width: 360));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('payment_punctuality_pill')), findsOneWidget);
+    },
+  );
 }
