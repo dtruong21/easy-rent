@@ -176,9 +176,7 @@ class FirestoreDashboardRepository implements DashboardRepository {
     // jours, borne haute STRICTE pour coller à `isLeaseRenewable` (`inDays < 60`).
     // Sinon le compteur diffère de la liste affichée juste en dessous (ancien
     // bug : fenêtre 30 j côté KPI vs 60 j côté liste/panneau).
-    final windowEnd = today.add(
-      const Duration(days: kLeaseRenewalWindowDays),
-    );
+    final windowEnd = today.add(const Duration(days: kLeaseRenewalWindowDays));
 
     final qs = await _firestore
         .collection('leases')

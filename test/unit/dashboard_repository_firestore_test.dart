@@ -210,31 +210,37 @@ void main() {
       expect(kpi.count, 1);
     });
 
-    test('bail déjà fini (endDate passée) → non compté (borne basse >= today)', () async {
-      final now = DateTime.now();
-      await seedLease(
-        id: 'expired',
-        startDate: DateTime(2020, 1, 1),
-        endDate: now.subtract(const Duration(days: 5)),
-      );
+    test(
+      'bail déjà fini (endDate passée) → non compté (borne basse >= today)',
+      () async {
+        final now = DateTime.now();
+        await seedLease(
+          id: 'expired',
+          startDate: DateTime(2020, 1, 1),
+          endDate: now.subtract(const Duration(days: 5)),
+        );
 
-      final kpi = await repo.fetchRenouvellements();
+        final kpi = await repo.fetchRenouvellements();
 
-      expect(kpi.count, 0);
-    });
+        expect(kpi.count, 0);
+      },
+    );
 
-    test('bail terminé finissant bientôt → non compté (statut non-actif)', () async {
-      final now = DateTime.now();
-      await seedLease(
-        id: 'term',
-        status: 'terminated',
-        startDate: DateTime(2020, 1, 1),
-        endDate: now.add(const Duration(days: 30)),
-      );
+    test(
+      'bail terminé finissant bientôt → non compté (statut non-actif)',
+      () async {
+        final now = DateTime.now();
+        await seedLease(
+          id: 'term',
+          status: 'terminated',
+          startDate: DateTime(2020, 1, 1),
+          endDate: now.add(const Duration(days: 30)),
+        );
 
-      final kpi = await repo.fetchRenouvellements();
+        final kpi = await repo.fetchRenouvellements();
 
-      expect(kpi.count, 0);
-    });
+        expect(kpi.count, 0);
+      },
+    );
   });
 }
