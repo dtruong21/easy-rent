@@ -19,7 +19,7 @@ final _log = Logger('DashboardController');
 ///
 /// Charge le [DashboardSnapshot] complet en parallèle via records Dart 3
 /// (required #4 — remplace le pattern `as dynamic` non type-safe).
-/// Si [isLandlordOnboarding] est `true`, les 5 autres requêtes sont court-circuitées.
+/// Si [isLandlordOnboarding] est `true`, les 4 autres requêtes sont court-circuitées.
 ///
 /// Le graphique « Cash-flow mensuel » est chargé séparément par
 /// [monthlyCashflowProvider] : sa période est sélectionnable par l'utilisateur
@@ -38,12 +38,11 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
       return DashboardSnapshot.empty(isOnboarding: true);
     }
 
-    // 2) Fan-in parallèle des 5 requêtes — types statiques préservés sans cast.
+    // 2) Fan-in parallèle des 4 requêtes — types statiques préservés sans cast.
     _log.info('DashboardController: chargement parallèle KPI + activité');
-    final (loyers, retards, renouvellements, docs, activity) = await (
+    final (loyers, retards, docs, activity) = await (
       repo.fetchLoyersMois(),
       repo.fetchRetards(),
-      repo.fetchRenouvellements(),
       repo.fetchDocsPending(),
       // 30 : la section n'en montre que 5 repliés, « Voir tout » déplie le
       // reste sur place sans requête supplémentaire.
@@ -53,7 +52,6 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
     return DashboardSnapshot(
       loyers: loyers,
       retards: retards,
-      renouvellements: renouvellements,
       docs: docs,
       activity: activity,
       isOnboarding: false,

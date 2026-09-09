@@ -19,7 +19,7 @@
 
 | Modèle | Notes |
 |---|---|
-| `DashboardSnapshot` | 4 KPI (LoyersMoisKpi, RetardsKpi, RenouvellementsKpi, DocsPendingKpi) + List<ActivityItem> + isOnboarding |
+| `DashboardSnapshot` | 3 KPI (LoyersMoisKpi, RetardsKpi, DocsPendingKpi) + List<ActivityItem> + isOnboarding |
 | `MonthlyCashflow` | year, month, collectedRentCents, nonRecoverableExpenseCents, loanPaymentCents, hasData → getter `netCents` (loyers - dépenses - mensualité) |
 | `MonthlyCollectedRent` | Helper pour agrégation loyers mensuels (brique du cashflow) |
 | `ActivityItem` | Activité récente (paiements, baux, documents, etc.) |

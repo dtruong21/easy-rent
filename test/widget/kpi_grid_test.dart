@@ -37,7 +37,6 @@ PropertyListItem _prop({String? activeLeaseId, int? price}) => PropertyListItem(
 DashboardSnapshot _snapshot() => const DashboardSnapshot(
   loyers: LoyersMoisKpi(encaissedCents: 0, dueCents: 0),
   retards: RetardsKpi(count: 0),
-  renouvellements: RenouvellementsKpi(count: 0),
   docs: DocsPendingKpi(count: 2),
   activity: [],
   isOnboarding: false,

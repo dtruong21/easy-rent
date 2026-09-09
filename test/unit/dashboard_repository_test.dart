@@ -17,7 +17,6 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeDashboardRepository implements DashboardRepository {
   final LoyersMoisKpi _loyers;
   final RetardsKpi _retards;
-  final RenouvellementsKpi _renouvellements;
   final DocsPendingKpi _docs;
   final List<MonthlyCollectedRent> _monthly;
   final List<ActivityItem> _activity;
@@ -26,7 +25,6 @@ class _FakeDashboardRepository implements DashboardRepository {
   const _FakeDashboardRepository({
     LoyersMoisKpi? loyers,
     RetardsKpi? retards,
-    RenouvellementsKpi? renouvellements,
     DocsPendingKpi? docs,
     List<MonthlyCollectedRent>? monthly,
     List<ActivityItem>? activity,
@@ -35,7 +33,6 @@ class _FakeDashboardRepository implements DashboardRepository {
            loyers ??
            const LoyersMoisKpi(encaissedCents: 85000, dueCents: 90000),
        _retards = retards ?? const RetardsKpi(count: 0),
-       _renouvellements = renouvellements ?? const RenouvellementsKpi(count: 0),
        _docs = docs ?? const DocsPendingKpi(count: 0),
        _monthly = monthly ?? const [],
        _activity = activity ?? const [],
@@ -46,9 +43,6 @@ class _FakeDashboardRepository implements DashboardRepository {
 
   @override
   Future<RetardsKpi> fetchRetards() async => _retards;
-
-  @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async => _renouvellements;
 
   @override
   Future<DocsPendingKpi> fetchDocsPending() async => _docs;
@@ -102,22 +96,6 @@ void main() {
       );
       final kpi = await repo.fetchRetards();
       expect(kpi.count, 3);
-    });
-  });
-
-  group('fetchRenouvellements', () {
-    test('retourne count=0 par défaut', () async {
-      final repo = const _FakeDashboardRepository();
-      final kpi = await repo.fetchRenouvellements();
-      expect(kpi.count, 0);
-    });
-
-    test('retourne count configuré', () async {
-      final repo = _FakeDashboardRepository(
-        renouvellements: const RenouvellementsKpi(count: 2),
-      );
-      final kpi = await repo.fetchRenouvellements();
-      expect(kpi.count, 2);
     });
   });
 

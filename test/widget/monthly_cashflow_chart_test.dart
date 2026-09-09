@@ -92,9 +92,6 @@ class _PeriodAwareDashboardRepository implements DashboardRepository {
   @override
   Future<RetardsKpi> fetchRetards() async => const RetardsKpi(count: 0);
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
   @override
@@ -120,9 +117,6 @@ class _FixedDashboardRepository implements DashboardRepository {
       const LoyersMoisKpi(encaissedCents: 0, dueCents: 0);
   @override
   Future<RetardsKpi> fetchRetards() async => const RetardsKpi(count: 0);
-  @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
   @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
