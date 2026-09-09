@@ -32,6 +32,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #174 — Dashboard : KPI patrimoniaux (occupation, patrimoine) + retrait des doublons (2026-09-09, commit b2d08d5)
+- La grille KPI faisait doublon avec le panneau « À traiter / À venir » (#171). Nouvelle grille : **Taux d'occupation · Patrimoine · Documents en attente**. Loyers/retards/renouvellements retirés.
+- Occupation = biens loués/total (ton warning si vacant) ; Patrimoine = Σ prix d'achat renseignés (montant à l'achat, factuel) ; tap → `/properties`. Cas dégradés gérés (0 bien, prix manquants).
+- `dashboardPortfolioKpisProvider` dérive `propertiesListItemsProvider` (`activeLeaseId` + `purchasePriceCents`) — zéro nouvelle requête Firestore. `KpiGrid` passe en `ConsumerWidget`.
+- i18n FR/EN. TDD (3 tâches). Suite complète verte (2875).
+- Effet de bord : cette PR **retire le KPI « Baux à renouveler »** que la PR #172 venait justement d'aligner sur 60 j → `DashboardRepository.fetchRenouvellements` n'a plus de consommateur UI (candidat au nettoyage, hors périmètre).
+- Différé (spec B) : indicateur factuel de fiabilité de paiement locataire (alternative légale à la notation).
+
 ### PR #172 — FIX Dashboard : KPI « Baux à renouveler » aligné sur la fenêtre 60 j (2026-09-09, commit 1ad8662)
 - Le KPI comptait les baux finissant sous **30 j** alors que son drill-down (`/leases?filter=renewable`) et le panneau « baux finissant » (PR #171) utilisent **60 j** (`isLeaseRenewable`) : le compteur pouvait différer de la liste affichée juste en dessous. Suivi laissé ouvert par la PR #171, désormais fermé.
 - `kLeaseRenewalWindowDays = 60` introduit dans `lease_renewal.dart` comme seuil unique ; `isLeaseRenewable` s'y réfère.
