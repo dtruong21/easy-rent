@@ -648,7 +648,7 @@
   "dashboardKpiLateSubtitle": "locataire(s) en retard",
   "dashboardKpiLateNoneSubtitle": "Tout est à jour",
   "dashboardKpiRenewalsLabel": "Baux à renouveler",
-  "dashboardKpiRenewalsSubtitle": "dans les 30 prochains jours",
+  "dashboardKpiRenewalsSubtitle": "dans les 60 prochains jours",
   "dashboardKpiDocsPendingLabel": "Documents en attente",
   "dashboardKpiDocsPendingSubtitle": "catégorie \"autre\"",
   "dashboardPortfolioYieldSectionTitle": "Rentabilité portfolio",

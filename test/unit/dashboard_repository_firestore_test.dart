@@ -31,6 +31,7 @@ void main() {
     required String id,
     String status = 'active',
     required DateTime startDate,
+    DateTime? endDate,
     int paymentDay = 1,
   }) async {
     await firestore.collection('leases').doc(id).set({
@@ -40,6 +41,7 @@ void main() {
       'rentAmountCents': 80000,
       'chargesAmountCents': 5000,
       'startDate': Timestamp.fromDate(startDate),
+      'endDate': endDate == null ? null : Timestamp.fromDate(endDate),
       'status': status,
       'paymentDay': paymentDay,
       'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
@@ -166,5 +168,73 @@ void main() {
         expect(kpi.count, 1);
       },
     );
+  });
+
+  group('FirestoreDashboardRepository.fetchRenouvellements — fenêtre 60 j', () {
+    test('aucun bail actif → count=0', () async {
+      final kpi = await repo.fetchRenouvellements();
+      expect(kpi.count, 0);
+    });
+
+    test('bail finissant dans 45 j → compté (la fenêtre est 60 j, pas 30 j : '
+        'la fenêtre 30 j historique l\'aurait exclu à tort — c\'est le bug '
+        'd\'alignement KPI/liste corrigé ici)', () async {
+      final now = DateTime.now();
+      await seedLease(
+        id: 'l1',
+        startDate: DateTime(2020, 1, 1),
+        endDate: now.add(const Duration(days: 45)),
+      );
+
+      final kpi = await repo.fetchRenouvellements();
+
+      expect(kpi.count, 1);
+    });
+
+    test('borne 60 j : finit dans 59 j → compté ; finit dans 61 j → non compté '
+        '(même seuil que isLeaseRenewable : inDays < 60)', () async {
+      final now = DateTime.now();
+      await seedLease(
+        id: 'in',
+        startDate: DateTime(2020, 1, 1),
+        endDate: now.add(const Duration(days: 59)),
+      );
+      await seedLease(
+        id: 'out',
+        startDate: DateTime(2020, 1, 1),
+        endDate: now.add(const Duration(days: 61)),
+      );
+
+      final kpi = await repo.fetchRenouvellements();
+
+      expect(kpi.count, 1);
+    });
+
+    test('bail déjà fini (endDate passée) → non compté (borne basse >= today)', () async {
+      final now = DateTime.now();
+      await seedLease(
+        id: 'expired',
+        startDate: DateTime(2020, 1, 1),
+        endDate: now.subtract(const Duration(days: 5)),
+      );
+
+      final kpi = await repo.fetchRenouvellements();
+
+      expect(kpi.count, 0);
+    });
+
+    test('bail terminé finissant bientôt → non compté (statut non-actif)', () async {
+      final now = DateTime.now();
+      await seedLease(
+        id: 'term',
+        status: 'terminated',
+        startDate: DateTime(2020, 1, 1),
+        endDate: now.add(const Duration(days: 30)),
+      );
+
+      final kpi = await repo.fetchRenouvellements();
+
+      expect(kpi.count, 0);
+    });
   });
 }
