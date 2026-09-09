@@ -1325,5 +1325,16 @@
   "@dashboardCollectionOutstanding": { "placeholders": { "amount": { "type": "String" } } },
   "dashboardCollectionAllPaid": "Tout est encaissé ce mois",
   "dashboardCashflowCollapsibleTitle": "Cash-flow mensuel — détail",
-  "dashboardCashflowCollapsibleSubtitle": "Surtout utile si vous saisissez crédit et dépenses."
+  "dashboardCashflowCollapsibleSubtitle": "Surtout utile si vous saisissez crédit et dépenses.",
+  "dashboardKpiOccupancyLabel": "Taux d'occupation",
+  "dashboardKpiOccupancyRented": "{occupied}/{total} loués",
+  "@dashboardKpiOccupancyRented": { "placeholders": { "occupied": { "type": "int" }, "total": { "type": "int" } } },
+  "dashboardKpiOccupancyVacant": "{count} vacant",
+  "@dashboardKpiOccupancyVacant": { "placeholders": { "count": { "type": "int" } } },
+  "dashboardKpiOccupancyNone": "Aucun bien",
+  "dashboardKpiPatrimonyLabel": "Patrimoine",
+  "dashboardKpiPatrimonyAtPurchase": "à l'achat",
+  "dashboardKpiPatrimonyPartial": "sur {withPrice}/{total} biens renseignés",
+  "@dashboardKpiPatrimonyPartial": { "placeholders": { "withPrice": { "type": "int" }, "total": { "type": "int" } } },
+  "dashboardKpiPatrimonyNone": "Renseignez le prix d'achat"
 }

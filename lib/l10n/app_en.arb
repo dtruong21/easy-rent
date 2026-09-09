@@ -5788,5 +5788,21 @@
   "dashboardCashflowCollapsibleSubtitle": "Most useful when you record loan and expenses.",
   "@dashboardCashflowCollapsibleSubtitle": {
     "description": "Dashboard — subtitle of the collapsible cash-flow tile, hinting why the chart is more informative once loan/expenses are recorded."
-  }
+  },
+  "dashboardKpiOccupancyLabel": "Occupancy",
+  "@dashboardKpiOccupancyLabel": { "description": "Dashboard KPI: occupancy rate label" },
+  "dashboardKpiOccupancyRented": "{occupied}/{total} rented",
+  "@dashboardKpiOccupancyRented": { "description": "Dashboard KPI: rented/total subtitle", "placeholders": { "occupied": { "type": "int" }, "total": { "type": "int" } } },
+  "dashboardKpiOccupancyVacant": "{count} vacant",
+  "@dashboardKpiOccupancyVacant": { "description": "Dashboard KPI: vacant count", "placeholders": { "count": { "type": "int" } } },
+  "dashboardKpiOccupancyNone": "No property",
+  "@dashboardKpiOccupancyNone": { "description": "Dashboard KPI: occupancy empty state" },
+  "dashboardKpiPatrimonyLabel": "Portfolio value",
+  "@dashboardKpiPatrimonyLabel": { "description": "Dashboard KPI: portfolio value label" },
+  "dashboardKpiPatrimonyAtPurchase": "at purchase",
+  "@dashboardKpiPatrimonyAtPurchase": { "description": "Dashboard KPI: patrimony subtitle (purchase-cost basis)" },
+  "dashboardKpiPatrimonyPartial": "on {withPrice}/{total} properties with price",
+  "@dashboardKpiPatrimonyPartial": { "description": "Dashboard KPI: patrimony partial-data subtitle", "placeholders": { "withPrice": { "type": "int" }, "total": { "type": "int" } } },
+  "dashboardKpiPatrimonyNone": "Add purchase prices",
+  "@dashboardKpiPatrimonyNone": { "description": "Dashboard KPI: patrimony empty state" }
 }
