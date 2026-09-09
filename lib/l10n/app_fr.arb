@@ -1336,5 +1336,17 @@
   "dashboardKpiPatrimonyAtPurchase": "à l'achat",
   "dashboardKpiPatrimonyPartial": "sur {withPrice}/{total} biens renseignés",
   "@dashboardKpiPatrimonyPartial": { "placeholders": { "withPrice": { "type": "int" }, "total": { "type": "int" } } },
-  "dashboardKpiPatrimonyNone": "Renseignez le prix d'achat"
+  "dashboardKpiPatrimonyNone": "Renseignez le prix d'achat",
+
+  "paymentsPunctualityOnTime": "{onTime}/{total} à l'heure",
+  "@paymentsPunctualityOnTime": { "placeholders": { "onTime": { "type": "int" }, "total": { "type": "int" } } },
+  "paymentsPunctualityLate": "{count} en retard",
+  "@paymentsPunctualityLate": { "placeholders": { "count": { "type": "int" } } },
+  "paymentsPunctualityLateShort": "{count} retard",
+  "@paymentsPunctualityLateShort": { "placeholders": { "count": { "type": "int" } } },
+  "paymentsPunctualitySheetTitle": "Ponctualité des paiements",
+  "paymentsPunctualityMethod": "À l'heure = réglé sous 5 jours après l'échéance.",
+  "paymentsPunctualityPrivacy": "Donnée privée, tirée de vos enregistrements. Jamais partagée.",
+  "paymentsPunctualityOnTimeLabel": "À l'heure",
+  "paymentsPunctualityLateLabel": "En retard"
 }
