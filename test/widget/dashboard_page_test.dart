@@ -8,7 +8,6 @@ import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/presentation/dashboard_page.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/action_items_panel.dart';
-import 'package:easyrent/features/dashboard/presentation/widgets/kpi_card.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/shortcuts_row.dart';
 import 'package:easyrent/features/leases/application/leases_list_provider.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
@@ -262,14 +261,20 @@ void main() {
   });
 
   group('DashboardPage — état data normal', () {
-    testWidgets('affiche les 4 KPI cards', (tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('kpi_loyers')), findsOneWidget);
-      expect(find.byKey(const Key('kpi_retards')), findsOneWidget);
-      expect(find.byKey(const Key('kpi_renouvellements')), findsOneWidget);
-      expect(find.byKey(const Key('kpi_docs')), findsOneWidget);
-    });
+    testWidgets(
+      'affiche les 3 KPI patrimoniaux (occupation, patrimoine, docs)',
+      (tester) async {
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('kpi_occupation')), findsOneWidget);
+        expect(find.byKey(const Key('kpi_patrimoine')), findsOneWidget);
+        expect(find.byKey(const Key('kpi_docs')), findsOneWidget);
+        // Les compteurs redondants avec le panneau ont été retirés.
+        expect(find.byKey(const Key('kpi_loyers')), findsNothing);
+        expect(find.byKey(const Key('kpi_retards')), findsNothing);
+        expect(find.byKey(const Key('kpi_renouvellements')), findsNothing);
+      },
+    );
 
     testWidgets('affiche le header "Bonjour"', (tester) async {
       await tester.pumpWidget(_wrap());
@@ -383,67 +388,7 @@ void main() {
     });
   });
 
-  group('DashboardPage — couleurs sémantiques KpiGrid', () {
-    testWidgets('KPI retards utilise AppColors.danger quand count > 0', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap(retards: 2));
-      await tester.pumpAndSettle();
-
-      // Trouve le KpiCard retards et vérifie sa semanticColor.
-      final kpiRetards = tester.widget<KpiCard>(
-        find.byKey(const Key('kpi_retards')),
-      );
-      expect(kpiRetards.semanticColor, equals(AppColors.light.danger.solid));
-    });
-
-    testWidgets('KPI retards utilise AppColors.neutral quand count = 0', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      final kpiRetards = tester.widget<KpiCard>(
-        find.byKey(const Key('kpi_retards')),
-      );
-      expect(kpiRetards.semanticColor, equals(AppColors.light.neutral.solid));
-    });
-  });
   group('DashboardPage — drill-down KPI cliquables', () {
-    testWidgets('tap « Loyers du mois » → /leases?filter=active', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_loyers')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('baux filter=active'), findsOneWidget);
-    });
-
-    testWidgets('tap « Retards » → /leases?filter=late', (tester) async {
-      await tester.pumpWidget(_wrap(retards: 2));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_retards')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('baux filter=late'), findsOneWidget);
-    });
-
-    testWidgets('tap « Baux à renouveler » → /leases?filter=renewable', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_renouvellements')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('baux filter=renewable'), findsOneWidget);
-    });
-
     testWidgets('« Documents en attente » n\'est PAS cliquable (pas de '
         'page globale documents)', (tester) async {
       await tester.pumpWidget(_wrap());
