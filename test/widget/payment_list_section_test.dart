@@ -5,6 +5,7 @@
 library;
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -180,6 +181,7 @@ Widget _buildSection({required Lease lease, required List<Payment> payments}) {
     ],
     child: MaterialApp.router(
       routerConfig: router,
+      theme: AppTheme.light,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       locale: const Locale('fr'),
       supportedLocales: supportedLocales,
@@ -206,8 +208,10 @@ void main() {
       final lease = _makeLease();
       await tester.pumpWidget(_buildSection(lease: lease, payments: []));
       await tester.pumpAndSettle();
-      // Hint "Aucun paiement" visible
-      expect(find.textContaining('Aucun paiement'), findsOneWidget);
+      // Hint "Aucun paiement enregistré. Cliquez sur..." visible (l'indicateur
+      // de ponctualité affiche aussi "Aucun paiement enregistré" en tête de
+      // section — on cible donc le texte complet du hint, pas le préfixe partagé).
+      expect(find.textContaining('Cliquez sur'), findsOneWidget);
     });
 
     // -----------------------------------------------------------------------
