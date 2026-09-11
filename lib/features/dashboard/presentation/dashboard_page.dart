@@ -208,7 +208,10 @@ class _DataView extends StatelessWidget {
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
-        ActionItemsPanel(loyers: snapshot.loyers),
+        ActionItemsPanel(
+          loyers: snapshot.loyers,
+          docsPendingCount: snapshot.docs.count,
+        ),
         SizedBox(height: spacing.xl),
         const CollapsibleCashflowSection(),
         SizedBox(height: spacing.xl),

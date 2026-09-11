@@ -5751,6 +5751,11 @@
   "@dashboardActionDetailUnavailable": {
     "description": "Dashboard actionable panel — fallback message shown when the underlying leases provider fails to load."
   },
+  "dashboardActionDocsPending": "{count, plural, =1{1 pending document} other{{count} pending documents}}",
+  "@dashboardActionDocsPending": {
+    "description": "Passive line in the dashboard action panel showing how many documents are pending. {count} is the number of pending documents.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "dashboardCollectionTitle": "This month's collection",
   "@dashboardCollectionTitle": {
     "description": "Dashboard actionable panel — heading of the collection-progress banner (encaissé / attendu) at the top of the panel."

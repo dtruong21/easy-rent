@@ -58,13 +58,14 @@ Widget _wrap(List<LeaseListItem> items, {required GoRouter router}) {
   );
 }
 
-GoRouter _router() => GoRouter(
+GoRouter _router({int docsPendingCount = 0}) => GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (_, _) => const Scaffold(
+      builder: (_, _) => Scaffold(
         body: ActionItemsPanel(
-          loyers: LoyersMoisKpi(encaissedCents: 60000, dueCents: 80000),
+          loyers: const LoyersMoisKpi(encaissedCents: 60000, dueCents: 80000),
+          docsPendingCount: docsPendingCount,
         ),
       ),
     ),
@@ -110,5 +111,34 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('action_items_empty')), findsOneWidget);
+  });
+
+  testWidgets('docs en attente > 0 → ligne passive affichée, non cliquable', (
+    tester,
+  ) async {
+    final far = DateTime.now().add(const Duration(days: 300));
+    await tester.pumpWidget(
+      _wrap([_item(id: 'C', endDate: far)], router: _router(docsPendingCount: 3)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('action_docs_pending')), findsOneWidget);
+    expect(find.textContaining('3 documents en attente'), findsOneWidget);
+    // Pas un bouton / ListTile cliquable : aucun InkWell sous la ligne.
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('action_docs_pending')),
+        matching: find.byType(InkWell),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('docs en attente == 0 → aucune ligne docs', (tester) async {
+    final far = DateTime.now().add(const Duration(days: 300));
+    await tester.pumpWidget(
+      _wrap([_item(id: 'C', endDate: far)], router: _router(docsPendingCount: 0)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('action_docs_pending')), findsNothing);
   });
 }

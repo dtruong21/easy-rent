@@ -1315,6 +1315,7 @@
   "dashboardActionViewAll": "Voir tout ({count})",
   "@dashboardActionViewAll": { "placeholders": { "count": { "type": "int" } } },
   "dashboardActionDetailUnavailable": "Détail indisponible",
+  "dashboardActionDocsPending": "{count, plural, =1{1 document en attente} other{{count} documents en attente}}",
   "dashboardCollectionTitle": "Encaissements du mois",
   "dashboardCollectionSummary": "{collected} encaissés sur {due} attendus",
   "@dashboardCollectionSummary": { "placeholders": { "collected": { "type": "String" }, "due": { "type": "String" } } },
