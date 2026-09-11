@@ -8,8 +8,10 @@
  * code des handlers propre et type-safe.
  */
 
+import * as admin from "firebase-admin";
 import type {DocumentSnapshot} from "firebase-admin/firestore";
 import {Timestamp} from "firebase-admin/firestore";
+import {logger} from "firebase-functions/v2";
 import {HttpsError} from "firebase-functions/v2/https";
 import type {CallableRequest} from "firebase-functions/v2/https";
 
@@ -24,6 +26,46 @@ export function requireAuthUid<T = unknown>(request: CallableRequest<T>): string
     throw new HttpsError("unauthenticated", "sign-in required");
   }
   return request.auth.uid;
+}
+
+/** Fraîcheur maximale de l'authentification pour un compte non-anonyme. */
+export const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
+
+/**
+ * Rejette si un compte NON-anonyme présente un token d'auth trop vieux
+ * (> RECENT_AUTH_MAX_AGE_SECONDS). Un compte anonyme (confirmé AUTORITATIVEMENT
+ * via Admin SDK `providerData`, car le claim `sign_in_provider` reste
+ * "anonymous" sur les tokens émis avant un upgrade par linking) est exempté.
+ */
+export async function assertRecentAuthForNonAnonymousAccount(
+  request: CallableRequest,
+  uid: string,
+): Promise<void> {
+  const token = request.auth?.token;
+  let isAnonymous = token?.firebase?.sign_in_provider === "anonymous";
+  if (isAnonymous) {
+    try {
+      const userRecord = await admin.auth().getUser(uid);
+      isAnonymous = userRecord.providerData.length === 0;
+    } catch (err) {
+      const code =
+        typeof err === "object" && err !== null && "code" in err ?
+          (err as {code: unknown}).code :
+          undefined;
+      if (code !== "auth/user-not-found") {
+        logger.error(`assertRecentAuth: getUser failed for uid=${uid}`, err);
+        throw new HttpsError("internal", "account lookup failed — retry");
+      }
+    }
+  }
+  if (!isAnonymous) {
+    const authTime =
+      typeof token?.auth_time === "number" ? token.auth_time : 0;
+    const ageSeconds = Date.now() / 1000 - authTime;
+    if (ageSeconds > RECENT_AUTH_MAX_AGE_SECONDS) {
+      throw new HttpsError("failed-precondition", "recent-login-required");
+    }
+  }
 }
 
 export function requireString(value: unknown, name: string): string {
