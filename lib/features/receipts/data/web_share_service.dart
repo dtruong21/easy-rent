@@ -117,7 +117,13 @@ class WebShareServiceImpl implements WebShareService {
     web.document.body?.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    web.URL.revokeObjectURL(url);
+    // Révocation DIFFÉRÉE, jamais immédiate : même prudence que dans
+    // [openPdfBytes] — Safari/WebKit desktop a déjà échoué des téléchargements
+    // quand le blob URL est révoqué juste après le clic.
+    Future<void>.delayed(
+      const Duration(minutes: 2),
+      () => web.URL.revokeObjectURL(url),
+    );
   }
 
   @override
