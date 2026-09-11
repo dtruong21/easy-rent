@@ -302,53 +302,57 @@ void main() {
     // -----------------------------------------------------------------------
     // Ponctualité par bail (#175, Task 5)
     // -----------------------------------------------------------------------
-    testWidgets('ligne de bail porte l\'indicateur de ponctualité si payment_day', (
-      tester,
-    ) async {
-      final payments = [
-        Payment(
-          id: 'p1',
-          leaseId: 'lz',
-          landlordId: 'lord1',
-          periodStart: DateTime(2026, 1, 1),
-          periodEnd: DateTime(2026, 1, 31),
-          paidAt: DateTime(2026, 1, 8), // échéance 5 + 5j = 10 → à l'heure
-          rentAmountCents: 80000,
-          chargesAmountCents: 0,
-          paymentMethod: PaymentMethod.virement,
-          createdAt: DateTime(2026, 1, 1),
-          updatedAt: DateTime(2026, 1, 1),
-        ),
-      ];
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            leasePaymentsProvider.overrideWith(() => _FakePayments(payments)),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.light,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            locale: const Locale('fr'),
-            supportedLocales: supportedLocales,
-            home: const Scaffold(
-              body: TenantLeaseSummary(
-                leases: [
-                  {
-                    'id': 'lz',
-                    'status': 'active',
-                    'start_date': '2026-01-01T00:00:00.000Z',
-                    'end_date': null,
-                    'rent_amount_cents': 80000,
-                    'payment_day': 5,
-                  },
-                ],
+    testWidgets(
+      'ligne de bail porte l\'indicateur de ponctualité si payment_day',
+      (tester) async {
+        final payments = [
+          Payment(
+            id: 'p1',
+            leaseId: 'lz',
+            landlordId: 'lord1',
+            periodStart: DateTime(2026, 1, 1),
+            periodEnd: DateTime(2026, 1, 31),
+            paidAt: DateTime(2026, 1, 8), // échéance 5 + 5j = 10 → à l'heure
+            rentAmountCents: 80000,
+            chargesAmountCents: 0,
+            paymentMethod: PaymentMethod.virement,
+            createdAt: DateTime(2026, 1, 1),
+            updatedAt: DateTime(2026, 1, 1),
+          ),
+        ];
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              leasePaymentsProvider.overrideWith(() => _FakePayments(payments)),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              locale: const Locale('fr'),
+              supportedLocales: supportedLocales,
+              home: const Scaffold(
+                body: TenantLeaseSummary(
+                  leases: [
+                    {
+                      'id': 'lz',
+                      'status': 'active',
+                      'start_date': '2026-01-01T00:00:00.000Z',
+                      'end_date': null,
+                      'rent_amount_cents': 80000,
+                      'payment_day': 5,
+                    },
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('payment_punctuality_tap')), findsOneWidget);
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('payment_punctuality_tap')),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
