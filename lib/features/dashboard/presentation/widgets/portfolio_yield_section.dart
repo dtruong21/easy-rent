@@ -7,6 +7,7 @@ import 'package:logging/logging.dart';
 
 import '../../../../core/finance/profitability_snapshot.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../properties/application/properties_list_provider.dart';
 import '../../../properties/domain/property_list_item.dart';
@@ -168,6 +169,14 @@ class _PortfolioYieldData extends StatelessWidget {
     final spacing =
         Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     final l10n = context.l10n;
+    final colors = Theme.of(context).extension<AppColors>() ?? AppColors.light;
+
+    Color? toneOf(double? percent) => switch (yieldTierFor(percent)) {
+      YieldTier.none => null,
+      YieldTier.negative => colors.danger.solid,
+      YieldTier.low => colors.warning.solid,
+      YieldTier.good => colors.success.solid,
+    };
 
     if (summary.totalCount == 0) {
       return Text(
@@ -202,6 +211,7 @@ class _PortfolioYieldData extends StatelessWidget {
                   ? '${summary.avgYieldGrossPercent!.toStringAsFixed(2)} %'
                   : '—',
               subtitle: l10n.dashboardPortfolioYieldGrossSubtitle,
+              valueColor: toneOf(summary.avgYieldGrossPercent),
             ),
             _PortfolioKpiCard(
               key: const Key('kpi_portfolio_net_yield'),
@@ -211,6 +221,7 @@ class _PortfolioYieldData extends StatelessWidget {
                   ? '${summary.avgYieldNetPercent!.toStringAsFixed(2)} %'
                   : '—',
               subtitle: l10n.dashboardPortfolioYieldBeforeTaxSubtitle,
+              valueColor: toneOf(summary.avgYieldNetPercent),
             ),
           ],
         ),
@@ -230,6 +241,23 @@ class _PortfolioYieldData extends StatelessWidget {
   }
 }
 
+/// Palier de couleur d'une valeur de rendement (%), pour signaler d'un coup
+/// d'œil la qualité du rendement. Seuils (décision produit) :
+/// négatif → danger (rouge) ; positif < 10 % → warning (jaune) ;
+/// ≥ 10 % → success (vert). `null` (rendement non calculable, affiché « — »)
+/// → aucun palier (couleur de texte par défaut).
+///
+/// **La couleur RENFORCE, elle ne porte jamais l'information seule** : la
+/// valeur « X.XX % » reste lisible sans distinction de teinte (accessibilité).
+enum YieldTier { none, negative, low, good }
+
+YieldTier yieldTierFor(double? percent) {
+  if (percent == null) return YieldTier.none;
+  if (percent < 0) return YieldTier.negative;
+  if (percent < 10) return YieldTier.low;
+  return YieldTier.good;
+}
+
 class _PortfolioKpiCard extends StatelessWidget {
   const _PortfolioKpiCard({
     super.key,
@@ -237,12 +265,16 @@ class _PortfolioKpiCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.subtitle,
+    this.valueColor,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final String subtitle;
+
+  /// Couleur de la valeur (palier de rendement). `null` → couleur par défaut.
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +307,7 @@ class _PortfolioKpiCard extends StatelessWidget {
             value,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
+              color: valueColor,
             ),
           ),
           Text(

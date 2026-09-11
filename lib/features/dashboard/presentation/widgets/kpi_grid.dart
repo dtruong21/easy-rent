@@ -27,12 +27,22 @@ class KpiGrid extends ConsumerWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final crossAxisCount = width > 600 ? 2 : 1;
-        const ratio = 1.6;
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          childAspectRatio: ratio,
-          crossAxisSpacing: spacing.md,
-          mainAxisSpacing: spacing.md,
+        // Hauteur de tuile FIXE (et non un childAspectRatio dépendant de la
+        // largeur) : le contenu de KpiCard est compact (icône, valeur,
+        // sous-titre) ; un ratio faisait exploser la hauteur des 2 tuiles en
+        // large (≈ 460 px de vide). mainAxisExtent garde des cartes courtes,
+        // robustes à toute largeur.
+        return GridView(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            // Hauteur qui contient le contenu de KpiCard (icône + valeur +
+            // label + sous-titre) plus la marge par défaut de Card, avec une
+            // marge pour les variantes de libellés FR/EN. Reste compact vs
+            // l'ancien ratio (~460 px).
+            mainAxisExtent: 180,
+            crossAxisSpacing: spacing.md,
+            mainAxisSpacing: spacing.md,
+          ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: _buildCards(context, ref),

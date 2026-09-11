@@ -269,6 +269,25 @@ void main() {
     });
   });
 
+  group('yieldTierFor — paliers de couleur', () {
+    test('null → none (pas de palier)', () {
+      expect(yieldTierFor(null), YieldTier.none);
+    });
+    test('négatif → negative', () {
+      expect(yieldTierFor(-0.01), YieldTier.negative);
+      expect(yieldTierFor(-5), YieldTier.negative);
+    });
+    test('positif et < 10 % → low (0 inclus)', () {
+      expect(yieldTierFor(0), YieldTier.low);
+      expect(yieldTierFor(5), YieldTier.low);
+      expect(yieldTierFor(9.99), YieldTier.low);
+    });
+    test('≥ 10 % → good (borne incluse)', () {
+      expect(yieldTierFor(10), YieldTier.good);
+      expect(yieldTierFor(15.5), YieldTier.good);
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Tests — PortfolioYieldSection (widget)
   // ---------------------------------------------------------------------------
