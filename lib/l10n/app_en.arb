@@ -2779,10 +2779,6 @@
   "@dashboardKpiDocsPendingSubtitle": {
     "description": "KPI card subtitle clarifying which document category is counted by the pending-documents KPI."
   },
-  "dashboardPortfolioYieldSectionTitle": "Portfolio yield",
-  "@dashboardPortfolioYieldSectionTitle": {
-    "description": "Section title above the portfolio yield summary on the dashboard."
-  },
   "dashboardPortfolioYieldErrorMessage": "Unable to compute the portfolio yield.",
   "@dashboardPortfolioYieldErrorMessage": {
     "description": "Error message shown when the portfolio yield computation fails."
@@ -2807,13 +2803,9 @@
   "@dashboardPortfolioYieldNetLabel": {
     "description": "Portfolio yield mini-KPI card label: weighted average net yield (key kpi_portfolio_net_yield)."
   },
-  "dashboardPortfolioYieldCashflowLabel": "Total monthly cash flow",
-  "@dashboardPortfolioYieldCashflowLabel": {
-    "description": "Portfolio yield mini-KPI card label: total monthly cash flow across the portfolio (key kpi_portfolio_cashflow)."
-  },
   "dashboardPortfolioYieldBeforeTaxSubtitle": "Before tax",
   "@dashboardPortfolioYieldBeforeTaxSubtitle": {
-    "description": "Subtitle shared by the net yield and cash flow mini-KPI cards, clarifying the amount is pre-tax."
+    "description": "Subtitle for the net yield mini-KPI card, clarifying the amount is pre-tax."
   },
   "dashboardPortfolioYieldFootnote": "{computedCount} of {totalCount} propert{totalCount, plural, one{y} other{ies}} with a purchase price and active lease. Pre-tax estimates.",
   "@dashboardPortfolioYieldFootnote": {
@@ -2826,10 +2818,6 @@
         "type": "int"
       }
     }
-  },
-  "dashboardPortfolioYieldCashflowMethodology": "Aggregated cash flow uses your actual expenses smoothed over a rolling 12 months when available, otherwise the charges declared on each property.",
-  "@dashboardPortfolioYieldCashflowMethodology": {
-    "description": "Static one-sentence methodology note shown under the portfolio yield footnote, explaining that the aggregated cash flow figure may blend real expense data and forecast data per property — same underlying rule as the property detail card, described at portfolio level since a per-property breakdown isn't shown here."
   },
   "dashboardMonthlyChartTitle": "Monthly cash flow",
   "@dashboardMonthlyChartTitle": {
