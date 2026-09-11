@@ -47,11 +47,6 @@ class ActionItemsPanel extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.dashboardActionPanelTitle,
-            style: theme.textTheme.titleMedium,
-          ),
-          SizedBox(height: spacing.md),
           _CollectionBanner(loyers: loyers),
           if (items != null) ...[
             if (items.late.isNotEmpty) ...[

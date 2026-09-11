@@ -2823,9 +2823,9 @@
   "@dashboardMonthlyChartTitle": {
     "description": "Title of the monthly cash flow chart card header (MonthlyCashflowChart), shown even when there is no data yet (toggles hidden)."
   },
-  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — rent collected, actual expenses and loan repayment. Not to be confused with the 12-month rolling average cash flow in the Portfolio yield section above.",
+  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — rent collected, actual expenses and loan repayment.",
   "@dashboardMonthlyChartMethodologyCaption": {
-    "description": "Short italic caption under the monthly cash flow chart header, listing what the figure includes (collected rent, actual expenses, loan repayment) and distinguishing it from the smoothed 12-month rolling cash flow shown in the Portfolio yield section just above — prevents the user from thinking the two figures contradict each other."
+    "description": "Short italic caption under the monthly cash flow chart header, listing what the figure includes (collected rent, actual expenses, loan repayment)."
   },
   "dashboardMonthlyChartErrorMessage": "Unable to load cash flow data for this period.",
   "@dashboardMonthlyChartErrorMessage": {
@@ -5716,10 +5716,6 @@
   "simulatorCompareEffortPerYearSuffix": "/year",
   "@simulatorCompareEffortPerYearSuffix": {
     "description": "FEAT-055 — Suffix appended to the formatted 'savings effort' euro amount to indicate the value is annual."
-  },
-  "dashboardActionPanelTitle": "To handle / Upcoming",
-  "@dashboardActionPanelTitle": {
-    "description": "Dashboard actionable panel (replaces the cash-flow chart at its former spot) — title of the ActionItemsPanel card."
   },
   "dashboardActionLateSectionTitle": "Late rents",
   "@dashboardActionLateSectionTitle": {
