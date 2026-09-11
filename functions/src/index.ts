@@ -88,6 +88,7 @@ export {
 export {createScenario} from "./callable/scenarios";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
+export {exportAccountData} from "./callable/export_account_data";
 export {createCheckoutSession} from "./callable/create_checkout_session";
 export {manageSubscription} from "./callable/manage_subscription";
 
