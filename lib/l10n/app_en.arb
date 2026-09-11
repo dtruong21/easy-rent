@@ -2730,9 +2730,17 @@
       }
     }
   },
-  "dashboardOverviewSectionTitle": "Overview",
-  "@dashboardOverviewSectionTitle": {
-    "description": "SectionHeader title above the KPI grid on the dashboard home tab (non-onboarding state)."
+  "dashboardZoneTodoTitle": "To do",
+  "@dashboardZoneTodoTitle": {
+    "description": "Dashboard Home zone header for actionable items (late rents, ending leases, pending documents)."
+  },
+  "dashboardZonePatrimonyTitle": "My portfolio",
+  "@dashboardZonePatrimonyTitle": {
+    "description": "Dashboard Home zone header for portfolio state (occupancy, portfolio value, yield)."
+  },
+  "dashboardZoneAnalysisTitle": "Analysis",
+  "@dashboardZoneAnalysisTitle": {
+    "description": "Dashboard Home zone header for analysis (cash-flow chart, recent activity)."
   },
   "dashboardLoadErrorMessage": "Unable to load the dashboard.",
   "@dashboardLoadErrorMessage": {
@@ -2771,18 +2779,6 @@
   "@dashboardKpiRenewalsSubtitle": {
     "description": "KPI card subtitle clarifying the renewal window for the renewals KPI."
   },
-  "dashboardKpiDocsPendingLabel": "Pending documents",
-  "@dashboardKpiDocsPendingLabel": {
-    "description": "KPI card label: count of documents in the 'other' category awaiting action (KpiGrid, key kpi_docs)."
-  },
-  "dashboardKpiDocsPendingSubtitle": "\"other\" category",
-  "@dashboardKpiDocsPendingSubtitle": {
-    "description": "KPI card subtitle clarifying which document category is counted by the pending-documents KPI."
-  },
-  "dashboardPortfolioYieldSectionTitle": "Portfolio yield",
-  "@dashboardPortfolioYieldSectionTitle": {
-    "description": "Section title above the portfolio yield summary on the dashboard."
-  },
   "dashboardPortfolioYieldErrorMessage": "Unable to compute the portfolio yield.",
   "@dashboardPortfolioYieldErrorMessage": {
     "description": "Error message shown when the portfolio yield computation fails."
@@ -2807,13 +2803,9 @@
   "@dashboardPortfolioYieldNetLabel": {
     "description": "Portfolio yield mini-KPI card label: weighted average net yield (key kpi_portfolio_net_yield)."
   },
-  "dashboardPortfolioYieldCashflowLabel": "Total monthly cash flow",
-  "@dashboardPortfolioYieldCashflowLabel": {
-    "description": "Portfolio yield mini-KPI card label: total monthly cash flow across the portfolio (key kpi_portfolio_cashflow)."
-  },
   "dashboardPortfolioYieldBeforeTaxSubtitle": "Before tax",
   "@dashboardPortfolioYieldBeforeTaxSubtitle": {
-    "description": "Subtitle shared by the net yield and cash flow mini-KPI cards, clarifying the amount is pre-tax."
+    "description": "Subtitle for the net yield mini-KPI card, clarifying the amount is pre-tax."
   },
   "dashboardPortfolioYieldFootnote": "{computedCount} of {totalCount} propert{totalCount, plural, one{y} other{ies}} with a purchase price and active lease. Pre-tax estimates.",
   "@dashboardPortfolioYieldFootnote": {
@@ -2827,17 +2819,13 @@
       }
     }
   },
-  "dashboardPortfolioYieldCashflowMethodology": "Aggregated cash flow uses your actual expenses smoothed over a rolling 12 months when available, otherwise the charges declared on each property.",
-  "@dashboardPortfolioYieldCashflowMethodology": {
-    "description": "Static one-sentence methodology note shown under the portfolio yield footnote, explaining that the aggregated cash flow figure may blend real expense data and forecast data per property — same underlying rule as the property detail card, described at portfolio level since a per-property breakdown isn't shown here."
-  },
   "dashboardMonthlyChartTitle": "Monthly cash flow",
   "@dashboardMonthlyChartTitle": {
     "description": "Title of the monthly cash flow chart card header (MonthlyCashflowChart), shown even when there is no data yet (toggles hidden)."
   },
-  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — rent collected, actual expenses and loan repayment. Not to be confused with the 12-month rolling average cash flow in the Portfolio yield section above.",
+  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — rent collected, actual expenses and loan repayment.",
   "@dashboardMonthlyChartMethodologyCaption": {
-    "description": "Short italic caption under the monthly cash flow chart header, listing what the figure includes (collected rent, actual expenses, loan repayment) and distinguishing it from the smoothed 12-month rolling cash flow shown in the Portfolio yield section just above — prevents the user from thinking the two figures contradict each other."
+    "description": "Short italic caption under the monthly cash flow chart header, listing what the figure includes (collected rent, actual expenses, loan repayment)."
   },
   "dashboardMonthlyChartErrorMessage": "Unable to load cash flow data for this period.",
   "@dashboardMonthlyChartErrorMessage": {
@@ -5729,10 +5717,6 @@
   "@simulatorCompareEffortPerYearSuffix": {
     "description": "FEAT-055 — Suffix appended to the formatted 'savings effort' euro amount to indicate the value is annual."
   },
-  "dashboardActionPanelTitle": "To handle / Upcoming",
-  "@dashboardActionPanelTitle": {
-    "description": "Dashboard actionable panel (replaces the cash-flow chart at its former spot) — title of the ActionItemsPanel card."
-  },
   "dashboardActionLateSectionTitle": "Late rents",
   "@dashboardActionLateSectionTitle": {
     "description": "Dashboard actionable panel — heading of the sub-section listing leases with a late rent payment."
@@ -5762,6 +5746,11 @@
   "dashboardActionDetailUnavailable": "Details unavailable",
   "@dashboardActionDetailUnavailable": {
     "description": "Dashboard actionable panel — fallback message shown when the underlying leases provider fails to load."
+  },
+  "dashboardActionDocsPending": "{count, plural, =1{1 pending document} other{{count} pending documents}}",
+  "@dashboardActionDocsPending": {
+    "description": "Passive line in the dashboard action panel showing how many documents are pending. {count} is the number of pending documents.",
+    "placeholders": { "count": { "type": "int" } }
   },
   "dashboardCollectionTitle": "This month's collection",
   "@dashboardCollectionTitle": {

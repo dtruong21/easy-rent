@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #177 — Accueil : cockpit à 3 zones (À traiter / Mon patrimoine / Analyse) (2026-09-11, commit b343ebe)
+- La structure de l'Accueil était à plat (un seul en-tête « Vue d'ensemble » sur 5 blocs hétérogènes) : actions/états/analyse mélangés, redondance patrimoniale, « docs » mal rangé. Restructuration en **3 zones nommées** (`SectionHeader`), réordonnées **actions d'abord** : Zone 1 « À traiter » (ActionItemsPanel : encaissement · retards · baux finissant) → Zone 2 « Mon patrimoine » (occupation · patrimoine · rendement brut/net) → Zone 3 « Analyse » (graphe cash-flow · activité récente).
+- **Docs** déplacé de la grille KPI vers une **ligne passive** « N documents en attente » en bas de « À traiter » (pas de tap : aucune page documents globale n'existe), masquée si 0. `KpiGrid` réduit à 2 tuiles (occupation, patrimoine) et perd son paramètre `snapshot`. Titre interne redondant de l'ActionItemsPanel retiré (la zone le nomme).
+- **Dédup cash-flow** : la carte « total mensuel » de PortfolioYield disparaît ; le graphe historique reste la seule représentation. En corollaire, l'agrégat mort `totalMonthlyCashflowCents` **et la requête `expensesRepository.listAllForLandlord()` qui l'alimentait** (inerte — les rendements brut/net n'utilisent que les charges déclarées) sont supprimés → **une requête Firestore en moins par chargement**. Caption « à ne pas confondre avec… » obsolète nettoyée.
+- **Zéro nouvelle requête Firestore** (une supprimée). Pure recomposition ; jetons de design, i18n FR/EN, responsive. TDD (4 tâches, subagent-driven), revue finale whole-branch. `flutter analyze` clean, suite complète verte (2886).
+
 ### PR #176 — FIX Dashboard : suppression du KPI renouvellements orphelin (requête Firestore morte) (2026-09-09, commit a9f2c7e)
 - La PR #174 a retiré le KPI « Baux à renouveler » de l'UI mais `fetchRenouvellements()` restait dans le fan-in de `DashboardController.build()` : une requête Firestore sur `leases` (fenêtre 60 j) partait à **chaque** chargement du dashboard, résultat jamais lu (`DashboardSnapshot.renouvellements` sans consommateur UI). Requête gaspillée + champ mort — nettoyage signalé par #174.
 - Retire `RenouvellementsKpi`, `fetchRenouvellements` (interface + impl Firestore), le champ `DashboardSnapshot.renouvellements` (+ `empty()`), le fan-in/construction du snapshot dans `dashboard_provider.dart`, et l'import `lease_renewal` devenu inutile dans le repository.

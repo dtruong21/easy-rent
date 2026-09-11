@@ -29,9 +29,12 @@ import 'widgets/shortcuts_row.dart';
 /// - [DashboardHeader] (bonjour + date)
 /// - Contenu conditionnel :
 ///   - Onboarding si 0 biens/locataires/baux → [OnboardingFirstSteps]
-///   - Sinon : [SectionHeader] « Vue d'ensemble » + [KpiGrid] +
-///     [PortfolioYieldSection] + [ActionItemsPanel] +
-///     [CollapsibleCashflowSection] + [RecentActivitySection]
+///   - Sinon, 3 zones nommées (chacune introduite par un [SectionHeader]),
+///     actions en tête :
+///     1. « À traiter » → [ActionItemsPanel]
+///     2. « Mon patrimoine » → [KpiGrid] + [PortfolioYieldSection]
+///     3. « Analyse » → [CollapsibleCashflowSection] +
+///        [RecentActivitySection]
 /// - [ShortcutsRow] (mobile uniquement, en bas) — réduite au seul CTA
 ///   simulateur : sur desktop le simulateur est épinglé au rail de
 ///   navigation (FEAT-026), le raccourci y serait redondant ; Biens/
@@ -202,14 +205,24 @@ class _DataView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: context.l10n.dashboardOverviewSectionTitle),
+        // ZONE 1 — À traiter
+        SectionHeader(title: context.l10n.dashboardZoneTodoTitle),
         SizedBox(height: spacing.md),
-        KpiGrid(snapshot: snapshot),
+        ActionItemsPanel(
+          loyers: snapshot.loyers,
+          docsPendingCount: snapshot.docs.count,
+        ),
+        SizedBox(height: spacing.xl),
+        // ZONE 2 — Mon patrimoine
+        SectionHeader(title: context.l10n.dashboardZonePatrimonyTitle),
+        SizedBox(height: spacing.md),
+        const KpiGrid(),
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
-        ActionItemsPanel(loyers: snapshot.loyers),
-        SizedBox(height: spacing.xl),
+        // ZONE 3 — Analyse
+        SectionHeader(title: context.l10n.dashboardZoneAnalysisTitle),
+        SizedBox(height: spacing.md),
         const CollapsibleCashflowSection(),
         SizedBox(height: spacing.xl),
         RecentActivitySection(items: snapshot.activity),

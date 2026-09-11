@@ -16,9 +16,14 @@ import '../../domain/dashboard_kpi.dart';
 /// Panneau « À traiter / À venir » : encaissements du mois + loyers en retard
 /// + baux finissant. Remplace le graphe cash-flow à son emplacement.
 class ActionItemsPanel extends ConsumerWidget {
-  const ActionItemsPanel({super.key, required this.loyers});
+  const ActionItemsPanel({
+    super.key,
+    required this.loyers,
+    required this.docsPendingCount,
+  });
 
   final LoyersMoisKpi loyers;
+  final int docsPendingCount;
 
   static const _maxRows = 3;
 
@@ -42,11 +47,6 @@ class ActionItemsPanel extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.dashboardActionPanelTitle,
-            style: theme.textTheme.titleMedium,
-          ),
-          SizedBox(height: spacing.md),
           _CollectionBanner(loyers: loyers),
           if (items != null) ...[
             if (items.late.isNotEmpty) ...[
@@ -116,6 +116,28 @@ class ActionItemsPanel extends ConsumerWidget {
                 ),
               ),
             ),
+          if (docsPendingCount > 0) ...[
+            SizedBox(height: spacing.lg),
+            Row(
+              key: const Key('action_docs_pending'),
+              children: [
+                Icon(
+                  Icons.folder_outlined,
+                  size: 18,
+                  color: (theme.extension<AppColors>() ?? AppColors.light)
+                      .info
+                      .solid,
+                ),
+                SizedBox(width: spacing.xs),
+                Expanded(
+                  child: Text(
+                    l10n.dashboardActionDocsPending(docsPendingCount),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

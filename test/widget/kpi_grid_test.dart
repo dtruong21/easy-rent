@@ -1,7 +1,5 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
-import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/dashboard_snapshot.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/kpi_grid.dart';
 import 'package:easyrent/features/properties/application/properties_list_provider.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
@@ -34,14 +32,6 @@ PropertyListItem _prop({String? activeLeaseId, int? price}) => PropertyListItem(
   activeLeaseId: activeLeaseId,
 );
 
-DashboardSnapshot _snapshot() => const DashboardSnapshot(
-  loyers: LoyersMoisKpi(encaissedCents: 0, dueCents: 0),
-  retards: RetardsKpi(count: 0),
-  docs: DocsPendingKpi(count: 2),
-  activity: [],
-  isOnboarding: false,
-);
-
 Widget _wrap(List<PropertyListItem> items) => ProviderScope(
   overrides: [
     propertiesListItemsProvider.overrideWith(() => _FakePropsNotifier(items)),
@@ -52,7 +42,7 @@ Widget _wrap(List<PropertyListItem> items) => ProviderScope(
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, _) => Scaffold(body: KpiGrid(snapshot: _snapshot())),
+          builder: (_, _) => const Scaffold(body: KpiGrid()),
         ),
         GoRoute(
           path: '/properties',
@@ -67,7 +57,7 @@ Widget _wrap(List<PropertyListItem> items) => ProviderScope(
 );
 
 void main() {
-  testWidgets('affiche occupation, patrimoine, docs — plus les anciens KPI', (
+  testWidgets('affiche occupation, patrimoine — plus les anciens KPI', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -79,7 +69,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('kpi_occupation')), findsOneWidget);
     expect(find.byKey(const Key('kpi_patrimoine')), findsOneWidget);
-    expect(find.byKey(const Key('kpi_docs')), findsOneWidget);
+    expect(find.byKey(const Key('kpi_docs')), findsNothing);
     expect(find.byKey(const Key('kpi_retards')), findsNothing);
     expect(find.byKey(const Key('kpi_renouvellements')), findsNothing);
     expect(find.byKey(const Key('kpi_loyers')), findsNothing);
