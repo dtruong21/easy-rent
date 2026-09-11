@@ -257,20 +257,19 @@ void main() {
   });
 
   group('DashboardPage — état data normal', () {
-    testWidgets(
-      'affiche 2 KPI patrimoniaux (occupation, patrimoine)',
-      (tester) async {
-        await tester.pumpWidget(_wrap());
-        await tester.pumpAndSettle();
-        expect(find.byKey(const Key('kpi_occupation')), findsOneWidget);
-        expect(find.byKey(const Key('kpi_patrimoine')), findsOneWidget);
-        expect(find.byKey(const Key('kpi_docs')), findsNothing);
-        // Les compteurs redondants avec le panneau ont été retirés.
-        expect(find.byKey(const Key('kpi_loyers')), findsNothing);
-        expect(find.byKey(const Key('kpi_retards')), findsNothing);
-        expect(find.byKey(const Key('kpi_renouvellements')), findsNothing);
-      },
-    );
+    testWidgets('affiche 2 KPI patrimoniaux (occupation, patrimoine)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('kpi_occupation')), findsOneWidget);
+      expect(find.byKey(const Key('kpi_patrimoine')), findsOneWidget);
+      expect(find.byKey(const Key('kpi_docs')), findsNothing);
+      // Les compteurs redondants avec le panneau ont été retirés.
+      expect(find.byKey(const Key('kpi_loyers')), findsNothing);
+      expect(find.byKey(const Key('kpi_retards')), findsNothing);
+      expect(find.byKey(const Key('kpi_renouvellements')), findsNothing);
+    });
 
     testWidgets('affiche le header "Bonjour"', (tester) async {
       await tester.pumpWidget(_wrap());
@@ -325,29 +324,30 @@ void main() {
       },
     );
 
-    testWidgets('3 zones nommées, dans l\'ordre À traiter → patrimoine → analyse', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
+    testWidgets(
+      '3 zones nommées, dans l\'ordre À traiter → patrimoine → analyse',
+      (tester) async {
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
 
-      final todo = find.text('À traiter');
-      final patrimony = find.text('Mon patrimoine');
-      final analysis = find.text('Analyse');
-      expect(todo, findsOneWidget);
-      expect(patrimony, findsOneWidget);
-      expect(analysis, findsOneWidget);
+        final todo = find.text('À traiter');
+        final patrimony = find.text('Mon patrimoine');
+        final analysis = find.text('Analyse');
+        expect(todo, findsOneWidget);
+        expect(patrimony, findsOneWidget);
+        expect(analysis, findsOneWidget);
 
-      // Ordre vertical : À traiter au-dessus de Mon patrimoine, au-dessus d'Analyse.
-      expect(
-        tester.getTopLeft(todo).dy,
-        lessThan(tester.getTopLeft(patrimony).dy),
-      );
-      expect(
-        tester.getTopLeft(patrimony).dy,
-        lessThan(tester.getTopLeft(analysis).dy),
-      );
-    });
+        // Ordre vertical : À traiter au-dessus de Mon patrimoine, au-dessus d'Analyse.
+        expect(
+          tester.getTopLeft(todo).dy,
+          lessThan(tester.getTopLeft(patrimony).dy),
+        );
+        expect(
+          tester.getTopLeft(patrimony).dy,
+          lessThan(tester.getTopLeft(analysis).dy),
+        );
+      },
+    );
   });
 
   group('DashboardPage — AppBar', () {

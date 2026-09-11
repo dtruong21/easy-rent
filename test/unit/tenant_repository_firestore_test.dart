@@ -158,23 +158,26 @@ void main() {
 
   group('FirestoreTenantRepository.listLeasesForTenant — payment_day '
       '(échéances page locataire, FEAT agrégat ponctualité)', () {
-    test('inclut payment_day dans la projection, égal au champ seedé', () async {
-      await seedTenant();
-      await firestore.collection('leases').doc('l1').set({
-        'landlordId': uid,
-        'tenantId': 't1',
-        'status': 'active',
-        'deletedAt': null,
-        'startDate': Timestamp.fromDate(DateTime(2026, 7, 1)),
-        'propertyId': 'p1',
-        'rentAmountCents': 65000,
-        'paymentDay': 5,
-      });
+    test(
+      'inclut payment_day dans la projection, égal au champ seedé',
+      () async {
+        await seedTenant();
+        await firestore.collection('leases').doc('l1').set({
+          'landlordId': uid,
+          'tenantId': 't1',
+          'status': 'active',
+          'deletedAt': null,
+          'startDate': Timestamp.fromDate(DateTime(2026, 7, 1)),
+          'propertyId': 'p1',
+          'rentAmountCents': 65000,
+          'paymentDay': 5,
+        });
 
-      final leases = await repo.listLeasesForTenant('t1');
+        final leases = await repo.listLeasesForTenant('t1');
 
-      expect(leases, hasLength(1));
-      expect(leases.first['payment_day'], 5);
-    });
+        expect(leases, hasLength(1));
+        expect(leases.first['payment_day'], 5);
+      },
+    );
   });
 }

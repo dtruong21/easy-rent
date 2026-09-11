@@ -32,6 +32,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #179 — FIX Accueil : cartes patrimoine compactes + couleur par palier du rendement (2026-09-11, commit 97717a7)
+- Retour propriétaire sur la zone « Mon patrimoine » (#177). `KpiGrid` : les 2 tuiles (occupation, patrimoine) étaient étirées à ~460 px (childAspectRatio dépendant de la largeur, absurde avec 2 colonnes en large). Remplacé par une hauteur de tuile fixe (`mainAxisExtent: 180`) → cartes compactes, robustes à toute largeur.
+- `PortfolioYield` : la valeur de rendement (brut/net) est colorée par palier (`yieldTierFor`) — < 0 % rouge, 0–10 % jaune, ≥ 10 % vert ; « — » (non calculable) garde la couleur par défaut. La couleur renforce, le « X.XX % » reste lisible sans teinte (accessibilité). Jetons de design uniquement, aucune couleur en dur ; aucune requête ni clé i18n nouvelle. Suite complète verte (2898).
+
 ### PR #178 — Fiche locataire : ponctualité de paiement agrégée (par locataire) (2026-09-11, commit ec1de24)
 - Suite de #175 (ponctualité par bail). Sur la fiche locataire : indicateur factuel **agrégé** sur tous les baux du locataire (en tête) + ponctualité **par bail** (#175) sur chaque ligne de la section « Baux ». « Par locataire » = le propre historique factuel d'un locataire (multi-baux) — **jamais** un comparatif/classement/liste noire inter-locataires (garde-fou #175 vérifié en revue finale : agrégat mono-locataire, keyé par `tenantId`).
 - `combinePaymentPunctuality(parts)` (helper pur additif) ; `PaymentPunctualityView` extrait de l'indicateur #175 (rendu réutilisable, partagé par-bail + agrégat) ; `payment_day` exposé dans la projection `listLeasesForTenant` ; `tenantLeasesProvider` + `TenantPunctualityIndicator` (un bail en chargement → rien ; 0 paiement → rien ; % si total ≥ 3).

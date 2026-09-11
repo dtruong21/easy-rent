@@ -118,7 +118,9 @@ void main() {
   ) async {
     final far = DateTime.now().add(const Duration(days: 300));
     await tester.pumpWidget(
-      _wrap([_item(id: 'C', endDate: far)], router: _router(docsPendingCount: 3)),
+      _wrap([
+        _item(id: 'C', endDate: far),
+      ], router: _router(docsPendingCount: 3)),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('action_docs_pending')), findsOneWidget);
@@ -136,7 +138,9 @@ void main() {
   testWidgets('docs en attente == 0 → aucune ligne docs', (tester) async {
     final far = DateTime.now().add(const Duration(days: 300));
     await tester.pumpWidget(
-      _wrap([_item(id: 'C', endDate: far)], router: _router(docsPendingCount: 0)),
+      _wrap([
+        _item(id: 'C', endDate: far),
+      ], router: _router(docsPendingCount: 0)),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('action_docs_pending')), findsNothing);
