@@ -274,6 +274,7 @@ void main() {
           'end_date': null,
           'status': 'active',
           'rent_amount_cents': 75000,
+          'payment_day': 5,
         },
       ];
       await tester.pumpWidget(

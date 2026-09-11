@@ -328,6 +328,7 @@ class FirestoreTenantRepository implements TenantRepository {
             .toIso8601String(),
         'status': raw['status'],
         'rent_amount_cents': raw['rentAmountCents'],
+        'payment_day': raw['paymentDay'],
       };
     }).toList();
   }

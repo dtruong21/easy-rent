@@ -47,6 +47,7 @@ void main() {
             'end_date': null,
             'status': 'active',
             'rent_amount_cents': 80000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -64,6 +65,7 @@ void main() {
             'end_date': '2024-01-01',
             'status': 'terminated',
             'rent_amount_cents': 65000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -81,6 +83,7 @@ void main() {
             'end_date': '2023-01-01',
             'status': 'archived',
             'rent_amount_cents': 60000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -100,6 +103,7 @@ void main() {
               'end_date': null,
               'status': 'pending',
               'rent_amount_cents': 70000,
+              'payment_day': 5,
             },
           ]),
         );
@@ -122,6 +126,7 @@ void main() {
             'end_date': null,
             'status': 'active',
             'rent_amount_cents': 80000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -143,6 +148,7 @@ void main() {
             'end_date': '2024-03-14',
             'status': 'terminated',
             'rent_amount_cents': 65000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -172,6 +178,7 @@ void main() {
             'end_date': null,
             'status': 'active',
             'rent_amount_cents': 80000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -193,6 +200,7 @@ void main() {
               'end_date': null,
               'status': 'active',
               'rent_amount_cents': 75050,
+              'payment_day': 5,
             },
           ]),
         );
@@ -213,6 +221,7 @@ void main() {
             'end_date': null,
             'status': 'active',
             'rent_amount_cents': 0,
+            'payment_day': 5,
           },
         ]),
       );
@@ -234,6 +243,7 @@ void main() {
             'end_date': null,
             'status': 'active',
             'rent_amount_cents': 80000,
+            'payment_day': 5,
           },
           {
             'id': 'l2',
@@ -242,6 +252,7 @@ void main() {
             'end_date': '2023-12-31',
             'status': 'terminated',
             'rent_amount_cents': 65000,
+            'payment_day': 5,
           },
         ]),
       );
@@ -263,6 +274,7 @@ void main() {
             'end_date': null,
             'status': 'active',
             // pas de rent_amount_cents
+            'payment_day': 5,
           },
         ]),
       );
