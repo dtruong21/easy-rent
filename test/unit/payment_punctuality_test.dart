@@ -66,4 +66,33 @@ void main() {
   test('aucun paiement → hasPayments false', () {
     expect(computePaymentPunctuality([], paymentDay: 5).hasPayments, isFalse);
   });
+
+  group('combinePaymentPunctuality', () {
+    test('somme total et onTime sur plusieurs baux', () {
+      final combined = combinePaymentPunctuality(const [
+        PaymentPunctuality(total: 3, onTime: 2),
+        PaymentPunctuality(total: 3, onTime: 3),
+      ]);
+      expect(combined.total, 6);
+      expect(combined.onTime, 5);
+      expect(combined.late, 1);
+      expect(combined.onTimePercent, 83); // (5/6*100).round()
+    });
+
+    test('liste vide → total 0, hasPayments false, percent null', () {
+      final combined = combinePaymentPunctuality(const []);
+      expect(combined.total, 0);
+      expect(combined.hasPayments, isFalse);
+      expect(combined.onTimePercent, isNull);
+    });
+
+    test('total agrégé < 3 → onTimePercent null', () {
+      final combined = combinePaymentPunctuality(const [
+        PaymentPunctuality(total: 1, onTime: 1),
+        PaymentPunctuality(total: 1, onTime: 0),
+      ]);
+      expect(combined.total, 2);
+      expect(combined.onTimePercent, isNull);
+    });
+  });
 }
