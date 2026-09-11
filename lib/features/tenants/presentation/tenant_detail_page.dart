@@ -13,6 +13,7 @@ import '../application/tenants_list_provider.dart';
 import '../data/tenant_repository.dart';
 import '../domain/tenant.dart';
 import 'widgets/tenant_lease_summary.dart';
+import 'widgets/tenant_punctuality_indicator.dart';
 
 final _log = Logger('TenantDetailPage');
 
@@ -73,6 +74,11 @@ class _TenantDetailContent extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _InfoCard(tenant: tenant),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TenantPunctualityIndicator(tenantId: tenant.id),
+            ),
             const SizedBox(height: 24),
 
             // Section baux liés

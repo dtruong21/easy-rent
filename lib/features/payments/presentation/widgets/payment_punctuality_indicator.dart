@@ -23,9 +23,6 @@ class PaymentPunctualityIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColors>()!;
-    final l10n = context.l10n;
     final payments = ref.watch(leasePaymentsProvider(leaseId)).valueOrNull;
     if (payments == null) return const SizedBox.shrink();
 
@@ -33,6 +30,24 @@ class PaymentPunctualityIndicator extends ConsumerWidget {
     if (!k.hasPayments) {
       return const SizedBox.shrink();
     }
+
+    return PaymentPunctualityView(k: k);
+  }
+}
+
+/// Présentation d'un [PaymentPunctuality] : ligne/pill responsive + feuille
+/// de détail au tap. Réutilisable par [PaymentPunctualityIndicator] (par bail)
+/// et par l'indicateur agrégé (par locataire).
+class PaymentPunctualityView extends StatelessWidget {
+  const PaymentPunctualityView({super.key, required this.k});
+
+  final PaymentPunctuality k;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
+    final l10n = context.l10n;
 
     final tone = k.late > 0 ? colors.warning : colors.success;
 

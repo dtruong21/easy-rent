@@ -32,6 +32,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #178 — Fiche locataire : ponctualité de paiement agrégée (par locataire) (2026-09-11, commit ec1de24)
+- Suite de #175 (ponctualité par bail). Sur la fiche locataire : indicateur factuel **agrégé** sur tous les baux du locataire (en tête) + ponctualité **par bail** (#175) sur chaque ligne de la section « Baux ». « Par locataire » = le propre historique factuel d'un locataire (multi-baux) — **jamais** un comparatif/classement/liste noire inter-locataires (garde-fou #175 vérifié en revue finale : agrégat mono-locataire, keyé par `tenantId`).
+- `combinePaymentPunctuality(parts)` (helper pur additif) ; `PaymentPunctualityView` extrait de l'indicateur #175 (rendu réutilisable, partagé par-bail + agrégat) ; `payment_day` exposé dans la projection `listLeasesForTenant` ; `tenantLeasesProvider` + `TenantPunctualityIndicator` (un bail en chargement → rien ; 0 paiement → rien ; % si total ≥ 3).
+- Accès Firestore jamais en direct (`leasePaymentsProvider` + `tenantRepositoryProvider`), aucune persistance de score, jamais partagé/exporté. Jetons de design, i18n réutilisée (aucune nouvelle clé). TDD (5 tâches subagent-driven), revue finale whole-branch APPROVE. `flutter analyze` clean, suite complète verte (2894).
+
 ### PR #177 — Accueil : cockpit à 3 zones (À traiter / Mon patrimoine / Analyse) (2026-09-11, commit b343ebe)
 - La structure de l'Accueil était à plat (un seul en-tête « Vue d'ensemble » sur 5 blocs hétérogènes) : actions/états/analyse mélangés, redondance patrimoniale, « docs » mal rangé. Restructuration en **3 zones nommées** (`SectionHeader`), réordonnées **actions d'abord** : Zone 1 « À traiter » (ActionItemsPanel : encaissement · retards · baux finissant) → Zone 2 « Mon patrimoine » (occupation · patrimoine · rendement brut/net) → Zone 3 « Analyse » (graphe cash-flow · activité récente).
 - **Docs** déplacé de la grille KPI vers une **ligne passive** « N documents en attente » en bas de « À traiter » (pas de tap : aucune page documents globale n'existe), masquée si 0. `KpiGrid` réduit à 2 tuiles (occupation, patrimoine) et perd son paramètre `snapshot`. Titre interne redondant de l'ActionItemsPanel retiré (la zone le nomme).

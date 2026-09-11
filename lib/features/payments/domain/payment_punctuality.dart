@@ -40,3 +40,20 @@ PaymentPunctuality computePaymentPunctuality(
   }
   return PaymentPunctuality(total: total, onTime: onTime);
 }
+
+/// Combine plusieurs [PaymentPunctuality] en un seul (somme additive).
+///
+/// Utilisé pour agréger la ponctualité d'un locataire sur l'ensemble de ses
+/// baux — jamais entre locataires. Les getters dérivés (`late`,
+/// `onTimePercent` avec son seuil de 3) s'appliquent au total combiné.
+PaymentPunctuality combinePaymentPunctuality(
+  Iterable<PaymentPunctuality> parts,
+) {
+  var total = 0;
+  var onTime = 0;
+  for (final p in parts) {
+    total += p.total;
+    onTime += p.onTime;
+  }
+  return PaymentPunctuality(total: total, onTime: onTime);
+}

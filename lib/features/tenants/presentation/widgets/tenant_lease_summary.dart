@@ -8,6 +8,7 @@ import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../leases/domain/lease_status.dart';
+import '../../../payments/presentation/widgets/payment_punctuality_indicator.dart';
 
 /// Affiche les baux liés à un locataire sous forme de liste de cards.
 ///
@@ -57,6 +58,7 @@ class _LeaseItem extends StatelessWidget {
     final startDate = lease['start_date'] as String? ?? '';
     final endDate = lease['end_date'] as String?;
     final rentCents = lease['rent_amount_cents'] as int? ?? 0;
+    final paymentDay = lease['payment_day'] as int?;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -98,6 +100,16 @@ class _LeaseItem extends StatelessWidget {
                           decoration: TextDecoration.underline,
                         ),
                       ),
+                    if (leaseId.isNotEmpty && paymentDay != null) ...[
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: PaymentPunctualityIndicator(
+                          leaseId: leaseId,
+                          paymentDay: paymentDay,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
