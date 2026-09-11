@@ -1,8 +1,12 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
+import 'package:easyrent/features/payments/application/lease_payments_provider.dart';
+import 'package:easyrent/features/payments/domain/payment.dart';
+import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/tenants/presentation/widgets/tenant_lease_summary.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -10,13 +14,25 @@ import 'package:flutter_test/flutter_test.dart';
 // ---------------------------------------------------------------------------
 
 Widget _buildWidget(List<Map<String, dynamic>> leases) {
-  return MaterialApp(
-    theme: AppTheme.light,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: supportedLocales,
-    locale: const Locale('fr'),
-    home: Scaffold(body: TenantLeaseSummary(leases: leases)),
+  return ProviderScope(
+    overrides: [
+      leasePaymentsProvider.overrideWith(() => _FakePayments(const [])),
+    ],
+    child: MaterialApp(
+      theme: AppTheme.light,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: supportedLocales,
+      locale: const Locale('fr'),
+      home: Scaffold(body: TenantLeaseSummary(leases: leases)),
+    ),
   );
+}
+
+class _FakePayments extends LeasePaymentsNotifier {
+  _FakePayments(this._payments);
+  final List<Payment> _payments;
+  @override
+  Future<List<Payment>> build(String arg) async => _payments;
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +297,58 @@ void main() {
 
       expect(find.textContaining('0,00'), findsWidgets);
       expect(find.textContaining('€/mois HC'), findsOneWidget);
+    });
+
+    // -----------------------------------------------------------------------
+    // Ponctualité par bail (#175, Task 5)
+    // -----------------------------------------------------------------------
+    testWidgets('ligne de bail porte l\'indicateur de ponctualité si payment_day', (
+      tester,
+    ) async {
+      final payments = [
+        Payment(
+          id: 'p1',
+          leaseId: 'lz',
+          landlordId: 'lord1',
+          periodStart: DateTime(2026, 1, 1),
+          periodEnd: DateTime(2026, 1, 31),
+          paidAt: DateTime(2026, 1, 8), // échéance 5 + 5j = 10 → à l'heure
+          rentAmountCents: 80000,
+          chargesAmountCents: 0,
+          paymentMethod: PaymentMethod.virement,
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            leasePaymentsProvider.overrideWith(() => _FakePayments(payments)),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+            home: const Scaffold(
+              body: TenantLeaseSummary(
+                leases: [
+                  {
+                    'id': 'lz',
+                    'status': 'active',
+                    'start_date': '2026-01-01T00:00:00.000Z',
+                    'end_date': null,
+                    'rent_amount_cents': 80000,
+                    'payment_day': 5,
+                  },
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('payment_punctuality_tap')), findsOneWidget);
     });
   });
 }
