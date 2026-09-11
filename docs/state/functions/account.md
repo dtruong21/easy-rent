@@ -2,7 +2,7 @@
 
 > Source d'état — account. Maintenu par state-keeper.
 
-Auth/provisioning, cycle de vie compte, soft-delete universel, crons, **facturation multi-paliers Pro/Max/Ultra** (FEAT-056), support, helpers génériques. Fichiers : `functions/src/callable/{finalize_anonymous_upgrade,delete_account,soft_delete,create_checkout_session,manage_subscription,scenarios}.ts`, `functions/src/http/revenuecat_webhook.ts`, `functions/src/scheduled/{cleanup_expired_anon,reconcile_entitlements}.ts`, `functions/src/entitlements/{plan,plan_matrix.generated,stripe_prices}.ts`, `functions/src/utils/callable_helpers.ts`, `functions/src/triggers/set_updated_at.ts`.
+Auth/provisioning, cycle de vie compte, soft-delete universel, crons, **facturation multi-paliers Pro/Max/Ultra** (FEAT-056), support, helpers génériques. Fichiers : `functions/src/callable/{finalize_anonymous_upgrade,delete_account,export_account_data,soft_delete,create_checkout_session,manage_subscription,scenarios}.ts`, `functions/src/http/revenuecat_webhook.ts`, `functions/src/scheduled/{cleanup_expired_anon,reconcile_entitlements}.ts`, `functions/src/entitlements/{plan,plan_matrix.generated,stripe_prices}.ts`, `functions/src/utils/callable_helpers.ts`, `functions/src/triggers/set_updated_at.ts`.
 
 ## Auth (ADR 0001 : GCIP désactivé)
 
@@ -27,6 +27,11 @@ Client invoke, **tout compte authentifié y compris anonyme**. Exigence stores :
 - **Invariant** : ordre **inverse** de `cleanupExpiredAnon` — retry porté par l'utilisateur encore connecté, échec en cours laisse Auth vivant pour relancer.
 - **Révocation Apple** : côté **CLIENT** avant l'appel (`revokeTokenWithAuthorizationCode` avec authorizationCode de la re-auth ; iOS/macOS, best-effort ailleurs).
 - **Retour** : `{deleted:true, receiptsRetained:number}`. Fichier `delete_account.ts`. Tests `delete_account.test.ts` + `rules-tests/firestore_rules.test.ts` (**16 cas**, `npm run test:rules` — l'ancien « 28 tests » ne correspondait à aucun décompte du fichier).
+
+### `exportAccountData` (FEAT-047, RGPD art. 15 accès + art. 20 portabilité)
+Client invoke depuis Profil (« Exporter mes données »). Lecture seule, `dbForRequest`. **Même garde d'auth récente** que `deleteAccount` (helper partagé `assertRecentAuthForNonAnonymousAccount`, anonymes exemptés).
+- **Lit** (`where landlordId==uid`) : `properties, tenants, leases, payments, receipts, documents, expenses, investment_scenarios, support_requests` + singletons `landlords/{uid}`, `paid_plan_interest/{uid}`. Enregistrements soft-deleted **inclus** (transparence). Fichiers binaires **référencés** (chemins Storage), pas empaquetés.
+- **Retour** : JSON structuré unique `{exportedAt, schemaVersion:1, account, paidPlanInterest, <collections>}`, Timestamp → ISO. **Inline** (pas d'objet Storage). Isolation cross-user = filtre `landlordId` sur chaque requête (Admin SDK bypasse les rules). Fichier `export_account_data.ts`, tests `export_account_data.test.ts`.
 
 ### `softDeleteEntity` (universel)
 Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-delete des `documents` passe par ce callable universel — pas de `softDeleteDocument` dédié (voir expenses-documents).
@@ -101,6 +106,7 @@ Fichier `scheduled/cleanup_expired_anon.ts`. Logs `firebase functions:log`.
 | Helper | Signature | Usage |
 |---|---|---|
 | `requireAuthUid()` | `(request) → string` | Extract + validate auth UID |
+| `assertRecentAuthForNonAnonymousAccount()` | `(request, uid) → Promise<void>` | Rejette `recent-login-required` si compte non-anonyme au token > 5 min ; anonyme exempté (providerData). Partagé par `deleteAccount` + `exportAccountData` |
 | `requireString()` | `(value, name) → string` | Non-empty string |
 | `requireInt()` | `(value, name, {min,max}) → number` | Integer borné |
 | `optionalString()` | `(value, name) → string\|null` | Optional string |
