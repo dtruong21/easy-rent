@@ -81,6 +81,24 @@ class WebShareServiceImpl implements WebShareService {
   }
 
   @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {
+    if (!_isMobile) return; // desktop / tests : no-op sûr
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(Uint8List.fromList(bytes), mimeType: mimeType)],
+        fileNameOverrides: [filename],
+        subject: shareTitle,
+        sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+      ),
+    );
+  }
+
+  @override
   Future<bool> copyToClipboard(String text) async {
     if (!_isMobile) {
       return false;

@@ -58,6 +58,18 @@ abstract interface class WebShareService {
     required List<int> pdfBytes,
     required String filename,
   });
+
+  /// Remet [bytes] à l'utilisateur sous forme de fichier nommé [filename].
+  ///
+  /// Web : déclenche un téléchargement (blob). Mobile (Android/iOS) : ouvre le
+  /// share sheet natif. Autres plateformes VM (desktop, tests) : no-op sûr.
+  /// Générique (tout [mimeType]) — utilisé par l'export RGPD (JSON).
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  });
 }
 
 /// Exception levée si l'utilisateur annule le dialog natif (AbortError JS).

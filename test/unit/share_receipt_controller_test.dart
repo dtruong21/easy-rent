@@ -112,6 +112,14 @@ class _MockWebShare implements WebShareService {
 
   @override
   Future<List<int>> fetchBytes(String url) async => _fetchBytes;
+
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------
