@@ -204,7 +204,7 @@ class _DataView extends StatelessWidget {
       children: [
         SectionHeader(title: context.l10n.dashboardOverviewSectionTitle),
         SizedBox(height: spacing.md),
-        KpiGrid(snapshot: snapshot),
+        const KpiGrid(),
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),

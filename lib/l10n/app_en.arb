@@ -2771,14 +2771,6 @@
   "@dashboardKpiRenewalsSubtitle": {
     "description": "KPI card subtitle clarifying the renewal window for the renewals KPI."
   },
-  "dashboardKpiDocsPendingLabel": "Pending documents",
-  "@dashboardKpiDocsPendingLabel": {
-    "description": "KPI card label: count of documents in the 'other' category awaiting action (KpiGrid, key kpi_docs)."
-  },
-  "dashboardKpiDocsPendingSubtitle": "\"other\" category",
-  "@dashboardKpiDocsPendingSubtitle": {
-    "description": "KPI card subtitle clarifying which document category is counted by the pending-documents KPI."
-  },
   "dashboardPortfolioYieldErrorMessage": "Unable to compute the portfolio yield.",
   "@dashboardPortfolioYieldErrorMessage": {
     "description": "Error message shown when the portfolio yield computation fails."

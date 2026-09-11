@@ -649,8 +649,6 @@
   "dashboardKpiLateNoneSubtitle": "Tout est à jour",
   "dashboardKpiRenewalsLabel": "Baux à renouveler",
   "dashboardKpiRenewalsSubtitle": "dans les 60 prochains jours",
-  "dashboardKpiDocsPendingLabel": "Documents en attente",
-  "dashboardKpiDocsPendingSubtitle": "catégorie \"autre\"",
   "dashboardPortfolioYieldErrorMessage": "Impossible de calculer la rentabilité du portfolio.",
   "dashboardPortfolioYieldEmptyMessage": "Aucun bien dans le portfolio.",
   "dashboardPortfolioYieldNoComputableMessage": "Saisir le prix d'achat et créer un bail sur vos biens pour afficher la rentabilité portfolio.",

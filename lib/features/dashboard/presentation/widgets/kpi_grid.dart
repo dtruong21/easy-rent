@@ -7,20 +7,17 @@ import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../application/dashboard_portfolio_kpis_provider.dart';
-import '../../domain/dashboard_snapshot.dart';
 import 'kpi_card.dart';
 
-/// Grille responsive de 3 KPI : occupation, patrimoine, documents en attente.
+/// Grille responsive de 2 KPI : occupation, patrimoine.
 ///
 /// Occupation et patrimoine viennent de [dashboardPortfolioKpisProvider]
-/// (dérivé de la liste des biens, zéro requête propre) ; documents vient du
-/// [DashboardSnapshot]. Les compteurs loyers/retards/renouvellements ont été
-/// retirés — ils font désormais doublon avec le panneau « À traiter / À venir »
-/// (encaissements, retards, baux finissant en détail).
+/// (dérivé de la liste des biens, zéro requête propre). Les compteurs
+/// loyers/retards/renouvellements ont été retirés — ils font désormais
+/// doublon avec le panneau « À traiter / À venir » (encaissements, retards,
+/// baux finissant en détail).
 class KpiGrid extends ConsumerWidget {
-  const KpiGrid({super.key, required this.snapshot});
-
-  final DashboardSnapshot snapshot;
+  const KpiGrid({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,12 +26,8 @@ class KpiGrid extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width > 900
-            ? 3
-            : width > 600
-            ? 2
-            : 1;
-        final ratio = width > 900 ? 1.8 : 1.6;
+        final crossAxisCount = width > 600 ? 2 : 1;
+        const ratio = 1.6;
         return GridView.count(
           crossAxisCount: crossAxisCount,
           childAspectRatio: ratio,
@@ -52,7 +45,6 @@ class KpiGrid extends ConsumerWidget {
     final colors = Theme.of(context).extension<AppColors>()!;
     final l10n = context.l10n;
     final kpis = ref.watch(dashboardPortfolioKpisProvider).valueOrNull;
-    final docs = snapshot.docs;
 
     // --- Occupation ---
     final String occValue;
@@ -90,8 +82,6 @@ class KpiGrid extends ConsumerWidget {
             );
     }
 
-    final docsColor = docs.count > 0 ? colors.info.solid : colors.neutral.solid;
-
     return [
       KpiCard(
         key: const Key('kpi_occupation'),
@@ -110,16 +100,6 @@ class KpiGrid extends ConsumerWidget {
         subtitle: patSubtitle,
         semanticColor: colors.neutral.solid,
         onTap: () => context.go('/properties'),
-      ),
-      // Documents : pas de page globale documents (ils vivent sous
-      // /leases/:id) → pas de drill-down (pas de onTap, donc pas de chevron).
-      KpiCard(
-        key: const Key('kpi_docs'),
-        icon: Icons.folder_outlined,
-        label: l10n.dashboardKpiDocsPendingLabel,
-        value: docs.count.toString(),
-        subtitle: l10n.dashboardKpiDocsPendingSubtitle,
-        semanticColor: docsColor,
       ),
     ];
   }
