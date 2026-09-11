@@ -2730,9 +2730,17 @@
       }
     }
   },
-  "dashboardOverviewSectionTitle": "Overview",
-  "@dashboardOverviewSectionTitle": {
-    "description": "SectionHeader title above the KPI grid on the dashboard home tab (non-onboarding state)."
+  "dashboardZoneTodoTitle": "To do",
+  "@dashboardZoneTodoTitle": {
+    "description": "Dashboard Home zone header for actionable items (late rents, ending leases, pending documents)."
+  },
+  "dashboardZonePatrimonyTitle": "My portfolio",
+  "@dashboardZonePatrimonyTitle": {
+    "description": "Dashboard Home zone header for portfolio state (occupancy, portfolio value, yield)."
+  },
+  "dashboardZoneAnalysisTitle": "Analysis",
+  "@dashboardZoneAnalysisTitle": {
+    "description": "Dashboard Home zone header for analysis (cash-flow chart, recent activity)."
   },
   "dashboardLoadErrorMessage": "Unable to load the dashboard.",
   "@dashboardLoadErrorMessage": {

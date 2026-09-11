@@ -324,6 +324,30 @@ void main() {
         expect(find.byType(ShortcutsRow), findsNothing);
       },
     );
+
+    testWidgets('3 zones nommées, dans l\'ordre À traiter → patrimoine → analyse', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+
+      final todo = find.text('À traiter');
+      final patrimony = find.text('Mon patrimoine');
+      final analysis = find.text('Analyse');
+      expect(todo, findsOneWidget);
+      expect(patrimony, findsOneWidget);
+      expect(analysis, findsOneWidget);
+
+      // Ordre vertical : À traiter au-dessus de Mon patrimoine, au-dessus d'Analyse.
+      expect(
+        tester.getTopLeft(todo).dy,
+        lessThan(tester.getTopLeft(patrimony).dy),
+      );
+      expect(
+        tester.getTopLeft(patrimony).dy,
+        lessThan(tester.getTopLeft(analysis).dy),
+      );
+    });
   });
 
   group('DashboardPage — AppBar', () {

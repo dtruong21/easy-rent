@@ -640,7 +640,9 @@
 
   "dashboardGreeting": "Bonjour",
   "dashboardGreetingWithName": "Bonjour, {firstName}",
-  "dashboardOverviewSectionTitle": "Vue d'ensemble",
+  "dashboardZoneTodoTitle": "À traiter",
+  "dashboardZonePatrimonyTitle": "Mon patrimoine",
+  "dashboardZoneAnalysisTitle": "Analyse",
   "dashboardLoadErrorMessage": "Impossible de charger le tableau de bord.",
   "dashboardKpiRentLabel": "Loyers du mois",
   "dashboardKpiRentDueSubtitle": "Dû : {amount}",
