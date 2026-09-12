@@ -11,6 +11,7 @@ import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_level.dart';
 import '../../paid_plan/presentation/pro_badge.dart';
 import '../../paid_plan/presentation/widgets/subscription_section.dart';
+import '../../account/presentation/widgets/export_data_tile.dart';
 import '../application/landlord_profile_provider.dart';
 import 'widgets/profile_settings_sections.dart';
 import 'widgets/section_header.dart';
@@ -75,6 +76,10 @@ class ProfilePage extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/profile/password'),
               ),
+            // Export RGPD (droit à la portabilité, art. 20) : juste avant la
+            // suppression de compte — ordre logique (consulter avant de
+            // supprimer).
+            const ExportDataTile(),
             // Suppression de compte (FEAT-045) : dans le groupe Compte —
             // facile à trouver (exigence stores), style destructif.
             ListTile(

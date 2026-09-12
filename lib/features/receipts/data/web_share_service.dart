@@ -97,6 +97,35 @@ class WebShareServiceImpl implements WebShareService {
     }
   }
 
+  /// Téléchargement générique via blob — ne dépend pas de `navigator.share()`
+  /// (fiable sur tous les navigateurs desktop, contrairement à [sharePdf]).
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {
+    final blob = web.Blob(
+      [Uint8List.fromList(bytes).toJS].toJS,
+      web.BlobPropertyBag(type: mimeType),
+    );
+    final url = web.URL.createObjectURL(blob);
+    final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+      ..href = url
+      ..download = filename;
+    web.document.body?.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    // Révocation DIFFÉRÉE, jamais immédiate : même prudence que dans
+    // [openPdfBytes] — Safari/WebKit desktop a déjà échoué des téléchargements
+    // quand le blob URL est révoqué juste après le clic.
+    Future<void>.delayed(
+      const Duration(minutes: 2),
+      () => web.URL.revokeObjectURL(url),
+    );
+  }
+
   @override
   Future<bool> copyToClipboard(String text) async {
     try {

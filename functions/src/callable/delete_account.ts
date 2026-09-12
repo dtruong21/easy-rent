@@ -43,12 +43,12 @@ import * as admin from "firebase-admin";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
-import {requireAuthUid} from "../utils/callable_helpers";
+import {
+  assertRecentAuthForNonAnonymousAccount,
+  requireAuthUid,
+} from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
 
-
-/** Fraîcheur maximale de l'authentification pour un compte non-anonyme. */
-const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
 
 /** Rétention légale des quittances : 5 ans (loi 6 juillet 1989 / art. 2224). */
 const RECEIPT_RETENTION_MS = 5 * 365.25 * 24 * 60 * 60 * 1000;
@@ -75,7 +75,6 @@ export const deleteAccount = onCall(
   {region: "europe-west1", timeoutSeconds: 300},
   async (request) => {
     const uid = requireAuthUid(request);
-    const token = request.auth?.token;
 
     // AUDIT FEAT-045 (M1) : le claim `sign_in_provider == 'anonymous'` reste
     // porté par les tokens émis AVANT un linkWithCredential/Provider (upgrade
@@ -83,38 +82,7 @@ export const deleteAccount = onCall(
     // est toujours anonyme. Pour ne pas exempter de la garde de fraîcheur un
     // compte upgradé (qui contient de vraies données), on confirme l'état
     // AUTORITATIF côté Admin SDK : anonyme ⇔ aucun provider lié.
-    let isAnonymous = token?.firebase?.sign_in_provider === "anonymous";
-    if (isAnonymous) {
-      try {
-        const userRecord = await admin.auth().getUser(uid);
-        isAnonymous = userRecord.providerData.length === 0;
-      } catch (err) {
-        const code =
-          typeof err === "object" && err !== null && "code" in err ?
-            (err as {code: unknown}).code :
-            undefined;
-        if (code !== "auth/user-not-found") {
-          logger.error(`deleteAccount: getUser failed for uid=${uid}`, err);
-          throw new HttpsError("internal", "account lookup failed — retry");
-        }
-        // user-not-found : compte Auth déjà supprimé par un run précédent
-        // interrompu — la garde de fraîcheur n'a plus d'objet, on laisse le
-        // nettoyage idempotent se terminer.
-      }
-    }
-
-    if (!isAnonymous) {
-      const authTime = typeof token?.auth_time === "number" ?
-        token.auth_time :
-        0;
-      const ageSeconds = Date.now() / 1000 - authTime;
-      if (ageSeconds > RECENT_AUTH_MAX_AGE_SECONDS) {
-        throw new HttpsError(
-          "failed-precondition",
-          "recent-login-required",
-        );
-      }
-    }
+    await assertRecentAuthForNonAnonymousAccount(request, uid);
 
     const db = dbForRequest(request);
 
@@ -158,8 +126,7 @@ export const deleteAccount = onCall(
       // donnée personnelle au-delà de l'UID, qui ne résout plus rien).
       logger.info(
         `deleteAccount: purged uid=${uid} ` +
-          `(docs=${purgedDocs}, receiptsRetained=${receiptsRetained}, ` +
-          `anonymous=${String(isAnonymous)})`,
+          `(docs=${purgedDocs}, receiptsRetained=${receiptsRetained})`,
       );
 
       return {deleted: true, receiptsRetained};

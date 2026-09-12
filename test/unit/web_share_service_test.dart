@@ -66,6 +66,14 @@ class _MockWebShareService implements WebShareService {
     if (_fetchException != null) throw _fetchException!;
     return _fetchResult ?? [];
   }
+
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------

@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #180 — FEAT-047 : export des données RGPD (accès + portabilité) (2026-09-12, commit 3abf91e)
+- Droit d'accès (art. 15) + portabilité (art. 20) : callable `exportAccountData` (europe-west1) parcourt en lecture toutes les collections du bailleur (`properties, tenants, leases, payments, receipts, documents, expenses, investment_scenarios, support_requests` + singletons `landlords/{uid}`, `paid_plan_interest/{uid}`) via `dbForRequest` + `landlordId == uid`, sérialise les Timestamp en ISO, renvoie un **JSON structuré unique** (inline). Soft-deleted inclus (transparence), binaires référencés (chemins) non empaquetés. Honore `docs/LEGAL.md:28`.
+- Garde d'auth récente (< 5 min, non-anonymes) **extraite en helper partagé** `assertRecentAuthForNonAnonymousAccount` (réutilisée par `deleteAccount`). **Isolation cross-user** : filtre `landlordId` sur chaque requête (Admin SDK bypasse les rules) — vérifié en revue finale sur les 11 accès.
+- Client : `AccountExportRepository` + `ExportDataController` (idle/loading/success/error) + tuile « Exporter mes données » dans Profil ; `WebShareService.deliverFile` générique (web download / mobile share, révocation blob différée pour Safari). i18n FR/EN.
+- TDD (5 tâches subagent-driven, revue finale whole-branch APPROVE). **Functions 466/466**, **Flutter 2907/2907**, analyze + dart format clean.
+
 ### PR #179 — FIX Accueil : cartes patrimoine compactes + couleur par palier du rendement (2026-09-11, commit 97717a7)
 - Retour propriétaire sur la zone « Mon patrimoine » (#177). `KpiGrid` : les 2 tuiles (occupation, patrimoine) étaient étirées à ~460 px (childAspectRatio dépendant de la largeur, absurde avec 2 colonnes en large). Remplacé par une hauteur de tuile fixe (`mainAxisExtent: 180`) → cartes compactes, robustes à toute largeur.
 - `PortfolioYield` : la valeur de rendement (brut/net) est colorée par palier (`yieldTierFor`) — < 0 % rouge, 0–10 % jaune, ≥ 10 % vert ; « — » (non calculable) garde la couleur par défaut. La couleur renforce, le « X.XX % » reste lisible sans teinte (accessibilité). Jetons de design uniquement, aucune couleur en dur ; aucune requête ni clé i18n nouvelle. Suite complète verte (2898).

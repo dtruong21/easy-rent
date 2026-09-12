@@ -5214,6 +5214,26 @@
   "@deleteAccountRequestAnonSuccessSnackbar": {
     "description": "SnackBar shown after an anonymous trial session has been successfully deleted from the public request page."
   },
+  "profileExportDataTile": "Export my data",
+  "@profileExportDataTile": {
+    "description": "Profile tile that triggers a RGPD data export (JSON)."
+  },
+  "profileExportDataSubtitle": "Get a copy of your data as JSON",
+  "@profileExportDataSubtitle": {
+    "description": "Subtitle under the export-my-data profile tile."
+  },
+  "profileExportDataSuccess": "Export ready",
+  "@profileExportDataSuccess": {
+    "description": "Snackbar shown after the data export succeeds."
+  },
+  "profileExportDataError": "Export failed. Please try again.",
+  "@profileExportDataError": {
+    "description": "Snackbar shown when the data export fails."
+  },
+  "profileExportDataRecentLogin": "Please sign in again, then retry the export.",
+  "@profileExportDataRecentLogin": {
+    "description": "Message shown when the export requires a recent login."
+  },
   "profileHubDeleteAccountTile": "Delete my account",
   "@profileHubDeleteAccountTile": {
     "description": "List tile label in the /profile hub Account group navigating to /profile/delete-account. Rendered in the error color (destructive action)."
