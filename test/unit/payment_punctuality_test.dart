@@ -95,4 +95,46 @@ void main() {
       expect(combined.onTimePercent, isNull);
     });
   });
+
+  group(
+    'computePaymentPunctuality — invariant round-trip UTC (régression fuseau)',
+    () {
+      // En prod, `periodStart`/`paidAt` sont écrits `.toUtc().toIso8601String()`
+      // puis relus via `DateTime.parse("…Z")` → DateTime UTC. Lire `.month` sur
+      // cet instant décale d'un cran à l'est d'UTC (« 01/08 » France stocké
+      // 2026-07-31T22:00Z → mois=juillet → échéance un mois trop tôt → faux
+      // retard). Le verdict ne doit PAS dépendre de la forme (locale vs
+      // UTC-round-trippée) sous laquelle la même date civile est fournie.
+      // Échoue AVANT le fix sous un offset ≠ 0 (ex. Europe/Paris) ; passe après.
+      DateTime roundTripUtc(DateTime local) =>
+          DateTime.parse(local.toUtc().toIso8601String());
+
+      test('période 01/08, payé 03/08, paymentDay 1 → à l\'heure, IDENTIQUE en '
+          'forme locale et UTC-round-trippée', () {
+        final periodLocal = DateTime(2026, 8, 1);
+        final paidLocal = DateTime(2026, 8, 3);
+
+        final local = computePaymentPunctuality([
+          _pay(periodStart: periodLocal, paidAt: paidLocal),
+        ], paymentDay: 1);
+        final roundTripped = computePaymentPunctuality([
+          _pay(
+            periodStart: roundTripUtc(periodLocal),
+            paidAt: roundTripUtc(paidLocal),
+          ),
+        ], paymentDay: 1);
+
+        expect(local.onTime, 1);
+        expect(local.late, 0);
+        expect(
+          roundTripped.onTime,
+          local.onTime,
+          reason:
+              'Le verdict ne doit pas dépendre de la forme (locale vs '
+              'UTC-round-trippée) de la même date civile.',
+        );
+        expect(roundTripped.late, local.late);
+      });
+    },
+  );
 }
