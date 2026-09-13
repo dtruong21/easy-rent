@@ -32,6 +32,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #181 — FIX ponctualité : faux retards (bug fuseau horaire) (2026-09-13, commit db4f12c)
+- L'indicateur de ponctualité (#175 fiche bail + #178 fiche locataire) affichait de faux retards. `computePaymentPunctuality` lisait `periodStart.month`/`paidAt` sur des `DateTime` **UTC** (écrits `.toUtc().toIso8601String()`, relus `DateTime.parse("…Z")`) : à l'est d'UTC, « 01/08 » local stocké `2026-07-31T22:00Z` → mois lu = juillet → échéance un mois trop tôt → tout en retard (systématique bailleurs FR, périodes le 1er).
+- Fix : normalise `periodStart`/`paidAt` via `leaseLocalDate` (toLocal + troncature) avant calcul, comme `isLeaseLate` (KPI Retards, déjà correct) et `FrenchDate.format`. `_dateOnly` de `lease_lateness` exposé en `leaseLocalDate` (public, partagé) — aucune duplication, aucun changement de stockage. Dashboard non affecté.
+- Test d'invariance round-trip UTC (même pattern que `lease_lateness_test`). Suite complète verte (2908), analyze + dart format clean.
+
 ### PR #180 — FEAT-047 : export des données RGPD (accès + portabilité) (2026-09-12, commit 3abf91e)
 - Droit d'accès (art. 15) + portabilité (art. 20) : callable `exportAccountData` (europe-west1) parcourt en lecture toutes les collections du bailleur (`properties, tenants, leases, payments, receipts, documents, expenses, investment_scenarios, support_requests` + singletons `landlords/{uid}`, `paid_plan_interest/{uid}`) via `dbForRequest` + `landlordId == uid`, sérialise les Timestamp en ISO, renvoie un **JSON structuré unique** (inline). Soft-deleted inclus (transparence), binaires référencés (chemins) non empaquetés. Honore `docs/LEGAL.md:28`.
 - Garde d'auth récente (< 5 min, non-anonymes) **extraite en helper partagé** `assertRecentAuthForNonAnonymousAccount` (réutilisée par `deleteAccount`). **Isolation cross-user** : filtre `landlordId` sur chaque requête (Admin SDK bypasse les rules) — vérifié en revue finale sur les 11 accès.
