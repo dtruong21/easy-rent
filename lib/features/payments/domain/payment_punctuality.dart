@@ -31,12 +31,20 @@ PaymentPunctuality computePaymentPunctuality(
   for (final p in payments) {
     if (p.deletedAt != null) continue;
     total++;
+    // Normalisation date-civile-LOCALE avant de lire année/mois et de comparer :
+    // `periodStart`/`paidAt` relus depuis Firestore sont des instants UTC
+    // (`.toUtc().toIso8601String()` à l'écriture). Sans `leaseLocalDate`, le
+    // mois lu est décalé d'un cran à l'est d'UTC (ex. « 01/08 » France stocké
+    // 2026-07-31T22:00Z → mois=juillet) → échéance un mois trop tôt → faux
+    // retards. Même pattern que `isLeaseLate` et `FrenchDate.format`.
+    final periodStart = leaseLocalDate(p.periodStart);
     final due = leaseDueDate(
       paymentDay: paymentDay,
-      year: p.periodStart.year,
-      month: p.periodStart.month,
+      year: periodStart.year,
+      month: periodStart.month,
     );
-    if (!p.paidAt.isAfter(due.add(Duration(days: graceDays)))) onTime++;
+    final paidAt = leaseLocalDate(p.paidAt);
+    if (!paidAt.isAfter(due.add(Duration(days: graceDays)))) onTime++;
   }
   return PaymentPunctuality(total: total, onTime: onTime);
 }

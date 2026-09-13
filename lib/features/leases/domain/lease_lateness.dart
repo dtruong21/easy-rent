@@ -51,14 +51,14 @@ bool isLeaseLate({
     return false;
   }
 
-  // Tronque à la partie date CIVILE LOCALE (cf. doc `_dateOnly` pour le
+  // Tronque à la partie date CIVILE LOCALE (cf. doc `leaseLocalDate` pour le
   // détail du bug de fuseau que cette conversion neutralise — `startDate`
   // relu depuis Firestore est un DateTime UTC, décalé d'un jour par rapport
   // au calendrier local selon l'heure de la journée).
   final dueMonth = _currentDueMonth(
-    startDate: _dateOnly(lease.startDate),
+    startDate: leaseLocalDate(lease.startDate),
     paymentDay: lease.paymentDay,
-    now: _dateOnly(now),
+    now: leaseLocalDate(now),
     graceDays: graceDays,
   );
 
@@ -166,8 +166,8 @@ bool _paymentCoversMonth(Payment payment, _YearMonth month) {
     month.month,
     _lastDayOfMonth(month.year, month.month),
   );
-  final periodStart = _dateOnly(payment.periodStart);
-  final periodEnd = _dateOnly(payment.periodEnd);
+  final periodStart = leaseLocalDate(payment.periodStart);
+  final periodEnd = leaseLocalDate(payment.periodEnd);
   return !periodStart.isAfter(lastDay) && !periodEnd.isBefore(firstDay);
 }
 
@@ -192,7 +192,10 @@ bool _paymentCoversMonth(Payment payment, _YearMonth month) {
 /// `.toLocal()` avant troncature neutralise ce décalage en ramenant tout
 /// sur le même calendrier civil (Europe/Paris) que celui utilisé à la
 /// saisie (date picker local) et par `DateTime.now()`.
-DateTime _dateOnly(DateTime dt) {
+/// Public (partagé avec `payment_punctuality.dart`) — même normalisation
+/// date-civile-locale requise partout où l'on lit `.year/.month/.day` d'une
+/// date relue depuis Firestore (instant UTC).
+DateTime leaseLocalDate(DateTime dt) {
   final local = dt.toLocal();
   return DateTime(local.year, local.month, local.day);
 }
