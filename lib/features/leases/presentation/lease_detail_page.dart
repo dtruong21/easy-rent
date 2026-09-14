@@ -17,6 +17,7 @@ import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_matrix.g.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_section.dart';
+import '../../charge_regularization/presentation/widgets/charge_statement_history_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../profile/application/landlord_profile_provider.dart';
@@ -247,6 +248,13 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
               propertyAddress: propertyAddress,
               tenantEmail: tenantEmail,
             ),
+            const SizedBox(height: 16),
+            // Historique des décomptes figés (FEAT-033 Task 9) — pas gaté par
+            // les mêmes conditions PRO/légal que la section ci-dessus : un
+            // décompte déjà figé reste consultable même si le bail ou
+            // l'abonnement changent ensuite. Ne s'affiche que s'il existe au
+            // moins un décompte.
+            ChargeStatementHistorySection(leaseId: lease.id),
             const SizedBox(height: 16),
             _InfoCard(lease: lease, propertyColorKey: propertyColorKey),
             const SizedBox(height: 16),

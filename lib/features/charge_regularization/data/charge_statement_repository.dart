@@ -169,3 +169,14 @@ final chargeStatementRepositoryProvider = Provider<ChargeStatementRepository>((
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );
 });
+
+/// Liste des décomptes de régularisation figés d'un bail, paramétrée par
+/// `leaseId` (FEAT-033 Task 9 — historique sur la fiche bail).
+///
+/// `autoDispose` : pas besoin de garder ce cache vivant hors de la fiche
+/// bail — même convention que les autres providers `.family` de lecture
+/// ponctuelle de ce module.
+final chargeStatementsForLeaseProvider = FutureProvider.family
+    .autoDispose<List<ChargeStatement>, String>((ref, leaseId) {
+      return ref.read(chargeStatementRepositoryProvider).listForLease(leaseId);
+    });
