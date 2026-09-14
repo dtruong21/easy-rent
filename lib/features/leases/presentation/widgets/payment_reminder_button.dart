@@ -48,7 +48,10 @@ class PaymentReminderButton extends StatelessWidget {
       landlordFullName: landlordFullName,
       propertyAddress: propertyAddress,
       dueMonthLabel: dueLabel,
-      amountDueCents: lease.rentAmountCents + lease.totalChargesCents,
+      // FEAT-031 revue finale : le locataire doit légalement uniquement
+      // rent + charges RÉCUPÉRABLES, pas les non-récupérables incluses dans
+      // `totalChargesCents` (voir lease.dart — jamais un montant dû).
+      amountDueCents: lease.totalAmountCents,
     );
   }
 

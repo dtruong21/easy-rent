@@ -32,4 +32,15 @@ void main() {
     expect(whatsAppUri(phone: '+1 202 555 0100', text: 'x'), isNull);
     expect(whatsAppUri(phone: 'pas un numéro', text: 'x'), isNull);
   });
+
+  test(
+    'whatsAppUri : espace encodé en %20 (pas en +) — wa.me rend "+" littéral',
+    () {
+      final u = whatsAppUri(phone: '06 12 34 56 78', text: 'Bonjour Marie');
+      expect(u!.toString(), contains('%20'));
+      expect(u.toString(), isNot(contains('+')));
+      // Le décodage via queryParameters reste correct dans les deux cas.
+      expect(u.queryParameters['text'], 'Bonjour Marie');
+    },
+  );
 }

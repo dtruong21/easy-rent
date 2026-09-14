@@ -27,12 +27,12 @@ Uri? whatsAppUri({required String phone, required String text}) {
   if (d.startsWith('0033')) d = d.substring(2);
   // 33XXXXXXXXX déjà au bon format (11 chiffres : 33 + 9)
   if (d.startsWith('33') && d.length == 11) {
-    return Uri.parse('https://wa.me/$d?text=${Uri.encodeQueryComponent(text)}');
+    return Uri.parse('https://wa.me/$d?text=${Uri.encodeComponent(text)}');
   }
   // 0XXXXXXXXX (10 chiffres, national FR) → 33 + les 9 chiffres après le 0
   if (d.startsWith('0') && d.length == 10) {
     return Uri.parse(
-      'https://wa.me/33${d.substring(1)}?text=${Uri.encodeQueryComponent(text)}',
+      'https://wa.me/33${d.substring(1)}?text=${Uri.encodeComponent(text)}',
     );
   }
   return null;

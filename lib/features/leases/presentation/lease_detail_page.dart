@@ -219,17 +219,20 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StatusCard(lease: lease, isLate: isLate),
-            if (isLate && tenant != null)
+            if (isLate &&
+                tenant != null &&
+                landlordProfile != null &&
+                property != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: PaymentReminderButton(
                   lease: lease,
                   tenant: tenant,
-                  landlordFullName: landlordProfile?.fullName ?? '',
+                  landlordFullName: landlordProfile.fullName ?? '',
                   propertyAddress: composePropertyAddress(
-                    address: property?.address,
-                    postalCode: property?.postalCode,
-                    city: property?.city,
+                    address: property.address,
+                    postalCode: property.postalCode,
+                    city: property.city,
                   ),
                 ),
               ),

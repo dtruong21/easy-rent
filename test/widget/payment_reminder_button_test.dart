@@ -9,6 +9,7 @@ library;
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
+import 'package:easyrent/core/utils/money_format.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
@@ -35,6 +36,25 @@ Lease _lease() => Lease(
   tenantId: 't1',
   rentAmountCents: 80000,
   chargesAmountCents: 5000,
+  startDate: DateTime(2020, 1, 1),
+  status: LeaseStatus.active,
+  leaseType: LeaseType.unfurnished,
+  paymentDay: 1,
+  createdAt: DateTime(2020, 1, 1),
+  updatedAt: DateTime(2020, 1, 1),
+);
+
+/// Bail avec charges récupérables ET non-récupérables distinctes — sert à
+/// vérifier que seules les charges récupérables entrent dans le montant dû
+/// communiqué au locataire (revue finale FEAT-031).
+Lease _leaseWithNonRecoverableCharges() => Lease(
+  id: 'l2',
+  landlordId: 'owner',
+  propertyId: 'p1',
+  tenantId: 't1',
+  rentAmountCents: 80000,
+  chargesAmountCents: 5000,
+  nonRecoverableChargesCents: 2000,
   startDate: DateTime(2020, 1, 1),
   status: LeaseStatus.active,
   leaseType: LeaseType.unfurnished,
@@ -107,4 +127,40 @@ void main() {
     expect(find.byKey(const Key('reminder_channel_sms')), findsOneWidget);
     expect(find.byKey(const Key('reminder_channel_whatsApp')), findsOneWidget);
   });
+
+  testWidgets(
+    'montant relance = rent + charges récupérables uniquement (exclut les '
+    'non-récupérables)',
+    (tester) async {
+      final lease = _leaseWithNonRecoverableCharges();
+      Uri? launched;
+      await tester.pumpWidget(
+        _host(
+          PaymentReminderButton(
+            lease: lease,
+            tenant: _tenant(phone: null),
+            landlordFullName: 'Jean Bailleur',
+            propertyAddress: '2 rue de Lyon',
+            launcher: (uri, {mode = LaunchMode.platformDefault}) async {
+              launched = uri;
+              return true;
+            },
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('btn_payment_reminder')));
+      await tester.pumpAndSettle();
+
+      final body = launched!.queryParameters['body']!;
+      final expectedDue = MoneyFormat.formatEurosFromCents(
+        lease.totalAmountCents,
+      );
+      final overstatedDue = MoneyFormat.formatEurosFromCents(
+        lease.rentAmountCents + lease.totalChargesCents,
+      );
+
+      expect(body, contains(expectedDue));
+      expect(body, isNot(contains(overstatedDue)));
+    },
+  );
 }
