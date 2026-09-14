@@ -102,7 +102,7 @@ class FirestoreChargeStatementRepository implements ChargeStatementRepository {
     final snap = await _col.doc(id).get();
     final data = snap.data();
     if (!snap.exists || data == null || data['landlordId'] != _uid) {
-      throw StateError('charge statement not found: $id');
+      throw ChargeStatementNotFoundException(id);
     }
     return ChargeStatement.fromJson(
       firestoreDocToSnakeJson(data, docId: snap.id),
@@ -180,3 +180,16 @@ final chargeStatementsForLeaseProvider = FutureProvider.family
     .autoDispose<List<ChargeStatement>, String>((ref, leaseId) {
       return ref.read(chargeStatementRepositoryProvider).listForLease(leaseId);
     });
+
+/// Levée quand un décompte de régularisation figé est introuvable ou n'est
+/// pas possédé par l'utilisateur courant (même patron que
+/// `ReceiptNotFoundException`, receipts).
+class ChargeStatementNotFoundException implements Exception {
+  const ChargeStatementNotFoundException(this.id);
+
+  final String id;
+
+  @override
+  String toString() =>
+      'ChargeStatementNotFoundException: décompte $id introuvable';
+}

@@ -34,11 +34,6 @@ class ChargeRegularizationSection extends ConsumerWidget {
   const ChargeRegularizationSection({
     super.key,
     required this.lease,
-    required this.landlordFullName,
-    required this.landlordAddress,
-    required this.tenantFullName,
-    required this.tenantFirstName,
-    required this.propertyAddress,
     this.tenantEmail,
   });
 
@@ -46,11 +41,12 @@ class ChargeRegularizationSection extends ConsumerWidget {
   /// récupérables (FEAT-041c). Lu directement depuis [lease.propertyId],
   /// pas de paramètre séparé nécessaire.
   final Lease lease;
-  final String landlordFullName;
-  final String landlordAddress;
-  final String tenantFullName;
-  final String tenantFirstName;
-  final String propertyAddress;
+
+  /// Email locataire — seul champ d'identité encore utile ici : il alimente
+  /// le fallback mailto:/presse-papier du partage. Les autres champs
+  /// d'identité (bailleur, locataire, adresse) proviennent désormais du
+  /// snapshot serveur figé au moment de la finalisation (FEAT-033), plus du
+  /// formulaire.
   final String? tenantEmail;
 
   @override

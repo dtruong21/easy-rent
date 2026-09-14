@@ -11,7 +11,6 @@ import '../../../core/ui/cards/status_pill_tone.dart';
 import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
-import '../../../core/utils/property_address.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_matrix.g.dart';
@@ -20,7 +19,6 @@ import '../../charge_regularization/presentation/widgets/charge_regularization_s
 import '../../charge_regularization/presentation/widgets/charge_statement_history_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
-import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/property_detail_provider.dart';
 import '../../properties/presentation/widgets/property_color_dot.dart';
 import '../../receipts/presentation/receipts_list_section.dart';
@@ -135,24 +133,11 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Charger le contexte nécessaire au bouton de partage des quittances.
     final asyncTenant = ref.watch(tenantDetailProvider(lease.tenantId));
     final asyncProperty = ref.watch(propertyDetailProvider(lease.propertyId));
-    final asyncProfile = ref.watch(landlordProfileProvider);
 
     // Extraire les valeurs dès qu'elles sont disponibles — null sinon
     // (le bouton de partage se désactive gracieusement).
     final tenantEmail = asyncTenant.valueOrNull?.email;
-    final tenantFirstName = asyncTenant.valueOrNull?.firstName ?? '';
-    final tenantLastName = asyncTenant.valueOrNull?.lastName ?? '';
-    final tenantFullName = '$tenantFirstName $tenantLastName'.trim();
-    // Adresse COMPLÈTE : `address` ne porte en pratique que la rue, le code
-    // postal et la ville vivant dans des champs séparés du bien. Elle part
-    // dans le PDF de régularisation de charges (champ « Logement : ») et dans
-    // le texte de partage (cf. property_address.dart).
     final property = asyncProperty.valueOrNull;
-    final propertyAddress = composePropertyAddress(
-      address: property?.address,
-      postalCode: property?.postalCode,
-      city: property?.city,
-    );
     // Couleur d'identité (FEAT-057) : le bien est déjà chargé ci-dessus pour
     // l'adresse — aucune lecture supplémentaire pour la propager aux
     // sections Paiements/Quittances de cette même page.
@@ -162,8 +147,6 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
             stored: property.colorKey,
           )
         : null;
-    final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
-    final landlordAddress = asyncProfile.valueOrNull?.address ?? '';
 
     // FEAT-028 : le retard est calculé au niveau de la liste (l'info
     // paiement n'est pas portée par le Lease seul). On réutilise le cache
@@ -234,15 +217,7 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
             // des charges était auparavant enterrée après _InfoCard (3ᵉ
             // carte), peu visible pour qui arrive par navigation normale
             // (pas via le raccourci liste ci-dessus).
-            ChargeRegularizationSection(
-              lease: lease,
-              landlordFullName: landlordFullName,
-              landlordAddress: landlordAddress,
-              tenantFullName: tenantFullName,
-              tenantFirstName: tenantFirstName,
-              propertyAddress: propertyAddress,
-              tenantEmail: tenantEmail,
-            ),
+            ChargeRegularizationSection(lease: lease, tenantEmail: tenantEmail),
             const SizedBox(height: 16),
             // Historique des décomptes figés (FEAT-033 Task 9) — pas gaté par
             // les mêmes conditions PRO/légal que la section ci-dessus : un

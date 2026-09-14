@@ -29,6 +29,10 @@ class _FakeChargeStatementRepository implements ChargeStatementRepository {
 
   final List<ChargeStatement> statements;
 
+  /// Appels enregistrés à [voidStatement] — `(id, reason)` — pour vérifier le
+  /// flux d'annulation depuis l'historique.
+  final List<({String id, String reason})> voidCalls = [];
+
   @override
   Future<List<ChargeStatement>> listForLease(String leaseId) async =>
       statements;
@@ -48,8 +52,9 @@ class _FakeChargeStatementRepository implements ChargeStatementRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Future<void> voidStatement(String id, String reason) async =>
-      throw UnimplementedError();
+  Future<void> voidStatement(String id, String reason) async {
+    voidCalls.add((id: id, reason: reason));
+  }
 
   @override
   Future<void> markAsSent({required String id, String? email}) async =>
@@ -101,11 +106,14 @@ ChargeStatement _voidedStatement() => ChargeStatement.fromJson({
   'voided_reason': 'Erreur de saisie',
 });
 
-Widget _buildSection(List<ChargeStatement> statements) {
+Widget _buildSection(
+  List<ChargeStatement> statements, {
+  _FakeChargeStatementRepository? repo,
+}) {
   return ProviderScope(
     overrides: [
       chargeStatementRepositoryProvider.overrideWithValue(
-        _FakeChargeStatementRepository(statements),
+        repo ?? _FakeChargeStatementRepository(statements),
       ),
     ],
     child: MaterialApp(
@@ -174,6 +182,45 @@ void main() {
           find.byKey(const Key('btn_charge_statement_void_cs-voided')),
           findsNothing,
         );
+      },
+    );
+
+    testWidgets(
+      'Annuler → dialog motif → confirme → voidStatement(id, reason) appelé',
+      (tester) async {
+        final repo = _FakeChargeStatementRepository([_sentStatement()]);
+        await tester.pumpWidget(_buildSection(const [], repo: repo));
+        await tester.pumpAndSettle();
+
+        // Ouvre le dialog d'annulation sur le décompte envoyé.
+        await tester.tap(
+          find.byKey(const Key('btn_charge_statement_void_cs-sent')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('dialog_void_charge_statement')),
+          findsOneWidget,
+        );
+
+        // Le bouton de confirmation est désactivé tant que le motif est vide.
+        final confirmFinder = find.byKey(
+          const Key('btn_void_charge_statement_confirm'),
+        );
+        expect(tester.widget<FilledButton>(confirmFinder).onPressed, isNull);
+
+        // Saisit un motif puis confirme.
+        await tester.enterText(
+          find.byKey(const Key('field_void_charge_statement_reason')),
+          'Erreur de montant',
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(confirmFinder);
+        await tester.pumpAndSettle();
+
+        // Le callable d'annulation a été appelé avec l'id et le motif exacts.
+        expect(repo.voidCalls, hasLength(1));
+        expect(repo.voidCalls.single.id, 'cs-sent');
+        expect(repo.voidCalls.single.reason, 'Erreur de montant');
       },
     );
 
