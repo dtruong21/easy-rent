@@ -11,6 +11,7 @@ import '../../../core/ui/cards/status_pill_tone.dart';
 import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/utils/property_address.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_matrix.g.dart';
@@ -19,6 +20,7 @@ import '../../charge_regularization/presentation/widgets/charge_regularization_s
 import '../../charge_regularization/presentation/widgets/charge_statement_history_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
+import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/property_detail_provider.dart';
 import '../../properties/presentation/widgets/property_color_dot.dart';
 import '../../receipts/presentation/receipts_list_section.dart';
@@ -34,6 +36,7 @@ import '../domain/lease_submit_error.dart';
 import 'lease_submit_error_l10n.dart';
 import 'lease_type_l10n.dart';
 import 'widgets/close_lease_dialog.dart';
+import 'widgets/payment_reminder_button.dart';
 
 final _log = Logger('LeaseDetailPage');
 
@@ -138,6 +141,10 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // (le bouton de partage se désactive gracieusement).
     final tenantEmail = asyncTenant.valueOrNull?.email;
     final property = asyncProperty.valueOrNull;
+    // FEAT-031 : contexte nécessaire au bouton de relance de paiement
+    // (locataire complet, nom du bailleur, adresse composée du bien).
+    final tenant = asyncTenant.valueOrNull;
+    final landlordProfile = ref.watch(landlordProfileProvider).valueOrNull;
     // Couleur d'identité (FEAT-057) : le bien est déjà chargé ci-dessus pour
     // l'adresse — aucune lecture supplémentaire pour la propager aux
     // sections Paiements/Quittances de cette même page.
@@ -212,6 +219,23 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StatusCard(lease: lease, isLate: isLate),
+            if (isLate &&
+                tenant != null &&
+                landlordProfile != null &&
+                property != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: PaymentReminderButton(
+                  lease: lease,
+                  tenant: tenant,
+                  landlordFullName: landlordProfile.fullName ?? '',
+                  propertyAddress: composePropertyAddress(
+                    address: property.address,
+                    postalCode: property.postalCode,
+                    city: property.city,
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             // FEAT-030 : remontée juste après le statut — la régularisation
             // des charges était auparavant enterrée après _InfoCard (3ᵉ

@@ -32,6 +32,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### FEAT-031 V1 — Relance de paiement assistée (client-side) (2026-09-14, branche `feat/payment-reminder-assisted`)
+- Bouton « Relancer le locataire » sur la fiche bail (FEAT-005), visible si bail en retard (`isLate`, FEAT-028). Lance le choix de canal, pré-remplit message amiable détaillé.
+- **Canaux** : email (`mailto:`), SMS (`sms:`), WhatsApp (`https://wa.me/…` FR-numbers seulement). Ouvre le client du propriétaire (100 % client via `launchUrl`, zéro backend).
+- **Message pré-rempli** : période due + montant (loyers + charges) + identité propriétaire/bien, mention explicite « relance amiable, pas une mise en demeure ».
+- **Pas de backend, pas de secret, pas de Cloud Function** — 100 % client (calcul + launchUrl).
+- **Fichiers nouveaux** : `lib/features/leases/domain/payment_reminder_message.dart`, `lib/features/leases/domain/payment_reminder_channel.dart`, `lib/features/leases/presentation/widgets/payment_reminder_button.dart`, `lib/core/utils/phone_uri.dart` ; public `leaseCurrentDueMonth` dans `lib/features/leases/domain/lease_lateness.dart`.
+- **V2 (non construit)** : automatisation cron serveur (nécessite enabler email — Resend/Trigger Email — pas encore en place).
+
 ### FEAT-033 — Archivage régularisations charges : snapshot figé immuable (2026-09-14, branche `feat/charge-statement-snapshot`)
 - Nouvelle collection `charge_statements/{id}` — **CF exclusive, IMMUABLE** (Rules `get,list: if isOwner(landlordId)` ; `create,update,delete: if false`). Pas de soft-delete (rétention légale 5 ans, décret 87-713) ; les décomptes annulés (`isVoided`) restent lisibles pour audit. Champs : identité figée à la finalisation (`landlordFullName/Address`, `tenantFullName/FirstName`, `propertyName/Address`), période (`periodStart/periodEnd`), `provisionsCollectedCents` (recalculé serveur), `actualExpensesCents` + `actualExpensesSource` ('expenses'|'manual'), `balanceCents` (signé), `lineItems[]` figé (`expenseId, nature, notes, amountCents, expenseDate`), `createdAt`, `isVoided/voidedAt/voidedReason`, `sentAt/sentToEmail`, `schemaVersion:1`.
 - 3 callables `europe-west1` (`functions/src/callable/charge_statements.ts`), patron répliqué de `receipts` (FEAT-007) : `finalizeChargeRegularization` (auth + ownership bail + **gate légal serveur** `resolveChargeMode(...)==='provisions'` sinon `charge_regularization_not_applicable` ; **provisions recalculées serveur** — jamais acceptées du client, via `sumProvisionsOverlap` sur les paiements de la période ; si `actualExpensesSource==='expenses'` la somme des `lineItems` doit égaler `actualExpensesCents` sinon `invalid-argument` ; écrit le snapshot immuable), `voidChargeStatement` (idempotent, non destructif — flag seulement), `markChargeStatementAsSent` (audit d'envoi, rejette un décompte déjà `isVoided`).
