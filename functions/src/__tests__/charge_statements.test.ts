@@ -190,6 +190,34 @@ describe("finalizeChargeRegularization", () => {
     ).rejects.toMatchObject({code: "permission-denied"});
   });
 
+  it("refuse un bail soft-deleted", async () => {
+    seedBase();
+    fakeDb.seed("leases/lease-1", {
+      landlordId: OWNER,
+      propertyId: "prop-1",
+      leaseType: "unfurnished",
+      chargeMode: "provisions",
+      tenantFirstName: "Marie",
+      tenantLastName: "Loc",
+      propertyName: "Studio",
+      propertyAddress: "2 rue B",
+      deletedAt: Timestamp.fromDate(new Date(iso("2025-01-01"))),
+    });
+
+    await expect(
+      finalizeChargeRegularization.run(
+        makeRequest(OWNER, {
+          leaseId: "lease-1",
+          periodStart: iso("2025-01-01"),
+          periodEnd: iso("2025-12-31"),
+          actualExpensesCents: 100,
+          actualExpensesSource: "manual",
+          lineItems: [],
+        }),
+      ),
+    ).rejects.toMatchObject({code: "failed-precondition", message: "lease is deleted"});
+  });
+
   it("refuse un bail au forfait (gate légal)", async () => {
     seedBase();
     fakeDb.seed("leases/lease-1", {
