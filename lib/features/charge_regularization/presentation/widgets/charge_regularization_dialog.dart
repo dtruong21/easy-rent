@@ -4,12 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../../expenses/application/expenses_provider.dart';
+import '../../../expenses/domain/expense.dart';
 import '../../../payments/application/lease_payments_provider.dart';
-import '../../../payments/domain/payment.dart';
-import '../../application/charge_provisions_calculator.dart';
-import '../../application/charge_regularization_share_controller.dart';
+import '../../application/charge_statement_finalize_controller.dart';
 import '../../application/recoverable_expenses_calculator.dart';
-import '../../domain/charge_regularization_balance.dart';
 import '../../domain/charge_regularization_share_error_reason.dart';
 import '../../domain/charge_regularization_share_state.dart';
 import 'charge_regularization_form.dart';
@@ -35,18 +33,17 @@ import 'charge_regularization_share_error_reason_l10n.dart';
 ///    [_userEditedExpenses]).
 /// 4. Solde recalculé en direct à chaque changement — voir
 ///    [ChargeRegularizationForm].
-/// 5. Bouton "Générer et partager" → PDF + Web Share (pas de persistance
-///    Firestore en V1, cf. doc de fichier du controller).
+/// 5. Bouton "Finaliser & figer le décompte" → confirmation puis
+///    [ChargeStatementFinalizeController.finalizeAndShare] (FEAT-033) :
+///    persiste un [ChargeStatement] immuable côté serveur (snapshot légal,
+///    art. 23 loi du 6 juillet 1989), régénère le PDF depuis CE snapshot puis
+///    partage. Remplace l'ancien flux volatile (V1.2, FEAT-029) — voir doc de
+///    fichier du controller.
 class ChargeRegularizationDialog extends ConsumerStatefulWidget {
   const ChargeRegularizationDialog({
     super.key,
     required this.leaseId,
     required this.propertyId,
-    required this.landlordFullName,
-    required this.landlordAddress,
-    required this.tenantFullName,
-    required this.tenantFirstName,
-    required this.propertyAddress,
     this.tenantEmail,
   });
 
@@ -55,11 +52,6 @@ class ChargeRegularizationDialog extends ConsumerStatefulWidget {
   /// Bien rattaché au bail — nécessaire pour charger les dépenses
   /// récupérables du bien (FEAT-041c, [recoverableExpensesProvider]).
   final String propertyId;
-  final String landlordFullName;
-  final String landlordAddress;
-  final String tenantFullName;
-  final String tenantFirstName;
-  final String propertyAddress;
   final String? tenantEmail;
 
   @override
@@ -152,7 +144,7 @@ class _ChargeRegularizationDialogState
     );
 
     ref.listen<ChargeRegularizationShareState>(
-      chargeRegularizationShareControllerProvider,
+      chargeStatementFinalizeControllerProvider,
       (_, next) => _handleStateChange(context, ref, next),
     );
 
@@ -185,14 +177,14 @@ class _ChargeRegularizationDialogState
     );
     _applyPrefill(prefilledExpensesCents);
 
-    final shareState = ref.watch(chargeRegularizationShareControllerProvider);
+    final shareState = ref.watch(chargeStatementFinalizeControllerProvider);
     final isPreparing = shareState is ChargeRegularizationSharePreparing;
-    // Correctif review FEAT-029 (points 1 et 2) : le bouton "Générer et
-    // partager" doit rester désactivé tant que (a) les paiements ne sont pas
-    // chargés — générer avant `asyncPayments.hasValue` produirait un avis
-    // avec provisions=0 — ou (b) la période de référence est invalide
-    // (fin <= début), ce qui fausserait le calcul des provisions ET rendrait
-    // le document légal incohérent.
+    // Correctif review FEAT-029 (points 1 et 2) : le bouton "Finaliser &
+    // figer" doit rester désactivé tant que (a) les paiements ne sont pas
+    // chargés — finaliser avant `asyncPayments.hasValue` afficherait un solde
+    // encore à 0 le temps de l'appel serveur — ou (b) la période de référence
+    // est invalide (fin <= début), ce qui rendrait le décompte légal
+    // incohérent.
     final canGenerate =
         !isPreparing && asyncPayments.hasValue && !_isPeriodInvalid;
 
@@ -232,9 +224,7 @@ class _ChargeRegularizationDialogState
         ),
         FilledButton.icon(
           key: const Key('btn_charge_regularization_generate'),
-          onPressed: canGenerate
-              ? () => _submit(asyncPayments.valueOrNull ?? const <Payment>[])
-              : null,
+          onPressed: canGenerate ? () => _submit(expensesForPeriod) : null,
           icon: isPreparing
               ? const SizedBox(
                   width: 16,
@@ -242,33 +232,79 @@ class _ChargeRegularizationDialogState
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.picture_as_pdf_outlined, size: 18),
-          label: Text(context.l10n.chargeRegularizationGenerateButton),
+          label: Text(context.l10n.chargeStatementFinalizeAction),
         ),
       ],
     );
   }
 
-  void _submit(List<Payment> payments) {
-    final provisionsCents = sumChargeProvisionsForPeriod(
-      payments: payments,
-      referenceStart: _periodStart,
-      referenceEnd: _periodEnd,
+  /// Demande confirmation (le décompte figé devient immuable — voir
+  /// `chargeStatementFinalizeConfirmBody`) puis appelle
+  /// [ChargeStatementFinalizeController.finalizeAndShare].
+  ///
+  /// [expensesForPeriod] est la liste **déjà filtrée** par
+  /// [filterRecoverableExpensesForPeriod] (même liste que celle affichée dans
+  /// [ChargeRegularizationForm], cf. `build()`) — sert à décider la source du
+  /// montant des dépenses réelles :
+  /// - si `_actualExpensesCents` == la somme de [expensesForPeriod] (le
+  ///   bailleur n'a pas modifié le pré-remplissage, ou a saisi exactement la
+  ///   même valeur), `actualExpensesSource` = `'expenses'` et les
+  ///   `lineItems` détaillent chaque dépense (le serveur revérifie que leur
+  ///   somme == `actualExpensesCents`) ;
+  /// - sinon (saisie manuelle divergente), `actualExpensesSource` =
+  ///   `'manual'` et `lineItems` = `[]` — seul choix cohérent : un `'expenses'`
+  ///   dont la somme des `lineItems` ne colle pas au total serait rejeté par
+  ///   le serveur (Task 6/7).
+  Future<void> _submit(List<Expense> expensesForPeriod) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.chargeStatementFinalizeConfirmTitle),
+        content: Text(context.l10n.chargeStatementFinalizeConfirmBody),
+        actions: [
+          TextButton(
+            key: const Key('btn_charge_statement_finalize_confirm_cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            key: const Key('btn_charge_statement_finalize_confirm_ok'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.l10n.chargeStatementFinalizeAction),
+          ),
+        ],
+      ),
     );
-    final balance = ChargeRegularizationBalance(
-      periodStart: _periodStart,
-      periodEnd: _periodEnd,
-      provisionsCollectedCents: provisionsCents,
-      actualExpensesCents: _actualExpensesCents,
+    if (confirmed != true || !mounted) return;
+
+    final prefilledExpensesCents = expensesForPeriod.fold<int>(
+      0,
+      (sum, e) => sum + e.amountCents,
     );
+    final isFromExpenses = _actualExpensesCents == prefilledExpensesCents;
+    final lineItems = isFromExpenses
+        ? expensesForPeriod
+              .map(
+                (e) => <String, dynamic>{
+                  'expenseId': e.id,
+                  'nature': e.nature.sqlValue,
+                  'notes': e.notes ?? '',
+                  'amountCents': e.amountCents,
+                  'expenseDate': e.expenseDate.toUtc().toIso8601String(),
+                },
+              )
+              .toList()
+        : <Map<String, dynamic>>[];
+
     ref
-        .read(chargeRegularizationShareControllerProvider.notifier)
-        .generateAndShare(
-          balance: balance,
-          landlordFullName: widget.landlordFullName,
-          landlordAddress: widget.landlordAddress,
-          tenantFullName: widget.tenantFullName,
-          tenantFirstName: widget.tenantFirstName,
-          propertyAddress: widget.propertyAddress,
+        .read(chargeStatementFinalizeControllerProvider.notifier)
+        .finalizeAndShare(
+          leaseId: widget.leaseId,
+          periodStart: _periodStart,
+          periodEnd: _periodEnd,
+          actualExpensesCents: _actualExpensesCents,
+          actualExpensesSource: isFromExpenses ? 'expenses' : 'manual',
+          lineItems: lineItems,
           tenantEmail: widget.tenantEmail,
         );
   }
@@ -280,7 +316,7 @@ class _ChargeRegularizationDialogState
   ) {
     final theme = Theme.of(context);
     final notifier = ref.read(
-      chargeRegularizationShareControllerProvider.notifier,
+      chargeStatementFinalizeControllerProvider.notifier,
     );
     switch (state) {
       case ChargeRegularizationShareShared(:final usedNativeShare):

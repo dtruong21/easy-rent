@@ -4587,6 +4587,46 @@
   "@chargeRegularizationBalanceDirectionBalanced": {
     "description": "Localized label for ChargeRegularizationBalanceDirection.balanced (actual expenses == provisions collected), shown on the on-screen StatusPill in ChargeRegularizationBalanceSummary."
   },
+  "chargeStatementFinalizeAction": "Finalize & lock the statement",
+  "@chargeStatementFinalizeAction": {
+    "description": "Button that persists the immutable charge regularization statement then shares it"
+  },
+  "chargeStatementFinalizeConfirmTitle": "Lock this statement?",
+  "@chargeStatementFinalizeConfirmTitle": {
+    "description": "Confirmation dialog title before finalizing a charge statement"
+  },
+  "chargeStatementFinalizeConfirmBody": "Once locked, this statement is immutable and kept for 5 years (legal proof). You can void and reissue it if needed.",
+  "@chargeStatementFinalizeConfirmBody": {
+    "description": "Confirmation dialog body explaining immutability before finalizing"
+  },
+  "chargeStatementHistoryTitle": "Locked statements",
+  "@chargeStatementHistoryTitle": {
+    "description": "Section title listing finalized charge regularization statements on the lease page"
+  },
+  "chargeStatementHistoryEmpty": "No locked statement yet.",
+  "@chargeStatementHistoryEmpty": {
+    "description": "Empty state when a lease has no finalized charge statement"
+  },
+  "chargeStatementBadgeSent": "Sent",
+  "@chargeStatementBadgeSent": {
+    "description": "Badge shown on a statement that was shared to the tenant"
+  },
+  "chargeStatementBadgeVoided": "Voided",
+  "@chargeStatementBadgeVoided": {
+    "description": "Badge shown on a voided statement"
+  },
+  "chargeStatementActionReshare": "Re-share",
+  "@chargeStatementActionReshare": {
+    "description": "Action to re-render and re-share an existing locked statement"
+  },
+  "chargeStatementActionVoid": "Void",
+  "@chargeStatementActionVoid": {
+    "description": "Action to void a locked statement"
+  },
+  "chargeStatementVoidReasonHint": "Reason for voiding",
+  "@chargeStatementVoidReasonHint": {
+    "description": "Hint text for the void reason input"
+  },
 
   "simulatorPageTitle": "Investment simulator",
   "@simulatorPageTitle": {
