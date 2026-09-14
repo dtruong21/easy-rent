@@ -38,10 +38,14 @@ Map<String, dynamic> _baseJson() => {
   'landlord_id': 'lord1',
   'lease_id': 'l1',
   'property_id': 'p1',
-  'landlord_full_name': 'Jean Bailleur',
+  // Valeurs distinctives et disjointes des unes des autres (aucune n'est une
+  // sous-chaîne d'une autre) — permet de vérifier par `contains()` que le
+  // message de partage utilise bien CE champ précis du snapshot figé, et pas
+  // un autre champ voisin ni une valeur de formulaire externe au décompte.
+  'landlord_full_name': 'Paul Bailleur Figé',
   'landlord_address': '1 rue A',
-  'tenant_full_name': 'Marie Loc',
-  'tenant_first_name': 'Marie',
+  'tenant_full_name': 'Zoé Locataire',
+  'tenant_first_name': 'Mariette',
   'property_name': 'Studio',
   'property_address': '2 rue B',
   'period_start': '2025-01-01T00:00:00.000Z',
@@ -136,6 +140,8 @@ class _FakeWebShare implements WebShareService {
 
   bool sharePdfCalled = false;
   String? lastFilename;
+  String? lastTitle;
+  String? lastText;
 
   _FakeWebShare({bool canShare = true, Exception? shareException})
     : _canShare = canShare,
@@ -153,6 +159,8 @@ class _FakeWebShare implements WebShareService {
   }) async {
     sharePdfCalled = true;
     lastFilename = filename;
+    lastTitle = title;
+    lastText = text;
     if (_shareException != null) throw _shareException;
   }
 
@@ -207,14 +215,7 @@ ProviderContainer _makeContainer({
   );
 }
 
-const _finalizeParams = (
-  leaseId: 'lease-1',
-  landlordFullName: 'Jean Bailleur',
-  landlordAddress: '1 rue A',
-  tenantFullName: 'Marie Loc',
-  tenantFirstName: 'Marie',
-  propertyAddress: '2 rue B',
-);
+const _leaseId = 'lease-1';
 
 void main() {
   group('ChargeRegularizationPdfData.fromStatement', () {
@@ -254,17 +255,12 @@ void main() {
         await container
             .read(chargeStatementFinalizeControllerProvider.notifier)
             .finalizeAndShare(
-              leaseId: _finalizeParams.leaseId,
+              leaseId: _leaseId,
               periodStart: DateTime.utc(2025, 1, 1),
               periodEnd: DateTime.utc(2025, 12, 31),
               actualExpensesCents: 15000,
               actualExpensesSource: 'manual',
               lineItems: const [],
-              landlordFullName: _finalizeParams.landlordFullName,
-              landlordAddress: _finalizeParams.landlordAddress,
-              tenantFullName: _finalizeParams.tenantFullName,
-              tenantFirstName: _finalizeParams.tenantFirstName,
-              propertyAddress: _finalizeParams.propertyAddress,
               tenantEmail: 'loc@example.com',
             );
 
@@ -289,6 +285,18 @@ void main() {
 
         expect(webShare.sharePdfCalled, isTrue);
 
+        // Régression ciblée (review round 1) : le message de partage (titre
+        // du partage natif + corps mailto:/Web Share) DOIT provenir du
+        // snapshot figé relu (`statement`), jamais d'un quelconque paramètre
+        // de formulaire — `finalizeAndShare` n'en accepte d'ailleurs plus
+        // aucun pour l'identité (landlord/tenant/adresse). On vérifie ici
+        // que ce sont bien les valeurs de `repo.statementToReturn` (nom
+        // distinctif `'Paul Bailleur Figé'` / `'Mariette'`, jamais passées
+        // en paramètre à cet appel) qui apparaissent dans le message envoyé.
+        expect(webShare.lastText, contains('Mariette'));
+        expect(webShare.lastText, contains('Paul Bailleur Figé'));
+        expect(webShare.lastText, isNot(contains('Zoé Locataire')));
+
         final state = container.read(chargeStatementFinalizeControllerProvider);
         expect(state, isA<ChargeRegularizationShareShared>());
         if (state case ChargeRegularizationShareShared(
@@ -310,17 +318,12 @@ void main() {
       await container
           .read(chargeStatementFinalizeControllerProvider.notifier)
           .finalizeAndShare(
-            leaseId: _finalizeParams.leaseId,
+            leaseId: _leaseId,
             periodStart: DateTime.utc(2025, 1, 1),
             periodEnd: DateTime.utc(2025, 12, 31),
             actualExpensesCents: 15000,
             actualExpensesSource: 'manual',
             lineItems: const [],
-            landlordFullName: _finalizeParams.landlordFullName,
-            landlordAddress: _finalizeParams.landlordAddress,
-            tenantFullName: _finalizeParams.tenantFullName,
-            tenantFirstName: _finalizeParams.tenantFirstName,
-            propertyAddress: _finalizeParams.propertyAddress,
           );
 
       expect(repo.calls, ['finalize', 'getById']);
@@ -344,17 +347,12 @@ void main() {
         await container
             .read(chargeStatementFinalizeControllerProvider.notifier)
             .finalizeAndShare(
-              leaseId: _finalizeParams.leaseId,
+              leaseId: _leaseId,
               periodStart: DateTime.utc(2025, 1, 1),
               periodEnd: DateTime.utc(2025, 12, 31),
               actualExpensesCents: 15000,
               actualExpensesSource: 'manual',
               lineItems: const [],
-              landlordFullName: _finalizeParams.landlordFullName,
-              landlordAddress: _finalizeParams.landlordAddress,
-              tenantFullName: _finalizeParams.tenantFullName,
-              tenantFirstName: _finalizeParams.tenantFirstName,
-              propertyAddress: _finalizeParams.propertyAddress,
             );
 
         expect(repo.calls, isNot(contains('markAsSent')));
@@ -374,17 +372,12 @@ void main() {
       await container
           .read(chargeStatementFinalizeControllerProvider.notifier)
           .finalizeAndShare(
-            leaseId: _finalizeParams.leaseId,
+            leaseId: _leaseId,
             periodStart: DateTime.utc(2025, 1, 1),
             periodEnd: DateTime.utc(2025, 12, 31),
             actualExpensesCents: 15000,
             actualExpensesSource: 'manual',
             lineItems: const [],
-            landlordFullName: _finalizeParams.landlordFullName,
-            landlordAddress: _finalizeParams.landlordAddress,
-            tenantFullName: _finalizeParams.tenantFullName,
-            tenantFirstName: _finalizeParams.tenantFirstName,
-            propertyAddress: _finalizeParams.propertyAddress,
           );
 
       expect(repo.calls, ['finalize']);

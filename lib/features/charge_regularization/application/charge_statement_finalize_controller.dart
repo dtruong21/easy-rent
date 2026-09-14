@@ -54,15 +54,16 @@ class ChargeStatementFinalizeController
   /// Finalise le décompte (snapshot serveur immuable), rend le PDF depuis ce
   /// snapshot, puis partage et marque le décompte comme envoyé.
   ///
-  /// [landlordFullName], [landlordAddress], [tenantFullName] et
-  /// [propertyAddress] correspondent aux valeurs du formulaire au moment de
-  /// l'appel — elles ne sont PAS utilisées pour rendre le PDF ni construire
-  /// le message de partage : une fois le décompte finalisé, le snapshot
-  /// serveur (`statement`, relu via `getById`) devient l'unique source de
-  /// vérité pour ces champs (constraint FEAT-033 : "PDF rendered client-side
-  /// from frozen fields only"). Elles ne sont conservées dans la signature
-  /// que pour la symétrie d'appel avec le formulaire (Task 8/9 UI) et un
-  /// éventuel usage de validation ultérieur.
+  /// Le décompte figé (`statement`, relu via `getById` juste après
+  /// `finalize()`) est l'**unique** source de vérité pour tout champ
+  /// d'identité rendu ou partagé (PDF, sujet/corps du message, titre du
+  /// partage natif) — nom du bailleur, prénom du locataire, adresse du bien,
+  /// etc. Cette méthode n'accepte donc AUCUN de ces champs en paramètre : ils
+  /// ne pourraient que diverger du snapshot figé entre le remplissage du
+  /// formulaire et l'appel (profil bailleur modifié entre-temps, préremplissage
+  /// obsolète), ce qui casserait la garantie légale "preuve figée"
+  /// (art. 23 loi du 6 juillet 1989). Seul [tenantEmail] reste un paramètre :
+  /// le décompte ne porte pas d'email (mailto:/markAsSent uniquement).
   Future<void> finalizeAndShare({
     required String leaseId,
     required DateTime periodStart,
@@ -70,11 +71,6 @@ class ChargeStatementFinalizeController
     required int actualExpensesCents,
     required String actualExpensesSource,
     required List<Map<String, dynamic>> lineItems,
-    required String landlordFullName,
-    required String landlordAddress,
-    required String tenantFullName,
-    required String tenantFirstName,
-    required String propertyAddress,
     String? tenantEmail,
   }) async {
     state = const ChargeRegularizationShareState.preparing();
@@ -94,12 +90,10 @@ class ChargeStatementFinalizeController
 
       await _renderShareAndMarkSent(
         statement: statement,
-        // Le décompte figé porte déjà tenantFirstName/landlordFullName —
-        // on privilégie ces valeurs de formulaire tant qu'elles sont
-        // fournies, avec repli sur le snapshot sinon (mêmes valeurs en
-        // pratique juste après finalize()).
-        tenantFirstName: tenantFirstName,
-        landlordFullName: landlordFullName,
+        // Toujours issu du snapshot figé — jamais d'un paramètre de
+        // formulaire (cf. doc ci-dessus).
+        tenantFirstName: statement.tenantFirstName,
+        landlordFullName: statement.landlordFullName,
         tenantEmail: tenantEmail,
       );
     } on ShareAbortedException {
