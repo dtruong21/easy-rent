@@ -41,7 +41,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-031 | Rappels paiement automatiques (attente infra email) | 📋 planned | payments-receipts | — |
 | FEAT-032 | Dashboard — trésorerie graphique (encaissé vs dû) | 📋 planned | dashboard | — |
 | FEAT-033 | Archivage régularisations charges — snapshot figé (`charge_statements`, immuable) | ✅ done + staging 2026-09-14 (PR #182, functions déployées) | leases | PR #182 |
-| FEAT-034 | Import multi-colonnes CSV (properties/tenants/leases) | 📋 planned | properties | — |
+| FEAT-034 | Import multi-colonnes CSV (properties/tenants/leases) | ❌ abandonné 2026-09-14 | properties | — |
 | FEAT-035 | 2FA TOTP | 📋 planned | account | — |
 | FEAT-036 | Charges récupérables vs non-récupérables (décret 87-713) | ✅ done | leases | PR #66 |
 | FEAT-041 | Suivi dépenses unifié V1 (expenses + documents v2) | ✅ done | expenses-documents | PR #67 |
