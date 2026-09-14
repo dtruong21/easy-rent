@@ -632,6 +632,18 @@
   "@leasesArchiveButton": {
     "description": "Button on the lease detail page to soft-delete (archive) the lease."
   },
+  "paymentReminderButton": "Send a reminder",
+  "@paymentReminderButton": {"description": "Button on the lease detail page (shown when rent is overdue) that lets the landlord send an amicable payment reminder to the tenant"},
+  "paymentReminderChannelSheetTitle": "Send the reminder via",
+  "@paymentReminderChannelSheetTitle": {"description": "Title of the bottom sheet letting the landlord pick a channel (email/SMS/WhatsApp) for the payment reminder"},
+  "paymentReminderChannelEmail": "Email",
+  "@paymentReminderChannelEmail": {"description": "Payment reminder channel: email"},
+  "paymentReminderChannelSms": "SMS",
+  "@paymentReminderChannelSms": {"description": "Payment reminder channel: SMS"},
+  "paymentReminderChannelWhatsApp": "WhatsApp",
+  "@paymentReminderChannelWhatsApp": {"description": "Payment reminder channel: WhatsApp"},
+  "paymentReminderLaunchError": "Could not open the messaging app.",
+  "@paymentReminderLaunchError": {"description": "SnackBar shown when launchUrl fails to open the mail/SMS/WhatsApp app for a payment reminder"},
   "leasesArchiveDialogTitle": "Archive this lease?",
   "@leasesArchiveDialogTitle": {
     "description": "Title of the archive confirmation dialog for a lease."
