@@ -44,6 +44,7 @@ const LANDLORD_SCOPED_COLLECTIONS = [
   "documents",
   "expenses",
   "investment_scenarios",
+  "charge_statements",
 ] as const;
 
 let env: RulesTestEnvironment;
@@ -208,6 +209,29 @@ describe("get — ownership par doc (inchangé, non-régression)", () => {
 
   it("un autre compte ne lit pas le doc d'autrui", async () => {
     await assertFails(asOtherB().doc("receipts/doc-a").get());
+  });
+});
+
+describe("charge_statements — immuables & owner-scoped (FEAT-033)", () => {
+  it("le propriétaire lit son décompte", async () => {
+    await assertSucceeds(asOwnerA().doc("charge_statements/doc-a").get());
+  });
+  it("un autre compte ne lit pas le décompte d'autrui", async () => {
+    await assertFails(asOtherB().doc("charge_statements/doc-a").get());
+  });
+  it("un autre compte ne peut lister les décomptes d'un UID orphelin", async () => {
+    await assertFails(
+      asOtherB().collection("charge_statements").where("landlordId", "==", "deleted-account-uid").get(),
+    );
+  });
+  it("le client ne peut PAS créer un décompte (CF exclusive)", async () => {
+    await assertFails(
+      asOwnerA().collection("charge_statements").add({landlordId: LANDLORD_A}),
+    );
+  });
+  it("le client ne peut PAS modifier ni supprimer un décompte", async () => {
+    await assertFails(asOwnerA().doc("charge_statements/doc-a").update({balanceCents: 0}));
+    await assertFails(asOwnerA().doc("charge_statements/doc-a").delete());
   });
 });
 

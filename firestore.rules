@@ -335,6 +335,22 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // charge_statements/{id} — IMMUABLES (loi 6 juillet 1989) → CF exclusive
+    //
+    // Décompte de régularisation figé (FEAT-033). Pas de soft-delete
+    // (rétention 5 ans). Les décomptes annulés (isVoided) restent lisibles
+    // pour audit. Owner-scoped en get ET list (mêmes garanties que receipts :
+    // les décomptes d'un compte supprimé restent conservés et ne doivent
+    // résoudre pour personne).
+    // ====================================================================
+    match /charge_statements/{id} {
+      allow get:  if isOwner(resource.data.landlordId);
+      allow list: if isOwner(resource.data.landlordId);
+      // finalize / void / markAsSent en Callable.
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
     // documents/{id}   — CF exclusive (legalHold dérivé de category)
     // ====================================================================
     match /documents/{id} {
