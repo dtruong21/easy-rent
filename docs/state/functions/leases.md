@@ -2,7 +2,7 @@
 
 > Source d'état — leases. Maintenu par state-keeper.
 
-Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c). Fichiers : `functions/src/callable/lease_payment.ts` (callables) · `functions/src/utils/property_address.ts` (composition adresse, fonction pure). FEAT : 005, 028, 036, 041c, 042.
+Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c), snapshot figé de régularisation (FEAT-033). Fichiers : `functions/src/callable/lease_payment.ts` (callables baux) · `functions/src/callable/charge_statements.ts` (callables charge_statements, FEAT-033) · `functions/src/utils/property_address.ts` (composition adresse, fonction pure). FEAT : 005, 028, 033, 036, 041c, 042.
 
 ## Callables
 
@@ -28,6 +28,27 @@ Client invoke, isFullyAuthed only.
   - **FEAT-056** : vérification atomique du quota `activeLeases` du plan effectif dans la transaction → RESOURCE_EXHAUSTED (`lease_limit_reached`) si saturé.
 - **Compteurs (FEAT-044)** : si `active→terminated` ou `terminated→active` (delta ≠ 0) → DECREMENT/INCREMENT `activeLeaseCount` sur properties/tenants et `activeLeasesCount` sur landlords.
 - **Retour** : `{updated:true}`.
+
+## Callables — Charge Statements (FEAT-033)
+
+Fichier `functions/src/callable/charge_statements.ts`. Patron répliqué de `receipts` (FEAT-007/payments-receipts.md) pour un objet légal **immuable** : snapshot figé, `create/update/delete: if false` en Rules, pas de PDF/Storage serveur (rendu client à partir des champs figés).
+
+### `finalizeChargeRegularization`
+Client invoke, isFullyAuthed.
+- **Params** : `leaseId, periodStart, periodEnd, actualExpensesCents, actualExpensesSource ('expenses'|'manual'), lineItems[]` (requis seulement si `source==='expenses'` ; chaque item `{expenseId, nature, notes?, amountCents, expenseDate}`).
+- **Validations** : auth uid ; `periodEnd > periodStart` ; `actualExpensesCents >= 0` ; `actualExpensesSource ∈ {expenses, manual}` ; landlord `fullName`/`address` non vides (`failed-precondition: profile_incomplete` sinon, mentions légales loi 1989) ; lease existe + `landlordId==uid` (`permission-denied` sinon) + non soft-deleted (`failed-precondition: lease is deleted`) ; **gate légal serveur** `resolveChargeMode(leaseType, chargeMode) === 'provisions'` sinon `failed-precondition: charge_regularization_not_applicable` (forfait exclu — pas de régularisation possible) ; si `source==='expenses'` → `validateLineItems()` : chaque `amountCents >= 0`, **la somme des lignes doit égaler `actualExpensesCents`** (`invalid-argument` sinon, avec `{sum, actualExpensesCents}`).
+- **Recompute serveur (autoritatif)** : `provisionsCollectedCents` **jamais accepté du client** — recalculé via `sumProvisionsOverlap()` sur les `payments` du bail (`landlordId==uid && leaseId==… && deletedAt==null`) dont la période recouvre `[periodStart, periodEnd]` (intersection d'intervalle). `balanceCents = actualExpensesCents - provisionsCollectedCents` (signé : positif = dû par le locataire, négatif = dû au locataire).
+- **Mutation** : CREATE `charge_statements/{id}` — snapshot dénorm figé (identité landlord + tenant + property lues sur `landlords/{uid}` et le `lease`), `lineItems[]` normalisés, `isVoided=false`, `sentAt=null`, `schemaVersion=1`. Erreur d'écriture → `internal: charge_statement_persist_failed` (loggée).
+- **Retour** : `{statementId, balanceCents, direction}` (`direction` dérivé : `dueByTenant`/`dueToTenant`/`balanced`, non persisté).
+- **Erreurs** : PERMISSION_DENIED, NOT_FOUND (lease/landlord), INVALID_ARGUMENT, FAILED_PRECONDITION (profil incomplet, bail supprimé, mode charge incompatible), INTERNAL.
+
+### `voidChargeStatement`
+Client invoke. Transaction : fetch + ownership (`landlordId==uid` sinon `permission-denied`) ; **idempotent** (noop si déjà `isVoided`) ; sinon `isVoided=true, voidedAt=now(), voidedReason=<motif requis>`. **Non destructif** — le document reste lisible (pas de soft-delete, rétention légale 5 ans). **Retour** : `{voided:true}`.
+
+### `markChargeStatementAsSent`
+Client invoke. Transaction : fetch + ownership ; **rejette** un décompte déjà `isVoided` (`failed-precondition`) ; sinon `sentAt=now(), sentToEmail=<email optionnel>` (audit d'envoi, pas de mail serveur). **Retour** : `{marked:true}`.
+
+**Immuabilité** : les 3 callables sont les **seules** écritures possibles sur `charge_statements` (Rules `create,update,delete: if false`) — `void`/`markAsSent` ne mutent que les champs d'audit (`isVoided*`, `sentAt*`), jamais les champs financiers/identité figés à la création.
 
 ## Constants & helpers (`lease_payment.ts`)
 
