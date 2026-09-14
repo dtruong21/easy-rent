@@ -204,11 +204,6 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           builder: (_) => ChargeRegularizationDialog(
             leaseId: lease.id,
             propertyId: lease.propertyId,
-            landlordFullName: landlordFullName,
-            landlordAddress: landlordAddress,
-            tenantFullName: tenantFullName,
-            tenantFirstName: tenantFirstName,
-            propertyAddress: propertyAddress,
             tenantEmail: tenantEmail,
           ),
         );

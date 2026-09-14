@@ -8,7 +8,8 @@
 /// environnement). Pattern identique à `ReceiptActionError`
 /// (`lib/features/receipts/domain/receipt_action_error.dart`) et
 /// `TenantSubmitError` (`lib/features/tenants/domain/tenant_submit_error.dart`) :
-/// [ChargeRegularizationShareController] stocke le **nom** de cet enum
+/// Le flow de partage (`ChargeStatementFinalizeController`, FEAT-033) stocke
+/// le **nom** de cet enum
 /// (`ChargeRegularizationShareErrorReason.name`, une clé technique stable,
 /// jamais un message FR) dans `ChargeRegularizationShareState.error.message` ;
 /// la couche présentation

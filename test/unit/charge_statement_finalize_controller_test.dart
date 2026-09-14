@@ -410,5 +410,33 @@ void main() {
         isA<ChargeRegularizationShareShared>(),
       );
     });
+
+    test('re-partage d\'un décompte VOIDÉ : shared, markAsSent jamais appelé '
+        '(régression revue finale — évite le faux snackbar d\'erreur, '
+        '`markChargeStatementAsSent` levant `failed-precondition` côté '
+        'serveur sur un décompte annulé)', () async {
+      final repo = _FakeChargeStatementRepository();
+      final webShare = _FakeWebShare(canShare: true);
+      final container = _makeContainer(repo: repo, webShare: webShare);
+      addTearDown(container.dispose);
+
+      final voidedStatement = ChargeStatement.fromJson({
+        ..._baseJson(),
+        'id': 'cs-voided',
+        'is_voided': true,
+        'voided_reason': 'erreur de saisie',
+      });
+
+      await container
+          .read(chargeStatementFinalizeControllerProvider.notifier)
+          .shareExisting(voidedStatement, tenantEmail: 'loc@example.com');
+
+      expect(repo.calls, isEmpty);
+      expect(webShare.sharePdfCalled, isTrue);
+      expect(
+        container.read(chargeStatementFinalizeControllerProvider),
+        isA<ChargeRegularizationShareShared>(),
+      );
+    });
   });
 }

@@ -44,11 +44,6 @@ class ChargeRegularizationDialog extends ConsumerStatefulWidget {
     super.key,
     required this.leaseId,
     required this.propertyId,
-    required this.landlordFullName,
-    required this.landlordAddress,
-    required this.tenantFullName,
-    required this.tenantFirstName,
-    required this.propertyAddress,
     this.tenantEmail,
   });
 
@@ -57,11 +52,6 @@ class ChargeRegularizationDialog extends ConsumerStatefulWidget {
   /// Bien rattaché au bail — nécessaire pour charger les dépenses
   /// récupérables du bien (FEAT-041c, [recoverableExpensesProvider]).
   final String propertyId;
-  final String landlordFullName;
-  final String landlordAddress;
-  final String tenantFullName;
-  final String tenantFirstName;
-  final String propertyAddress;
   final String? tenantEmail;
 
   @override

@@ -32,8 +32,8 @@ final chargeRegularizationPdfRendererProvider =
 /// partage + marquage "envoyé" de l'avis de régularisation des charges
 /// (FEAT-033).
 ///
-/// Contrairement à [ChargeRegularizationShareController] (V1.2, FEAT-029),
-/// ce contrôleur :
+/// Contrairement à l'ancien flux volatile (V1.2, FEAT-029, supprimé en
+/// revue finale FEAT-033), ce contrôleur :
 /// - appelle `finalize` AVANT de rendre le PDF — un décompte `ChargeStatement`
 ///   immuable est créé côté serveur (callable `finalizeChargeRegularization`,
 ///   Task 6/7) ;
@@ -42,8 +42,9 @@ final chargeRegularizationPdfRendererProvider =
 ///   de formulaire en direct ;
 /// - marque le décompte comme envoyé (`markAsSent`) après un partage réussi.
 ///
-/// Réutilise la mécanique de partage de `charge_regularization_share_controller.dart`
-/// (Web Share API + fallback téléchargement + mailto:, mêmes exceptions).
+/// Réutilise la mécanique de partage (Web Share API + fallback téléchargement
+/// + mailto:, mêmes exceptions) de l'ancien flux volatile (V1.2, FEAT-029,
+/// supprimé en revue finale FEAT-033).
 class ChargeStatementFinalizeController
     extends StateNotifier<ChargeRegularizationShareState> {
   ChargeStatementFinalizeController(this._ref)
@@ -190,8 +191,8 @@ class ChargeStatementFinalizeController
       usedNativeShare = true;
     } else {
       // Fallback : data URL + téléchargement, puis mailto: si un email
-      // locataire est disponible (même mécanisme que
-      // ChargeRegularizationShareController).
+      // locataire est disponible (même mécanisme que l'ancien flux volatile
+      // V1.2, FEAT-029, supprimé en revue finale FEAT-033).
       final base64 = base64Encode(pdfBytes);
       final dataUrl = 'data:application/pdf;base64,$base64';
       await launchUrl(Uri.parse(dataUrl), mode: LaunchMode.externalApplication);
@@ -207,13 +208,21 @@ class ChargeStatementFinalizeController
       usedNativeShare = false;
     }
 
-    await _ref
-        .read(chargeStatementRepositoryProvider)
-        .markAsSent(id: statement.id, email: tenantEmail);
+    // Un décompte annulé (isVoided) ne doit jamais être re-marqué "envoyé" —
+    // `markChargeStatementAsSent` lève `failed-precondition` côté serveur sur
+    // un décompte voidé (functions/src/callable/charge_statements.ts), ce qui
+    // ferait échouer ce partage avec une erreur alors que le partage
+    // lui-même (permettre au bailleur de re-télécharger la preuve annulée
+    // pour ses archives) a bien réussi.
+    if (!statement.isVoided) {
+      await _ref
+          .read(chargeStatementRepositoryProvider)
+          .markAsSent(id: statement.id, email: tenantEmail);
+    }
 
     _log.info(
       'décompte de régularisation partagé et marqué envoyé '
-      '(id=${statement.id}, native=$usedNativeShare)',
+      '(id=${statement.id}, native=$usedNativeShare, voided=${statement.isVoided})',
     );
     state = ChargeRegularizationShareState.shared(
       usedNativeShare: usedNativeShare,

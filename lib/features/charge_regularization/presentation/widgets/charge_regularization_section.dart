@@ -124,11 +124,6 @@ class ChargeRegularizationSection extends ConsumerWidget {
       builder: (_) => ChargeRegularizationDialog(
         leaseId: lease.id,
         propertyId: lease.propertyId,
-        landlordFullName: landlordFullName,
-        landlordAddress: landlordAddress,
-        tenantFullName: tenantFullName,
-        tenantFirstName: tenantFirstName,
-        propertyAddress: propertyAddress,
         tenantEmail: tenantEmail,
       ),
     );

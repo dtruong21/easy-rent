@@ -7,7 +7,8 @@
 // document n'est PAS archivé comme `document`/`receipt` Firestore en V1 —
 // il est généré à la volée à partir de données saisies et partagé
 // directement (Web Share), voir commentaire détaillé dans
-// `application/charge_regularization_share_controller.dart`.
+// `application/charge_statement_finalize_controller.dart` (flow de
+// partage général).
 
 import 'dart:typed_data';
 
