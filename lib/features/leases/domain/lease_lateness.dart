@@ -74,6 +74,29 @@ bool isLeaseLate({
   return !coveredByAnyPayment;
 }
 
+/// Mois calendaire dont le loyer est actuellement dû et impayable-sans-retard
+/// dépassé, pour un bail démarrant [startDate] avec échéance [paymentDay].
+///
+/// Wrapper public de [_currentDueMonth] renvoyant le 1er jour du mois (midi
+/// local, pour éviter tout effet de bord de fuseau à l'affichage) — utilisable
+/// directement avec `FrenchDate.frenchMonthYear`. `null` si aucun mois n'est
+/// encore dû (bail trop récent / 1ʳᵉ échéance dans le délai de grâce).
+DateTime? leaseCurrentDueMonth({
+  required DateTime startDate,
+  required int paymentDay,
+  required DateTime now,
+  int graceDays = kDefaultLeaseGraceDays,
+}) {
+  final ym = _currentDueMonth(
+    startDate: leaseLocalDate(startDate),
+    paymentDay: paymentDay,
+    now: leaseLocalDate(now),
+    graceDays: graceDays,
+  );
+  if (ym == null) return null;
+  return DateTime(ym.year, ym.month, 1, 12);
+}
+
 /// Représente un mois calendaire (année + mois, sans jour).
 typedef _YearMonth = ({int year, int month});
 
