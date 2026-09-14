@@ -60,7 +60,7 @@ class FirestoreChargeStatementRepository implements ChargeStatementRepository {
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
-  final FirebaseFunctions? _functions;
+  final FirebaseFunctions _functions;
 
   String get _uid {
     final uid = _auth.currentUser?.uid;
@@ -73,16 +73,10 @@ class FirestoreChargeStatementRepository implements ChargeStatementRepository {
   CollectionReference<Map<String, dynamic>> get _col =>
       _firestore.collection('charge_statements');
 
-  HttpsCallable _callable(String name) {
-    final functions = _functions;
-    if (functions == null) {
-      throw StateError('FirebaseFunctions not configured');
-    }
-    return functions.httpsCallable(
-      name,
-      options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
-    );
-  }
+  HttpsCallable _callable(String name) => _functions.httpsCallable(
+    name,
+    options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
+  );
 
   @override
   Future<List<ChargeStatement>> listForLease(String leaseId) async {

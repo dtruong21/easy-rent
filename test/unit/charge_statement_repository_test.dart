@@ -7,10 +7,18 @@
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:easyrent/features/charge_regularization/data/charge_statement_repository.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// [FirebaseFunctions] jamais appelé par `listForLease` — toute utilisation
+/// lève via noSuchMethod (pattern `receipts_repository_payment_notes_test.dart`).
+class _UnusedFunctions implements FirebaseFunctions {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   group('FirestoreChargeStatementRepository.listForLease', () {
@@ -62,7 +70,11 @@ void main() {
         signedIn: true,
         mockUser: MockUser(uid: 'lord1'),
       );
-      final repo = FirestoreChargeStatementRepository(fs, auth, null);
+      final repo = FirestoreChargeStatementRepository(
+        fs,
+        auth,
+        _UnusedFunctions(),
+      );
 
       final list = await repo.listForLease('l1');
 
@@ -99,7 +111,11 @@ void main() {
         signedIn: true,
         mockUser: MockUser(uid: 'lord1'),
       );
-      final repo = FirestoreChargeStatementRepository(fs, auth, null);
+      final repo = FirestoreChargeStatementRepository(
+        fs,
+        auth,
+        _UnusedFunctions(),
+      );
 
       final list = await repo.listForLease('l1');
 
@@ -135,7 +151,11 @@ void main() {
         signedIn: true,
         mockUser: MockUser(uid: 'lord1'),
       );
-      final repo = FirestoreChargeStatementRepository(fs, auth, null);
+      final repo = FirestoreChargeStatementRepository(
+        fs,
+        auth,
+        _UnusedFunctions(),
+      );
 
       final list = await repo.listForLease('l1');
 
