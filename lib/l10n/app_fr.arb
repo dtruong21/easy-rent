@@ -1043,6 +1043,9 @@
   "chargeRegularizationBalanceDirectionDueByTenant": "à réclamer au locataire",
   "chargeRegularizationBalanceDirectionDueToTenant": "à rembourser au locataire",
   "chargeRegularizationBalanceDirectionBalanced": "aucun solde",
+  "chargeStatementFinalizeAction": "Finaliser & figer le décompte",
+  "chargeStatementFinalizeConfirmTitle": "Figer ce décompte ?",
+  "chargeStatementFinalizeConfirmBody": "Une fois figé, ce décompte est immuable et conservé 5 ans (preuve légale). Vous pourrez l'annuler et le réémettre si besoin.",
 
   "simulatorPageTitle": "Simulateur d'investissement",
   "simulatorQuitDemoTooltip": "Quitter le mode démo",
