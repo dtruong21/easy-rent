@@ -76,7 +76,11 @@ export {
   voidReceipt,
   markReceiptAsSent,
 } from "./callable/receipts";
-export {finalizeChargeRegularization} from "./callable/charge_statements";
+export {
+  finalizeChargeRegularization,
+  voidChargeStatement,
+  markChargeStatementAsSent,
+} from "./callable/charge_statements";
 export {
   createDocument,
   getDocumentDownloadUrl,

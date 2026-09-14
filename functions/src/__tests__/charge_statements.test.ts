@@ -5,8 +5,10 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 
 import {
   finalizeChargeRegularization,
+  markChargeStatementAsSent,
   sumProvisionsOverlap,
   validateLineItems,
+  voidChargeStatement,
 } from "../callable/charge_statements";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
@@ -338,5 +340,66 @@ describe("finalizeChargeRegularization", () => {
         }),
       ),
     ).rejects.toMatchObject({code: "invalid-argument"});
+  });
+});
+
+// ============================================================================
+// voidChargeStatement / markChargeStatementAsSent
+// ============================================================================
+describe("voidChargeStatement / markChargeStatementAsSent", () => {
+  const OWNER = "landlord-a";
+
+  function seedStatement(over: Record<string, unknown> = {}) {
+    void fakeDb.doc("charge_statements/cs-1").set({
+      id: "cs-1",
+      landlordId: OWNER,
+      isVoided: false,
+      voidedAt: null,
+      voidedReason: null,
+      sentAt: null,
+      sentToEmail: null,
+      ...over,
+    });
+  }
+
+  it("void pose les flags, non destructif, idempotent", async () => {
+    seedStatement();
+    await voidChargeStatement.run(
+      makeRequest(OWNER, {statementId: "cs-1", reason: "erreur montant"}),
+    );
+    const d = (await fakeDb.doc("charge_statements/cs-1").get()).data()!;
+    expect(d.isVoided).toBe(true);
+    expect(d.voidedReason).toBe("erreur montant");
+
+    // idempotent : second appel ne jette pas
+    await voidChargeStatement.run(
+      makeRequest(OWNER, {statementId: "cs-1", reason: "x"}),
+    );
+  });
+
+  it("void refuse un non-propriétaire", async () => {
+    seedStatement();
+    await expect(
+      voidChargeStatement.run(
+        makeRequest("intrus", {statementId: "cs-1", reason: "x"}),
+      ),
+    ).rejects.toThrow(HttpsError);
+  });
+
+  it("markAsSent pose sentAt et sentToEmail", async () => {
+    seedStatement();
+    await markChargeStatementAsSent.run(
+      makeRequest(OWNER, {statementId: "cs-1", email: "loc@ex.fr"}),
+    );
+    const d = (await fakeDb.doc("charge_statements/cs-1").get()).data()!;
+    expect(d.sentToEmail).toBe("loc@ex.fr");
+    expect(d.sentAt).not.toBeNull();
+  });
+
+  it("markAsSent refuse un décompte annulé", async () => {
+    seedStatement({isVoided: true});
+    await expect(
+      markChargeStatementAsSent.run(makeRequest(OWNER, {statementId: "cs-1"})),
+    ).rejects.toThrow(/voided/);
   });
 });

@@ -10,8 +10,8 @@
  *   - `provisionsCollectedCents` RECALCULÉ serveur (jamais accepté du client)
  *     — preuve infalsifiable (art. 23 loi 6/7/1989, décret 87-713).
  *
- * `voidChargeStatement` et `markChargeStatementAsSent` arrivent en Task 2 —
- * seul `finalizeChargeRegularization` est exporté depuis `index.ts` ici.
+ * `voidChargeStatement` et `markChargeStatementAsSent` (Task 2) suivent le
+ * même patron non destructif que `voidReceipt`/`markReceiptAsSent`.
  */
 import * as admin from "firebase-admin";
 import type {Timestamp} from "firebase-admin/firestore";
@@ -229,5 +229,75 @@ export const finalizeChargeRegularization = onCall(
       balanceCents > 0 ? "dueByTenant" : balanceCents < 0 ? "dueToTenant" : "balanced";
     logger.info("charge statement finalized", {uid, statementId, balanceCents});
     return {statementId, balanceCents, direction};
+  },
+);
+
+// ============================================================================
+// voidChargeStatement
+// ============================================================================
+export const voidChargeStatement = onCall(
+  {region: "europe-west1"},
+  async (request) => {
+    const uid = requireAuthUid(request);
+    const data = asBag(request.data);
+    const statementId = requireString(data.statementId, "statementId");
+    const reason = requireString(data.reason, "reason");
+
+    const db = dbForRequest(request);
+    const ref = db.doc(`charge_statements/${statementId}`);
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const s = dataOrFail(snap, "charge statement not found");
+      if (s.landlordId !== uid) {
+        throw new HttpsError("permission-denied", "not owner");
+      }
+      if (s.isVoided === true) {
+        return; // idempotent
+      }
+      tx.update(ref, {
+        isVoided: true,
+        voidedAt: admin.firestore.FieldValue.serverTimestamp(),
+        voidedReason: reason,
+      });
+    });
+
+    return {voided: true};
+  },
+);
+
+// ============================================================================
+// markChargeStatementAsSent
+// ============================================================================
+export const markChargeStatementAsSent = onCall(
+  {region: "europe-west1"},
+  async (request) => {
+    const uid = requireAuthUid(request);
+    const data = asBag(request.data);
+    const statementId = requireString(data.statementId, "statementId");
+    const email = optionalString(data.email, "email");
+
+    const db = dbForRequest(request);
+    const ref = db.doc(`charge_statements/${statementId}`);
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const s = dataOrFail(snap, "charge statement not found");
+      if (s.landlordId !== uid) {
+        throw new HttpsError("permission-denied", "not owner");
+      }
+      if (s.isVoided === true) {
+        throw new HttpsError(
+          "failed-precondition",
+          "cannot mark a voided statement as sent",
+        );
+      }
+      tx.update(ref, {
+        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        sentToEmail: email,
+      });
+    });
+
+    return {marked: true};
   },
 );
