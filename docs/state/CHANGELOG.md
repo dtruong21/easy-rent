@@ -30,7 +30,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-06)
+## Changements (2026-08-03 → 2026-09-15)
+
+### FEAT-058 — Onboarding progressif jusqu'à la 1re quittance (2026-09-15)
+- Checklist d'onboarding progressive du dashboard : 5 étapes (bien → locataire → bail → paiement → quittance), chacune dérivée des données (non-vide = cochée) via `DashboardRepository.fetchOnboardingProgress()` → modèle `OnboardingProgress`. Affichée tant qu'aucune quittance (`hasReceipt == false`) ET non explicitement passée (`onboardingDismissedProvider`, SharedPreferences). Étapes 4–5 lease-scoped (désactivées sans bail). Dismiss local (bouton « Passer ») persiste en SharedPreferences (`onboarding_dismissed:bool`).
+- **100 % client** : lecture seule des données Firestore, zéro backend, zéro Cloud Function, zéro déploiement serveur. Intégré au snapshot dashboard existant (`DashboardSnapshot.onboarding`), aucune requête additionnelle.
 
 ### FEAT-046 — Purge différée des quittances (cron RGPD) (2026-09-15)
 - Cron quotidien (03:00 Europe/Paris, région europe-west1) purge les quittances expirées selon RGPD art. 5.1.e : hard-delete `receipts where retentionUntil <= now` sur la base `(default)`. Champ `retentionUntil` posé par `stampRetainedReceipts` lors de la suppression de compte (FEAT-045), valeur = date de suppression + 5 ans (rétention légale loi 6/7/1989).
