@@ -10,6 +10,7 @@ import '../../leases/domain/lease_lateness.dart';
 import '../../payments/domain/payment.dart';
 import '../domain/activity_item.dart';
 import '../domain/dashboard_kpi.dart';
+import '../domain/onboarding_progress.dart';
 
 final _log = Logger('DashboardRepository');
 
@@ -34,6 +35,9 @@ abstract interface class DashboardRepository {
   Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(int months);
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5});
   Future<bool> isLandlordOnboarding();
+
+  /// Progression d'onboarding dérivée (5 signaux + id d'un bail). Lecture seule.
+  Future<OnboardingProgress> fetchOnboardingProgress();
 }
 
 class FirestoreDashboardRepository implements DashboardRepository {
@@ -374,6 +378,42 @@ class FirestoreDashboardRepository implements DashboardRepository {
     final isEmpty = results.every((qs) => qs.docs.isEmpty);
     _log.fine('isLandlordOnboarding=$isEmpty');
     return isEmpty;
+  }
+
+  @override
+  Future<OnboardingProgress> fetchOnboardingProgress() async {
+    final uid = _uid;
+
+    Query<Map<String, dynamic>> owned(String col) => _firestore
+        .collection(col)
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isNull: true)
+        .limit(1);
+
+    final results = await Future.wait([
+      owned('properties').get(),
+      owned('tenants').get(),
+      owned('leases').get(),
+      owned('payments').get(),
+      // receipts : collection immuable read-only (pas de deletedAt) ; un
+      // receipt compte même s'il est ensuite isVoided — l'aha, c'est de
+      // l'avoir généré.
+      _firestore
+          .collection('receipts')
+          .where('landlordId', isEqualTo: uid)
+          .limit(1)
+          .get(),
+    ]);
+
+    final leaseDocs = results[2].docs;
+    return OnboardingProgress(
+      hasProperty: results[0].docs.isNotEmpty,
+      hasTenant: results[1].docs.isNotEmpty,
+      hasLease: leaseDocs.isNotEmpty,
+      hasPayment: results[3].docs.isNotEmpty,
+      hasReceipt: results[4].docs.isNotEmpty,
+      firstLeaseId: leaseDocs.isNotEmpty ? leaseDocs.first.id : null,
+    );
   }
 
   static DateTime _activityDate(ActivityItem item) => item.when(
