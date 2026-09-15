@@ -53,6 +53,8 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-044d | Paiement — Stripe Checkout Session web (back-end, ADR 0002 approche A) | ✅ done | account | PR #117 |
 | FEAT-044e | Paiement — **intégration client** — web ✅ (paywall `/pro/*` + Stripe Checkout, 75fcbd3) / IAP mobile 📋 (pas de `purchases_flutter`) | 🚧 wip | account | 75fcbd3, docs/plans/FEAT-044-payment-revenuecat-plan.md |
 | FEAT-045 | Suppression compte in-app + /delete-account (loi 6/7/1989) | ✅ done | account | PR #69 |
+| FEAT-046 | Purge différée des quittances archivées (cron `retentionUntil`, RGPD art. 5.1.e) | 📋 planned | account | — |
+| FEAT-047 | Export des données RGPD (art. 15/20) — callable `exportAccountData` + tuile Profil | ✅ done | account | PR #180 (2026-09-12) |
 | FEAT-048 | FAQ produit publique /faq | ✅ done | account | PR #69 |
 | FEAT-049 | SEO du PWA — quick-wins (Option A) + domaine canonique baillan.com | ✅ done | account | PR #73, #121 |
 | FEAT-050 | Site marketing statique crawlable (Option B) | 🚧 v1 construite (bascule domaine en attente) | account | docs/backlog/050-marketing-site-seo.md |
