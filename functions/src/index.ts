@@ -84,6 +84,7 @@ export {
 export {
   createDocument,
   getDocumentDownloadUrl,
+  updateDocumentCategory,
 } from "./callable/documents";
 export {
   createExpense,

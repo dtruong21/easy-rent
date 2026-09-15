@@ -907,6 +907,7 @@
   "documentsActionEditCategory": "Modifier la catégorie",
   "documentsCategoryUpdateSuccessSnackbar": "Catégorie mise à jour.",
   "documentsCategoryUpdateErrorUnexpected": "Modification impossible. Réessayez.",
+  "documentsCategoryUpdateErrorLegalHold": "Ce document est conservé au titre d'une obligation légale (bail, état des lieux, justificatif) et ne peut pas être reclassé.",
   "documentsActionDownload": "Télécharger",
   "documentsDownloadErrorCantOpen": "Impossible d'ouvrir le document.",
   "documentsDownloadErrorGeneric": "Erreur lors du téléchargement. Réessayez.",

@@ -3981,6 +3981,10 @@
   "@documentsCategoryUpdateErrorUnexpected": {
     "description": "Snackbar error shown when updating a document's category fails for an uncategorized reason (UpdateCategoryErrorReason.unexpected, i.e. not a FirebaseException)."
   },
+  "documentsCategoryUpdateErrorLegalHold": "This document is kept to meet a legal obligation (lease, condition report, receipt) and cannot be reclassified.",
+  "@documentsCategoryUpdateErrorLegalHold": {
+    "description": "Snackbar error shown when reclassifying a document is refused because it is under legal hold (UpdateCategoryErrorReason.legalHold; server code document_under_legal_hold)."
+  },
   "documentsActionDownload": "Download",
   "@documentsActionDownload": {
     "description": "Popup menu item on a document list tile: generates a signed URL and opens the file in a new tab."

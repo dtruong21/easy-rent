@@ -1,5 +1,5 @@
 /**
- * createDocument + getDocumentDownloadUrl — callables.
+ * createDocument + getDocumentDownloadUrl + updateDocumentCategory — callables.
  *
  * Réplique des triggers Postgres `tr_00b_compute_legal_hold` (dérive
  * `legalHold` depuis `category`) et `tr_01b_protect_immutable_documents`
@@ -439,5 +439,56 @@ export const getDocumentDownloadUrl = onCall(
         Date.now() + DOWNLOAD_URL_EXPIRY_SECONDS * 1000,
       ).toISOString(),
     };
+  },
+);
+
+// ============================================================================
+// updateDocumentCategory — reclasse un document (seule mutation autorisée
+// après création ; les Rules bloquent tout update direct client).
+//
+// La `category` est le SEUL champ mutable d'un document (les 5 colonnes
+// immuables de `tr_01b_protect_immutable_documents` — landlordId, storagePath,
+// filename, mimeType, sizeBytes — restent figées). Recalcule `legalHold` depuis
+// la nouvelle catégorie, comme `createDocument`.
+//
+// Garde-fou rétention : un document DÉJÀ sous `legalHold` (bail signé, état des
+// lieux, justificatif de dépense) ne peut être reclassé — le sortir de sa
+// catégorie protégée casserait la rétention légale (5 ans loi 1989 / 10 ans
+// comptable). Même logique que `softDeleteEntity`, qui refuse la suppression
+// d'un document sous `legalHold` (code `document_under_legal_hold`).
+// ============================================================================
+export const updateDocumentCategory = onCall(
+  {region: "europe-west1"},
+  async (request) => {
+    const uid = requireAuthUid(request);
+    const data = asBag(request.data);
+    const documentId = requireString(data.documentId, "documentId");
+    const category = requireString(data.category, "category");
+    if (!ALLOWED_CATEGORIES.has(category)) {
+      throw new HttpsError("invalid-argument", `invalid category: ${category}`);
+    }
+
+    const db = dbForRequest(request);
+    const ref = db.doc(`documents/${documentId}`);
+    const snap = await ref.get();
+    const doc = dataOrFail(snap, "document not found");
+    if (doc.landlordId !== uid) {
+      throw new HttpsError("permission-denied", "not owner");
+    }
+    if (doc.deletedAt != null) {
+      throw new HttpsError("failed-precondition", "document is deleted");
+    }
+    if (doc.legalHold === true) {
+      throw new HttpsError("failed-precondition", "document_under_legal_hold");
+    }
+
+    const legalHold = LEGAL_HOLD_CATEGORIES.has(category);
+    await ref.update({
+      category,
+      legalHold,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {documentId, category, legalHold};
   },
 );
