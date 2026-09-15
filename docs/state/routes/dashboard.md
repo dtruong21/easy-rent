@@ -16,8 +16,8 @@ Affichée en haut du dashboard tant qu'aucune quittance n'a été générée (`h
 1. **Créer un bien** : cochée si `properties.length > 0` (collection non-vide)
 2. **Ajouter un locataire** : cochée si `tenants.length > 0`
 3. **Créer un bail** : cochée si `leases.length > 0`
-4. **Enregistrer un paiement** : cochée si ≥ 1 paiement du 1er bail (`activeLeaseId` non-null ET `payments.length > 0`) — **désactivée sans bail** (UI grisée, non-interactive)
-5. **Générer une quittance** : cochée si ≥ 1 quittance du 1er bail (`activeLeaseId` non-null ET `receipts.length > 0`) — **désactivée sans bail** — ***fin de l'onboarding lorsque franchie***
+4. **Enregistrer un paiement** : cochée si le bailleur a ≥ 1 paiement (`hasPayment` — requête `payments` scopée `landlordId`, **tous baux confondus**, pas au seul `firstLeaseId`) — **désactivée sans bail** (UI grisée, non-interactive ; le `firstLeaseId` ne sert qu'à router le lien d'action)
+5. **Générer une quittance** : cochée si le bailleur a ≥ 1 quittance (`hasReceipt` — requête `receipts` scopée `landlordId`, tous baux confondus) — **désactivée sans bail** — ***fin de l'onboarding lorsque franchie***
 
 Chaque étape affiche un statut visuel (case à cocher) et un lien d'action contextuelle (`/properties`, `/leases`, `/leases/<firstLeaseId>/payments/new`, `/receipts`). Étapes 4–5 sont automatiquement grisées si pas de premier bail.
 
