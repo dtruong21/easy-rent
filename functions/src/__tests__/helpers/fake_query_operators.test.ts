@@ -33,7 +33,7 @@ describe("FakeQuery — opérateurs de comparaison", () => {
     expect(snap.docs.map((d) => d.id)).toEqual(["r-future"]);
   });
 
-  it("lève sur un opérateur non supporté", async () => {
+  it("lève sur un opérateur non supporté", () => {
     expect(() =>
       db.collection("receipts").where("id", "array-contains", "x"),
     ).toThrow();
