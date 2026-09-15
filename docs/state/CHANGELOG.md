@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### PR #188 — FIX documents : action « Modifier la catégorie » cassée (2026-09-15)
+- L'action était câblée UI (`EditCategoryDialog` → contrôleur → repository) mais `FirestoreDocumentsRepository.updateCategory` jetait `UnsupportedError` à chaque appel — Callable serveur jamais écrite. Reclasser un document = erreur systématique. Trouvé au discovery 2026-09-15.
+- **Serveur** : nouvelle Callable `updateDocumentCategory` (`functions/src/callable/documents.ts`, exportée `index.ts`). Reclasse `category` (seul champ mutable), recalcule `legalHold`, revalide ownership + non-supprimé + `ALLOWED_CATEGORIES`. **Garde-fou** : refuse (`FAILED_PRECONDITION` `document_under_legal_hold`) un document **déjà** sous `legalHold`, comme `softDeleteEntity`.
+- **Client** : `updateCategory` invoque la Callable puis relit via `getById` ; refus legalHold mappé vers `UpdateCategoryErrorReason.legalHold` + message FR/EN dédié.
+- Tests : `update_document_category.test.ts` (8 cas) + cas legalHold dans le test contrôleur Dart. **Cloud Functions modifiées → déploiement manuel** après merge.
+
 ### FEAT-032 — Trésorerie graphique « encaissé vs dû » : superseded (2026-09-15, décision PM)
 - Le livrable littéral de FEAT-032 (barchart mensuel « encaissé vs dû ») a été **délibérément supprimé en FEAT-027** au profit du graphe **cash-flow net réel** (loyers encaissés − dépenses non-récupérables − mensualité prêt). Rationale FEAT-027, dans le code : « un loyer est fixe, le voir en barres n'apprend rien au bailleur » (`monthly_cashflow.dart:5-9`, `monthly_cashflow_chart.dart:23-27`).
 - FEAT-032 marqué `❌ superseded` : le graphe visé existe déjà sous une meilleure forme. Aucun code. La série temporelle des impayés (« attendu vs encaissé » par mois) reste un angle distinct possible en V2, mais recoupe partiellement FEAT-028 (retard courant) + indicateur ponctualité (#178) — à re-cadrer si repris.
