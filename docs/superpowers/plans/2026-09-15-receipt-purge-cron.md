@@ -180,7 +180,7 @@ git commit -m "test(functions): FakeQuery supporte les opérateurs de comparaiso
 
 **Interfaces:**
 - Consumes: `FakeQuery` étendu (Task 1) pour `where("retentionUntil", "<=", now)` ; `admin.firestore.Timestamp.now()` (fake = `new Date()`).
-- Produces: `export const purgeExpiredReceipts` (scheduled function v2). Aucun autre module ne le consomme (point d'entrée Cloud Functions).
+- Produces: `export const purgeExpiredReceipts` (scheduled function v2, point d'entrée) **et** `export async function purgeExpiredReceiptsImpl(db, now): Promise<number>` (logique pure, retourne le nombre purgé). Le wrapper `onSchedule` appelle `purgeExpiredReceiptsImpl`. **Convention repo** : les tests ciblent la fonction pure, pas le wrapper — identique à `reconcile_entitlements.test.ts` qui teste `reconcileExpiredEntitlements(db, …)` et non `.run()`.
 
 - [ ] **Step 1: Écrire les tests (échouent)**
 
@@ -196,15 +196,17 @@ vi.mock("firebase-admin", async () => {
   return makeFakeAdminModule();
 });
 
-// Import APRÈS le mock (le module lit admin.firestore au run, pas à l'import).
-import {purgeExpiredReceipts} from "../scheduled/purge_expired_receipts";
+// On teste la fonction PURE (convention repo, cf. reconcile_entitlements.test.ts
+// qui teste reconcileExpiredEntitlements(db, …), pas le wrapper onSchedule).
+import {purgeExpiredReceiptsImpl} from "../scheduled/purge_expired_receipts";
 
 let fakeDb: FakeFirestore;
 
-/** Invoque le corps du scheduled (onSchedule v2 expose `.run`). */
-function runCron(): Promise<unknown> {
-  return (purgeExpiredReceipts as unknown as {run: (e: unknown) => Promise<unknown>}).run(
-    {},
+/** Invoque la logique pure avec le fake db et « maintenant ». */
+function runCron(): Promise<number> {
+  return purgeExpiredReceiptsImpl(
+    fakeDb as never,
+    new Date() as never,
   );
 }
 
@@ -266,7 +268,7 @@ describe("purgeExpiredReceipts", () => {
 });
 ```
 
-> Vérifier au passage que `FakeFirestore` expose `peek(path)` (utilisé par `documents.test.ts`) — c'est le cas. Si `.run({})` ne convient pas au fake d'`onSchedule`, se caler sur un scheduled test existant (`reconcile_entitlements`/`cleanup_expired_anon` s'ils ont un test) pour la forme d'invocation ; sinon exposer la logique dans une fonction pure interne `purgeExpiredReceiptsImpl(db)` importée par le test, et laisser le wrapper `onSchedule` l'appeler.
+> `FakeFirestore` expose `peek(path)` (utilisé par `documents.test.ts`) — vérifié. Le test cible `purgeExpiredReceiptsImpl` directement (fonction pure), comme `reconcile_entitlements.test.ts` cible `reconcileExpiredEntitlements` — pas le wrapper `onSchedule`.
 
 - [ ] **Step 2: Lancer les tests — échouent**
 
@@ -303,38 +305,54 @@ import * as admin from "firebase-admin";
 import {logger} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
+type Firestore = admin.firestore.Firestore;
+type Timestamp = admin.firestore.Timestamp;
+
 const PAGE_SIZE = 400;
 const MAX_DELETES_PER_RUN = 2000; // 5 pages — large devant tout volume réaliste
+
+/**
+ * Logique pure, testable avec le FakeFirestore (convention repo — cf.
+ * reconcileExpiredEntitlements). Retourne le nombre de quittances purgées.
+ */
+export async function purgeExpiredReceiptsImpl(
+  db: Firestore,
+  now: Timestamp,
+): Promise<number> {
+  let purged = 0;
+
+  while (purged < MAX_DELETES_PER_RUN) {
+    const snap = await db
+      .collection("receipts")
+      .where("retentionUntil", "<=", now)
+      .limit(PAGE_SIZE)
+      .get();
+
+    if (snap.empty) break;
+
+    const batch = db.batch();
+    for (const doc of snap.docs) batch.delete(doc.ref);
+    await batch.commit();
+    purged += snap.size;
+
+    if (snap.size < PAGE_SIZE) break; // dernière page
+  }
+
+  if (purged === 0) {
+    logger.info("purgeExpiredReceipts: no expired receipts");
+  } else {
+    logger.info(`purgeExpiredReceipts: purged ${purged} expired receipts`);
+  }
+  return purged;
+}
 
 export const purgeExpiredReceipts = onSchedule(
   {schedule: "0 3 * * *", timeZone: "Europe/Paris", region: "europe-west1"},
   async () => {
-    const db = admin.firestore();
-    const now = admin.firestore.Timestamp.now();
-    let purged = 0;
-
-    while (purged < MAX_DELETES_PER_RUN) {
-      const snap = await db
-        .collection("receipts")
-        .where("retentionUntil", "<=", now)
-        .limit(PAGE_SIZE)
-        .get();
-
-      if (snap.empty) break;
-
-      const batch = db.batch();
-      for (const doc of snap.docs) batch.delete(doc.ref);
-      await batch.commit();
-      purged += snap.size;
-
-      if (snap.size < PAGE_SIZE) break; // dernière page
-    }
-
-    if (purged === 0) {
-      logger.info("purgeExpiredReceipts: no expired receipts");
-    } else {
-      logger.info(`purgeExpiredReceipts: purged ${purged} expired receipts`);
-    }
+    await purgeExpiredReceiptsImpl(
+      admin.firestore(),
+      admin.firestore.Timestamp.now(),
+    );
   },
 );
 ```
@@ -408,4 +426,4 @@ git commit -m "docs(state): FEAT-046 purgeExpiredReceipts (shard + FEATURES + CH
 - **Spec coverage** : cron quotidien (Task 2), base `(default)` (Global Constraints + impl), `retentionUntil <= now` + hard-delete paginé (Task 2), pas de Storage (constraint + impl sans Storage), tests des 5 cas du spec (Task 2 Step 1), extension fake requise par le `<=` (Task 1), DoD docs (Task 3). ✅
 - **Placeholder scan** : aucun TODO/à-compléter ; tout le code est fourni.
 - **Type consistency** : `purgeExpiredReceipts` nommé identiquement dans l'impl, l'export index.ts, les tests et les docs. `PAGE_SIZE`/`MAX_DELETES_PER_RUN` définis une fois. `matchesFilter`/`toComparable` cohérents avec le type de filtre `[string, string, unknown]`.
-- **Risque connu** : la forme d'invocation du scheduled en test (`.run({})`) dépend du harness `onSchedule` ; Task 2 Step 1 prévoit le repli (fonction pure interne) si nécessaire — à confirmer par l'implémenteur au premier run.
+- **Invocation en test** : résolu — Task 2 teste la fonction pure `purgeExpiredReceiptsImpl(db, now)` (convention repo confirmée sur `reconcile_entitlements.test.ts`), pas le wrapper `onSchedule`. Aucun risque de harness.
