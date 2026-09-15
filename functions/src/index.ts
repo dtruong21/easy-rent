@@ -104,3 +104,4 @@ export {revenueCatWebhook} from "./http/revenuecat_webhook";
 // ---------- Scheduled ----------
 export {cleanupExpiredAnon} from "./scheduled/cleanup_expired_anon";
 export {reconcileEntitlements} from "./scheduled/reconcile_entitlements";
+export {purgeExpiredReceipts} from "./scheduled/purge_expired_receipts";
