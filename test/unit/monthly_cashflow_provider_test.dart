@@ -22,6 +22,7 @@ import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
 import 'package:easyrent/features/dashboard/domain/monthly_cashflow.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/expenses/data/expenses_repository.dart';
 import 'package:easyrent/features/expenses/domain/expense.dart';
 import 'package:easyrent/features/expenses/domain/expense_category.dart';
@@ -59,7 +60,15 @@ class _FakeDashboardRepository implements DashboardRepository {
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 class _FakeExpensesRepository implements ExpensesRepository {

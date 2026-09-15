@@ -34,7 +34,6 @@ abstract interface class DashboardRepository {
   /// de `MonthlyCollectedRent`).
   Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(int months);
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5});
-  Future<bool> isLandlordOnboarding();
 
   /// Progression d'onboarding dérivée (5 signaux + id d'un bail). Lecture seule.
   Future<OnboardingProgress> fetchOnboardingProgress();
@@ -350,34 +349,6 @@ class FirestoreDashboardRepository implements DashboardRepository {
       _log.warning('fetchRecentActivity documents error', e, st);
     }
     return items;
-  }
-
-  @override
-  Future<bool> isLandlordOnboarding() async {
-    final uid = _uid;
-    final results = await Future.wait([
-      _firestore
-          .collection('properties')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-      _firestore
-          .collection('tenants')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-      _firestore
-          .collection('leases')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-    ]);
-    final isEmpty = results.every((qs) => qs.docs.isEmpty);
-    _log.fine('isLandlordOnboarding=$isEmpty');
-    return isEmpty;
   }
 
   @override

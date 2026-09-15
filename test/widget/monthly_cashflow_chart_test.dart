@@ -21,6 +21,7 @@ import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/chart_format.dart';
 import 'package:easyrent/features/dashboard/domain/chart_period.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/monthly_cashflow_chart.dart';
 import 'package:easyrent/features/expenses/data/expenses_repository.dart';
 import 'package:easyrent/features/expenses/domain/expense.dart';
@@ -97,7 +98,15 @@ class _PeriodAwareDashboardRepository implements DashboardRepository {
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 /// Fake qui ignore `months` et retourne une liste fixe — utilisé pour le
@@ -123,7 +132,15 @@ class _FixedDashboardRepository implements DashboardRepository {
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 class _FakeExpensesRepository implements ExpensesRepository {
