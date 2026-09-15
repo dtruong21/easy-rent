@@ -32,6 +32,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### FEAT-032 — Trésorerie graphique « encaissé vs dû » : superseded (2026-09-15, décision PM)
+- Le livrable littéral de FEAT-032 (barchart mensuel « encaissé vs dû ») a été **délibérément supprimé en FEAT-027** au profit du graphe **cash-flow net réel** (loyers encaissés − dépenses non-récupérables − mensualité prêt). Rationale FEAT-027, dans le code : « un loyer est fixe, le voir en barres n'apprend rien au bailleur » (`monthly_cashflow.dart:5-9`, `monthly_cashflow_chart.dart:23-27`).
+- FEAT-032 marqué `❌ superseded` : le graphe visé existe déjà sous une meilleure forme. Aucun code. La série temporelle des impayés (« attendu vs encaissé » par mois) reste un angle distinct possible en V2, mais recoupe partiellement FEAT-028 (retard courant) + indicateur ponctualité (#178) — à re-cadrer si repris.
+
 ### FEAT-031 V1 — Relance de paiement assistée (client-side) (2026-09-14, branche `feat/payment-reminder-assisted`)
 - Bouton « Relancer le locataire » sur la fiche bail (FEAT-005), visible si bail en retard (`isLate`, FEAT-028). Lance le choix de canal, pré-remplit message amiable détaillé.
 - **Canaux** : email (`mailto:`), SMS (`sms:`), WhatsApp (`https://wa.me/…` FR-numbers seulement). Ouvre le client du propriétaire (100 % client via `launchUrl`, zéro backend).
