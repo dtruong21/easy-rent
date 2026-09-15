@@ -132,6 +132,42 @@ export class FakeTransaction {
 
 let autoIdCounter = 0;
 
+/** Convertit une valeur comparable (number, Date, Timestamp) en millis, sinon null. */
+function toComparable(v: unknown): number | null {
+  if (typeof v === "number") return v;
+  if (v instanceof Date) return v.getTime();
+  if (v && typeof (v as {toMillis?: () => number}).toMillis === "function") {
+    return (v as {toMillis: () => number}).toMillis();
+  }
+  return null;
+}
+
+/** Applique un filtre [field, op, value] à un document. */
+function matchesFilter(
+  data: DocData,
+  [field, op, value]: [string, string, unknown],
+): boolean {
+  if (op === "==") return data[field] === value;
+  const actual = data[field];
+  // Sémantique Firestore : un champ absent ne matche jamais une comparaison.
+  if (actual === undefined || actual === null) return false;
+  const a = toComparable(actual);
+  const b = toComparable(value);
+  if (a === null || b === null) return false;
+  switch (op) {
+    case "<=":
+      return a <= b;
+    case "<":
+      return a < b;
+    case ">=":
+      return a >= b;
+    case ">":
+      return a > b;
+    default:
+      return false;
+  }
+}
+
 /**
  * Snapshot de doc retourné par les requêtes (FakeQuery) — expose `ref`
  * en plus de `id`/`data()` pour permettre `batch.delete(doc.ref)`.
@@ -152,24 +188,24 @@ export class FakeQueryDocSnapshot extends FakeDocSnapshot {
 
 /**
  * Requête fake — couvre le sous-ensemble utilisé par `delete_account.ts` :
- * `.where(field, "==", value)` (chaînable) + `.limit(n)` + `.get()`.
+ * `.where(field, op, value)` (chaînable) + `.limit(n)` + `.get()`.
  */
 export class FakeQuery {
   constructor(
     protected readonly collectionName: string,
     protected readonly queryStore: Map<string, DocData>,
-    private readonly filters: ReadonlyArray<[string, unknown]> = [],
+    private readonly filters: ReadonlyArray<[string, string, unknown]> = [],
     private readonly limitCount: number | null = null,
   ) {}
 
   where(field: string, op: string, value: unknown): FakeQuery {
-    if (op !== "==") {
+    if (!["==", "<=", "<", ">=", ">"].includes(op)) {
       throw new Error(`FakeQuery: unsupported operator ${op}`);
     }
     return new FakeQuery(
       this.collectionName,
       this.queryStore,
-      [...this.filters, [field, value]],
+      [...this.filters, [field, op, value]],
       this.limitCount,
     );
   }
@@ -204,7 +240,7 @@ export class FakeQuery {
       // Ne matche que les docs DIRECTS de la collection (pas de sous-coll).
       if (!path.startsWith(prefix)) continue;
       if (path.slice(prefix.length).includes("/")) continue;
-      if (this.filters.every(([field, value]) => data[field] === value)) {
+      if (this.filters.every((f) => matchesFilter(data, f))) {
         docs.push(
           new FakeQueryDocSnapshot(
             path,

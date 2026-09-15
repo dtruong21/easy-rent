@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-06)
 
+### FEAT-046 — Purge différée des quittances (cron RGPD) (2026-09-15)
+- Cron quotidien (03:00 Europe/Paris, région europe-west1) purge les quittances expirées selon RGPD art. 5.1.e : hard-delete `receipts where retentionUntil <= now` sur la base `(default)`. Champ `retentionUntil` posé par `stampRetainedReceipts` lors de la suppression de compte (FEAT-045), valeur = date de suppression + 5 ans (rétention légale loi 6/7/1989).
+- **Implémentation** : fonction pure idempotente `purgeExpiredReceiptsImpl(db, now)` pagine 400 docs/itération, max 2000 hard-deletes/run, aucun accès Storage. Fonction main `purgeExpiredReceipts` wrappée via `onSchedule`. Fichier `functions/src/scheduled/purge_expired_receipts.ts`.
+- **Déploiement** : Cloud Functions restent hors CI (ADR 0003) — **déploiement manuel après merge**. Règles Firestore et indexes déployés automatiquement par CI.
+- Tests : `functions/src/__tests__/purge_expired_receipts.test.ts` (5 cas : aucune quittance à purger, une à purger, pagination, limites MAX_DELETES_PER_RUN, idempotence).
+
 ### PR #188 — FIX documents : action « Modifier la catégorie » cassée (2026-09-15)
 - L'action était câblée UI (`EditCategoryDialog` → contrôleur → repository) mais `FirestoreDocumentsRepository.updateCategory` jetait `UnsupportedError` à chaque appel — Callable serveur jamais écrite. Reclasser un document = erreur systématique. Trouvé au discovery 2026-09-15.
 - **Serveur** : nouvelle Callable `updateDocumentCategory` (`functions/src/callable/documents.ts`, exportée `index.ts`). Reclasse `category` (seul champ mutable), recalcule `legalHold`, revalide ownership + non-supprimé + `ALLOWED_CATEGORIES`. **Garde-fou** : refuse (`FAILED_PRECONDITION` `document_under_legal_hold`) un document **déjà** sous `legalHold`, comme `softDeleteEntity`.
