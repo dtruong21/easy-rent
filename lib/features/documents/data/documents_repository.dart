@@ -281,11 +281,18 @@ class FirestoreDocumentsRepository implements DocumentsRepository {
     required DocumentCategory newCategory,
   }) async {
     _log.info('updateCategory(id=$id, category=${newCategory.sqlValue})');
-    // Rules Firestore bloquent update sur documents/{id}. Pour MVP, on n'a
-    // pas de Callable `updateDocumentCategory`. À ajouter si nécessaire.
-    throw UnsupportedError(
-      'updateCategory not yet supported on Firestore — TODO callable',
-    );
+    // Rules Firestore bloquent l'update direct sur documents/{id} — tout passe
+    // par la Callable `updateDocumentCategory`, qui revalide l'ownership,
+    // recalcule `legalHold` depuis la nouvelle catégorie et refuse un document
+    // déjà sous rétention (`document_under_legal_hold`).
+    await _callable('updateDocumentCategory').call(<String, dynamic>{
+      'documentId': id,
+      'category': newCategory.sqlValue,
+    });
+
+    // Relit le document mis à jour (source de vérité serveur : legalHold +
+    // updatedAt recalculés côté callable). getById valide ownership + non-supprimé.
+    return getById(id);
   }
 
   @override

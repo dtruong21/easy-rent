@@ -13,6 +13,8 @@ extension UpdateCategoryErrorReasonL10n on UpdateCategoryErrorReason {
   String message(BuildContext context) {
     final l10n = context.l10n;
     return switch (this) {
+      UpdateCategoryErrorReason.legalHold =>
+        l10n.documentsCategoryUpdateErrorLegalHold,
       UpdateCategoryErrorReason.connectionError =>
         l10n.documentsErrorConnection,
       UpdateCategoryErrorReason.unexpected =>
