@@ -39,7 +39,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-029b | Découvrabilité régularisation (?action=regularize) | ✅ done | leases | 514666f |
 | FEAT-030 | Navigation retour corrigée (pop/push) | ✅ done | dashboard | 7db144d |
 | FEAT-031 | Relance de paiement assistée (client-side) — automatisation cron = V2 | ✅ done | leases | feat/payment-reminder-assisted |
-| FEAT-032 | Dashboard — trésorerie graphique (encaissé vs dû) | 📋 planned | dashboard | — |
+| FEAT-032 | Dashboard — trésorerie graphique (encaissé vs dû) | ❌ superseded 2026-09-15 (par FEAT-027) | dashboard | — |
 | FEAT-033 | Archivage régularisations charges — snapshot figé (`charge_statements`, immuable) | ✅ done + staging 2026-09-14 (PR #182, functions déployées) | leases | PR #182 |
 | FEAT-034 | Import multi-colonnes CSV (properties/tenants/leases) | ❌ abandonné 2026-09-14 | properties | — |
 | FEAT-035 | 2FA TOTP | 📋 planned | account | — |
