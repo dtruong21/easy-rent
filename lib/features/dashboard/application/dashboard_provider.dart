@@ -12,6 +12,7 @@ import '../domain/dashboard_snapshot.dart';
 import '../domain/monthly_cashflow.dart';
 import '../domain/monthly_loan_payment.dart';
 import 'chart_period_provider.dart';
+import 'onboarding_dismissed_provider.dart';
 
 final _log = Logger('DashboardController');
 
@@ -19,7 +20,8 @@ final _log = Logger('DashboardController');
 ///
 /// Charge le [DashboardSnapshot] complet en parallèle via records Dart 3
 /// (required #4 — remplace le pattern `as dynamic` non type-safe).
-/// Si [isLandlordOnboarding] est `true`, les 4 autres requêtes sont court-circuitées.
+/// Si la progression d'onboarding est incomplète et non masquée, les 4
+/// autres requêtes sont court-circuitées.
 ///
 /// Le graphique « Cash-flow mensuel » est chargé séparément par
 /// [monthlyCashflowProvider] : sa période est sélectionnable par l'utilisateur
@@ -31,11 +33,14 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
   Future<DashboardSnapshot> build() async {
     final repo = ref.watch(dashboardRepositoryProvider);
 
-    // 1) Test onboarding — court-circuit si vrai.
-    final isOnboarding = await repo.isLandlordOnboarding();
-    if (isOnboarding) {
+    // 1) Test onboarding — court-circuit si progression incomplète et non
+    // masquée par le bailleur.
+    final progress = await repo.fetchOnboardingProgress();
+    final dismissed = ref.watch(onboardingDismissedProvider);
+
+    if (!progress.isComplete && !dismissed) {
       _log.info('Landlord en onboarding — skip KPI queries');
-      return DashboardSnapshot.empty(isOnboarding: true);
+      return DashboardSnapshot.onboarding(progress);
     }
 
     // 2) Fan-in parallèle des 4 requêtes — types statiques préservés sans cast.
@@ -54,7 +59,6 @@ class DashboardController extends AsyncNotifier<DashboardSnapshot> {
       retards: retards,
       docs: docs,
       activity: activity,
-      isOnboarding: false,
     );
   }
 

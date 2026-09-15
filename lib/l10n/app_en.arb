@@ -2968,7 +2968,7 @@
   "@dashboardOnboardingTitle": {
     "description": "Title of the onboarding checklist card shown when the landlord has zero properties, tenants and leases."
   },
-  "dashboardOnboardingSubtitle": "Follow these 3 steps to get started.",
+  "dashboardOnboardingSubtitle": "Follow these 5 steps to get started.",
   "@dashboardOnboardingSubtitle": {
     "description": "Subtitle of the onboarding checklist card."
   },
@@ -2983,6 +2983,23 @@
   "dashboardOnboardingStepCreateLeaseLabel": "Create a lease",
   "@dashboardOnboardingStepCreateLeaseLabel": {
     "description": "Onboarding checklist step 3 label, navigates to /leases/new."
+  },
+  "dashboardOnboardingStepRecordPaymentLabel": "Record a payment",
+  "@dashboardOnboardingStepRecordPaymentLabel": {
+    "description": "Onboarding checklist step 4: navigates to the payment form for the landlord's first lease."
+  },
+  "dashboardOnboardingStepGenerateReceiptLabel": "Generate a receipt",
+  "@dashboardOnboardingStepGenerateReceiptLabel": {
+    "description": "Onboarding checklist step 5 (the value moment): navigates to the receipts page of the landlord's first lease."
+  },
+  "dashboardOnboardingProgressLabel": "{done} / {total}",
+  "@dashboardOnboardingProgressLabel": {
+    "description": "Onboarding progress indicator, e.g. '2 / 5'.",
+    "placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "dashboardOnboardingSkip": "Skip",
+  "@dashboardOnboardingSkip": {
+    "description": "Link that permanently hides the onboarding checklist on this device."
   },
   "dashboardShortcutSimulatorLabel": "Simulate an investment",
   "@dashboardShortcutSimulatorLabel": {

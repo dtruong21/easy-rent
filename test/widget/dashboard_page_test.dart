@@ -6,6 +6,7 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/dashboard/presentation/dashboard_page.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/action_items_panel.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/shortcuts_row.dart';
@@ -76,7 +77,23 @@ class _FakeDashboardRepo implements DashboardRepository {
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
 
   @override
-  Future<bool> isLandlordOnboarding() async => onboarding;
+  Future<OnboardingProgress> fetchOnboardingProgress() async => onboarding
+      ? const OnboardingProgress(
+          hasProperty: false,
+          hasTenant: false,
+          hasLease: false,
+          hasPayment: false,
+          hasReceipt: false,
+          firstLeaseId: null,
+        )
+      : const OnboardingProgress(
+          hasProperty: true,
+          hasTenant: true,
+          hasLease: true,
+          hasPayment: true,
+          hasReceipt: true,
+          firstLeaseId: null,
+        );
 }
 
 class _FakeAuthRepo implements AuthRepository {
