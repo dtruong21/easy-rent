@@ -199,8 +199,9 @@ class _DataView extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing =
         Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-    if (snapshot.isOnboarding) {
-      return const OnboardingFirstSteps();
+    final onboarding = snapshot.onboarding;
+    if (onboarding != null) {
+      return OnboardingFirstSteps(progress: onboarding);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
