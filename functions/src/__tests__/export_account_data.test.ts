@@ -75,6 +75,12 @@ beforeEach(() => {
   });
   fakeDb.seed("properties/pb", {landlordId: LANDLORD_B, name: "Bien B"});
   fakeDb.seed("payments/paya", {landlordId: LANDLORD_A, amountCents: 80000});
+  fakeDb.seed("etat_des_lieux/edla", {
+    landlordId: LANDLORD_A,
+    type: "entree",
+    tenantFullName: "Marie Dupont",
+  });
+  fakeDb.seed("etat_des_lieux/edlb", {landlordId: LANDLORD_B, type: "sortie"});
 });
 
 describe("exportAccountData", () => {
@@ -89,6 +95,15 @@ describe("exportAccountData", () => {
     expect(res.payments).toHaveLength(1);
     expect(res.schemaVersion).toBe(1);
     expect(typeof res.exportedAt).toBe("string");
+  });
+
+  it("exporte les états des lieux du bailleur (RGPD art. 15/20), owner-scoped", async () => {
+    const res = (await exportAccountData.run(
+      makeRequest(LANDLORD_A),
+    )) as ExportResult & {etatDesLieux?: Array<{tenantFullName?: string}>};
+
+    expect(res.etatDesLieux).toHaveLength(1);
+    expect(res.etatDesLieux?.[0]?.tenantFullName).toBe("Marie Dupont");
   });
 
   it("sérialise les Timestamp en chaînes ISO", async () => {

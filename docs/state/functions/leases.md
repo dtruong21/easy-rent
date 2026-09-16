@@ -56,11 +56,11 @@ Fichier `functions/src/callable/etat_des_lieux.ts`. Patron immuable (figé à la
 
 ### `createEtatDesLieux`
 Client invoke, isFullyAuthed only.
-- **Params** : `leaseId, etalessType ('entry'|'exit'), rooms[], meterReadings, keysHandedOver, observations, createdByTenant`.
-- **Validations** : auth uid ; `etalessType ∈ {entry, exit}` ; lease existe + `landlordId==uid` (`permission-denied` sinon) + non soft-deleted ; ownership : property + tenant du lease doivent appartenir au propriétaire ; **gate légal serveur** : `leaseType` et `chargeMode` résolus (`resolveChargeMode`) ; landlord `fullName`/`address` non vides (`failed-precondition: profile_incomplete` sinon, mentions légales décret 2016-382) ; rooms + elements validés (existence champs requis, enums condition) ; meterReadings format ; keysHandedOver boolean ; observations string.
-- **Mutation** : CREATE `etat_des_lieux/{id}` — snapshot dénorm figé (identité landlord + tenant + property lues sur `landlords/{uid}` et le `lease`), parties figées (`etalessType`, rooms, meterReadings, keysHandedOver, observations), `createdAt=now()`, `createdByTenant`, `schemaVersion=1`. Aucun soft-delete.
+- **Params** : `leaseId, type ('entree'|'sortie'), date, keysCount, rooms[], meterReadings, generalComment`. `rooms` = `[{name, elements: [{name, condition, comment}]}]` ; `meterReadings` = `{waterIndex, electricityIndex, gasIndex}` (chaînes\|null). Les champs légaux figés (parties, adresses, domicile bailleur) NE sont PAS des params — lus serveur.
+- **Validations** : auth uid ; `type ∈ {entree, sortie}` ; `keysCount ≥ 0` ; chaque `condition ∈ {neuf, bon, moyen, mauvais}` (`invalid-argument` sinon) ; lease existe + `landlordId==uid` (`permission-denied` sinon) + non soft-deleted (`failed-precondition`) ; landlord `fullName` **et** `address` non vides (`failed-precondition: profile_incomplete {missing}` sinon — le décret 2016-382 exige le domicile du bailleur). Pas de gate `resolveChargeMode` (l'EDL s'applique à tout bail).
+- **Mutation** : CREATE `etat_des_lieux/{id}` — écrit `type`, `date`, `rooms`, `meterReadings`, `keysCount`, `generalComment` du payload + snapshot figé serveur : `propertyAddress` (du lease), `tenantFullName` (`tenantFirstName+tenantLastName` du lease), `landlordFullName` + `landlordAddress` (du profil `landlords/{uid}`), `propertyId`, `createdAt=serverTimestamp()`, `schemaVersion=1`. Aucun soft-delete.
 - **Retour** : `{etatDesLieuxId}`.
-- **Erreurs** : PERMISSION_DENIED, NOT_FOUND (lease/landlord), INVALID_ARGUMENT (champs invalides), FAILED_PRECONDITION (profil incomplet, bail supprimé, type/mode incompatibles).
+- **Erreurs** : PERMISSION_DENIED (bail non possédé), NOT_FOUND (lease/landlord), INVALID_ARGUMENT (type/condition/keysCount/rooms invalides), FAILED_PRECONDITION (profil incomplet, bail supprimé).
 
 **Immuabilité** : le callable est l'**unique** écriture possible sur `etat_des_lieux` (Rules `create,update,delete: if false`) — aucune mutation après création.
 

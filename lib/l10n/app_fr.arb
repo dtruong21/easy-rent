@@ -1388,7 +1388,6 @@
   "edlAddRoom": "Ajouter une pièce",
   "edlRemoveRoomTooltip": "Supprimer la pièce",
   "edlElementNameLabel": "Élément",
-  "edlElementConditionLabel": "État",
   "edlElementCommentLabel": "Commentaire",
   "edlAddElement": "Ajouter un élément",
   "edlRemoveElementTooltip": "Supprimer l'élément",

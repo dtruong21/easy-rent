@@ -130,18 +130,17 @@ Collection **immuable, CF exclusive** — état des lieux digitalisé. Parties +
 | `landlordId` | string | FK → landlords.id, immuable |
 | `leaseId` | string | FK → leases.id, immuable |
 | `propertyId` | string | snapshot lease.propertyId à la création |
+| `type` | string | `'entree'` \| `'sortie'` — type d'état des lieux |
+| `date` | timestamp | date de l'EDL saisie par le bailleur (distincte de `createdAt`) |
+| `propertyAddress` | string | snapshot lease.propertyAddress (adresse composée figée) |
 | `landlordFullName` | string | snapshot landlords.fullName (identité figée, requis non-vide, décret 2016-382) |
-| `landlordAddress` | string | snapshot landlords.address — **domicile du bailleur** figé (décret 2016-382, line 3) |
+| `landlordAddress` | string | snapshot landlords.address — **domicile du bailleur** figé (décret 2016-382, requis non-vide) |
 | `tenantFullName` | string | snapshot `tenantFirstName + tenantLastName` du lease |
-| `propertyName` | string | snapshot lease.propertyName |
-| `propertyAddress` | string | snapshot lease.propertyAddress (adresse composée) |
-| `etalessType` | string | `'entry'` \| `'exit'` — type d'état des lieux |
-| `rooms` | array\<map\> | figé — `{roomId, roomName, EdlElement[], condition, notes}` (pièces + éléments + état) |
-| `meterReadings` | map | figé — `{water: {value, unit}, gas: {value, unit}, electricity: {value, unit}, …}` (relevés compteurs) |
-| `keysHandedOver` | bool | clés remises (figé) |
-| `observations` | string | observations générales (figé) |
+| `rooms` | array\<map\> | figé — `[{name, elements: [{name, condition, comment}]}]` ; `condition` ∈ `neuf`\|`bon`\|`moyen`\|`mauvais` |
+| `meterReadings` | map | figé — `{waterIndex, electricityIndex, gasIndex}` (chaînes\|null, relevés d'index) |
+| `keysCount` | int | nombre de clés remises (figé, ≥ 0) |
+| `generalComment` | string\|null | commentaire général optionnel (figé) |
 | `createdAt` | timestamp | immuable, `serverTimestamp()` |
-| `createdByTenant` | bool | créé par locataire (audit) |
 | `schemaVersion` | int | `1` |
 
 **Immutabilité** : tous les champs sont figés à la création. Aucune mutation, aucun soft-delete, rétention légale 5 ans (décret 2016-382 : document probant).

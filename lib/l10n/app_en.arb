@@ -5934,8 +5934,6 @@
   "@edlRemoveRoomTooltip": { "description": "EDL form: tooltip on the icon button removing a room card." },
   "edlElementNameLabel": "Element",
   "@edlElementNameLabel": { "description": "EDL form: editable element name field label, within a room." },
-  "edlElementConditionLabel": "Condition",
-  "@edlElementConditionLabel": { "description": "EDL form: condition dropdown label, within an element row." },
   "edlElementCommentLabel": "Comment",
   "@edlElementCommentLabel": { "description": "EDL form: optional comment field label, within an element row." },
   "edlAddElement": "Add an element",

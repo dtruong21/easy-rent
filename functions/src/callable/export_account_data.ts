@@ -23,6 +23,7 @@ const EXPORTED_COLLECTIONS: Record<string, string> = {
   payments: "payments",
   receipts: "receipts",
   chargeStatements: "charge_statements",
+  etatDesLieux: "etat_des_lieux",
   documents: "documents",
   expenses: "expenses",
   investmentScenarios: "investment_scenarios",
