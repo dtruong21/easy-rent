@@ -75,7 +75,10 @@ describe("createEtatDesLieux", () => {
   const iso = (d: string) => `${d}T00:00:00.000Z`;
 
   function seedBase() {
-    fakeDb.seed("landlords/landlord-a", {fullName: "Jean Bailleur"});
+    fakeDb.seed("landlords/landlord-a", {
+      fullName: "Jean Bailleur",
+      address: "10 rue du Bailleur, 75002 Paris",
+    });
     fakeDb.seed("leases/lease-1", {
       landlordId: LANDLORD,
       propertyId: "prop-1",
@@ -126,6 +129,7 @@ describe("createEtatDesLieux", () => {
     expect(stored?.tenantFullName).toBe("Marie Dupont");
     expect(stored?.propertyAddress).toBe("10 rue de la Paix");
     expect(stored?.landlordFullName).toBe("Jean Bailleur");
+    expect(stored?.landlordAddress).toBe("10 rue du Bailleur, 75002 Paris");
     expect(stored?.keysCount).toBe(2);
     expect(stored?.rooms).toHaveLength(2);
     expect(stored?.meterReadings?.waterIndex).toBe("001234");
@@ -134,9 +138,60 @@ describe("createEtatDesLieux", () => {
     expect(stored?.createdAt).toBeDefined();
   });
 
+  it("fige parties/adresse depuis bail+profil, ignore le payload forgé", async () => {
+    seedBase();
+    const res = (await createEtatDesLieux.run(
+      makeRequest(LANDLORD, {
+        leaseId: "lease-1",
+        type: "entree",
+        date: iso("2025-09-15"),
+        keysCount: 0,
+        rooms: [],
+        meterReadings: {},
+        // Champs légaux forgés par un client malveillant : doivent être ignorés.
+        tenantFullName: "FORGE Tenant",
+        landlordFullName: "FORGE Landlord",
+        landlordAddress: "FORGE Address",
+        propertyAddress: "FORGE Property",
+      }),
+    )) as CreateResult;
+    const stored = (await fakeDb.doc(`etat_des_lieux/${res.etatDesLieuxId}`).get()).data();
+    expect(stored?.tenantFullName).toBe("Marie Dupont");
+    expect(stored?.landlordFullName).toBe("Jean Bailleur");
+    expect(stored?.landlordAddress).toBe("10 rue du Bailleur, 75002 Paris");
+    expect(stored?.propertyAddress).toBe("10 rue de la Paix");
+  });
+
+  it("refuse si le domicile du bailleur manque (profile_incomplete)", async () => {
+    fakeDb.seed("landlords/landlord-a", {fullName: "Jean Bailleur"}); // pas d'address
+    fakeDb.seed("leases/lease-1", {
+      landlordId: LANDLORD,
+      propertyId: "prop-1",
+      tenantFirstName: "Marie",
+      tenantLastName: "Dupont",
+      propertyAddress: "10 rue de la Paix",
+      deletedAt: null,
+    });
+    await expect(
+      createEtatDesLieux.run(
+        makeRequest(LANDLORD, {
+          leaseId: "lease-1",
+          type: "entree",
+          date: iso("2025-09-15"),
+          keysCount: 0,
+          rooms: [],
+          meterReadings: {},
+        }),
+      ),
+    ).rejects.toMatchObject({code: "failed-precondition"});
+  });
+
   it("refuse un bail non possédé", async () => {
     seedBase();
-    fakeDb.seed("landlords/autre", {fullName: "Un Autre"});
+    fakeDb.seed("landlords/autre", {
+      fullName: "Un Autre",
+      address: "1 rue Autre, 75001 Paris",
+    });
     await expect(
       createEtatDesLieux.run(
         makeRequest("autre", {

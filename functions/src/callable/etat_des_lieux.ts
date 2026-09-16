@@ -84,12 +84,17 @@ export const createEtatDesLieux = onCall(
 
     const db = dbForRequest(request);
 
-    // Landlord (fullName légal)
+    // Landlord (fullName + address légaux : le décret 2016-382 exige le
+    // domicile du bailleur sur l'EDL — même exigence que les quittances/régul).
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
     const landlordData = dataOrFail(landlordSnap, "landlord not found");
     const landlordFullName = String(landlordData.fullName ?? "").trim();
-    if (landlordFullName.length === 0) {
-      throw new HttpsError("failed-precondition", "profile_incomplete", {missing: ["fullName"]});
+    const landlordAddress = String(landlordData.address ?? "").trim();
+    const missing: string[] = [];
+    if (landlordFullName.length === 0) missing.push("fullName");
+    if (landlordAddress.length === 0) missing.push("address");
+    if (missing.length > 0) {
+      throw new HttpsError("failed-precondition", "profile_incomplete", {missing});
     }
 
     // Lease + ownership + non supprimé ; fige adresse + locataire
@@ -118,6 +123,7 @@ export const createEtatDesLieux = onCall(
         date,
         propertyAddress,
         landlordFullName,
+        landlordAddress,
         tenantFullName,
         rooms,
         meterReadings,

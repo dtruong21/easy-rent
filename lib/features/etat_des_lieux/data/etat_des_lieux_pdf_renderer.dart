@@ -96,6 +96,8 @@ Future<Uint8List> renderEtatDesLieuxPdf(EtatDesLieux edl) async {
         _section(label: 'Logement :', value: edl.propertyAddress),
         pw.SizedBox(height: 10),
         _section(label: 'Bailleur :', value: edl.landlordFullName),
+        pw.SizedBox(height: 4),
+        _section(label: 'Domicile du bailleur :', value: edl.landlordAddress),
         pw.SizedBox(height: 10),
         _section(label: 'Locataire :', value: edl.tenantFullName),
         pw.SizedBox(height: 16),

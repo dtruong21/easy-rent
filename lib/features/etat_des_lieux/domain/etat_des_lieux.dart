@@ -36,6 +36,7 @@ class EtatDesLieux with _$EtatDesLieux {
     required DateTime date,
     @JsonKey(name: 'property_address') required String propertyAddress,
     @JsonKey(name: 'landlord_full_name') required String landlordFullName,
+    @JsonKey(name: 'landlord_address') required String landlordAddress,
     @JsonKey(name: 'tenant_full_name') required String tenantFullName,
     required List<EdlRoom> rooms,
     @JsonKey(name: 'meter_readings') required EdlMeterReadings meterReadings,

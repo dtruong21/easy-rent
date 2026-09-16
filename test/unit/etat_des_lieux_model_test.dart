@@ -35,6 +35,7 @@ void main() {
       date: DateTime(2026, 9, 16),
       propertyAddress: '1 rue X, 75001 Paris',
       landlordFullName: 'Jean Bailleur',
+      landlordAddress: '10 rue du Bailleur, 75002 Paris',
       tenantFullName: 'Marie Locataire',
       rooms: const [
         EdlRoom(
