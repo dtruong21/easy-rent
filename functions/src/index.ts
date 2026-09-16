@@ -97,6 +97,7 @@ export {deleteAccount} from "./callable/delete_account";
 export {exportAccountData} from "./callable/export_account_data";
 export {createCheckoutSession} from "./callable/create_checkout_session";
 export {manageSubscription} from "./callable/manage_subscription";
+export {createEtatDesLieux} from "./callable/etat_des_lieux";
 
 // ---------- HTTP (webhooks) ----------
 export {revenueCatWebhook} from "./http/revenuecat_webhook";

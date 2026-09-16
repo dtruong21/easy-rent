@@ -45,6 +45,7 @@ const LANDLORD_SCOPED_COLLECTIONS = [
   "expenses",
   "investment_scenarios",
   "charge_statements",
+  "etat_des_lieux",
 ] as const;
 
 let env: RulesTestEnvironment;
@@ -232,6 +233,29 @@ describe("charge_statements — immuables & owner-scoped (FEAT-033)", () => {
   it("le client ne peut PAS modifier ni supprimer un décompte", async () => {
     await assertFails(asOwnerA().doc("charge_statements/doc-a").update({balanceCents: 0}));
     await assertFails(asOwnerA().doc("charge_statements/doc-a").delete());
+  });
+});
+
+describe("etat_des_lieux — immuables & owner-scoped (FEAT-037)", () => {
+  it("le propriétaire lit son état des lieux", async () => {
+    await assertSucceeds(asOwnerA().doc("etat_des_lieux/doc-a").get());
+  });
+  it("un autre compte ne lit pas l'état des lieux d'autrui", async () => {
+    await assertFails(asOtherB().doc("etat_des_lieux/doc-a").get());
+  });
+  it("un autre compte ne peut lister les états des lieux d'un UID orphelin", async () => {
+    await assertFails(
+      asOtherB().collection("etat_des_lieux").where("landlordId", "==", "deleted-account-uid").get(),
+    );
+  });
+  it("le client ne peut PAS créer un état des lieux (CF exclusive)", async () => {
+    await assertFails(
+      asOwnerA().collection("etat_des_lieux").add({landlordId: LANDLORD_A}),
+    );
+  });
+  it("le client ne peut PAS modifier ni supprimer un état des lieux", async () => {
+    await assertFails(asOwnerA().doc("etat_des_lieux/doc-a").update({roomsCount: 0}));
+    await assertFails(asOwnerA().doc("etat_des_lieux/doc-a").delete());
   });
 });
 

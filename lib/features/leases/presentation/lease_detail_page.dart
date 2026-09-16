@@ -263,6 +263,8 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
             ),
             const SizedBox(height: 16),
             DocumentsSection(leaseId: lease.id),
+            const SizedBox(height: 16),
+            _EtatDesLieuxTile(leaseId: lease.id),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)
@@ -351,6 +353,31 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
         ),
       );
     }
+  }
+}
+
+/// Tuile d'accès à la liste des états des lieux du bail (FEAT-037, tâche 7).
+///
+/// Patron `_ReceiptsSummaryEntry` (`receipts_list_section.dart`) simplifié :
+/// pas de résumé chiffré ici, juste l'accès à
+/// `/leases/:id/etat-des-lieux` — la liste complète affiche déjà le compte et
+/// le bouton PDF par ligne.
+class _EtatDesLieuxTile extends StatelessWidget {
+  const _EtatDesLieuxTile({required this.leaseId});
+
+  final String leaseId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        key: const Key('tile_etat_des_lieux'),
+        leading: const Icon(Icons.fact_check_outlined),
+        title: Text(context.l10n.edlListTitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/leases/$leaseId/etat-des-lieux'),
+      ),
+    );
   }
 }
 

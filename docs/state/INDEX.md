@@ -76,7 +76,7 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 - **Frontend** : Flutter 3.x + Dart 3.11+ (web + Android + iOS `com.daki.baillan`), CanvasKit, EB Garamond serif.
 - **State/Nav** : Riverpod 2.6 (StreamProvider) · GoRouter 14.6 (garde 3-états via sessionStateProvider).
 - **Auth** : Firebase Auth natif (email/password + Google + Apple + anonyme).
-- **Backend** : Firestore (11 collections, camelCase, soft-delete + **37 index composites**, règles 3 couches) + Cloud Functions Node 20 (**17 callables + 9 triggers + 1 HTTP + 3 scheduled**).
+- **Backend** : Firestore (12 collections, camelCase, soft-delete + **38 index composites**, règles 3 couches) + Cloud Functions Node 20 (**18 callables + 9 triggers + 1 HTTP + 3 scheduled**).
 - **Paiement** : Stripe Checkout (web) + RevenueCat comme plan de gestion (entitlement `pro`) → webhook serveur-autoritaire. **Back-end seul : aucune UI, aucun `purchases_flutter`.**
 - **Storage** : Firebase Storage (signed URLs 5 min ; documents ≤ 10 MiB, quota free 10). **PDF** : `pdf` + `share_plus` (quittance loi 6/07/1989). **Hosting** : Firebase **multi-site**, 4 cibles (`prod` → baillan.com, `stage` → stage.baillan.com pour l'app Flutter ; `marketing` → baillan-marketing, `marketing-stage` → baillan-marketing-stage pour la vitrine Astro FEAT-050) — déploiements scopés `--only` obligatoires. ⚠️ **app : prod/stage partagent Firestore/Auth/Storage du même projet — un test sur staging écrit en prod**. **CI** : GitHub Actions (format + analyze + tests Flutter, + jobs `functions` lint/build/test, `firestore-rules`, `site` build Astro).
 

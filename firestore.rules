@@ -351,6 +351,19 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // etat_des_lieux/{id} — IMMUABLES (loi 6/7/1989, décret 2016-382) → CF
+    // exclusive
+    //
+    // État des lieux figé (FEAT-037). Owner-scoped en get ET list, comme
+    // receipts/charge_statements. Création via callable createEtatDesLieux.
+    // ====================================================================
+    match /etat_des_lieux/{id} {
+      allow get:  if isOwner(resource.data.landlordId);
+      allow list: if isOwner(resource.data.landlordId);
+      allow create, update, delete: if false;
+    }
+
+    // ====================================================================
     // documents/{id}   — CF exclusive (legalHold dérivé de category)
     // ====================================================================
     match /documents/{id} {

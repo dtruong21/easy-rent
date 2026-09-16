@@ -50,6 +50,20 @@ Client invoke. Transaction : fetch + ownership ; **rejette** un décompte déjà
 
 **Immuabilité** : les 3 callables sont les **seules** écritures possibles sur `charge_statements` (Rules `create,update,delete: if false`) — `void`/`markAsSent` ne mutent que les champs d'audit (`isVoided*`, `sentAt*`), jamais les champs financiers/identité figés à la création.
 
+## Callables — État des lieux (FEAT-037)
+
+Fichier `functions/src/callable/etat_des_lieux.ts`. Patron immuable (figé à la création, comme `charge_statements`) : snapshot figé de parties + adresse + **domicile du bailleur** (décret 2016-382) au moment de la saisie — preuve légale de l'état du bien.
+
+### `createEtatDesLieux`
+Client invoke, isFullyAuthed only.
+- **Params** : `leaseId, type ('entree'|'sortie'), date, keysCount, rooms[], meterReadings, generalComment`. `rooms` = `[{name, elements: [{name, condition, comment}]}]` ; `meterReadings` = `{waterIndex, electricityIndex, gasIndex}` (chaînes\|null). Les champs légaux figés (parties, adresses, domicile bailleur) NE sont PAS des params — lus serveur.
+- **Validations** : auth uid ; `type ∈ {entree, sortie}` ; `keysCount ≥ 0` ; chaque `condition ∈ {neuf, bon, moyen, mauvais}` (`invalid-argument` sinon) ; lease existe + `landlordId==uid` (`permission-denied` sinon) + non soft-deleted (`failed-precondition`) ; landlord `fullName` **et** `address` non vides (`failed-precondition: profile_incomplete {missing}` sinon — le décret 2016-382 exige le domicile du bailleur). Pas de gate `resolveChargeMode` (l'EDL s'applique à tout bail).
+- **Mutation** : CREATE `etat_des_lieux/{id}` — écrit `type`, `date`, `rooms`, `meterReadings`, `keysCount`, `generalComment` du payload + snapshot figé serveur : `propertyAddress` (du lease), `tenantFullName` (`tenantFirstName+tenantLastName` du lease), `landlordFullName` + `landlordAddress` (du profil `landlords/{uid}`), `propertyId`, `createdAt=serverTimestamp()`, `schemaVersion=1`. Aucun soft-delete.
+- **Retour** : `{etatDesLieuxId}`.
+- **Erreurs** : PERMISSION_DENIED (bail non possédé), NOT_FOUND (lease/landlord), INVALID_ARGUMENT (type/condition/keysCount/rooms invalides), FAILED_PRECONDITION (profil incomplet, bail supprimé).
+
+**Immuabilité** : le callable est l'**unique** écriture possible sur `etat_des_lieux` (Rules `create,update,delete: if false`) — aucune mutation après création.
+
 ## Constants & helpers (`lease_payment.ts`)
 
 | Constant/Helper | Valeur/Signature | Usage |
