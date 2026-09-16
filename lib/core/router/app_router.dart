@@ -10,6 +10,8 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/etat_des_lieux/presentation/etat_des_lieux_form_page.dart';
+import '../../features/etat_des_lieux/presentation/etat_des_lieux_list_page.dart';
 import '../../features/expenses/presentation/expense_form_page.dart';
 import '../../features/expenses/presentation/property_expenses_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
@@ -541,6 +543,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           ),
                           transition: AppTransition.standard,
                         ),
+                      ),
+                      GoRoute(
+                        path: 'etat-des-lieux',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: EtatDesLieuxListPage(
+                            leaseId: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: 'new',
+                            pageBuilder: (context, state) => appPage(
+                              key: state.pageKey,
+                              child: EtatDesLieuxFormPage(
+                                leaseId: state.pathParameters['id']!,
+                              ),
+                              transition: AppTransition.standard,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

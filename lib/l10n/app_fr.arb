@@ -1403,5 +1403,10 @@
   "edlErrorLeaseNotOwned": "Ce bail ne vous appartient pas.",
   "edlErrorProfileIncomplete": "Complétez votre profil bailleur (nom, adresse) avant de générer un état des lieux.",
   "edlErrorGeneric": "Une erreur est survenue. Veuillez réessayer.",
-  "edlErrorOpenPdf": "Impossible d'ouvrir le PDF."
+  "edlErrorOpenPdf": "Impossible d'ouvrir le PDF.",
+  "edlListEmptyTitle": "Aucun état des lieux",
+  "edlListEmptyMessage": "Les états des lieux de ce bail apparaissent ici une fois créés.",
+  "edlNewButton": "Nouvel état des lieux",
+  "edlListErrorTitle": "Impossible de charger les états des lieux.",
+  "edlPdfButton": "PDF"
 }

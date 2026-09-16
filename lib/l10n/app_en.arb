@@ -5965,5 +5965,15 @@
   "edlErrorGeneric": "Something went wrong. Please try again.",
   "@edlErrorGeneric": { "description": "SnackBar error for any other createEtatDesLieux failure (EdlFormErrorReason.generic)." },
   "edlErrorOpenPdf": "Unable to open the PDF.",
-  "@edlErrorOpenPdf": { "description": "SnackBar shown when rendering or opening the generated condition report PDF fails, after a successful creation." }
+  "@edlErrorOpenPdf": { "description": "SnackBar shown when rendering or opening the generated condition report PDF fails, after a successful creation." },
+  "edlListEmptyTitle": "No condition reports yet",
+  "@edlListEmptyTitle": { "description": "EDL list page: empty state title when the lease has no condition report yet." },
+  "edlListEmptyMessage": "Condition reports for this lease appear here once you create one.",
+  "@edlListEmptyMessage": { "description": "EDL list page: empty state explanatory message." },
+  "edlNewButton": "New condition report",
+  "@edlNewButton": { "description": "EDL list page: CTA button label (empty state action and list header) that pushes the creation form." },
+  "edlListErrorTitle": "Unable to load condition reports.",
+  "@edlListErrorTitle": { "description": "EDL list page: error view title when listForLease fails, with a retry button." },
+  "edlPdfButton": "PDF",
+  "@edlPdfButton": { "description": "EDL list page: per-row button label that renders and opens the condition report PDF." }
 }
