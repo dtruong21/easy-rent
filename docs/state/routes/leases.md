@@ -32,3 +32,20 @@ Ordre de précédence **volontaire**, à ne pas inverser :
 3. **Fail-closed** pendant le chargement du tier (pas de flash du bouton). Clé l10n `chargeRegularizationProOnly` (FR + EN).
 
 **FEATs** : FEAT-005 (baux, 4 routes), FEAT-042 (chargeMode), FEAT-044 (gate Pro). Sous-routes paiements/quittances (`/leases/:id/payments…`, `/leases/:id/receipts`) → shard **payments-receipts**.
+
+## État des lieux digital (FEAT-037)
+
+Saisie entrée/sortie + PDF décret 2016-382 (domicile du bailleur, propriétaire, locataire, adresse bien figés).
+
+| Chemin | Page | Type | Params / notes |
+|---|---|---|---|
+| `/leases/:id/etat-des-lieux` | EtatDesLieuxListPage | read | `id`=UUID ; affiche historique des états des lieux du bail (entrée + sorties), bouton « Nouveau » |
+| `/leases/:id/etat-des-lieux/new` | EtatDesLieuxFormPage | write | `id`=UUID ; param query `?type=entry\|exit` ; formulaire saisie (pièces + éléments + état + compteurs + clés) → callable + rendu PDF |
+
+**Entrée fiche bail** (`LeaseDetailPage`) : bouton « État des lieux » en section dédiée, tap → `/leases/:id/etat-des-lieux` (liste avec historique + bouton « Nouveau »).
+
+**Immutabilité** : l'état des lieux est figé à la création (collection immuable CF-exclusive). Aucune édition, aucune suppression possible.
+
+**Rendu PDF** : côté client, sans Cloud Functions (pattern `pdf` + `share_plus`, comme quittances FEAT-007). Décret 2016-382 : mentions légales propriétaire + domicile bailleur obligatoires.
+
+**FEATs** : FEAT-037 (V1 : saisie + PDF, cuts V2 : photos, signature électronique, comparaison entrée↔sortie).

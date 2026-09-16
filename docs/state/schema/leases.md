@@ -119,3 +119,40 @@ Décompte de régularisation de charges **figé** (snapshot immuable) au moment 
 **Déploiement** : Rules + index déployés **automatiquement par la CI** (`develop` → base `staging`, `main` → `(default)`, cf. `docs/ENVIRONMENTS.md`). Rien à faire à la main. Les **Cloud Functions restent hors CI — déploiement manuel délibéré** (ADR 0003) : sans `firebase deploy --only functions:finalizeChargeRegularization,functions:voidChargeStatement,functions:markChargeStatementAsSent`, l'action « Finaliser » échoue en staging (callable introuvable) même client déployé.
 
 **Export RGPD** : inclus dans `exportAccountData` (clé `chargeStatements`).
+
+## `etat_des_lieux/{id}` (FEAT-037)
+
+Collection **immuable, CF exclusive** — état des lieux digitalisé. Parties + adresse bien + **domicile du bailleur** (décret 2016-382) sont figés à la création. Aucun soft-delete (document légal) ; rétention 5 ans (décret 2016-382).
+
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | string | = doc id |
+| `landlordId` | string | FK → landlords.id, immuable |
+| `leaseId` | string | FK → leases.id, immuable |
+| `propertyId` | string | snapshot lease.propertyId à la création |
+| `landlordFullName` | string | snapshot landlords.fullName (identité figée, requis non-vide, décret 2016-382) |
+| `landlordAddress` | string | snapshot landlords.address — **domicile du bailleur** figé (décret 2016-382, line 3) |
+| `tenantFullName` | string | snapshot `tenantFirstName + tenantLastName` du lease |
+| `propertyName` | string | snapshot lease.propertyName |
+| `propertyAddress` | string | snapshot lease.propertyAddress (adresse composée) |
+| `etalessType` | string | `'entry'` \| `'exit'` — type d'état des lieux |
+| `rooms` | array\<map\> | figé — `{roomId, roomName, EdlElement[], condition, notes}` (pièces + éléments + état) |
+| `meterReadings` | map | figé — `{water: {value, unit}, gas: {value, unit}, electricity: {value, unit}, …}` (relevés compteurs) |
+| `keysHandedOver` | bool | clés remises (figé) |
+| `observations` | string | observations générales (figé) |
+| `createdAt` | timestamp | immuable, `serverTimestamp()` |
+| `createdByTenant` | bool | créé par locataire (audit) |
+| `schemaVersion` | int | `1` |
+
+**Immutabilité** : tous les champs sont figés à la création. Aucune mutation, aucun soft-delete, rétention légale 5 ans (décret 2016-382 : document probant).
+
+**Règles Firestore** :
+- `get, list` : `isOwner(resource.data.landlordId)` (propriétaire seul)
+- `create, update, delete` : `if false` — CF exclusive (callable `createEtatDesLieux`)
+
+**Index** :
+- `landlordId` ↑, `leaseId` ↑, `createdAt` ↓ (historique par bail, `listForLease`)
+
+**Callables** : `createEtatDesLieux`.
+
+**Export RGPD** : inclus dans `exportAccountData` (clé `etatDesLieux`).

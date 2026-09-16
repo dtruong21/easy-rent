@@ -50,6 +50,20 @@ Client invoke. Transaction : fetch + ownership ; **rejette** un décompte déjà
 
 **Immuabilité** : les 3 callables sont les **seules** écritures possibles sur `charge_statements` (Rules `create,update,delete: if false`) — `void`/`markAsSent` ne mutent que les champs d'audit (`isVoided*`, `sentAt*`), jamais les champs financiers/identité figés à la création.
 
+## Callables — État des lieux (FEAT-037)
+
+Fichier `functions/src/callable/etat_des_lieux.ts`. Patron immuable (figé à la création, comme `charge_statements`) : snapshot figé de parties + adresse + **domicile du bailleur** (décret 2016-382) au moment de la saisie — preuve légale de l'état du bien.
+
+### `createEtatDesLieux`
+Client invoke, isFullyAuthed only.
+- **Params** : `leaseId, etalessType ('entry'|'exit'), rooms[], meterReadings, keysHandedOver, observations, createdByTenant`.
+- **Validations** : auth uid ; `etalessType ∈ {entry, exit}` ; lease existe + `landlordId==uid` (`permission-denied` sinon) + non soft-deleted ; ownership : property + tenant du lease doivent appartenir au propriétaire ; **gate légal serveur** : `leaseType` et `chargeMode` résolus (`resolveChargeMode`) ; landlord `fullName`/`address` non vides (`failed-precondition: profile_incomplete` sinon, mentions légales décret 2016-382) ; rooms + elements validés (existence champs requis, enums condition) ; meterReadings format ; keysHandedOver boolean ; observations string.
+- **Mutation** : CREATE `etat_des_lieux/{id}` — snapshot dénorm figé (identité landlord + tenant + property lues sur `landlords/{uid}` et le `lease`), parties figées (`etalessType`, rooms, meterReadings, keysHandedOver, observations), `createdAt=now()`, `createdByTenant`, `schemaVersion=1`. Aucun soft-delete.
+- **Retour** : `{etatDesLieuxId}`.
+- **Erreurs** : PERMISSION_DENIED, NOT_FOUND (lease/landlord), INVALID_ARGUMENT (champs invalides), FAILED_PRECONDITION (profil incomplet, bail supprimé, type/mode incompatibles).
+
+**Immuabilité** : le callable est l'**unique** écriture possible sur `etat_des_lieux` (Rules `create,update,delete: if false`) — aucune mutation après création.
+
 ## Constants & helpers (`lease_payment.ts`)
 
 | Constant/Helper | Valeur/Signature | Usage |

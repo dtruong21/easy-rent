@@ -44,6 +44,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-034 | Import multi-colonnes CSV (properties/tenants/leases) | ❌ abandonné 2026-09-14 | properties | — |
 | FEAT-035 | 2FA TOTP | 📋 planned | account | — |
 | FEAT-036 | Charges récupérables vs non-récupérables (décret 87-713) | ✅ done | leases | PR #66 |
+| FEAT-037 | État des lieux digital (V1 : saisie + PDF décret 2016-382, collection immuable) | ✅ done | leases | feat/037-etat-des-lieux |
 | FEAT-041 | Suivi dépenses unifié V1 (expenses + documents v2) | ✅ done | expenses-documents | PR #67 |
 | FEAT-042 | Mode de charges (provisions/forfait) + éligibilité régul. | ✅ done | leases | PR #68 |
 | FEAT-043 | Internationalisation FR/EN (i18n, gen_l10n) | ✅ done | account | PR #71 |

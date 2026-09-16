@@ -30,7 +30,16 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-15)
+## Changements (2026-08-03 → 2026-09-16)
+
+### FEAT-037 — État des lieux digital (V1) (2026-09-16)
+- Saisie entrée/sortie du locataire ou propriétaire : pièces + éléments + état + compteurs + clés, formulaire complet `EtatDesLieuxFormPage`.
+- Rendu PDF côté client (pattern `pdf` + `share_plus`, comme quittances) conforme décret 2016-382 : mentions légales propriétaire + **domicile du bailleur** obligatoirement figés au moment de la saisie.
+- Nouvelle collection immuable CF-exclusive `etat_des_lieux/{id}` (patron `charge_statements`) : parties + adresse bien + identité bailleur figées ; aucun soft-delete, rétention légale 5 ans. Index composite `(landlordId, leaseId, createdAt DESC)` pour historique par bail.
+- Repository `EtatDesLieuxRepository` (create via callable, listForLease, getById) + provider Riverpod.
+- UI : liste `EtatDesLieuxListPage` affiche historique entées/sorties du bail + bouton « Nouveau », routes `/leases/:id/etat-des-lieux` + `/new`. Entrée fiche bail via bouton section dédiée.
+- **Déploiement reporté** (gel GitHub Actions, Plan A) : Cloud Functions callable `createEtatDesLieux` + Firestore rules/indexes à déployer **manuellement au reset quota** (après merge `feat/037-etat-des-lieux` → `develop` → `main`). Rules du streaming ont un déploiement auto (CI), pas les Functions.
+- **Cuts V2** : photos, signature électronique, comparaison automatique entrée↔sortie (non construit dans ce plan).
 
 ### FEAT-058 — Onboarding progressif jusqu'à la 1re quittance (2026-09-15)
 - Checklist d'onboarding progressive du dashboard : 5 étapes (bien → locataire → bail → paiement → quittance), chacune dérivée des données (non-vide = cochée) via `DashboardRepository.fetchOnboardingProgress()` → modèle `OnboardingProgress`. Affichée tant qu'aucune quittance (`hasReceipt == false`) ET non explicitement passée (`onboardingDismissedProvider`, SharedPreferences). Étapes 4–5 lease-scoped (désactivées sans bail). Dismiss local (bouton « Passer ») persiste en SharedPreferences (`onboarding_dismissed:bool`).
