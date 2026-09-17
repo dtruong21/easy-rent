@@ -54,6 +54,7 @@ class EtatDesLieuxFormPage extends ConsumerStatefulWidget {
 }
 
 class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
+  final _formKey = GlobalKey<FormState>();
   EtatDesLieuxType _type = EtatDesLieuxType.entree;
   DateTime _date = DateTime.now();
   late List<_RoomEdit> _rooms;
@@ -129,6 +130,11 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
   // ---------------------------------------------------------------------
 
   Future<void> _submit() async {
+    // Validation client : bloque les noms de pièce/élément vides avant l'appel
+    // serveur (qui les refuserait avec un invalid-argument opaque). Met en
+    // évidence le(s) champ(s) fautif(s) au lieu d'un message générique.
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
     final water = _waterCtrl.text.trim();
     final electricity = _electricityCtrl.text.trim();
     final gas = _gasCtrl.text.trim();
@@ -237,31 +243,34 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
         title: l10n.edlFormTitle,
         fallbackRoute: '/leases/${widget.leaseId}',
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(spacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildTypeAndDateCard(context, spacing),
-            SizedBox(height: spacing.xl),
-            _buildRoomsSection(context, spacing),
-            SizedBox(height: spacing.xl),
-            _buildMetersSection(context, spacing),
-            SizedBox(height: spacing.xl),
-            _buildKeysAndCommentSection(context, spacing),
-            SizedBox(height: spacing.xxl),
-            FilledButton(
-              key: const Key('edl_generate_button'),
-              onPressed: isSubmitting ? null : _submit,
-              child: isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l10n.edlGenerate),
-            ),
-          ],
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(spacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTypeAndDateCard(context, spacing),
+              SizedBox(height: spacing.xl),
+              _buildRoomsSection(context, spacing),
+              SizedBox(height: spacing.xl),
+              _buildMetersSection(context, spacing),
+              SizedBox(height: spacing.xl),
+              _buildKeysAndCommentSection(context, spacing),
+              SizedBox(height: spacing.xxl),
+              FilledButton(
+                key: const Key('edl_generate_button'),
+                onPressed: isSubmitting ? null : _submit,
+                child: isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.edlGenerate),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -367,6 +376,10 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
                     key: Key('edl_room_name_field_$roomIndex'),
                     controller: room.nameCtrl,
                     style: Theme.of(context).textTheme.titleSmall,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => (v ?? '').trim().isEmpty
+                        ? l10n.validationRequired
+                        : null,
                     decoration: InputDecoration(
                       labelText: l10n.edlRoomNameLabel,
                       isDense: true,
@@ -413,6 +426,9 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
     final nameField = TextFormField(
       key: Key('edl_element_name_field_${roomIndex}_$elementIndex'),
       controller: element.nameCtrl,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      validator: (v) =>
+          (v ?? '').trim().isEmpty ? l10n.validationRequired : null,
       decoration: InputDecoration(
         labelText: l10n.edlElementNameLabel,
         isDense: true,

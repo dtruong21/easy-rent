@@ -62,8 +62,9 @@ abstract interface class DocumentsRepository {
   Future<({String? storagePath, bool hardDeleted})> softDelete(String id);
 
   /// Met à jour la category. Les Rules Firestore interdisent l'update direct
-  /// côté client (on bloque tout sur documents) — on devra ajouter une
-  /// Callable `updateDocumentCategory` côté CF (TODO). Pour MVP, on refuse.
+  /// côté client (on bloque tout sur documents) — la mutation passe donc par la
+  /// Callable `updateDocumentCategory`, qui recalcule `legalHold` et refuse un
+  /// document déjà sous rétention légale.
   Future<Document> updateCategory({
     required String id,
     required DocumentCategory newCategory,
