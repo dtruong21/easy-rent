@@ -271,6 +271,27 @@ void main() {
       },
     );
 
+    testWidgets('nom de pièce vide bloque la soumission (validation client)', (
+      tester,
+    ) async {
+      final repo = _FakeEtatDesLieuxRepository(result: _makeEdl());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      // Vide le nom de la 1re pièce puis tente de soumettre.
+      await tester.enterText(
+        find.byKey(const Key('edl_room_name_field_0')),
+        '',
+      );
+      await tester.ensureVisible(find.byKey(const Key('edl_generate_button')));
+      await tester.tap(find.byKey(const Key('edl_generate_button')));
+      await tester.pumpAndSettle();
+
+      // create() n'est jamais appelé ; le message de validation s'affiche.
+      expect(repo.capturedLeaseId, isNull);
+      expect(find.text('Ce champ est obligatoire'), findsWidgets);
+    });
+
     testWidgets('erreur du repo → SnackBar affiché', (tester) async {
       final repo = _FakeEtatDesLieuxRepository(
         exception: FirebaseFunctionsException(
