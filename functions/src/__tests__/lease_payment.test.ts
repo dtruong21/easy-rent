@@ -19,6 +19,7 @@
  * en mode forfait (un forfait ne se ventile pas).
  */
 
+import type * as FirestoreModule from "firebase-admin/firestore";
 import type {CallableRequest} from "firebase-functions/v2/https";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
@@ -133,15 +134,18 @@ vi.mock("firebase-admin", () => {
     },
   });
 
-  return {
-    firestore: Object.assign(fakeFirestore, {
-      FieldValue: {
-        serverTimestamp: () => "__server-timestamp__",
-        increment: (n: number) => ({__increment: n}),
-      },
-    }),
-  };
+  return {firestore: fakeFirestore};
 });
+
+// Ce fichier a son propre store ad hoc (sentinel `{__increment}`), distinct
+// de la FakeFirestore : il surcharge le mock global de `setupFiles`.
+vi.mock("firebase-admin/firestore", async (importOriginal) => ({
+  ...(await importOriginal<typeof FirestoreModule>()),
+  FieldValue: {
+    serverTimestamp: () => "__server-timestamp__",
+    increment: (n: number) => ({__increment: n}),
+  },
+}));
 
 // Import après le mock (hoisted par vitest de toute façon, mais explicite).
 import {

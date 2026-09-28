@@ -13,7 +13,7 @@
  * `voidChargeStatement` et `markChargeStatementAsSent` (Task 2) suivent le
  * même patron non destructif que `voidReceipt`/`markReceiptAsSent`.
  */
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import type {Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
@@ -185,7 +185,7 @@ export const finalizeChargeRegularization = onCall(
     // 4. Écriture du snapshot figé (immuable post-create par Rules)
     const ref = db.collection("charge_statements").doc();
     const statementId = ref.id;
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     try {
       await ref.set({
         id: statementId,
@@ -257,7 +257,7 @@ export const voidChargeStatement = onCall(
       }
       tx.update(ref, {
         isVoided: true,
-        voidedAt: admin.firestore.FieldValue.serverTimestamp(),
+        voidedAt: FieldValue.serverTimestamp(),
         voidedReason: reason,
       });
     });
@@ -293,7 +293,7 @@ export const markChargeStatementAsSent = onCall(
         );
       }
       tx.update(ref, {
-        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        sentAt: FieldValue.serverTimestamp(),
         sentToEmail: email,
       });
     });

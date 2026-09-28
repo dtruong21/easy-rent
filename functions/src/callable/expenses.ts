@@ -28,7 +28,8 @@
  * contournable).
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 
@@ -325,7 +326,7 @@ export const createExpense = onCall(
         assertOwnedAndActive(document, uid, "document");
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(expenseRef, {
         id: expenseRef.id,
         landlordId: uid,
@@ -573,7 +574,7 @@ export const updateExpense = onCall(
 
       tx.update(expenseRef, {
         ...cleanPatch,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       return {updated: true};

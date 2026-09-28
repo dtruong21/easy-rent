@@ -1,3 +1,4 @@
+import {Timestamp} from "firebase-admin/firestore";
 import type {CallableRequest} from "firebase-functions/v2/https";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
@@ -142,11 +143,11 @@ describe("deleteAccount", () => {
     expect(receipt?.receiptNumber).toBe("2026-a1");
     expect(receipt?.amountCents).toBe(70000);
     expect(receipt?.accountDeletedAt).toBeInstanceOf(Date);
-    expect(receipt?.retentionUntil).toBeInstanceOf(Date);
+    expect(receipt?.retentionUntil).toBeInstanceOf(Timestamp);
     // retentionUntil ≈ maintenant + 5 ans (tolérance 1 jour).
     const fiveYearsMs = 5 * 365.25 * 24 * 60 * 60 * 1000;
     const delta = Math.abs(
-      (receipt?.retentionUntil as Date).getTime() -
+      (receipt?.retentionUntil as Timestamp).toMillis() -
         (Date.now() + fiveYearsMs),
     );
     expect(delta).toBeLessThan(24 * 60 * 60 * 1000);

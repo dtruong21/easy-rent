@@ -15,7 +15,7 @@
  * bail actif décrémente le compteur dans softDeleteEntity.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
@@ -245,7 +245,7 @@ export const createLease = onCall(
         }
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(leaseRef, {
         id: leaseRef.id,
         landlordId: uid,
@@ -289,16 +289,16 @@ export const createLease = onCall(
 
       if (status === "active") {
         tx.update(propertyRef, {
-          activeLeaseCount: admin.firestore.FieldValue.increment(1),
+          activeLeaseCount: FieldValue.increment(1),
         });
         tx.update(tenantRef, {
-          activeLeaseCount: admin.firestore.FieldValue.increment(1),
+          activeLeaseCount: FieldValue.increment(1),
         });
         // FEAT-044 : compteur de baux actifs du bailleur — sème la vraie valeur
         // (recomptée) sur un compte legacy sans compteur, sinon incrémente.
         if (leaseHasCounter) {
           tx.update(landlordRef, {
-            activeLeasesCount: admin.firestore.FieldValue.increment(1),
+            activeLeasesCount: FieldValue.increment(1),
           });
         } else {
           tx.update(landlordRef, {
@@ -517,7 +517,7 @@ export const updateLease = onCall(
 
       tx.update(leaseRef, {
         ...cleanPatch,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       if (delta !== 0) {
@@ -525,10 +525,10 @@ export const updateLease = onCall(
         const tenantId = lease.tenantId;
         if (typeof propertyId === "string" && typeof tenantId === "string") {
           tx.update(db.doc(`properties/${propertyId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(delta),
+            activeLeaseCount: FieldValue.increment(delta),
           });
           tx.update(db.doc(`tenants/${tenantId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(delta),
+            activeLeaseCount: FieldValue.increment(delta),
           });
         }
         // FEAT-044 : compteur de baux actifs du bailleur. Écriture absolue
@@ -591,7 +591,7 @@ export const createPayment = onCall(
       const lease = dataOrFail(leaseSnap, "lease not found");
       assertOwnedAndActive(lease, uid, "lease");
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(paymentRef, {
         id: paymentRef.id,
         landlordId: uid,
@@ -665,7 +665,7 @@ export const updatePayment = onCall(
 
     await ref.update({
       ...cleanPatch,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return {updated: true};

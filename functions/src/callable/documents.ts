@@ -32,6 +32,7 @@
  */
 
 import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
@@ -368,7 +369,7 @@ export const createDocument = onCall(
       const legalHold = LEGAL_HOLD_CATEGORIES.has(category);
 
       const docRef = db.collection("documents").doc();
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       try {
         await docRef.set({
           id: docRef.id,
@@ -486,7 +487,7 @@ export const updateDocumentCategory = onCall(
     await ref.update({
       category,
       legalHold,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return {documentId, category, legalHold};

@@ -27,6 +27,7 @@
  */
 
 import * as admin from "firebase-admin";
+import {Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
@@ -40,7 +41,7 @@ export const cleanupExpiredAnon = onSchedule(
   },
   async () => {
     const db = admin.firestore();
-    const now = admin.firestore.Timestamp.now();
+    const now = Timestamp.now();
 
     const expiredSnap = await db
       .collection("landlords")

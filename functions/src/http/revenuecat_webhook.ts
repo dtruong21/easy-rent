@@ -31,7 +31,8 @@
 
 import {timingSafeEqual} from "crypto";
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {logger} from "firebase-functions/v2";
 import {onRequest} from "firebase-functions/v2/https";
@@ -177,7 +178,7 @@ function toFirestoreStates(
       expiresAt:
         state.expiresAtMs === null ?
           null :
-          admin.firestore.Timestamp.fromMillis(state.expiresAtMs),
+          Timestamp.fromMillis(state.expiresAtMs),
       willRenew: state.willRenew,
       productId: state.productId,
       store: state.store,
@@ -282,17 +283,17 @@ export async function applyRevenueCatEvent(
       proExpiresAt:
         effExpiresAtMs === null ?
           null :
-          admin.firestore.Timestamp.fromMillis(effExpiresAtMs),
+          Timestamp.fromMillis(effExpiresAtMs),
       proWillRenew: eff.state?.willRenew ?? false,
       // proSince : posé à la 1re activation, conservé ensuite (audit, W6).
       proSince: eff.active ?
-        (data.proSince ?? admin.firestore.FieldValue.serverTimestamp()) :
+        (data.proSince ?? FieldValue.serverTimestamp()) :
         (data.proSince ?? null),
       // Plus une garde d'ordre (elle est par palier désormais) mais un repère
       // de diagnostic — et un champ que les rules gèlent déjà : le supprimer
       // ferait échouer l'update client de TOUS les comptes.
       proLastEventAtMs: Math.max(previousLastTs, eventTs),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
     return "applied";
   });

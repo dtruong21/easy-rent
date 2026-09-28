@@ -40,6 +40,7 @@
  */
 
 import * as admin from "firebase-admin";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
@@ -157,8 +158,8 @@ async function stampRetainedReceipts(
     .get();
   if (snap.empty) return 0;
 
-  const accountDeletedAt = admin.firestore.FieldValue.serverTimestamp();
-  const retentionUntil = admin.firestore.Timestamp.fromMillis(
+  const accountDeletedAt = FieldValue.serverTimestamp();
+  const retentionUntil = Timestamp.fromMillis(
     Date.now() + RECEIPT_RETENTION_MS,
   );
 

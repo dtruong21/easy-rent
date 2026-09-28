@@ -10,6 +10,7 @@
  *     PALIER d'un compte déjà payant, dans les deux sens.
  */
 
+import {Timestamp} from "firebase-admin/firestore";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
 import {
@@ -101,7 +102,7 @@ describe("reconcileLandlord — non-régression palier unique", () => {
     const doc = fakeDb.peek("landlords/u1");
     expect(doc?.subscriptionTier).toBe("paid");
     expect(doc?.planLevel).toBe("pro");
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_30D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_30D));
   });
 
   it("rien n'a bougé → unchanged", async () => {
@@ -169,7 +170,7 @@ describe("reconcileLandlord — correction de palier (FEAT-056)", () => {
     const doc = fakeDb.peek("landlords/u1");
     expect(doc?.subscriptionTier).toBe("paid"); // surtout pas `free`
     expect(doc?.planLevel).toBe("pro");
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_30D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_30D));
   });
 
   it("chevauchement : deux paliers actifs → le rang le plus élevé gagne", async () => {

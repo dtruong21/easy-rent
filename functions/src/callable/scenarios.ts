@@ -25,7 +25,7 @@
  * dépassement est borné, non lucratif, et se résorbe à la suppression suivante.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
@@ -206,7 +206,7 @@ export const createScenario = onCall(
         id: ref.id,
         landlordId: uid,
         inputs,
-        now: admin.firestore.FieldValue.serverTimestamp(),
+        now: FieldValue.serverTimestamp(),
       }),
     );
 
