@@ -30,7 +30,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-16)
+## Changements (2026-08-03 → 2026-09-28)
+
+### PR #193/#194/#195 — FIX recette mobile iOS (2026-09-28)
+- **#193** Build iOS Xcode 27 : cible minimale 15.0 (Runner + pods), retrait du pod `FirebaseFirestore` précompilé (doublon avec Swift Package Manager, Flutter 3.44). Debug émulateur : Functions + Storage branchés (ports surchargeables par dart-define). Functions : `FieldValue`/`Timestamp` via `firebase-admin/firestore` (16 fichiers — le proxy de l'émulateur perdait `admin.firestore.FieldValue`) → **redéployer toutes les functions**.
+- **#194** PDF quittance/EDL sur mobile = feuille de partage système (le repli `data:` n'ouvrait rien sur iOS). Liste EDL invalidée après création (`etatDesLieuxListProvider` déplacé en `application/`) + formulaire refermé (anti-doublon). Onboarding étape 5 et CTA Quittances vides → fiche du bail. Bandeau Quittances : plus de débordement.
+- **#195** `CardGrid` : en colonne unique, cartes en hauteur naturelle (la hauteur fixe desktop laissait ~70 px de vide sur mobile).
+- Recette : iOS simulateur contre émulateurs (recette dans la mémoire `mobile-emulator-testing`).
 
 ### FEAT-037 — État des lieux digital (V1) (2026-09-16)
 - Saisie entrée/sortie du locataire ou propriétaire : pièces + éléments + état + compteurs + clés, formulaire complet `EtatDesLieuxFormPage`.
