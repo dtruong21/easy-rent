@@ -26,6 +26,7 @@
  */
 
 import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {asBag, requireAuthUid} from "../utils/callable_helpers";
@@ -181,7 +182,7 @@ export const finalizeAnonymousUpgrade = onCall(
         return {ok: true, tier: currentTier};
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       // `email` / `fullName` viennent d'Auth (niveau supérieur puis
       // `providerData`) — le doc anonyme les portait vides par construction, et
       // ne pas les renseigner ici produisait un compte complet sans identité.

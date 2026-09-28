@@ -1,3 +1,4 @@
+import {Timestamp} from "firebase-admin/firestore";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
 import {levelForRcEntitlement, rcEntitlementIdFor} from "../entitlements/plan";
@@ -148,7 +149,7 @@ describe("applyRevenueCatEvent", () => {
     expect(doc?.proStore).toBe("app_store");
     expect(doc?.proProductId).toBe("pro_monthly");
     expect(doc?.proWillRenew).toBe(true);
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_30D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_30D));
     expect(doc?.proSince).toBeInstanceOf(Date); // serverTimestamp résolu
     expect(doc?.proLastEventAtMs).toBe(NOW);
   });
@@ -333,7 +334,7 @@ describe("map d'état par palier", () => {
       store: "app_store",
       lastEventAtMs: NOW,
     });
-    expect(states.pro?.expiresAt).toEqual(new Date(IN_30D));
+    expect(states.pro?.expiresAt).toEqual(Timestamp.fromMillis(IN_30D));
   });
 
   it("EXPIRATION du dernier palier → free, planLevel null, proSince gardé", async () => {
@@ -385,7 +386,7 @@ describe("map d'état par palier", () => {
     expect(states.pro?.active).toBe(false); // seul Pro a bougé
     expect(states.ultra?.active).toBe(true);
     // Les champs pro* reflètent le palier EFFECTIF, pas l'event reçu.
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_60D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_60D));
     expect(doc?.proEntitlementActive).toBe(true);
   });
 
@@ -491,7 +492,7 @@ describe("🔴 compte legacy (aucune map `entitlements`)", () => {
     expect(doc?.planLevel).toBe("pro"); // grandfathering (I3)
     const states = doc?.entitlements as Record<string, Record<string, unknown>>;
     expect(states.pro?.active).toBe(true);
-    expect(states.pro?.expiresAt).toEqual(new Date(IN_60D));
+    expect(states.pro?.expiresAt).toEqual(Timestamp.fromMillis(IN_60D));
     expect(doc?.proSince).toEqual(new Date(AGO_1D)); // W6
   });
 

@@ -18,7 +18,8 @@
  * la feature documents (bail signé, état des lieux).
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
@@ -245,7 +246,7 @@ export const generateReceipt = onCall(
     const receiptRef = db.collection("receipts").doc();
     const receiptId = receiptRef.id;
     const paymentIds = paymentDocs.map((p) => p.id);
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
 
     try {
       await receiptRef.set({
@@ -262,7 +263,7 @@ export const generateReceipt = onCall(
         tenantFullName: `${lease.tenantFirstName} ${lease.tenantLastName}`,
         periodStart: earliestStart,
         periodEnd: latestEnd,
-        lastPaidAt: admin.firestore.Timestamp.fromMillis(lastPaidAtMs),
+        lastPaidAt: Timestamp.fromMillis(lastPaidAtMs),
         rentCents,
         chargesCents,
         totalCents,
@@ -321,7 +322,7 @@ export const voidReceipt = onCall(
       }
       tx.update(ref, {
         isVoided: true,
-        voidedAt: admin.firestore.FieldValue.serverTimestamp(),
+        voidedAt: FieldValue.serverTimestamp(),
         voidedReason: reason,
       });
     });
@@ -357,7 +358,7 @@ export const markReceiptAsSent = onCall(
         );
       }
       tx.update(ref, {
-        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        sentAt: FieldValue.serverTimestamp(),
         sentToEmail: email,
       });
     });

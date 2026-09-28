@@ -20,11 +20,11 @@
  */
 
 import * as admin from "firebase-admin";
+import {Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
 type Firestore = admin.firestore.Firestore;
-type Timestamp = admin.firestore.Timestamp;
 
 const PAGE_SIZE = 400;
 const MAX_DELETES_PER_RUN = 2000; // 5 pages — large devant tout volume réaliste
@@ -69,7 +69,7 @@ export const purgeExpiredReceipts = onSchedule(
   async () => {
     await purgeExpiredReceiptsImpl(
       admin.firestore(),
-      admin.firestore.Timestamp.now(),
+      Timestamp.now(),
     );
   },
 );

@@ -33,6 +33,7 @@
  */
 
 import * as admin from "firebase-admin";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {logger} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
@@ -84,7 +85,7 @@ function toFirestoreStates(
       expiresAt:
         state.expiresAtMs === null ?
           null :
-          admin.firestore.Timestamp.fromMillis(state.expiresAtMs),
+          Timestamp.fromMillis(state.expiresAtMs),
       willRenew: state.willRenew,
       productId: state.productId,
       store: state.store,
@@ -167,9 +168,9 @@ export async function reconcileLandlord(
     proWillRenew: eff.state?.willRenew ?? false,
     proExpiresAt:
       effExpiryMs !== null ?
-        admin.firestore.Timestamp.fromMillis(effExpiryMs) :
+        Timestamp.fromMillis(effExpiryMs) :
         (data.proExpiresAt ?? null),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   };
   await ref.update(patch);
 

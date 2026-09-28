@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,10 +49,14 @@ Future<void> main() async {
   // Initialise Firebase (FEAT-019). Source unique de la couche data.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // DEBUG UNIQUEMENT : branche les émulateurs Firebase (Firestore + Auth)
-  // quand `USE_FIREBASE_EMULATOR=true` est passé en dart-define. Le garde-fou
-  // release vit dans `Env.useFirebaseEmulator` (kDebugMode). DOIT être appelé
-  // APRÈS initializeApp et AVANT tout accès Firestore/Auth (donc avant runApp).
+  // DEBUG UNIQUEMENT : branche les émulateurs Firebase (Firestore, Auth,
+  // Functions, Storage) quand `USE_FIREBASE_EMULATOR=true` est passé en
+  // dart-define. Le garde-fou release vit dans `Env.useFirebaseEmulator`
+  // (kDebugMode). DOIT être appelé APRÈS initializeApp et AVANT tout accès
+  // (donc avant runApp). Functions + Storage sont indispensables : sans eux,
+  // les callables et uploads partent vers la PROD avec un token d'émulateur
+  // (rejeté). `instanceFor(region:)` est mis en cache par app+région, donc le
+  // branchement ici s'applique aux instances des repositories.
   // Cf. tool/seed/seed_tiers.mjs pour peupler les comptes de test.
   if (Env.useFirebaseEmulator) {
     final host = Env.firebaseEmulatorHost;
@@ -59,9 +65,18 @@ Future<void> main() async {
       Env.firestoreEmulatorPort,
     );
     await FirebaseAuth.instance.useAuthEmulator(host, Env.authEmulatorPort);
+    FirebaseFunctions.instanceFor(
+      region: 'europe-west1',
+    ).useFunctionsEmulator(host, Env.functionsEmulatorPort);
+    await FirebaseStorage.instance.useStorageEmulator(
+      host,
+      Env.storageEmulatorPort,
+    );
     Logger('main').warning(
       'Firebase ÉMULATEUR actif — Firestore $host:${Env.firestoreEmulatorPort}, '
-      'Auth $host:${Env.authEmulatorPort}. Données locales, PAS la prod.',
+      'Auth $host:${Env.authEmulatorPort}, '
+      'Functions $host:${Env.functionsEmulatorPort}, '
+      'Storage $host:${Env.storageEmulatorPort}. Données locales, PAS la prod.',
     );
   }
 

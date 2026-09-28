@@ -5,7 +5,7 @@
  * patron `charge_statements`. Fige parties + adresse depuis le bail (loi
  * 6/7/1989). PDF rendu côté client depuis le snapshot (pas de Storage).
  */
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
@@ -112,7 +112,7 @@ export const createEtatDesLieux = onCall(
 
     const ref = db.collection("etat_des_lieux").doc();
     const id = ref.id;
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     try {
       await ref.set({
         id,

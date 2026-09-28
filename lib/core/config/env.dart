@@ -87,10 +87,25 @@ class Env {
     defaultValue: '127.0.0.1',
   );
 
-  /// Ports par défaut des émulateurs — alignés sur `firebase.json` (défauts
-  /// firebase-tools) et sur `tool/seed/seed_tiers.mjs`.
-  static const int firestoreEmulatorPort = 8080;
-  static const int authEmulatorPort = 9099;
+  /// Ports des émulateurs — défauts firebase-tools (alignés sur
+  /// `tool/seed/seed_tiers.mjs`). Surchargeables par dart-define quand un autre
+  /// projet local occupe déjà les ports par défaut.
+  static const int firestoreEmulatorPort = int.fromEnvironment(
+    'FIRESTORE_EMULATOR_PORT',
+    defaultValue: 8080,
+  );
+  static const int authEmulatorPort = int.fromEnvironment(
+    'AUTH_EMULATOR_PORT',
+    defaultValue: 9099,
+  );
+  static const int functionsEmulatorPort = int.fromEnvironment(
+    'FUNCTIONS_EMULATOR_PORT',
+    defaultValue: 5001,
+  );
+  static const int storageEmulatorPort = int.fromEnvironment(
+    'STORAGE_EMULATOR_PORT',
+    defaultValue: 9199,
+  );
 
   /// `true` si le checkout Stripe / les CTA « S'abonner » à Baillan Pro
   /// sont activés. **Défaut `false`** : MVP freemium web (~1 mois de test,
