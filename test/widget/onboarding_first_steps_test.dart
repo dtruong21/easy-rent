@@ -53,8 +53,9 @@ Widget _wrap({
             builder: (context, state) => const Scaffold(body: Text('payments')),
           ),
           GoRoute(
-            path: '/leases/:leaseId/receipts',
-            builder: (context, state) => const Scaffold(body: Text('receipts')),
+            path: '/leases/:leaseId',
+            builder: (context, state) =>
+                const Scaffold(body: Text('lease detail')),
           ),
         ],
       ),
@@ -281,14 +282,14 @@ void main() {
       expect(find.text('payments'), findsOneWidget);
     });
 
-    testWidgets('tap étape 5 → navigation quittance (avec bail)', (
+    testWidgets('tap étape 5 → fiche du bail (liste des paiements)', (
       tester,
     ) async {
       await tester.pumpWidget(_wrap(progress: _fullProgress));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Générer une quittance'));
       await tester.pumpAndSettle();
-      expect(find.text('receipts'), findsOneWidget);
+      expect(find.text('lease detail'), findsOneWidget);
     });
 
     testWidgets('tap "Passer" appelle dismiss', (tester) async {

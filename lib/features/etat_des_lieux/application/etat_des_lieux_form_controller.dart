@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../data/etat_des_lieux_repository.dart';
+import 'etat_des_lieux_list_provider.dart';
 import '../domain/edl_enums.dart';
 import '../domain/etat_des_lieux.dart';
 
@@ -103,6 +104,8 @@ class EtatDesLieuxFormController extends StateNotifier<EdlFormState> {
           );
 
       _log.info('EDL créé id=${edl.id} leaseId=$leaseId type=${type.sqlValue}');
+      // Rafraîchit la liste du bail : sinon le nouvel EDL n'y apparaît pas.
+      _ref.invalidate(etatDesLieuxListProvider(leaseId));
       state = EdlFormSuccess(edl: edl);
     } on FirebaseFunctionsException catch (e, st) {
       // Refus métier attendus : à tester AVANT FirebaseException (dont
