@@ -60,7 +60,9 @@ class CardGrid extends StatelessWidget {
   /// Si `true`, la grille prend la hauteur minimale nécessaire.
   final bool shrinkWrap;
 
-  /// Hauteur fixe (px) des cellules, si fournie.
+  /// Hauteur fixe (px) des cellules en grille (2 colonnes et plus), si
+  /// fournie. Ignorée en colonne unique, où chaque carte prend sa hauteur
+  /// naturelle.
   ///
   /// Par défaut (`null`), la hauteur suit `childAspectRatio: 1.4` — sur les
   /// grandes largeurs de cellule (desktop), ce ratio laisse une zone vide
@@ -70,35 +72,55 @@ class CardGrid extends StatelessWidget {
   /// largeur de cellule.
   final double? mainAxisExtent;
 
+  /// Largeur max d'une colonne de la grille.
+  static const double maxCrossAxisExtent = 380;
+
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final insets = padding.resolve(Directionality.of(context));
+        final width = constraints.maxWidth - insets.horizontal;
+        // Même calcul de colonnes que SliverGridDelegateWithMaxCrossAxisExtent.
+        final columns = (width / (maxCrossAxisExtent + gap)).ceil();
+        return columns <= 1 ? _buildList() : _buildGrid();
+      },
+    );
+  }
+
+  /// Une seule colonne (mobile) : hauteur NATURELLE de chaque carte.
+  ///
+  /// La hauteur fixe [mainAxisExtent] n'a de sens qu'en grille, pour aligner
+  /// les rangées. Appliquée à une colonne unique, elle laissait ~70 px de
+  /// vide sous chaque carte (retour recette mobile 2026-09-28).
+  Widget _buildList() {
+    return ListView.separated(
+      padding: padding,
+      shrinkWrap: shrinkWrap,
+      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
+      itemCount: itemCount ?? children!.length,
+      separatorBuilder: (_, _) => SizedBox(height: gap),
+      itemBuilder: itemBuilder ?? (context, index) => children![index],
+    );
+  }
+
+  Widget _buildGrid() {
     final extent = mainAxisExtent;
     final delegate = SliverGridDelegateWithMaxCrossAxisExtent(
-      maxCrossAxisExtent: 380,
+      maxCrossAxisExtent: maxCrossAxisExtent,
       mainAxisSpacing: gap,
       crossAxisSpacing: gap,
       mainAxisExtent: extent,
       childAspectRatio: extent != null ? 1.0 : 1.4,
     );
 
-    if (itemBuilder != null && itemCount != null) {
-      return GridView.builder(
-        padding: padding,
-        shrinkWrap: shrinkWrap,
-        physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
-        gridDelegate: delegate,
-        itemCount: itemCount,
-        itemBuilder: itemBuilder!,
-      );
-    }
-
     return GridView.builder(
       padding: padding,
       shrinkWrap: shrinkWrap,
       physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
       gridDelegate: delegate,
-      itemCount: children!.length,
-      itemBuilder: (context, index) => children![index],
+      itemCount: itemCount ?? children!.length,
+      itemBuilder: itemBuilder ?? (context, index) => children![index],
     );
   }
 }

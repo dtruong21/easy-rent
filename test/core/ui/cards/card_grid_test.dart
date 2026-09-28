@@ -73,8 +73,21 @@ void main() {
   });
 
   group('CardGrid — largeurs responsives', () {
-    for (final width in [320.0, 600.0, 1024.0, 1440.0]) {
-      testWidgets('largeur $width — rendu sans erreur', (tester) async {
+    for (final width in [320.0, 390.0]) {
+      testWidgets('largeur $width — colonne unique en liste', (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            CardGrid(shrinkWrap: true, children: _buildItems(3)),
+            width: width,
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(GridView), findsNothing);
+        expect(find.byType(ListView), findsOneWidget);
+      });
+    }
+    for (final width in [600.0, 1024.0, 1440.0]) {
+      testWidgets('largeur $width — grille', (tester) async {
         await tester.pumpWidget(
           _wrap(
             CardGrid(shrinkWrap: true, children: _buildItems(3)),
@@ -85,6 +98,42 @@ void main() {
         expect(find.byType(GridView), findsOneWidget);
       });
     }
+  });
+
+  group('CardGrid — hauteur des cartes', () {
+    Widget card(int i) =>
+        SizedBox(key: ValueKey('card_$i'), height: 120, child: Text('Card $i'));
+
+    testWidgets('mobile : hauteur naturelle, mainAxisExtent ignoré', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          CardGrid(
+            shrinkWrap: true,
+            mainAxisExtent: 220,
+            children: [card(0), card(1)],
+          ),
+          width: 390,
+        ),
+      );
+      await tester.pump();
+      expect(tester.getSize(find.byKey(const ValueKey('card_0'))).height, 120);
+    });
+
+    testWidgets('desktop : hauteur fixe mainAxisExtent', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          CardGrid(
+            shrinkWrap: true,
+            mainAxisExtent: 220,
+            children: [card(0), card(1)],
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(tester.getSize(find.byKey(const ValueKey('card_0'))).height, 220);
+    });
   });
 
   group('CardGrid — gap et padding', () {
