@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -157,9 +158,22 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
         );
   }
 
+  /// Revient à la liste après une création réussie. Un EDL est immuable :
+  /// rester sur le formulaire (bouton « Générer » réactivé) exposait à un
+  /// doublon d'un second tap.
+  void _leaveForm() {
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      GoRouter.maybeOf(context)?.go('/leases/${widget.leaseId}/etat-des-lieux');
+    }
+  }
+
   /// Rend le PDF de l'état des lieux créé et l'ouvre (patron
-  /// `open_receipt_pdf.dart`) : `blob:` sur web via [WebShareService], repli
-  /// sur une URL `data:` ailleurs.
+  /// `open_receipt_pdf.dart`) : `blob:` sur web via [WebShareService],
+  /// feuille de partage sur mobile, repli `data:` sur desktop.
   Future<void> _openGeneratedPdf(EtatDesLieux edl) async {
     try {
       final bytes = await ref.read(etatDesLieuxPdfRendererProvider)(edl);
@@ -223,7 +237,7 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
             backgroundColor: theme.colorScheme.primaryContainer,
           ),
         );
-        unawaited(_openGeneratedPdf(next.edl));
+        unawaited(_openGeneratedPdf(next.edl).whenComplete(_leaveForm));
       } else if (next is EdlFormError) {
         _log.warning('EtatDesLieuxFormPage error state: ${next.reason}');
         ScaffoldMessenger.of(context).showSnackBar(

@@ -114,9 +114,11 @@ class LeaseReceiptsPage extends ConsumerWidget {
                     message: l10n.receiptsEmptyStateMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_go_payments_empty'),
-                      onPressed: () =>
-                          context.push('/leases/$leaseId/payments/new'),
-                      icon: const Icon(Icons.add),
+                      // Fiche du bail = liste des paiements + bouton
+                      // « générer la quittance » (le libellé dit « Voir les
+                      // paiements » : ouvrir un formulaire vide trompait).
+                      onPressed: () => context.push('/leases/$leaseId'),
+                      icon: const Icon(Icons.list_alt_outlined),
                       label: Text(l10n.receiptsEmptyStateGoPaymentsButton),
                     ),
                   );

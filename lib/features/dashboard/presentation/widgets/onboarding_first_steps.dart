@@ -104,7 +104,10 @@ class OnboardingFirstSteps extends ConsumerWidget {
               label: l10n.dashboardOnboardingStepGenerateReceiptLabel,
               icon: Icons.receipt_long_outlined,
               done: progress.hasReceipt,
-              route: leaseId == null ? null : '/leases/$leaseId/receipts',
+              // Fiche du bail : c'est là que vit la liste des paiements et son
+              // bouton « générer la quittance ». La page Quittances, vide à ce
+              // stade, renvoyait vers « Nouveau paiement » (impasse).
+              route: leaseId == null ? null : '/leases/$leaseId',
             ),
             SizedBox(height: spacing.md),
             Align(

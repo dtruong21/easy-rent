@@ -271,6 +271,48 @@ void main() {
       },
     );
 
+    testWidgets('succès → le formulaire se referme (pas de doublon possible)', (
+      tester,
+    ) async {
+      final repo = _FakeEtatDesLieuxRepository(result: _makeEdl());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            etatDesLieuxRepositoryProvider.overrideWithValue(repo),
+            webShareServiceProvider.overrideWithValue(_FakeWebShareService()),
+            etatDesLieuxPdfRendererProvider.overrideWithValue(_fakeRenderer),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            locale: const Locale('fr'),
+            supportedLocales: supportedLocales,
+            home: Builder(
+              builder: (context) => TextButton(
+                key: const Key('open_form'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        const EtatDesLieuxFormPage(leaseId: 'lease-1'),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open_form')));
+      await tester.pumpAndSettle();
+      expect(find.byType(EtatDesLieuxFormPage), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('edl_generate_button')));
+      await tester.tap(find.byKey(const Key('edl_generate_button')));
+      await tester.pumpAndSettle();
+
+      expect(repo.capturedLeaseId, 'lease-1');
+      expect(find.byType(EtatDesLieuxFormPage), findsNothing);
+    });
+
     testWidgets('nom de pièce vide bloque la soumission (validation client)', (
       tester,
     ) async {

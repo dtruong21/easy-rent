@@ -399,5 +399,29 @@ void main() {
       // Nom + adresse visible dans le texte concaténé.
       expect(find.textContaining('12 rue de la Paix'), findsOneWidget);
     });
+
+    testWidgets('adresse longue sur mobile — ellipsis, pas de débordement', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        _buildBanner(
+          lease: _makeLease(),
+          tenant: _makeTenant(),
+          property: _makeProperty().copyWith(
+            address: '128 boulevard du Montparnasse, 75014 Paris',
+          ),
+          receipts: [],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Un RenderFlex overflow lève une exception en test.
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('boulevard du Montparnasse'), findsOneWidget);
+    });
   });
 }

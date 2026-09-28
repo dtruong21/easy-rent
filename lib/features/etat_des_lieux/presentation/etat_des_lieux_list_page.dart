@@ -20,18 +20,12 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/utils/french_date.dart';
 import '../../receipts/data/web_share_service_bridge.dart';
-import '../data/etat_des_lieux_repository.dart';
+import '../application/etat_des_lieux_list_provider.dart';
 import '../domain/edl_enums.dart';
 import '../domain/etat_des_lieux.dart';
 import 'etat_des_lieux_form_page.dart' show etatDesLieuxPdfRendererProvider;
 
 final _log = Logger('EtatDesLieuxListPage');
-
-/// Liste des états des lieux d'un bail — patron `leaseReceiptsProvider`.
-final etatDesLieuxListProvider =
-    FutureProvider.family<List<EtatDesLieux>, String>((ref, leaseId) {
-      return ref.watch(etatDesLieuxRepositoryProvider).listForLease(leaseId);
-    });
 
 /// Page `/leases/:id/etat-des-lieux` — liste des états des lieux d'un bail.
 class EtatDesLieuxListPage extends ConsumerWidget {
@@ -143,7 +137,8 @@ class _EdlTile extends ConsumerWidget {
 
   /// Rend puis ouvre le PDF de l'état des lieux (patron
   /// `EtatDesLieuxFormPage._openGeneratedPdf`) : `blob:` sur web via
-  /// [WebShareService], repli sur une URL `data:` ailleurs.
+  /// [WebShareService], feuille de partage sur mobile, repli `data:` sur
+  /// desktop.
   Future<void> _openPdf(BuildContext context, WidgetRef ref) async {
     try {
       final bytes = await ref.read(etatDesLieuxPdfRendererProvider)(edl);

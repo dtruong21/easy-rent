@@ -72,12 +72,28 @@ class WebShareServiceImpl implements WebShareService {
     required List<int> pdfBytes,
     required String filename,
   }) async {
-    // Hors Web, `launchUrl` sur une URL `data:` fonctionne (la restriction de
-    // navigation de premier niveau est propre aux navigateurs). On renvoie
-    // `false` pour laisser l'appelant conserver son chemin historique, plutôt
-    // que d'introduire ici une écriture de fichier temporaire dont personne
-    // n'a besoin aujourd'hui.
-    return false;
+    // Desktop / tests : l'appelant garde son repli `launchUrl` (URL `data:`).
+    if (!_isMobile) return false;
+    // Mobile : le repli `data:` ne marche PAS — sur iOS `launchUrl` d'une URL
+    // `data:` n'ouvre rien et ne rend jamais la main (recette simulateur
+    // 2026-09-28 : quittance et état des lieux impossibles à consulter). On
+    // présente le PDF dans la feuille de partage système : aperçu natif
+    // (Quick Look sur iOS), « Enregistrer dans Fichiers », Mail, impression.
+    // Une fermeture sans cible reste un succès : le document a été présenté.
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile.fromData(
+            Uint8List.fromList(pdfBytes),
+            mimeType: 'application/pdf',
+          ),
+        ],
+        fileNameOverrides: [filename],
+        // Ancre iPad, cf. [sharePdf].
+        sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+      ),
+    );
+    return true;
   }
 
   @override
