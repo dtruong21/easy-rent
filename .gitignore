@@ -123,3 +123,6 @@ firestore-debug.log
 site/node_modules/
 site/dist/
 site/.astro/
+
+# Graphe de connaissance local (/graphify) — régénérable, non versionné
+graphify-out/
