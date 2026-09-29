@@ -98,13 +98,13 @@ version: 1.0.0+1
 
 ---
 
-## Cloud Functions (Node.js 20 — Firebase)
+## Cloud Functions (Node.js 22 — Firebase)
 
 ### package.json
 
 | Clé | Valeur |
 |---|---|
-| **Node** | 20 (engine) |
+| **Node** | 22 (engine) |
 | **Main** | lib/index.js (compiled output) |
 | **Région** | europe-west1 (firebase.json) |
 | **Max instances** | 10 (global, override per-function) |
@@ -120,7 +120,7 @@ version: 1.0.0+1
 
 | Package | Version | Usage |
 |---|---|---|
-| `@types/node` | `^20.14.0` | Type hints Node.js |
+| `@types/node` | `^22.20.4` | Type hints Node.js |
 | `@typescript-eslint/eslint-plugin` | `^7.18.0` | Linting TypeScript |
 | `@typescript-eslint/parser` | `^7.18.0` | Parser TypeScript |
 | `eslint` | `^8.57.0` | Code linting |

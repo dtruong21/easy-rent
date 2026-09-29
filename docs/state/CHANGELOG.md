@@ -32,6 +32,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-29)
 
+### Cloud Functions : runtime Node.js 22 (2026-09-29)
+- `firebase.json` `nodejs20` → `nodejs22`, `engines.node` 22, `@types/node` ^22, jobs CI functions + règles en Node 22. Node 20 est décommissionné le 2026-10-30 (plus de déploiement possible après). `firebase-functions` reste en v6 (montée de version majeure à part).
+- Vérifié sous Node 22 : lint, build, 521 tests, 96 tests de règles, émulateur Functions (38 fonctions chargées). **Redéploiement de toutes les Functions requis** pour basculer le runtime.
+
 ### Build Android de test sur staging — Test Lab (2026-09-29)
 - Functions : `dbForRequest` async — web routé par Origin (inchangé), appels mobiles (sans Origin) routés par la base du compte (`dbForLandlordUid`, prod d'abord). **Redéploiement de toutes les Functions requis.**
 - App : réglage `MOBILE_STAGING` (ignoré en release) → base `staging`, auto-login d'un compte de test staging-only (`dart-defines.testlab.json`, gitignoré), ruban « STAGING ».
