@@ -143,6 +143,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
                   tenantFirstName: tenantFirstName,
                   propertyAddress: propertyAddress,
                   landlordFullName: landlordFullName,
+                  propertyColorKey: propertyColorKey,
                 );
               },
             ),

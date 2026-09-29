@@ -42,7 +42,7 @@ class ReceiptsCardView extends StatelessWidget {
     return CardGrid.builder(
       key: const Key('receipts_card_grid'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      mainAxisExtent: 244,
+      mainAxisExtent: 132,
       itemCount: receipts.length,
       itemBuilder: (context, index) {
         final receipt = receipts[index];
@@ -68,7 +68,7 @@ class _ReceiptsCardViewLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return CardGrid(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      mainAxisExtent: 244,
+      mainAxisExtent: 132,
       children: List.generate(6, (_) => const CardSkeleton()),
     );
   }

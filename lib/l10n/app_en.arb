@@ -3432,6 +3432,10 @@
       }
     }
   },
+  "receiptsCardTotalCaption": "rent + charges",
+  "@receiptsCardTotalCaption": {
+    "description": "Caption under the receipt total key figure"
+  },
   "receiptsOpenPdfLabel": "Open PDF",
   "@receiptsOpenPdfLabel": {
     "description": "Tooltip/button label to open a receipt's PDF (desktop actions row icon button, and the receipt-generated preview dialog's action button)."

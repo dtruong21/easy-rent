@@ -784,6 +784,7 @@
   "receiptsCardStaleWarning": "Quittance périmée",
   "receiptsCardAmountCc": "{amount} CC",
   "receiptsTimelineVoidReasonPrefix": "Motif : {reason}",
+  "receiptsCardTotalCaption": "loyer + charges",
   "receiptsOpenPdfLabel": "Ouvrir le PDF",
   "receiptsOpenPdfMenuItem": "Ouvrir PDF",
   "receiptsOpenPdfButtonShort": "PDF",

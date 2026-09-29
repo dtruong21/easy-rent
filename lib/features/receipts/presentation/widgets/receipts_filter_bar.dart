@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/breakpoints.dart';
-import '../../../../core/ui/cards/view_mode.dart';
-import '../../../../core/ui/cards/view_mode_provider.dart';
+import '../../../../core/ui/cards/view_mode_toggle.dart';
+import '../../../../core/ui/filters/filter_chips_bar.dart';
 import '../../application/receipts_filter_provider.dart';
 import '../../domain/receipt_status_filter.dart';
 import 'receipt_status_filter_l10n.dart';
@@ -13,9 +13,10 @@ import 'receipt_status_filter_l10n.dart';
 ///
 /// Paramétrique par [leaseId] pour isoler l'état par bail.
 ///
-/// - Mobile (< 600px) : Dropdown statut + pas de toggle (force Timeline).
-/// - Tablette/desktop (>= 600px) : SegmentedButton statut + Dropdown année
-///   + ViewModeToggle (Timeline | Cards).
+/// Puces de filtre ([FilterChipsBar]) avec compteurs, sur toutes les
+/// largeurs. En [trailing] (fixe à droite) : le sélecteur d'année (dès qu'au
+/// moins une année est disponible) puis le [ViewModeToggle] (masqué sur
+/// mobile, qui force la Timeline).
 class ReceiptsFilterBar extends ConsumerWidget {
   const ReceiptsFilterBar({super.key, required this.leaseId});
 
@@ -28,143 +29,41 @@ class ReceiptsFilterBar extends ConsumerWidget {
     final currentFilter = ref.watch(receiptStatusFilterProvider(leaseId));
     final currentYear = ref.watch(receiptYearFilterProvider(leaseId));
     final availableYears = ref.watch(receiptAvailableYearsProvider(leaseId));
-    final isMobile = context.isMobile;
+    final counts = ref.watch(receiptStatusCountsProvider(leaseId));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: isMobile
-          ? _MobileFilterBar(
-              leaseId: leaseId,
-              currentFilter: currentFilter,
-              onFilterChanged: (f) {
-                if (f != null) {
-                  ref
-                          .read(receiptStatusFilterProvider(leaseId).notifier)
-                          .state =
-                      f;
-                }
-              },
-            )
-          : _DesktopFilterBar(
-              leaseId: leaseId,
-              viewModeKey: _viewModeKey,
-              currentFilter: currentFilter,
-              currentYear: currentYear,
-              availableYears: availableYears,
-              onFilterChanged: (f) {
-                ref.read(receiptStatusFilterProvider(leaseId).notifier).state =
-                    f;
-              },
-              onYearChanged: (y) {
-                ref.read(receiptYearFilterProvider(leaseId).notifier).state = y;
-              },
-            ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Desktop / tablette
-// ---------------------------------------------------------------------------
-
-class _DesktopFilterBar extends ConsumerWidget {
-  const _DesktopFilterBar({
-    required this.leaseId,
-    required this.viewModeKey,
-    required this.currentFilter,
-    required this.currentYear,
-    required this.availableYears,
-    required this.onFilterChanged,
-    required this.onYearChanged,
-  });
-
-  final String leaseId;
-  final String viewModeKey;
-  final ReceiptStatusFilter currentFilter;
-  final int? currentYear;
-  final List<int> availableYears;
-  final void Function(ReceiptStatusFilter) onFilterChanged;
-  final void Function(int?) onYearChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentMode = ref.watch(viewModeProvider(viewModeKey));
-
-    return Row(
-      children: [
-        // Segmented button statut (4 segments).
-        Expanded(
-          child: SegmentedButton<ReceiptStatusFilter>(
-            key: const Key('receipt_status_filter'),
-            segments: ReceiptStatusFilter.values
-                .map(
-                  (f) => ButtonSegment<ReceiptStatusFilter>(
-                    value: f,
-                    label: Text(f.label(context)),
-                  ),
-                )
-                .toList(),
-            selected: {currentFilter},
-            onSelectionChanged: (selection) {
-              if (selection.isNotEmpty) onFilterChanged(selection.first);
-            },
-            showSelectedIcon: false,
-          ),
-        ),
-        const SizedBox(width: 12),
-        // Dropdown année.
-        if (availableYears.isNotEmpty)
-          _YearDropdown(
-            currentYear: currentYear,
-            availableYears: availableYears,
-            onChanged: onYearChanged,
-          ),
-        if (availableYears.isNotEmpty) const SizedBox(width: 12),
-        // Toggle Timeline / Cards.
-        _ReceiptsViewModeToggle(
-          viewModeKey: viewModeKey,
-          currentMode: currentMode,
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Mobile
-// ---------------------------------------------------------------------------
-
-class _MobileFilterBar extends StatelessWidget {
-  const _MobileFilterBar({
-    required this.leaseId,
-    required this.currentFilter,
-    required this.onFilterChanged,
-  });
-
-  final String leaseId;
-  final ReceiptStatusFilter currentFilter;
-  final void Function(ReceiptStatusFilter?) onFilterChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return DropdownButton<ReceiptStatusFilter>(
-      key: const Key('receipt_status_filter_mobile'),
-      value: currentFilter,
-      isExpanded: true,
-      underline: const SizedBox.shrink(),
-      borderRadius: BorderRadius.circular(8),
-      style: theme.textTheme.bodyMedium,
-      items: ReceiptStatusFilter.values
-          .map(
-            (f) => DropdownMenuItem<ReceiptStatusFilter>(
+      child: FilterChipsBar<ReceiptStatusFilter>(
+        options: [
+          for (final f in ReceiptStatusFilter.values)
+            FilterChipOption(
               value: f,
-              child: Text(f.label(context)),
+              label: f.label(context),
+              count: counts?[f],
             ),
-          )
-          .toList(),
-      onChanged: onFilterChanged,
+        ],
+        selected: currentFilter,
+        onSelected: (f) =>
+            ref.read(receiptStatusFilterProvider(leaseId).notifier).state = f,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (availableYears.isNotEmpty) ...[
+              _YearDropdown(
+                currentYear: currentYear,
+                availableYears: availableYears,
+                onChanged: (y) =>
+                    ref
+                            .read(receiptYearFilterProvider(leaseId).notifier)
+                            .state =
+                        y,
+              ),
+              const SizedBox(width: 12),
+            ],
+            if (!context.isMobile) ViewModeToggle(pageKey: _viewModeKey),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -205,61 +104,6 @@ class _YearDropdown extends StatelessWidget {
         ),
       ],
       onChanged: onChanged,
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Toggle Timeline / Cards (adapté au ViewMode existant)
-// ---------------------------------------------------------------------------
-
-/// Toggle "Timeline" / "Cards" pour la page Quittances.
-///
-/// Réutilise [viewModeProvider] avec le mapping :
-/// - [ViewMode.table] → Timeline (vue par défaut)
-/// - [ViewMode.card]  → Cards
-///
-/// Masqué sur mobile (< 600px).
-class _ReceiptsViewModeToggle extends StatelessWidget {
-  const _ReceiptsViewModeToggle({
-    required this.viewModeKey,
-    required this.currentMode,
-  });
-
-  final String viewModeKey;
-  final ViewMode currentMode;
-
-  @override
-  Widget build(BuildContext context) {
-    if (context.isMobile) return const SizedBox.shrink();
-
-    return Consumer(
-      builder: (context, ref, _) {
-        return SegmentedButton<ViewMode>(
-          key: const Key('receipt_view_mode_toggle'),
-          segments: [
-            ButtonSegment(
-              value: ViewMode.table,
-              icon: const Icon(Icons.view_timeline_outlined),
-              label: Text(context.l10n.receiptsViewModeTimeline),
-            ),
-            ButtonSegment(
-              value: ViewMode.card,
-              icon: const Icon(Icons.grid_view_outlined),
-              label: Text(context.l10n.receiptsViewModeCards),
-            ),
-          ],
-          selected: {currentMode},
-          onSelectionChanged: (selection) {
-            if (selection.isNotEmpty) {
-              ref
-                  .read(viewModeProvider(viewModeKey).notifier)
-                  .setMode(selection.first);
-            }
-          },
-          showSelectedIcon: false,
-        );
-      },
     );
   }
 }

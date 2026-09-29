@@ -1,7 +1,7 @@
 /// Tests widget de [ReceiptsFilterBar].
 ///
-/// Couvre : SegmentedButton desktop, Dropdown mobile, sélection → provider,
-/// dropdown année dynamique, toggle ViewMode.
+/// Couvre : puces de filtre (toutes largeurs), sélection → provider,
+/// toggle ViewMode (desktop uniquement, masqué sur mobile).
 library;
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
@@ -87,24 +87,24 @@ Widget _buildMobile(ProviderContainer container) {
 
 void main() {
   group('ReceiptsFilterBar', () {
-    testWidgets('desktop — SegmentedButton statut visible avec 4 segments', (
-      tester,
-    ) async {
+    testWidgets('desktop — puces de filtre visibles (4)', (tester) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       await tester.pumpWidget(_buildDesktop(container));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('receipt_status_filter')), findsOneWidget);
-      expect(find.text('Toutes'), findsOneWidget);
-      expect(find.text('Envoyées'), findsOneWidget);
-      expect(find.text('Payées'), findsOneWidget);
-      expect(find.text('Annulées'), findsOneWidget);
+      for (final f in ReceiptStatusFilter.values) {
+        expect(find.byKey(Key('filter_chip_$f')), findsOneWidget);
+      }
+      expect(find.textContaining('Toutes'), findsOneWidget);
+      expect(find.textContaining('Envoyées'), findsOneWidget);
+      expect(find.textContaining('Payées'), findsOneWidget);
+      expect(find.textContaining('Annulées'), findsOneWidget);
     });
 
     testWidgets(
-      'desktop — sélection "Annulées" → provider = ReceiptStatusFilter.voided',
+      'desktop — tap puce "Annulées" → provider = ReceiptStatusFilter.voided',
       (tester) async {
         final container = ProviderContainer();
         addTearDown(container.dispose);
@@ -117,7 +117,12 @@ void main() {
           ReceiptStatusFilter.all,
         );
 
-        await tester.tap(find.text('Annulées'));
+        final chip = find.byKey(
+          Key('filter_chip_${ReceiptStatusFilter.voided}'),
+        );
+        await tester.ensureVisible(chip);
+        await tester.pumpAndSettle();
+        await tester.tap(chip);
         await tester.pumpAndSettle();
 
         expect(
@@ -127,35 +132,19 @@ void main() {
       },
     );
 
-    testWidgets('mobile — DropdownButton visible (pas SegmentedButton)', (
-      tester,
-    ) async {
+    testWidgets('mobile — puces de filtre visibles', (tester) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       await tester.pumpWidget(_buildMobile(container));
       await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const Key('receipt_status_filter_mobile')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('receipt_status_filter')), findsNothing);
+      for (final f in ReceiptStatusFilter.values) {
+        expect(find.byKey(Key('filter_chip_$f')), findsOneWidget);
+      }
     });
 
-    testWidgets('desktop — toggle Timeline/Cards visible', (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(_buildDesktop(container));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('receipt_view_mode_toggle')), findsOneWidget);
-      expect(find.text('Timeline'), findsOneWidget);
-      expect(find.text('Cards'), findsOneWidget);
-    });
-
-    testWidgets('desktop — clic "Cards" → viewMode = ViewMode.card', (
+    testWidgets('desktop — toggle ViewMode visible (Cartes / Tableau)', (
       tester,
     ) async {
       final container = ProviderContainer();
@@ -164,7 +153,31 @@ void main() {
       await tester.pumpWidget(_buildDesktop(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Cards'));
+      expect(find.text('Cartes'), findsOneWidget);
+      expect(find.text('Tableau'), findsOneWidget);
+    });
+
+    testWidgets('mobile — toggle ViewMode masqué', (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildMobile(container));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cartes'), findsNothing);
+      expect(find.text('Tableau'), findsNothing);
+    });
+
+    testWidgets('desktop — clic "Cartes" → viewMode = ViewMode.card', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildDesktop(container));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cartes'));
       await tester.pumpAndSettle();
 
       expect(
