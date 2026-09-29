@@ -224,9 +224,8 @@ jobs:
       # (majeure seule, comme les jobs Node de `ci.yml`) plutôt qu'un patch
       # exact : n'importe quelle 22.x que `actions/setup-node` installe est
       # déjà >= 22.12.0, donc pas besoin de la faire suivre manuellement comme
-      # `flutter-version` ci-dessus. Ne PAS copier `node-version: "20"` des
-      # jobs Node de `ci.yml` — Astro 7 exige >= 22.12.0, "20" échouerait au
-      # premier `npm ci --prefix site`.
+      # `flutter-version` ci-dessus. Ne jamais descendre sous "22" — Astro 7
+      # exige >= 22.12.0, "20" échouerait au premier `npm ci --prefix site`.
       # Ce step (et « Build marketing site » ci-dessous) est dans le même job
       # séquentiel que le déploiement Hosting/Firestore/Storage de prod : un
       # échec ici bloque tout le déploiement de l'app Flutter avec lui, alors

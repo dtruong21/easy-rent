@@ -10,7 +10,7 @@ Checklist d'installation :
 
 1. Git + clone du repo (`gh auth login` pour la CLI GitHub)
 2. Flutter épinglé sur la version CI (voir `.github/workflows/ci.yml`), ajouté au PATH
-3. Node 20+ (Cloud Functions) et Firebase CLI (`npm i -g firebase-tools`, `firebase login`)
+3. Node 22 (Cloud Functions) et Firebase CLI (`npm i -g firebase-tools`, `firebase login`)
 4. Claude Code : `npm i -g @anthropic-ai/claude-code`, connexion avec le compte Pro
 5. Dans le repo : `flutter pub get` puis `dart run build_runner build` (les `*.g.dart` sont gitignorés)
 6. Android SDK / Xcode uniquement si builds mobiles sur cette machine

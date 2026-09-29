@@ -33,7 +33,7 @@
   protégés par `preservesImmutables()`.
 - Toute query filtrant `deletedAt` a son **index composite** déclaré dans
   `firestore.indexes.json` (28 à ce jour).
-- **Cloud Functions** : Node 20 + TypeScript, dans `functions/src/`
+- **Cloud Functions** : Node 22 + TypeScript, dans `functions/src/`
   (`callable/`, `triggers/`, `scheduled/`, `http/`). Les écritures sensibles
   (`leases`, `payments`, `documents`, `expenses`) sont **exclusives aux CF** —
   le client n'écrit pas directement.
@@ -100,7 +100,7 @@ EasyRent/
 ├── android/ ios/              # Apps natives (FEAT-024)
 ├── assets/                    # Fonts, images
 ├── tool/                      # Scripts Dart (branding/, release/, seed/)
-├── functions/                 # Cloud Functions Node 20 + TS
+├── functions/                 # Cloud Functions Node 22 + TS
 │   ├── src/                   # callable/ triggers/ scheduled/ http/ utils/
 │   ├── rules-tests/           # Tests règles Firestore (émulateur)
 │   └── scripts/

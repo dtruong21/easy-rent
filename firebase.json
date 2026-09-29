@@ -234,7 +234,7 @@
     {
       "source": "functions",
       "codebase": "default",
-      "runtime": "nodejs20",
+      "runtime": "nodejs22",
       "region": "europe-west1",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
