@@ -2275,6 +2275,14 @@
   "@tenantsCreateLeaseButton": {
     "description": "Button/tooltip label to start creating a new lease for a tenant with no active lease (used on cards and table row actions)."
   },
+  "tenantsCallButton": "Call",
+  "@tenantsCallButton": {
+    "description": "Quick action: phone the tenant"
+  },
+  "tenantsEmailButton": "Send an email",
+  "@tenantsEmailButton": {
+    "description": "Quick action / menu: email the tenant"
+  },
   "tenantsTableColumnName": "Name",
   "@tenantsTableColumnName": {
     "description": "Tenants table column header: tenant full name."

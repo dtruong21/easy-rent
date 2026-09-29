@@ -536,6 +536,8 @@
   "tenantsNoPropertyOccupied": "Aucun bien occupé",
   "tenantsViewLeaseButton": "Voir le bail",
   "tenantsCreateLeaseButton": "Créer un bail",
+  "tenantsCallButton": "Appeler",
+  "tenantsEmailButton": "Envoyer un email",
   "tenantsTableColumnName": "Nom",
   "tenantsTableColumnEmail": "Email",
   "tenantsTableColumnPhone": "Téléphone",

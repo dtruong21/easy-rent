@@ -290,6 +290,7 @@ class FirestoreTenantRepository implements TenantRepository {
         currentPropertyName: lease['propertyName'] as String?,
         activeLeasePeriodLabel: periodLabel,
         activeLeaseRentCents: lease['rentAmountCents'] as int?,
+        activeLeaseChargesCents: lease['chargesAmountCents'] as int?,
         currentPropertyId: propertyId,
         currentPropertyColorKey: propertyId != null
             ? colorKeyByPropertyId[propertyId]

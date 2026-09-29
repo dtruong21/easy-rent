@@ -1,7 +1,7 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
-import 'package:easyrent/features/properties/presentation/widgets/property_color_dot.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
 import 'package:easyrent/features/tenants/domain/tenant_list_item.dart';
 import 'package:easyrent/features/tenants/presentation/widgets/tenant_card.dart';
@@ -203,33 +203,37 @@ void main() {
   });
 
   group('TenantsCardView — couleur d\'identité du bien (FEAT-057)', () {
-    testWidgets('locataire avec bail actif → pastille de couleur visible', (
+    testWidgets(
+      'locataire avec bail actif → liseré de couleur d\'identité non nul',
+      (tester) async {
+        final items = [
+          _makeItem(
+            id: 'ta',
+            firstName: 'Marc',
+            lastName: 'Actif',
+            activeLeaseId: 'l1',
+            propertyName: 'Appartement Test',
+          ),
+        ];
+
+        await tester.pumpWidget(_buildCardView(items));
+        await tester.pumpAndSettle();
+
+        final card = tester.widget<SummaryCard>(find.byType(SummaryCard));
+        expect(card.accentColor, isNotNull);
+      },
+    );
+
+    testWidgets('locataire sans bail → liseré neutre (accentColor null)', (
       tester,
     ) async {
-      final items = [
-        _makeItem(
-          id: 'ta',
-          firstName: 'Marc',
-          lastName: 'Actif',
-          activeLeaseId: 'l1',
-          propertyName: 'Appartement Test',
-        ),
-      ];
-
-      await tester.pumpWidget(_buildCardView(items));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(PropertyColorDot), findsOneWidget);
-    });
-
-    testWidgets('locataire sans bail → aucune pastille (pas de bien à '
-        'rattacher)', (tester) async {
       final items = [_makeItem(id: 'ts', firstName: 'Lucie', lastName: 'Sans')];
 
       await tester.pumpWidget(_buildCardView(items));
       await tester.pumpAndSettle();
 
-      expect(find.byType(PropertyColorDot), findsNothing);
+      final card = tester.widget<SummaryCard>(find.byType(SummaryCard));
+      expect(card.accentColor, isNull);
     });
   });
 }

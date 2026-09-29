@@ -303,8 +303,8 @@ void main() {
       await tester.pumpWidget(_buildPage(repo));
       await tester.pumpAndSettle();
 
-      // La barre contient au moins le segment "Tous"
-      expect(find.text('Tous'), findsOneWidget);
+      // La barre contient au moins la puce "Tous" (libellé + compteur)
+      expect(find.textContaining('Tous'), findsOneWidget);
     });
 
     testWidgets(
