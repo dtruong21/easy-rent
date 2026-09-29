@@ -62,10 +62,10 @@ Maquettes de référence : `.superpowers/brainstorm/*/content/four-types.html`
 |---|---|---|---|---|---|---|
 | Bien loué | nom | locataire courant | loyer CC · « CC / mois » | Loué · adresse, type, surface | — | Voir le bail · Modifier |
 | Bien vacant | nom | « Aucun locataire » | — | Vacant · adresse, type | + Créer un bail | Modifier |
-| Bail | nom du bien | locataire | loyer CC · « CC / mois » | statut (Actif / En retard / À renouveler / Terminé) · « depuis le JJ/MM/AAAA » | + Paiement | Quittances · Régulariser les charges (si éligible, existant) · Modifier |
-| Locataire avec bail | nom complet | bien occupé | loyer CC · « CC / mois » | Bail actif · « depuis le … » | ✆ Appeler si téléphone, sinon ✉ Envoyer un email | Voir le bail · Envoyer un email (si pas en action rapide) · Modifier |
+| Bail | nom du bien | locataire | loyer CC · « CC / mois » | statut (Actif / En retard / À renouveler / Terminé) · période existante (« 01/09/2026 → CDI ») | + Paiement | Quittances · Régulariser les charges (si éligible, existant) · Modifier |
+| Locataire avec bail | nom complet | bien occupé | loyer CC · « CC / mois » | Bail actif · période existante (« Depuis 01/09/2026 ») | ✆ Appeler si téléphone, sinon ✉ Envoyer un email | Voir le bail · Envoyer un email (si pas en action rapide) · Modifier |
 | Locataire sans bail | nom complet | email | — | Sans bail | + Créer un bail | Envoyer un email · Modifier |
-| Quittance | période (« Septembre 2026 ») | bien · locataire | total · « loyer + charges » | statut (Payée / Envoyée / Annulée / Périmée) · date | ↗ Envoyer (réutilise la logique de `ShareReceiptButton`, états désactivés compris) | Ouvrir le PDF · Annuler la quittance (destructive, masqué si déjà annulée) |
+| Quittance | période (« Septembre 2026 ») | ligne secondaire existante (« Payée le 28/09 ») — la page est propre à un bail, son bandeau montre déjà bien et locataire | total · « loyer + charges » | statut (Payée / Envoyée / Annulée / Périmée) · date | ↗ Envoyer (réutilise la logique de `ShareReceiptButton`, états désactivés compris) | Ouvrir le PDF · Annuler la quittance (destructive, masqué si déjà annulée) |
 
 - **Appeler** : `url_launcher` `tel:` ; **email** : `mailto:`. Affichés
   seulement si la donnée existe.
@@ -120,7 +120,7 @@ Côté features, les cartes deviennent de **fins adaptateurs** « entité →
 - Android : ajouter l'intent `DIAL`/`tel` dans `<queries>` du manifeste
   (`mailto` y est déjà).
 - l10n FR + EN : nouvelles clés pour « Plus d'actions », « Appeler »,
-  « Envoyer un email », « depuis le {date} », « CC / mois », « loyer +
+  « Envoyer un email », « CC / mois », « loyer +
   charges » ; réutiliser les clés existantes (`tenantsViewLeaseButton`,
   `tenantsCreateLeaseButton`, `propertiesNoTenant`, `commonEdit`,
   `leasesRegularizeChargesMenuItem`, `receiptsShareMenuItem`,
