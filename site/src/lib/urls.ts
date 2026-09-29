@@ -32,7 +32,8 @@ export function getCanonicalUrl(pathname: string, site: URL | undefined): string
 // site » de `.github/workflows/deploy.yml` sur `develop` ; sans lui (build prod),
 // on retombe sur l'app de prod. Sans ce discriminant, la vitrine de staging
 // enverrait ses visiteurs vers l'app de PROD (« Ouvrir l'app », /signup, footer…).
-export const appUrl =
-  import.meta.env.SITE_ENV === 'staging'
-    ? 'https://app.staging.baillan.com'
-    : 'https://app.baillan.com';
+export const isStaging = import.meta.env.SITE_ENV === 'staging';
+
+export const appUrl = isStaging
+  ? 'https://app.staging.baillan.com'
+  : 'https://app.baillan.com';

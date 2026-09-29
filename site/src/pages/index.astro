@@ -3,24 +3,64 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { appUrl } from '../lib/urls';
 import { ideaFormUrl } from '../lib/links';
+import { jsonLdString } from '../lib/jsonld';
 
+// Données structurées : uniquement ce que la page affiche déjà. Pas de note,
+// d'avis ni de prix inventé. `offers` décrit le palier gratuit annoncé dans le
+// hero (« Gratuit jusqu'à 2 biens »). `operatingSystem: Web` : c'est une
+// application web (PWA) ; les apps iOS/Android sont en préparation (FAQ).
+// Daki Studio n'est pas une entité juridique : simple nom d'auteur, aucune
+// donnée légale (SIREN, adresse…) — à enrichir à la création de la structure.
+const siteUrl = new URL('/', Astro.site).href;
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'Baillan',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web, iOS, Android',
-  inLanguage: 'fr',
-  description:
-    'Gestion locative pour bailleurs particuliers : quittances conformes, suivi des loyers, charges et rentabilité.',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${siteUrl}#website`,
+      name: 'Baillan',
+      url: siteUrl,
+      inLanguage: 'fr-FR',
+      publisher: { '@id': `${siteUrl}#author` },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      '@id': `${siteUrl}#application`,
+      name: 'Baillan',
+      url: siteUrl,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'fr',
+      description:
+        'Gestion locative pour bailleurs particuliers : quittances conformes, suivi des loyers, charges et rentabilité.',
+      featureList: [
+        'Quittances de loyer conformes à la loi n° 89-462 du 6 juillet 1989',
+        'Suivi des loyers et des retards',
+        'Régularisation des charges récupérables (décret n° 87-713)',
+        'Simulateur de rentabilité avec cash-flow réel',
+      ],
+      offers: {
+        '@type': 'Offer',
+        name: "Gratuit jusqu'à 2 biens",
+        price: '0',
+        priceCurrency: 'EUR',
+      },
+      author: { '@id': `${siteUrl}#author` },
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${siteUrl}#author`,
+      name: 'Daki Studio',
+    },
+  ],
 };
 ---
 <BaseLayout
-  title="Baillan — la gestion locative sans tableur"
+  title="Baillan — Gestion locative et quittances de loyer"
   description="Quittances conformes à la loi de 1989, suivi des loyers et des retards, régularisation des charges et rentabilité réelle. Pour les bailleurs particuliers."
   fullBleed
 >
-  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+  <script type="application/ld+json" slot="head" set:html={jsonLdString(jsonLd)} />
 
   <section class="hero">
     <div class="wrap hero-grid">

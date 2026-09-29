@@ -39,3 +39,17 @@ Hosting `marketing` (prod) et `marketing-stage` (staging).
 
 Node **>= 22.12.0** requis (`engines.node` dans `package.json`) — Astro 7 ne
 démarre pas sur Node 20.
+
+## SEO — où vit quoi
+
+| Sujet | Où |
+| :--- | :--- |
+| `<head>` commun (canonical, robots, Open Graph, Twitter Card, `theme-color`, favicons, préchargement des polices) | `src/layouts/BaseLayout.astro` |
+| Titre et description de chaque page | props `title` / `description` passées à `BaseLayout` — uniques par page |
+| JSON-LD | dans chaque page (`slot="head"`), sérialisé par `src/lib/jsonld.ts` (échappe `<`). Accueil : `WebSite` + `SoftwareApplication` + auteur `Organization` (nom seul). FAQ : `FAQPage`, généré depuis `src/data/faq.ts` — donc strictement le contenu affiché |
+| Staging = noindex | trois ceintures : header `X-Robots-Tag` (`firebase.json`, cible `marketing-stage`), `robots.txt` en `Disallow: /`, et `<meta name="robots" content="noindex">` posée par `BaseLayout` quand `SITE_ENV=staging` |
+| Image de partage 1200x630 | `public/icons/og-image-1200x630.png`, copie de `web/icons/…` ; source `scripts/og-image.svg`, rendu par `scripts/generate-og-image.sh` (qui écrit les deux copies) |
+| Favicons | `public/favicon.svg` (tracé vectoriel de la marque), `favicon.ico`, `apple-touch-icon.png` — dérivés de `assets/icon/baillan_icon_master.png` |
+| Polices | `public/fonts/*.woff2` (EB Garamond, OFL, conversion de format sans modification des glyphes). Seules Medium (h1) et Italic (marque) sont préchargées : ce sont celles du haut de page |
+| Pas d'hreflang | site FR uniquement, une URL par page. À ajouter (avec des URLs `/en/*` réelles) le jour où une version anglaise existe, pas avant |
+| Page 404 | `src/pages/404.astro` → `404.html`, servie par Firebase avec le statut 404, en noindex |

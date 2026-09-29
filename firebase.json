@@ -189,6 +189,19 @@
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
         },
         {
+          "//": "Polices et icônes de la vitrine : noms STABLES (non fingerprintés, contrairement à /_astro/**), donc pas immutable — mais 30 j / 7 j au lieu du max-age=0 de la règle ** (chaque page revalidait 2 polices + favicon). Règle placée APRÈS ** : dernière règle matchante gagne pour Cache-Control.",
+          "source": "/fonts/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+        },
+        {
+          "source": "/icons/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+        },
+        {
+          "source": "/{favicon.ico,favicon.svg,apple-touch-icon.png}",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+        },
+        {
           "//": "@astrojs/sitemap (Task 7, FEAT-050) génère sitemap-index.xml + sitemap-0.xml, jamais sitemap.xml — le glob doit matcher ces noms réels, sinon les deux fichiers retombent sur le max-age=0 de la règle ** ci-dessus.",
           "source": "/{robots.txt,sitemap*.xml}",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
@@ -209,6 +222,19 @@
           "//": "Avec cleanUrls, **/*.html ne matche jamais une clean URL (Firebase route headers sur le chemin demandé, pas le fichier physique) — retombait sur le défaut Firebase (max-age=3600). ** couvre toute page HTML ; clé Cache-Control distincte du X-Robots-Tag de la règle précédente, donc les deux headers s'appliquent sans conflit.",
           "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+        },
+        {
+          "//": "Même cache que la prod pour les polices et icônes (cf. cible marketing) : le staging doit mesurer les mêmes performances que la prod.",
+          "source": "/fonts/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+        },
+        {
+          "source": "/icons/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+        },
+        {
+          "source": "/{favicon.ico,favicon.svg,apple-touch-icon.png}",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
         }
       ]
     }
