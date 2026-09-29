@@ -540,7 +540,7 @@ void main() {
     // -----------------------------------------------------------------------
     // ViewMode toggle
     // -----------------------------------------------------------------------
-    testWidgets('desktop — FilterBar visible avec SegmentedButton filtres', (
+    testWidgets('desktop — FilterBar visible avec puces de filtre', (
       tester,
     ) async {
       final repo = _FakeRepo(items: [_makeItem()]);
@@ -548,7 +548,9 @@ void main() {
       await tester.pumpWidget(_buildPage(repo, size: const Size(1200, 800)));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SegmentedButton<LeaseFilter>), findsOneWidget);
+      for (final f in LeaseFilter.values) {
+        expect(find.byKey(Key('filter_chip_$f')), findsOneWidget);
+      }
     });
   });
 
