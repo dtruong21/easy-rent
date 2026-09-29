@@ -26,7 +26,7 @@
 /// ```
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
 
 class Env {
   const Env._();
@@ -74,6 +74,37 @@ class Env {
   /// avec le flag activé pointerait les vrais utilisateurs vers un backend
   /// local inexistant (app cassée). C'est un toggle de dev pur.
   static bool get useFirebaseEmulator => kDebugMode && _useEmulatorFlag;
+
+  static const bool _mobileStagingFlag = bool.fromEnvironment(
+    'MOBILE_STAGING',
+    defaultValue: false,
+  );
+
+  /// Build de test mobile (Firebase Test Lab) sur la base `staging`.
+  ///
+  /// Double garde, comme [useFirebaseEmulator] : `kReleaseMode` garantit qu'un
+  /// build publié sur les stores ne vise JAMAIS staging, même si le
+  /// dart-define fuit dans la commande de release.
+  static bool get useMobileStaging => !kReleaseMode && _mobileStagingFlag;
+
+  static const String _testAutoLoginEmail = String.fromEnvironment(
+    'TEST_AUTO_LOGIN_EMAIL',
+  );
+  static const String _testAutoLoginPassword = String.fromEnvironment(
+    'TEST_AUTO_LOGIN_PASSWORD',
+  );
+
+  /// Compte de test staging-only pour la connexion automatique du build Test
+  /// Lab (Robo ne sait pas remplir un formulaire Flutter). `null` hors build
+  /// de test ou si l'un des deux champs est vide. Fourni au build par
+  /// `dart-defines.testlab.json` (gitignoré) — jamais commité.
+  static ({String email, String password})? get testAutoLoginCredentials {
+    if (!useMobileStaging) return null;
+    if (_testAutoLoginEmail.isEmpty || _testAutoLoginPassword.isEmpty) {
+      return null;
+    }
+    return (email: _testAutoLoginEmail, password: _testAutoLoginPassword);
+  }
 
   /// Hôte des émulateurs Firebase. Défaut `127.0.0.1` (PAS `localhost`) :
   /// sur le web, Chromium résout `localhost` en IPv6 `::1`, or les émulateurs

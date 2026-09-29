@@ -80,6 +80,21 @@ Future<void> main() async {
     );
   }
 
+  // Build Test Lab (MOBILE_STAGING, jamais en release) : connexion
+  // automatique du compte de test staging-only, Robo ne sachant pas remplir
+  // le formulaire de connexion Flutter. Un échec n'empêche pas le démarrage.
+  final testCredentials = Env.testAutoLoginCredentials;
+  if (testCredentials != null && FirebaseAuth.instance.currentUser == null) {
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: testCredentials.email,
+        password: testCredentials.password,
+      );
+    } catch (e, st) {
+      Logger('main').warning('Auto-login Test Lab échoué', e, st);
+    }
+  }
+
   // Rapport d'incident (Crashlytics) — MOBILE UNIQUEMENT, opt-in RGPD.
   // Branche les hooks d'erreur, puis applique le consentement PERSISTÉ
   // (désactivé par défaut). No-op sur le web. La bascule runtime est gérée par
@@ -140,14 +155,15 @@ class _BaillanAppState extends ConsumerState<BaillanApp> {
       localeResolutionCallback: resolveLocale,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
-      // Ruban « EMULATOR » (debug only) pour ne jamais confondre les données
-      // locales de l'émulateur avec la prod pendant les tests UI. No-op dès
-      // que le toggle est éteint (build normal, release).
-      builder: Env.useFirebaseEmulator
+      // Rubans debug : « EMULATOR » (données locales) ou « STAGING » (build de
+      // test Test Lab). No-op en build normal / release.
+      builder: Env.useFirebaseEmulator || Env.useMobileStaging
           ? (context, child) => Banner(
-              message: 'EMULATOR',
+              message: Env.useFirebaseEmulator ? 'EMULATOR' : 'STAGING',
               location: BannerLocation.topStart,
-              color: Colors.deepOrange,
+              color: Env.useFirebaseEmulator
+                  ? Colors.deepOrange
+                  : Colors.purple,
               child: child ?? const SizedBox.shrink(),
             )
           : null,
