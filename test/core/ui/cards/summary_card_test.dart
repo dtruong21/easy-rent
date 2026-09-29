@@ -85,6 +85,31 @@ void main() {
     expect(cardTaps, 1);
   });
 
+  testWidgets('action rapide et menu ⋮ respectent la cible tactile Android', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _wrap(
+        SummaryCard(
+          title: 'Bail',
+          keyFigure: const SummaryKeyFigure(value: '800,00 €'),
+          onTap: () {},
+          quickAction: SummaryQuickActionButton(
+            key: const Key('qa'),
+            icon: Icons.add,
+            label: 'Paiement',
+            onPressed: () {},
+          ),
+          menuKey: const Key('menu'),
+          menuItems: [SummaryMenuItem(label: 'Modifier', onSelected: () {})],
+        ),
+      ),
+    );
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    handle.dispose();
+  });
+
   testWidgets('sans chiffre clé : action rapide en haut à droite', (
     tester,
   ) async {

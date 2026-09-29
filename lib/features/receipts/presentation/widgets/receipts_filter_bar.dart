@@ -45,30 +45,34 @@ class ReceiptsFilterBar extends ConsumerWidget {
         selected: currentFilter,
         onSelected: (f) =>
             ref.read(receiptStatusFilterProvider(leaseId).notifier).state = f,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (availableYears.isNotEmpty) ...[
-              _YearDropdown(
-                currentYear: currentYear,
-                availableYears: availableYears,
-                onChanged: (y) =>
-                    ref
-                            .read(receiptYearFilterProvider(leaseId).notifier)
-                            .state =
-                        y,
+        trailing: (availableYears.isEmpty && context.isMobile)
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (availableYears.isNotEmpty) ...[
+                    _YearDropdown(
+                      currentYear: currentYear,
+                      availableYears: availableYears,
+                      onChanged: (y) =>
+                          ref
+                                  .read(
+                                    receiptYearFilterProvider(leaseId).notifier,
+                                  )
+                                  .state =
+                              y,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (!context.isMobile)
+                    ViewModeToggle(
+                      pageKey: _viewModeKey,
+                      // Ici le mode `table` ouvre la timeline, pas un tableau.
+                      cardsLabel: context.l10n.receiptsViewModeCards,
+                      tableLabel: context.l10n.receiptsViewModeTimeline,
+                    ),
+                ],
               ),
-              const SizedBox(width: 12),
-            ],
-            if (!context.isMobile)
-              ViewModeToggle(
-                pageKey: _viewModeKey,
-                // Ici le mode `table` ouvre la timeline, pas un tableau.
-                cardsLabel: context.l10n.receiptsViewModeCards,
-                tableLabel: context.l10n.receiptsViewModeTimeline,
-              ),
-          ],
-        ),
       ),
     );
   }

@@ -43,11 +43,14 @@ class TenantCard extends StatelessWidget {
     final rent = item.activeLeaseRentCents;
     final emailInQuickAction = hasLease && !hasPhone;
 
+    void openEmail() =>
+        _launch(context, Uri(scheme: 'mailto', path: tenant.email));
+
     Widget emailButton() => SummaryQuickActionButton(
       key: Key('card_email_$tenantId'),
       icon: Icons.mail_outline,
       label: l10n.tenantsEmailButton,
-      onPressed: () => launchUrl(Uri(scheme: 'mailto', path: tenant.email)),
+      onPressed: openEmail,
     );
 
     return SummaryCard(
@@ -56,7 +59,9 @@ class TenantCard extends StatelessWidget {
       semanticLabel:
           '${tenant.firstName} ${tenant.lastName} — ${pillData.label}',
       title: '${tenant.firstName} ${tenant.lastName}',
-      subtitle: hasLease ? item.currentPropertyName : tenant.email,
+      subtitle: hasLease
+          ? (item.currentPropertyName ?? l10n.tenantsNoPropertyOccupied)
+          : tenant.email,
       keyFigure: hasLease && rent != null
           ? SummaryKeyFigure(
               value: MoneyFormat.formatEurosFromCents(
@@ -84,7 +89,10 @@ class TenantCard extends StatelessWidget {
               key: Key('card_call_$tenantId'),
               icon: Icons.call_outlined,
               label: l10n.tenantsCallButton,
-              onPressed: () => launchUrl(Uri(scheme: 'tel', path: phone)),
+              onPressed: () => _launch(
+                context,
+                Uri(scheme: 'tel', path: phone.replaceAll(RegExp(r'\s'), '')),
+              ),
             )
           : emailButton(),
       menuKey: Key('tenant_menu_$tenantId'),
@@ -99,8 +107,7 @@ class TenantCard extends StatelessWidget {
           SummaryMenuItem(
             key: Key('menu_email_$tenantId'),
             label: l10n.tenantsEmailButton,
-            onSelected: () =>
-                launchUrl(Uri(scheme: 'mailto', path: tenant.email)),
+            onSelected: openEmail,
           ),
         SummaryMenuItem(
           key: Key('card_edit_tenant_$tenantId'),
@@ -109,5 +116,17 @@ class TenantCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _launch(BuildContext context, Uri uri) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final message = context.l10n.tenantsLaunchFailed;
+    var ok = false;
+    try {
+      ok = await launchUrl(uri);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok) messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }

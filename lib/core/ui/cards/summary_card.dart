@@ -57,9 +57,8 @@ class SummaryQuickActionButton extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 36),
+        minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        visualDensity: VisualDensity.compact,
         textStyle: Theme.of(
           context,
         ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -269,7 +268,6 @@ class SummaryCard extends StatelessWidget {
       key: menuKey,
       icon: const Icon(Icons.more_vert, size: 20),
       tooltip: context.l10n.commonMoreActions,
-      style: IconButton.styleFrom(visualDensity: VisualDensity.compact),
       onSelected: (i) => menuItems[i].onSelected(),
       itemBuilder: (_) => [
         for (var i = 0; i < menuItems.length; i++)

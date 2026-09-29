@@ -65,7 +65,7 @@ class ReceiptCard extends ConsumerWidget {
     if (receipt.isStale && !receipt.isVoided) {
       meta = l10n.receiptsCardStaleWarning;
     } else if (receipt.isVoided && receipt.voidedReason != null) {
-      meta = receipt.voidedReason;
+      meta = l10n.receiptsTimelineVoidReasonPrefix(receipt.voidedReason!);
     }
 
     return SummaryCard(
@@ -107,7 +107,7 @@ class ReceiptCard extends ConsumerWidget {
         if (!receipt.isVoided && !isVoiding)
           SummaryMenuItem(
             key: Key('btn_void_card_${receipt.id}'),
-            label: l10n.receiptsVoidMenuItem,
+            label: l10n.receiptsVoidTooltip,
             destructive: true,
             onSelected: () => _showVoidDialog(context, ref),
           ),
