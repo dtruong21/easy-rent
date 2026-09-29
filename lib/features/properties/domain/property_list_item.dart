@@ -19,6 +19,7 @@ class PropertyListItem {
     this.currentTenantName,
     this.currentRentLabel,
     this.currentRentHcCents,
+    this.currentRentCcCents,
   });
 
   /// Le bien immobilier complet (tous les champs scalaires).
@@ -37,6 +38,10 @@ class PropertyListItem {
   /// vacant. Nécessaire aux calculs de rentabilité (`core/finance`), qui
   /// attendent le loyer HC et non le libellé CC formaté.
   final int? currentRentHcCents;
+
+  /// Loyer charges comprises (loyer + charges) du bail actif, en centimes,
+  /// ou `null` si vacant. Chiffre clé des cartes de liste.
+  final int? currentRentCcCents;
 
   /// Construit un [PropertyListItem] depuis le JSON brut de PostgREST.
   ///
@@ -64,6 +69,7 @@ class PropertyListItem {
     String? rentLabel;
     String? leaseId;
     int? rentHcCents;
+    int? rentCcCents;
 
     if (activeLease != null) {
       leaseId = activeLease['id'] as String?;
@@ -82,6 +88,7 @@ class PropertyListItem {
         final total = rentCents + (chargesCents ?? 0);
         rentLabel = '${MoneyFormat.formatEurosFromCents(total)} CC / mois';
         rentHcCents = rentCents;
+        rentCcCents = total;
       }
     }
 
@@ -91,6 +98,7 @@ class PropertyListItem {
       currentTenantName: tenantName,
       currentRentLabel: rentLabel,
       currentRentHcCents: rentHcCents,
+      currentRentCcCents: rentCcCents,
     );
   }
 }

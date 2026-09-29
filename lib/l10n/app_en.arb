@@ -27,6 +27,10 @@
   "@commonMoreActions": {
     "description": "Tooltip of the ⋮ overflow menu on list cards"
   },
+  "commonRentCcPerMonthCaption": "incl. charges / month",
+  "@commonRentCcPerMonthCaption": {
+    "description": "Caption under the monthly rent (rent + charges) key figure on list cards"
+  },
   "commonBack": "Back",
   "@commonBack": {
     "description": "Generic back navigation action."

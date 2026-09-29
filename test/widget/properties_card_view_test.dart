@@ -4,9 +4,9 @@ import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
 import 'package:easyrent/features/properties/presentation/widgets/properties_card_view.dart';
 import 'package:easyrent/features/properties/presentation/widgets/property_card.dart';
-import 'package:easyrent/features/properties/presentation/widgets/property_color_dot.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +42,7 @@ PropertyListItem _makeItem({
   property: _makeProperty(id: id, name: name),
   activeLeaseId: activeLeaseId,
   currentTenantName: tenantName,
-  currentRentLabel: activeLeaseId != null ? '1 200,00 € CC / mois' : null,
+  currentRentCcCents: activeLeaseId != null ? 120000 : null,
 );
 
 Widget _buildCardView(List<PropertyListItem> items) {
@@ -192,7 +192,7 @@ void main() {
     });
 
     testWidgets(
-      'chaque bien affiche sa pastille de couleur d\'identité (FEAT-057) — '
+      'chaque bien affiche un liseré de couleur d\'identité (FEAT-057) — '
       'même un bien "legacy" sans colorKey stockée (repli déterministe, '
       'jamais sans couleur)',
       (tester) async {
@@ -204,7 +204,11 @@ void main() {
         await tester.pumpWidget(_buildCardView(items));
         await tester.pumpAndSettle();
 
-        expect(find.byType(PropertyColorDot), findsNWidgets(2));
+        final cards = tester.widgetList<SummaryCard>(find.byType(SummaryCard));
+        expect(cards, hasLength(2));
+        for (final card in cards) {
+          expect(card.accentColor, isNotNull);
+        }
       },
     );
   });
