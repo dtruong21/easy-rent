@@ -294,9 +294,11 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
   > ⚠️ **`--dart-define=APP_ENV=prod` obligatoire sur les builds de release
   > mobile.** Sans lui, `APP_ENV` retombe sur son défaut `'dev'` → l'app afficherait
   > le badge « DEV/STAGING » à de vrais utilisateurs. La base Firestore, elle,
-  > reste protégée quoi qu'il arrive : le `firestoreProvider` route tout build
-  > mobile vers `(default)` via le garde `kIsWeb` (ADR 0003) — mais l'affichage
-  > `Env.isProd` dépend bien de ce flag.
+  > reste protégée quoi qu'il arrive : le `firestoreProvider` route **tout build
+  > mobile de release** vers `(default)` (garde `kIsWeb` ; `MOBILE_STAGING` est
+  > ignoré en release — ADR 0003) — mais l'affichage `Env.isProd` dépend bien de
+  > ce flag. Seul le build **debug** de test avec `MOBILE_STAGING` vise `staging`
+  > (cf. [Test Lab (Robo)](#test-lab-robo)).
 
   Le build number (= nb de commits) est strictement croissant → un nouveau
   build à uploader sur le store aura toujours un numéro supérieur au précédent
