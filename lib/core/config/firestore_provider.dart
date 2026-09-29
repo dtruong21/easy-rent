@@ -35,8 +35,8 @@ bool shouldUseStagingDatabase({
 /// **Fail-safe vers `(default)` = prod**, exactement comme le backend
 /// (`dbForRequest`). On ne route vers la base `staging` que sur un signal
 /// POSITIF et non ambigu :
-/// - **Staging web déployé** (`stage.baillan.com`, `APP_ENV=dev`, non-émulateur)
-///   → base nommée [`staging`](kStagingDatabaseId), séparée de la prod. Le garde
+/// - **Staging web déployé** (`app.staging.baillan.com`, `APP_ENV=dev`,
+///   non-émulateur) → base nommée [`staging`](kStagingDatabaseId), séparée de la prod. Le garde
 ///   `kIsWeb` est critique : la commande de release mobile documentée
 ///   (`docs/MOBILE.md`) ne passe pas `APP_ENV`, donc `APP_ENV` retombe sur son
 ///   défaut `'dev'` — sans ce garde, une release mobile enverrait les vrais
