@@ -36,6 +36,7 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - Functions : `dbForRequest` async — web routé par Origin (inchangé), appels mobiles (sans Origin) routés par la base du compte (`dbForLandlordUid`, prod d'abord). **Redéploiement de toutes les Functions requis.**
 - App : réglage `MOBILE_STAGING` (ignoré en release) → base `staging`, auto-login d'un compte de test staging-only (`dart-defines.testlab.json`, gitignoré), ruban « STAGING ».
 - Doc : `docs/MOBILE.md` (Test Lab / Robo), ADR 0003 amendée, domaine staging corrigé dans `ENVIRONMENTS.md`.
+- Outil : `tool/seed/seed_testlab_staging.mjs` — sème le compte de test (Auth email vérifié, `landlords/{uid}` dans `staging` seulement, données via les callables avec l'Origin staging web) et écrit `dart-defines.testlab.json` ; refuse tout compte présent en prod.
 
 ### FEAT-059 — Cartes de liste « chiffre clé » + puces de filtre (2026-09-29)
 - `SummaryCard` (core) : liseré couleur du bien, montant en gros à droite, 1 action rapide + menu ⋮ ; ~90 px au lieu de ~150. Adaptateurs : `PropertyCard`, `LeaseCard`, `TenantCard` (Appeler / email), `ReceiptCard` (Envoyer = `ShareReceiptButton`).

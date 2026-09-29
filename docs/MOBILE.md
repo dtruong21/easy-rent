@@ -119,22 +119,35 @@ base Firestore **`staging`** — jamais la prod. Détails d'architecture :
 - **Functions déployées avec le routage mobile par compte** (`dbForRequest`
   async, appels sans `Origin` routés par compte). Sans ce déploiement, les
   callables du build de test écrivent en prod.
-- **Compte de test** créé **une seule fois** sur `https://app.staging.baillan.com`
-  (son doc `landlords/{uid}` vit alors dans la base `staging`). Il doit exister
-  **avant** de lancer Test Lab : si le doc est absent de `staging`, les callables
-  mobiles retombent sur la prod.
+- **Compte de test** semé par
+  [`tool/seed/seed_testlab_staging.mjs`](../tool/seed/seed_testlab_staging.mjs)
+  (à lancer soi-même, compte owner) :
+
+  ```bash
+  gcloud auth application-default login          # une fois
+  node tool/seed/seed_testlab_staging.mjs --yes-staging
+  ```
+
+  Le script crée (ou reprend) le compte Auth `testlab.robo@example.com` (email
+  marqué vérifié, mot de passe aléatoire renouvelé à chaque run), écrit son doc
+  `landlords/{uid}` **uniquement** dans `staging` (profil complet, palier
+  `paid`), crée un jeu de données réaliste via les vraies callables (routées vers
+  `staging` par l'Origin de l'app web staging — marche **sans** le redéploiement
+  des Functions) et remplit `dart-defines.testlab.json` (gitignoré ; le mot de
+  passe n'est jamais affiché). Il **refuse** tout compte qui a un doc landlord en
+  prod, avant d'y toucher. Rejouable : pas de nouveau seed si des biens existent.
+  Vérifiable d'abord sur les émulateurs (mode décrit en tête du script).
+  - Le doc `landlords/{uid}` doit exister dans `staging` **avant** de lancer
+    Test Lab : s'il est absent, les callables mobiles retombent sur la prod.
   - **Email vérifié** obligatoire : le routeur de l'app ne laisse passer que les
     comptes non anonymes avec `emailVerified == true`
     (`auth_session_provider.dart`) ; sinon Robo reste bloqué sur l'écran de
-    vérification.
-  - Terminer aussi l'onboarding / le profil sur le web staging, pour que Robo
-    arrive sur de vrais écrans.
+    vérification. Le script le positionne.
   - **Ne jamais utiliser ce compte en prod** : le routage mobile cherche la prod
     d'abord, un compte présent dans les deux bases serait routé en prod.
   - **Mot de passe dédié** : les identifiants d'auto-login sont des constantes de
     compilation, lisibles dans l'APK debug (que Test Lab stocke dans le bucket du
-    projet). Utiliser un mot de passe unique, employé nulle part ailleurs — jamais
-    un mot de passe personnel.
+    projet). Le script génère un mot de passe aléatoire propre à ce compte.
 
 **Vérification préalable (smoke test) — avant le premier run Robo**
 
@@ -148,8 +161,9 @@ Tant que les Functions ne sont pas redéployées, les callables du build de test
 **Build et lancement**
 
 ```bash
-# 1. Dart-defines (fichier gitignoré) : renseigner TEST_AUTO_LOGIN_EMAIL / _PASSWORD
-cp dart-defines.testlab.example.json dart-defines.testlab.json
+# 1. Dart-defines (fichier gitignoré) : écrit par le script de seed ci-dessus.
+#    (À la main : cp dart-defines.testlab.example.json dart-defines.testlab.json
+#     puis renseigner TEST_AUTO_LOGIN_EMAIL / _PASSWORD.)
 
 # 2. Build APK debug
 flutter build apk --debug --dart-define-from-file=dart-defines.testlab.json
@@ -174,9 +188,9 @@ gcloud firebase test android run --type robo \
 - **Risque Robo — écrans destructifs.** L'auto-login rend la session « récente » :
   Robo peut donc atteindre les écrans sensibles du compte (déconnexion,
   « Supprimer mon compte » — qui supprime l'utilisateur Auth **partagé** —,
-  changement d'email ou de mot de passe). Reprise après incident : recréer le
-  compte de test sur l'app web staging, puis mettre à jour
-  `dart-defines.testlab.json`.
+  changement d'email ou de mot de passe). Reprise après incident : relancer
+  `node tool/seed/seed_testlab_staging.mjs --yes-staging` (recrée le compte et
+  réécrit `dart-defines.testlab.json`), puis reconstruire l'APK.
 - **Comptes anonymes résiduels.** Les comptes anonymes que Robo pourrait créer ne
   sont pas nettoyés par `cleanup_expired_anon` (il ne scanne que `(default)`) :
   à purger à la main s'ils s'accumulent.
