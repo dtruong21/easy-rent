@@ -7,8 +7,11 @@ interface Props {
   title: string;
   description: string;
   noindex?: boolean;
+  /** La page gère elle-même ses largeurs (bandes pleine largeur) : `main`
+   *  ne contraint ni la largeur ni les marges. Utilisé par l'accueil. */
+  fullBleed?: boolean;
 }
-const { title, description, noindex = false } = Astro.props;
+const { title, description, noindex = false, fullBleed = false } = Astro.props;
 const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
 ---
 <!doctype html>
@@ -24,18 +27,19 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
+    <link rel="preload" href="/fonts/EBGaramond-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <slot name="head" />
   </head>
   <body>
     <header class="site-nav">
-      <a class="brand" href="/">Baillan</a>
+      <a class="brand" href="/" aria-label="Baillan, accueil">Baillan</a>
       <nav>
         <a href="/faq">FAQ</a>
         <a href="/a-propos">À propos</a>
         <a class="cta" href={appUrl}>Ouvrir l'app</a>
       </nav>
     </header>
-    <main><slot /></main>
+    <main class:list={{ 'full-bleed': fullBleed }}><slot /></main>
     <footer class="site-footer">
       <a href="/mentions-legales">Mentions légales</a>
       <a href={`${appUrl}/privacy`}>Confidentialité</a>
@@ -44,6 +48,42 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     </footer>
   </body>
 </html>
+
+<style is:global>
+  /* EB Garamond : la typographie de titre de l'app (assets/fonts, licence OFL
+     dans public/fonts/OFL.txt), auto-hébergée — aucun appel à un service
+     tiers. Le texte courant reste en police système, comme dans l'app. */
+  @font-face {
+    font-family: 'EB Garamond';
+    src: url('/fonts/EBGaramond-Regular.ttf') format('truetype');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'EB Garamond';
+    src: url('/fonts/EBGaramond-Medium.ttf') format('truetype');
+    font-weight: 500; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'EB Garamond';
+    src: url('/fonts/EBGaramond-Italic.ttf') format('truetype');
+    font-weight: 400; font-style: italic; font-display: swap;
+  }
+  :root {
+    --font-display: 'EB Garamond', Garamond, 'Times New Roman', serif;
+    --font-text: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1.12;
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-olive);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+</style>
 
 <style>
   :root {
@@ -64,7 +104,7 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     margin: 0;
     background: var(--color-cream);
     color: var(--color-ink);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-text);
     line-height: 1.6;
   }
   .site-nav, .site-footer {
@@ -79,13 +119,17 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     border-bottom: 1px solid var(--color-rule);
   }
   .site-nav nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
-  .brand { font-weight: 800; font-size: 1.15rem; text-decoration: none; color: var(--color-ink); }
+  .brand {
+    font-family: var(--font-display); font-style: italic; font-weight: 400;
+    font-size: 1.55rem; line-height: 1; text-decoration: none; color: var(--color-ink);
+  }
   .site-nav a, .site-footer a { color: var(--color-ink-muted); text-decoration: none; }
   .site-nav a:hover, .site-footer a:hover { color: var(--color-ink); text-decoration: underline; }
   .site-nav .cta {
     background: var(--color-olive); color: var(--color-cream);
-    padding: .55rem 1rem; border-radius: 7px; font-weight: 650;
+    padding: .55rem 1rem; border-radius: 6px; font-weight: 600;
   }
+  .site-nav .cta:hover { background: var(--color-olive-deep); color: var(--color-cream); text-decoration: none; }
   .site-footer {
     border-top: 1px solid var(--color-rule);
     margin-top: 4rem; font-size: .9rem; flex-wrap: wrap;
@@ -94,4 +138,13 @@ const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
     max-width: 68rem; margin: 0 auto;
     padding: var(--space-page) clamp(1rem, 5vw, 4rem);
   }
+  main.full-bleed { max-width: none; padding: 0; }
+  .site-nav a { white-space: nowrap; }
+  @media (max-width: 30rem) {
+    .site-nav { gap: 1rem; }
+    .site-nav nav { gap: .9rem; font-size: .92rem; }
+    .brand { font-size: 1.35rem; }
+    .site-nav .cta { padding: .5rem .75rem; }
+  }
+  .full-bleed + .site-footer { margin-top: 0; }
 </style>
