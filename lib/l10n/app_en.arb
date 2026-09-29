@@ -23,6 +23,10 @@
   "@commonEdit": {
     "description": "Generic edit action (buttons, menu items)."
   },
+  "commonMoreActions": "More actions",
+  "@commonMoreActions": {
+    "description": "Tooltip of the ⋮ overflow menu on list cards"
+  },
   "commonBack": "Back",
   "@commonBack": {
     "description": "Generic back navigation action."
