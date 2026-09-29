@@ -144,7 +144,7 @@ void main() {
       }
     });
 
-    testWidgets('desktop — toggle ViewMode visible (Cartes / Tableau)', (
+    testWidgets('desktop — toggle ViewMode visible (Cartes / Chronologie)', (
       tester,
     ) async {
       final container = ProviderContainer();
@@ -154,7 +154,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Cartes'), findsOneWidget);
-      expect(find.text('Tableau'), findsOneWidget);
+      // Le mode `table` ouvre la timeline : jamais « Tableau » ici.
+      expect(find.text('Chronologie'), findsOneWidget);
+      expect(find.text('Tableau'), findsNothing);
     });
 
     testWidgets('mobile — toggle ViewMode masqué', (tester) async {
@@ -165,7 +167,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Cartes'), findsNothing);
-      expect(find.text('Tableau'), findsNothing);
+      expect(find.text('Chronologie'), findsNothing);
     });
 
     testWidgets('desktop — clic "Cartes" → viewMode = ViewMode.card', (

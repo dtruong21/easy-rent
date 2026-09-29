@@ -60,7 +60,13 @@ class ReceiptsFilterBar extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
             ],
-            if (!context.isMobile) ViewModeToggle(pageKey: _viewModeKey),
+            if (!context.isMobile)
+              ViewModeToggle(
+                pageKey: _viewModeKey,
+                // Ici le mode `table` ouvre la timeline, pas un tableau.
+                cardsLabel: context.l10n.receiptsViewModeCards,
+                tableLabel: context.l10n.receiptsViewModeTimeline,
+              ),
           ],
         ),
       ),

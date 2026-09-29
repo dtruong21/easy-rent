@@ -231,4 +231,60 @@ void main() {
       expect(card.accentColor, isNull);
     });
   });
+
+  group('ReceiptsCardView — hauteur de cellule (mainAxisExtent 132)', () {
+    testWidgets('pire cas desktop 1280 px — aucun overflow', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final stale = Receipt(
+        id: 'r-stale',
+        landlordId: 'landlord-1',
+        leaseId: 'lease-1',
+        paymentIds: const ['pay-1'],
+        periodStart: DateTime(2026, 9, 1),
+        periodEnd: DateTime(2026, 9, 30),
+        totalCents: 123456789,
+        rentCents: 123000000,
+        chargesCents: 456789,
+        documentType: DocumentType.quittance,
+        pdfPath: 'l-1/r-stale.pdf',
+        isVoided: false,
+        isStale: true,
+        generatedAt: DateTime(2026, 9, 5),
+        createdAt: DateTime(2026, 9, 5),
+        sentAt: DateTime(2026, 9, 6),
+        sentToEmail: 'un.prenom.tres.long@un-domaine-tres-long-example.com',
+      );
+      final voided = Receipt(
+        id: 'r-voided',
+        landlordId: 'landlord-1',
+        leaseId: 'lease-1',
+        paymentIds: const ['pay-1'],
+        periodStart: DateTime(2026, 8, 1),
+        periodEnd: DateTime(2026, 8, 31),
+        totalCents: 123456789,
+        rentCents: 123000000,
+        chargesCents: 456789,
+        documentType: DocumentType.quittance,
+        pdfPath: 'l-1/r-voided.pdf',
+        isVoided: true,
+        voidedAt: DateTime(2026, 8, 10),
+        voidedReason:
+            'Motif d\'annulation très long qui dépasse largement la largeur '
+            'disponible de la carte et doit être tronqué proprement sans '
+            'provoquer le moindre débordement de mise en page',
+        isStale: false,
+        generatedAt: DateTime(2026, 8, 5),
+        createdAt: DateTime(2026, 8, 5),
+      );
+
+      await tester.pumpWidget(_buildView([stale, voided]));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReceiptCard), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

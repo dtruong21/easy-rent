@@ -8,12 +8,14 @@ import 'dart:typed_data';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
+import 'package:easyrent/features/receipts/application/void_receipt_controller.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/receipt_card.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/share_receipt_button.dart';
+import 'package:easyrent/features/receipts/presentation/widgets/void_receipt_dialog.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +27,8 @@ import 'package:go_router/go_router.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeRepo implements ReceiptsRepository {
+  final List<String> renderedPdfIds = [];
+
   @override
   Future<List<Receipt>> listForLease(String leaseId) async => [];
   @override
@@ -47,7 +51,17 @@ class _FakeRepo implements ReceiptsRepository {
   }) async => throw UnimplementedError();
 
   @override
-  Future<Uint8List> renderPdfBytes(String receiptId) async => Uint8List(0);
+  Future<Uint8List> renderPdfBytes(String receiptId) async {
+    renderedPdfIds.add(receiptId);
+    return Uint8List(0);
+  }
+}
+
+/// Contrôleur d'annulation figé en `VoidReceiptSubmitting`.
+class _SubmittingVoidController extends VoidReceiptController {
+  _SubmittingVoidController(super.ref) {
+    state = const VoidReceiptSubmitting();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +103,11 @@ Receipt _makeReceipt({
   );
 }
 
-Widget _buildCard(Receipt receipt) {
+Widget _buildCard(
+  Receipt receipt, {
+  _FakeRepo? repo,
+  bool voidSubmitting = false,
+}) {
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -102,7 +120,13 @@ Widget _buildCard(Receipt receipt) {
   );
 
   return ProviderScope(
-    overrides: [receiptsRepositoryProvider.overrideWithValue(_FakeRepo())],
+    overrides: [
+      receiptsRepositoryProvider.overrideWithValue(repo ?? _FakeRepo()),
+      if (voidSubmitting)
+        voidReceiptControllerProvider.overrideWith(
+          (ref, _) => _SubmittingVoidController(ref),
+        ),
+    ],
     child: MaterialApp.router(
       routerConfig: router,
       theme: _appTheme(),
@@ -181,6 +205,67 @@ void main() {
 
       expect(find.byKey(const Key('btn_pdf_card_r-active')), findsOneWidget);
       expect(find.byKey(const Key('btn_void_card_r-active')), findsOneWidget);
+    });
+
+    testWidgets('tap sur la carte → ouvre le PDF (renderPdfBytes appelé)', (
+      tester,
+    ) async {
+      final repo = _FakeRepo();
+      await tester.pumpWidget(
+        _buildCard(_makeReceipt(id: 'r-tap'), repo: repo),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('receipt_card_r-tap')));
+      await tester.pumpAndSettle();
+
+      expect(repo.renderedPdfIds, ['r-tap']);
+    });
+
+    testWidgets('menu ⋮ → "Ouvrir le PDF" → renderPdfBytes appelé', (
+      tester,
+    ) async {
+      final repo = _FakeRepo();
+      await tester.pumpWidget(
+        _buildCard(_makeReceipt(id: 'r-pdf'), repo: repo),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('receipt_menu_r-pdf')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_pdf_card_r-pdf')));
+      await tester.pumpAndSettle();
+
+      expect(repo.renderedPdfIds, ['r-pdf']);
+    });
+
+    testWidgets('menu ⋮ → "Annuler" → ouvre le dialogue de confirmation', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildCard(_makeReceipt(id: 'r-void-dlg')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('receipt_menu_r-void-dlg')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_void_card_r-void-dlg')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VoidReceiptDialog), findsOneWidget);
+    });
+
+    testWidgets('annulation en cours (Submitting) — item Annuler absent', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildCard(_makeReceipt(id: 'r-busy'), voidSubmitting: true),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('receipt_menu_r-busy')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('btn_void_card_r-busy')), findsNothing);
+      expect(find.byKey(const Key('btn_pdf_card_r-busy')), findsOneWidget);
     });
   });
 }
