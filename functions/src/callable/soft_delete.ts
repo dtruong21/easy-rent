@@ -74,7 +74,7 @@ export const softDeleteEntity = onCall(
       );
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`${collection}/${id}`);
 
     // La purge Storage est un effet de BORD : elle ne peut pas vivre dans la

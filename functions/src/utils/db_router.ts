@@ -4,7 +4,9 @@
  * déployé (app : `app.staging.baillan.com`) → base nommée `dev`, séparée.
  *
  * Deux entrées selon la nature de l'appel :
- * - **Callables** (navigateur) → routage par l'en-tête **Origin** ([dbForRequest]).
+ * - **Callables** ([dbForRequest]) : web (Origin présent) → routage par
+ *   l'en-tête **Origin** ; mobile (Origin absent ou vide) → routage par la base
+ *   qui porte le doc landlord, comme le webhook.
  * - **Webhook RevenueCat** (server-to-server, sans Origin) → routage par la base
  *   qui contient réellement le doc landlord ([dbForLandlordUid]). C'est plus
  *   robuste que la metadata `env` prescrite par l'ADR : ça ne dépend d'aucune
@@ -56,14 +58,27 @@ export function isStagingOrigin(origin: unknown): boolean {
 }
 
 /**
- * Base Firestore pour une requête callable, routée par l'Origin du navigateur.
+ * Base Firestore pour une requête callable.
+ *
+ * - **Web** (Origin présent) : routage par l'Origin, inchangé — seul le
+ *   staging web va vers `staging`, tout le reste vers `(default)`.
+ * - **Mobile** (Origin absent ou vide — une app native n'en envoie pas) :
+ *   routage par la base qui porte le doc landlord ([dbForLandlordUid]), prod
+ *   d'abord. Un vrai utilisateur mobile a son compte en prod → prod ; le
+ *   compte de test du build Test Lab n'existe qu'en staging → staging.
+ *
  * Un client non-navigateur pourrait forger l'Origin, mais il ne routerait que
- * SES propres écritures vers `dev` (les rules d'ownership s'appliquent sur les
- * deux bases) — pas d'impact cross-user.
+ * SES propres écritures (les règles d'ownership s'appliquent sur les deux
+ * bases) — pas d'impact cross-user.
  */
-export function dbForRequest(request: CallableRequest): Firestore {
+export async function dbForRequest(
+  request: CallableRequest,
+): Promise<Firestore> {
   const origin = request.rawRequest?.headers?.origin;
-  return firestoreForEnv(isStagingOrigin(origin));
+  if (typeof origin === "string" && origin.length > 0) {
+    return firestoreForEnv(isStagingOrigin(origin));
+  }
+  return dbForLandlordUid(request.auth?.uid ?? "");
 }
 
 /**

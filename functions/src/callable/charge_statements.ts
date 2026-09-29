@@ -133,7 +133,7 @@ export const finalizeChargeRegularization = onCall(
         validateLineItems(rawLineItems, actualExpensesCents) :
         [];
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
 
     // 1. Landlord (champs légaux fullName + address requis, loi 1989)
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
@@ -243,7 +243,7 @@ export const voidChargeStatement = onCall(
     const statementId = requireString(data.statementId, "statementId");
     const reason = requireString(data.reason, "reason");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`charge_statements/${statementId}`);
 
     await db.runTransaction(async (tx) => {
@@ -277,7 +277,7 @@ export const markChargeStatementAsSent = onCall(
     const statementId = requireString(data.statementId, "statementId");
     const email = optionalString(data.email, "email");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`charge_statements/${statementId}`);
 
     await db.runTransaction(async (tx) => {

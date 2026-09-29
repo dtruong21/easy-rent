@@ -160,7 +160,7 @@ export const finalizeAnonymousUpgrade = onCall(
       );
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`landlords/${uid}`);
 
     return await db.runTransaction(async (tx) => {

@@ -191,7 +191,7 @@ export const createLease = onCall(
       "entryInventoryDone",
     );
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const leaseRef = db.collection("leases").doc();
     const propertyRef = db.doc(`properties/${propertyId}`);
     const tenantRef = db.doc(`tenants/${tenantId}`);
@@ -387,7 +387,7 @@ export const updateLease = onCall(
       }
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const leaseRef = db.doc(`leases/${id}`);
 
     // FEAT-044 : fail-closed sur activeLeasesCount absent (compte legacy) —
@@ -582,7 +582,7 @@ export const createPayment = onCall(
     const notes = optionalString(data.notes, "notes");
     const reference = optionalString(data.reference, "reference");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const leaseRef = db.doc(`leases/${leaseId}`);
     const paymentRef = db.collection("payments").doc();
 
@@ -657,7 +657,7 @@ export const updatePayment = onCall(
       }
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`payments/${id}`);
     const snap = await ref.get();
     const p = dataOrFail(snap, "payment not found");

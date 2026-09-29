@@ -85,7 +85,7 @@ export const deleteAccount = onCall(
     // AUTORITATIF côté Admin SDK : anonyme ⇔ aucun provider lié.
     await assertRecentAuthForNonAnonymousAccount(request, uid);
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
 
     try {
       // (a) Quittances : rétention légale — stamp, jamais delete.

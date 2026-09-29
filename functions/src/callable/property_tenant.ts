@@ -173,7 +173,7 @@ export const createProperty = onCall(
       {min: 0},
     );
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const propertyRef = db.collection("properties").doc();
 
@@ -305,7 +305,7 @@ export const createTenant = onCall(
     const guarantorEmail = optionalString(data.guarantorEmail, "guarantorEmail");
     const guarantorPhone = optionalString(data.guarantorPhone, "guarantorPhone");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const tenantRef = db.collection("tenants").doc();
 

@@ -82,7 +82,7 @@ export const createEtatDesLieux = onCall(
     };
     const generalComment = optionalString(data.generalComment, "generalComment") ?? null;
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
 
     // Landlord (fullName + address légaux : le décret 2016-382 exige le
     // domicile du bailleur sur l'EDL — même exigence que les quittances/régul).

@@ -1,16 +1,23 @@
+import type {CallableRequest} from "firebase-functions/v2/https";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
 import {
   dbForLandlordUid,
+  dbForRequest,
   isStagingOrigin,
   STAGING_ORIGIN,
 } from "../utils/db_router";
 
-import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
 
 // `admin.firestore()` (chemin (default)/prod du routeur) est mocké par le fake
-// partagé. Le chemin `dev` (`getFirestore` de firebase-admin/firestore) n'est
-// PAS mocké — les tests ci-dessous évitent volontairement de l'atteindre.
+// partagé (`fakeAdminFirestoreHolder`). Le chemin `staging`
+// (`getFirestore(STAGING_DATABASE_ID)` de firebase-admin/firestore) est mocké
+// par `helpers/setup_firestore_mock.ts` → `fakeStagingFirestoreHolder`.
 vi.mock("firebase-admin", async () => {
   const {makeFakeAdminModule} = await import("./helpers/fake_firestore");
   return makeFakeAdminModule();
@@ -67,5 +74,57 @@ describe("dbForLandlordUid — fail-safe prod-first", () => {
     // `getFirestore('dev')` non-mocké et lèverait — le test échouerait donc
     // aussi sur une régression d'ordre.
     expect(await dbForLandlordUid("u1")).toBe(fakeDb);
+  });
+});
+
+describe("dbForRequest — web par Origin, mobile par compte", () => {
+  let prod: FakeFirestore;
+  let staging: FakeFirestore;
+
+  beforeEach(() => {
+    prod = new FakeFirestore();
+    staging = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = prod;
+    fakeStagingFirestoreHolder.db = staging;
+  });
+
+  const req = (uid: string, origin?: string) =>
+    ({
+      auth: {uid},
+      rawRequest: {headers: origin === undefined ? {} : {origin}},
+    }) as unknown as CallableRequest;
+
+  it("web : Origin staging → staging, même si le compte est en prod", async () => {
+    prod.seed("landlords/u1", {id: "u1"});
+    expect(await dbForRequest(req("u1", STAGING_ORIGIN))).toBe(staging);
+  });
+
+  it("web : Origin prod → prod", async () => {
+    staging.seed("landlords/u1", {id: "u1"});
+    expect(await dbForRequest(req("u1", "https://baillan.com"))).toBe(prod);
+  });
+
+  it("web : Origin inattendu → prod", async () => {
+    expect(await dbForRequest(req("u1", "https://evil.example"))).toBe(prod);
+  });
+
+  it("mobile : compte en prod → prod", async () => {
+    prod.seed("landlords/u1", {id: "u1"});
+    staging.seed("landlords/u1", {id: "u1"});
+    expect(await dbForRequest(req("u1"))).toBe(prod);
+  });
+
+  it("mobile : compte uniquement en staging → staging", async () => {
+    staging.seed("landlords/u2", {id: "u2"});
+    expect(await dbForRequest(req("u2"))).toBe(staging);
+  });
+
+  it("mobile : compte absent → prod (fail-safe)", async () => {
+    expect(await dbForRequest(req("u3"))).toBe(prod);
+  });
+
+  it("mobile : Origin vide traité comme absent", async () => {
+    staging.seed("landlords/u2", {id: "u2"});
+    expect(await dbForRequest(req("u2", ""))).toBe(staging);
   });
 });
