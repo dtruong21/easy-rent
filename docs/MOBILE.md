@@ -107,6 +107,62 @@ flutter build ios --simulator      # iOS simulateur (pas de codesign)
 flutter run -d <device>            # run direct émulateur/simulateur
 ```
 
+## Test Lab (Robo)
+
+Build Android **debug** de test, lancé sur le Firebase Test Lab (Robo) contre la
+base Firestore **`staging`** — jamais la prod. Détails d'architecture :
+[`ENVIRONMENTS.md`](ENVIRONMENTS.md) (« Build de test mobile ») et ADR 0003
+(amendement 2026-09-29).
+
+**Prérequis**
+
+- **Functions déployées avec le routage mobile par compte** (`dbForRequest`
+  async, appels sans `Origin` routés par compte). Sans ce déploiement, les
+  callables du build de test écrivent en prod.
+- **Compte de test** créé **une seule fois** sur `https://app.staging.baillan.com`
+  (son doc `landlords/{uid}` vit alors dans la base `staging`). Il doit exister
+  **avant** de lancer Test Lab : si le doc est absent de `staging`, les callables
+  mobiles retombent sur la prod.
+  - **Email vérifié** obligatoire : le routeur de l'app ne laisse passer que les
+    comptes non anonymes avec `emailVerified == true`
+    (`auth_session_provider.dart`) ; sinon Robo reste bloqué sur l'écran de
+    vérification.
+  - Terminer aussi l'onboarding / le profil sur le web staging, pour que Robo
+    arrive sur de vrais écrans.
+  - **Ne jamais utiliser ce compte en prod** : le routage mobile cherche la prod
+    d'abord, un compte présent dans les deux bases serait routé en prod.
+
+**Build et lancement**
+
+```bash
+# 1. Dart-defines (fichier gitignoré) : renseigner TEST_AUTO_LOGIN_EMAIL / _PASSWORD
+cp dart-defines.testlab.example.json dart-defines.testlab.json
+
+# 2. Build APK debug
+flutter build apk --debug --dart-define-from-file=dart-defines.testlab.json
+
+# 3. Lancement Robo (modèles disponibles : gcloud firebase test android models list)
+gcloud firebase test android run --type robo \
+  --app build/app/outputs/flutter-apk/app-debug.apk \
+  --device model=MediumPhone.arm,version=34 \
+  --device model=Pixel2.arm,version=30 \
+  --timeout 300s --project easy-rent-54cd4
+```
+
+**À savoir**
+
+- `MOBILE_STAGING` et l'auto-login n'ont **aucun effet en release**
+  (`kReleaseMode`) : le build de test est un APK debug, la release store n'est
+  pas concernée.
+- L'app se connecte seule au compte de test au démarrage et affiche un ruban
+  violet « STAGING » (le ruban « EMULATOR » prime si l'émulateur est aussi actif).
+- Effet de bord d'un `flutter build apk` local : Flutter peut ajouter
+  `android.builtInKotlin=false` et `android.newDsl=false` à
+  `android/gradle.properties` — ne pas les committer (`git checkout android/gradle.properties`).
+
+**Résultats** : console Firebase → Test Lab (plantages, captures, vidéo). Quota
+gratuit : 10 tests/jour sur appareils virtuels.
+
 ## TL;DR
 
 Le codebase est **déjà largement portable** : les seuls points web-only sont

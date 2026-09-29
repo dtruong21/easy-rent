@@ -332,3 +332,39 @@ en `(default)` et le webhook (qui teste prod d'abord) basculerait le compte prod
   rattrapé par le reconcile (seul l'event webhook `EXPIRATION`/`CANCELLATION`,
   routé vers `dev`, le gère) ; les triggers de dénormalisation ne se déclenchent
   pas sur `dev`. Acceptable pour un environnement de preview.
+
+## Amendement 2026-09-29 — routage mobile par compte
+
+**Motivation.** Lancer un build Android de test sur le Firebase Test Lab (Robo)
+sans polluer la prod : le build doit lire/écrire dans la base `staging`. La
+limitation « mobile = `(default)` partout » (ci-dessus) empêchait tout bac à
+sable mobile — l'émulateur ne couvre pas le Test Lab.
+
+**Décision.**
+- `dbForRequest(request)` devient **asynchrone** (`Promise<Firestore>`) ; les 24
+  sites d'appel des 13 callables font `await dbForRequest(request)`.
+- **Web, inchangé** : Origin présent → routage par l'en-tête `Origin`
+  (`https://app.staging.baillan.com` → `staging`, tout le reste → `(default)`).
+- **Appels sans Origin** (app native, Origin absent ou vide) → `dbForLandlordUid`
+  (`request.auth?.uid`) : base qui porte `landlords/{uid}`, **prod d'abord**
+  (fail-safe), puis `staging`, absent des deux → `(default)`.
+- **Côté app** : `Env.useMobileStaging` (`MOBILE_STAGING`, désactivé en release
+  via `kReleaseMode`) fait viser la base `staging` à `firestoreProvider` ; un
+  auto-login à un compte de test dédié (`dart-defines.testlab.json`, gitignoré)
+  évite de saisir des identifiants dans Robo. La limitation « tout build mobile
+  → `(default)` » ne vaut donc plus que pour les builds sans ce flag (donc toute
+  release) — le défaut reste fail-safe.
+
+**Coût.** **+1 lecture Firestore par appel callable mobile** (2 pour le compte de
+test staging : prod puis staging). **Toutes les Functions sont à redéployer**
+(déploiement manuel, hors CI).
+
+**Discipline.** Le compte de test doit être **staging-only** : créé sur
+`app.staging.baillan.com`, doc `landlords/{uid}` présent en `staging` **avant** le
+run (sinon repli sur la prod), **jamais utilisé en prod** (même contrainte que
+pour le webhook : un uid présent dans les deux bases est routé en prod). Email
+vérifié requis (le routeur de l'app bloque les comptes non vérifiés).
+
+**Sécurité.** Un client non-navigateur peut forger l'`Origin`, mais ne route que
+ses propres écritures : les règles d'ownership s'appliquent sur les deux bases,
+sans impact cross-user. Procédure opérationnelle : [`docs/MOBILE.md`](../MOBILE.md#test-lab-robo).
