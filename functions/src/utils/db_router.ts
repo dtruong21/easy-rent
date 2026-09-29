@@ -1,7 +1,7 @@
 /**
  * Routage de la base Firestore par environnement (ADR 0003 — isolation
  * prod/staging). Prod (app : `app.baillan.com`) → base `(default)` ; staging
- * déployé (app : `app.staging.baillan.com`) → base nommée `dev`, séparée.
+ * déployé (app : `app.staging.baillan.com`) → base nommée `staging`, séparée.
  *
  * Deux entrées selon la nature de l'appel :
  * - **Callables** ([dbForRequest]) : web (Origin présent) → routage par
@@ -32,7 +32,7 @@ import type {CallableRequest} from "firebase-functions/v2/https";
  */
 export const STAGING_DATABASE_ID = "staging";
 
-/** Origin du site staging — la SEULE origine routée vers la base `dev`. */
+/** Origin du site staging — la SEULE origine routée vers la base `staging`. */
 export const STAGING_ORIGIN = "https://app.staging.baillan.com";
 
 /**
@@ -41,8 +41,8 @@ export const STAGING_ORIGIN = "https://app.staging.baillan.com";
  * Le chemin `(default)` passe par `admin.firestore()` — et non `getFirestore()`
  * — car c'est le seam que tout le code et les tests (`vi.mock("firebase-admin")`)
  * utilisent déjà pour la base par défaut : back-compat totale, comportement prod
- * strictement identique. La base nommée `dev` n'a pas d'équivalent namespacé,
- * d'où `getFirestore(id)`.
+ * strictement identique. La base nommée `staging` n'a pas d'équivalent
+ * namespacé, d'où `getFirestore(id)`.
  */
 export function firestoreForEnv(isDev: boolean): Firestore {
   return isDev ? getFirestore(STAGING_DATABASE_ID) : admin.firestore();
@@ -68,8 +68,9 @@ export function isStagingOrigin(origin: unknown): boolean {
  *   compte de test du build Test Lab n'existe qu'en staging → staging.
  *
  * Un client non-navigateur pourrait forger l'Origin, mais il ne routerait que
- * SES propres écritures (les règles d'ownership s'appliquent sur les deux
- * bases) — pas d'impact cross-user.
+ * SES propres écritures : les callables restent bornées à `request.auth.uid`
+ * par leurs propres contrôles (`requireAuthUid`, `landlordId === uid`) — pas
+ * d'impact cross-user.
  */
 export async function dbForRequest(
   request: CallableRequest,
@@ -83,9 +84,10 @@ export async function dbForRequest(
 
 /**
  * Base Firestore contenant le doc `landlords/{uid}`, pour les flux
- * server-to-server SANS Origin (webhook RevenueCat). Cherche d'abord la prod
+ * server-to-server SANS Origin (webhook RevenueCat) et pour les callables
+ * mobiles ([dbForRequest]). Cherche d'abord la prod
  * `(default)` — fail-safe : un vrai compte prod ne doit jamais être écrit dans
- * `dev` —, puis `dev`. Un uid ne vit que dans UNE base (l'utilisateur s'est
+ * `staging` —, puis `staging`. Un uid ne vit que dans UNE base (l'utilisateur s'est
  * inscrit sur prod OU staging), donc la 1re base qui porte le doc est la bonne.
  * Absent des deux → `(default)` (le webhook renverra `no_landlord`).
  *
