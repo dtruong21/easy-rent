@@ -304,7 +304,7 @@ export const createDocument = onCall(
       );
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
 
     // À partir d'ici, l'objet est DÉJÀ dans le bucket (le client uploade avant
     // d'appeler) et le préfixe `documents/{uid}/` est vérifié : tout refus doit
@@ -411,7 +411,7 @@ export const getDocumentDownloadUrl = onCall(
     const data = asBag(request.data);
     const documentId = requireString(data.documentId, "documentId");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const snap = await db.doc(`documents/${documentId}`).get();
     const doc = dataOrFail(snap, "document not found");
     if (doc.landlordId !== uid) {
@@ -469,7 +469,7 @@ export const updateDocumentCategory = onCall(
       throw new HttpsError("invalid-argument", `invalid category: ${category}`);
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`documents/${documentId}`);
     const snap = await ref.get();
     const doc = dataOrFail(snap, "document not found");

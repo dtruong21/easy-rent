@@ -289,7 +289,7 @@ export const createExpense = onCall(
       throw new HttpsError("invalid-argument", "notes must be <= 2000 chars");
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const propertyRef = db.doc(`properties/${propertyId}`);
     const leaseRef = leaseId ? db.doc(`leases/${leaseId}`) : null;
     const documentRef = documentId ? db.doc(`documents/${documentId}`) : null;
@@ -393,7 +393,7 @@ export const updateExpense = onCall(
       }
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const expenseRef = db.doc(`expenses/${id}`);
 
     return await db.runTransaction(async (tx) => {

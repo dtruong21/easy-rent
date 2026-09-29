@@ -180,7 +180,7 @@ export const createScenario = onCall(
     const uid = requireAuthUid(request);
     const inputs = parseScenarioInputs(asBag(request.data));
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
     if (!landlordSnap.exists) {
       throw new HttpsError("not-found", "landlord not found");

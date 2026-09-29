@@ -223,7 +223,7 @@ export const createCheckoutSession = onCall(
 
     // Garde anti-double-abonnement : lecture du doc landlord AVANT tout appel
     // Stripe. `dbForRequest` route staging/prod (ADR 0003).
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
     assertCanOpenCheckout(
       landlordSnap.exists ?

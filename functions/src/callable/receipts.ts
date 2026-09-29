@@ -136,7 +136,7 @@ export const generateReceipt = onCall(
       );
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
 
     // 1. Load landlord (legal fields fullName + address required)
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
@@ -308,7 +308,7 @@ export const voidReceipt = onCall(
     const receiptId = requireString(data.receiptId, "receiptId");
     const reason = requireString(data.reason, "reason");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`receipts/${receiptId}`);
 
     await db.runTransaction(async (tx) => {
@@ -342,7 +342,7 @@ export const markReceiptAsSent = onCall(
     const receiptId = requireString(data.receiptId, "receiptId");
     const email = optionalString(data.email, "email");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`receipts/${receiptId}`);
 
     await db.runTransaction(async (tx) => {

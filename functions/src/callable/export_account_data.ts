@@ -56,7 +56,7 @@ export const exportAccountData = onCall(
     const uid = requireAuthUid(request);
     await assertRecentAuthForNonAnonymousAccount(request, uid);
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const result: Record<string, unknown> = {
       exportedAt: new Date().toISOString(),
       schemaVersion: 1,

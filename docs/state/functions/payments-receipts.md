@@ -6,7 +6,7 @@ Paiements (FEAT-006/029) + quittances (FEAT-007). Fichiers : `functions/src/call
 
 ## Callables — Payments
 
-**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+**ADR 0003** : tous les callables écrivant Firestore utilisent `await dbForRequest(request)` pour router vers la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 
 ### `createPayment` (FEAT-006)
 Client invoke.

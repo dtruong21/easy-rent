@@ -478,6 +478,16 @@ export const fakeAdminFirestoreHolder: {
 };
 
 /**
+ * Base nommée `staging` en test : `getFirestore(STAGING_DATABASE_ID)` (mocké
+ * par `setup_firestore_mock.ts`) renvoie `db`. Vide par défaut — un appel
+ * mobile dont le landlord n'est pas en prod retombe donc sur la prod, comme
+ * en production quand le doc n'existe nulle part.
+ */
+export const fakeStagingFirestoreHolder: {db: FakeFirestore} = {
+  db: new FakeFirestore(),
+};
+
+/**
  * `admin.firestore.Timestamp` fake — `fromMillis`/`fromDate` retournent des
  * `Date` (suffisant pour asserter les champs écrits dans le store).
  */

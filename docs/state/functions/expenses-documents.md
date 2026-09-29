@@ -6,7 +6,7 @@ Dépenses (FEAT-041a) + documents (FEAT-008, v2 FEAT-041b). Fichiers : `function
 
 ## Callables — Documents
 
-**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+**ADR 0003** : tous les callables écrivant Firestore utilisent `await dbForRequest(request)` pour router vers la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 
 ### `createDocument` (v3, FEAT-008/FEAT-041b/FEAT-044/FEAT-056)
 Client invoke. **v3 (2026-08-03+) : taille RÉELLE lue depuis Storage, paliers différenciés par tier.**
