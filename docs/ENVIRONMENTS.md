@@ -109,9 +109,10 @@ Storage**. Le défaut est `dev`, c'est-à-dire le mode le moins exposé.
 > 📌 **Isolation implémentée (ADR 0003).** Les accès Firestore de `lib/` passent
 > désormais par `firestoreProvider` (`lib/core/config/firestore_provider.dart`),
 > et `firebase.json` déclare les deux bases `(default)` + `staging`. Le routage
-> est **fail-safe vers `(default)`** : seul un build **web** de staging
-> (`kIsWeb && APP_ENV=dev`) vise `staging` ; tout build mobile reste sur
-> `(default)` — sauf le build de test mobile (ci-dessous).
+> est **fail-safe vers `(default)`** : seuls un build **web** de staging
+> (`kIsWeb && APP_ENV=dev`) et le build de test mobile (debug, `MOBILE_STAGING`,
+> ci-dessous) visent `staging` ; tout build mobile de release reste sur
+> `(default)`.
 
 ### Build de test mobile (Test Lab)
 
@@ -128,8 +129,11 @@ actif dans un build store). Il sert au Firebase Test Lab (Robo), qui ne doit pas
   `landlords/{uid}`, prod d'abord) ; le web reste routé par `Origin`. Requiert
   des Functions redéployées avec ce routage — cf. ADR 0003, amendement
   2026-09-29.
-- **Discipline** : le compte de test n'existe qu'en staging, **jamais utilisé
-  en prod** (sinon le routage mobile le renverrait en prod).
+- **Discipline** : l'utilisateur Auth du compte de test est **partagé** (Auth
+  n'est pas séparé par environnement) ; ce sont le doc `landlords/{uid}` et les
+  données métier qui n'existent qu'en `staging`. Le compte n'est **jamais utilisé
+  en prod** (sinon le doc existerait aussi en `(default)` et le routage mobile le
+  renverrait en prod).
 
 ### Fichiers de dart-defines
 

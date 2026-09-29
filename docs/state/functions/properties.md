@@ -6,7 +6,7 @@ Patrimoine (properties + tenants). **Création CF-exclusive** via callables (FEA
 
 ## Callables — FEAT-044
 
-**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+**ADR 0003** : tous les callables écrivant Firestore utilisent `await dbForRequest(request)` pour router vers la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 
 ### `createProperty` (FEAT-044, étendu multi-paliers FEAT-056)
 Client invoke, isFullyAuthed only.

@@ -325,7 +325,8 @@ en `(default)` et le webhook (qui teste prod d'abord) basculerait le compte prod
   sable `dev` pour le mobile (utiliser l'émulateur). Côté callables, un build
   mobile n'a de toute façon pas d'en-tête `Origin` → `dbForRequest` route aussi
   vers `(default)` : les deux couches sont **cohérentes** (mobile = prod partout,
-  pas de split-brain).
+  pas de split-brain). (→ amendé le 2026-09-29, voir « Amendement 2026-09-29 » en
+  bas de page.)
 - Les crons (`reconcile_entitlements`, `cleanup_expired_anon`) et le trigger
   `recompute_receipt_stale` restent sur `(default)` — ils ne traitent pas la
   base `dev`. Conséquence staging : un entitlement expiré en `dev` n'est pas
@@ -351,9 +352,18 @@ sable mobile — l'émulateur ne couvre pas le Test Lab.
 - **Côté app** : `Env.useMobileStaging` (`MOBILE_STAGING`, désactivé en release
   via `kReleaseMode`) fait viser la base `staging` à `firestoreProvider` ; un
   auto-login à un compte de test dédié (`dart-defines.testlab.json`, gitignoré)
-  évite de saisir des identifiants dans Robo. La limitation « tout build mobile
-  → `(default)` » ne vaut donc plus que pour les builds sans ce flag (donc toute
-  release) — le défaut reste fail-safe.
+  évite de saisir des identifiants dans Robo.
+- **Portée de la limitation antérieure : CLIENT uniquement.** « Tout build mobile
+  → `(default)` » reste vrai pour le **client** : un build sans `MOBILE_STAGING`
+  (donc toute release) lit/écrit `(default)` en direct. Côté **serveur**, en
+  revanche, les callables de **tout** build mobile — release comprise — sont
+  désormais routés par compte (`dbForLandlordUid`, prod d'abord).
+- **Conséquence : split-brain pour un compte staging-only connecté sur un build
+  store/release.** Le client lit `(default)` (vide) alors que ses callables
+  écrivent dans `staging`. D'où la discipline ci-dessous : le compte de test
+  staging ne doit **jamais** être utilisé sur un build store ni en prod. Pas
+  d'exposition cross-user ni de donnée prod : le compte n'existe qu'en `staging`
+  et les callables restent bornés à son propre uid.
 
 **Coût.** **+1 lecture Firestore par appel callable mobile** (2 pour le compte de
 test staging : prod puis staging). **Toutes les Functions sont à redéployer**
@@ -366,5 +376,7 @@ pour le webhook : un uid présent dans les deux bases est routé en prod). Email
 vérifié requis (le routeur de l'app bloque les comptes non vérifiés).
 
 **Sécurité.** Un client non-navigateur peut forger l'`Origin`, mais ne route que
-ses propres écritures : les règles d'ownership s'appliquent sur les deux bases,
-sans impact cross-user. Procédure opérationnelle : [`docs/MOBILE.md`](../MOBILE.md#test-lab-robo).
+ses propres écritures, sans impact cross-user : les callables (Admin SDK, qui
+contourne les règles Firestore) sont bornés à `request.auth.uid` par leurs
+propres contrôles (`requireAuthUid`, `landlordId === uid`) ; les règles Firestore
+protègent, elles, l'accès client direct sur les deux bases. Procédure opérationnelle : [`docs/MOBILE.md`](../MOBILE.md#test-lab-robo).

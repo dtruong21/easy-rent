@@ -131,6 +131,19 @@ base Firestore **`staging`** — jamais la prod. Détails d'architecture :
     arrive sur de vrais écrans.
   - **Ne jamais utiliser ce compte en prod** : le routage mobile cherche la prod
     d'abord, un compte présent dans les deux bases serait routé en prod.
+  - **Mot de passe dédié** : les identifiants d'auto-login sont des constantes de
+    compilation, lisibles dans l'APK debug (que Test Lab stocke dans le bucket du
+    projet). Utiliser un mot de passe unique, employé nulle part ailleurs — jamais
+    un mot de passe personnel.
+
+**Vérification préalable (smoke test) — avant le premier run Robo**
+
+Après le déploiement des Functions : lancer le build de test (émulateur Android
+ou appareil, **sans** `USE_FIREBASE_EMULATOR`), créer une entité (par ex. un
+bien) et vérifier dans la console Firebase qu'elle apparaît dans la base
+**`staging`** et **pas** dans `(default)`.
+Tant que les Functions ne sont pas redéployées, les callables du build de test
+écrivent encore en prod : **ne pas lancer Test Lab avant ce contrôle.**
 
 **Build et lancement**
 
@@ -155,13 +168,26 @@ gcloud firebase test android run --type robo \
   (`kReleaseMode`) : le build de test est un APK debug, la release store n'est
   pas concernée.
 - L'app se connecte seule au compte de test au démarrage et affiche un ruban
-  violet « STAGING » (le ruban « EMULATOR » prime si l'émulateur est aussi actif).
+  violet « STAGING » (le ruban « EMULATOR » prime si l'émulateur est aussi actif ;
+  dans ce cas l'auto-login est ignoré, le compte de test n'existant pas dans
+  l'Auth local).
+- **Risque Robo — écrans destructifs.** L'auto-login rend la session « récente » :
+  Robo peut donc atteindre les écrans sensibles du compte (déconnexion,
+  « Supprimer mon compte » — qui supprime l'utilisateur Auth **partagé** —,
+  changement d'email ou de mot de passe). Reprise après incident : recréer le
+  compte de test sur l'app web staging, puis mettre à jour
+  `dart-defines.testlab.json`.
+- **Comptes anonymes résiduels.** Les comptes anonymes que Robo pourrait créer ne
+  sont pas nettoyés par `cleanup_expired_anon` (il ne scanne que `(default)`) :
+  à purger à la main s'ils s'accumulent.
 - Effet de bord d'un `flutter build apk` local : Flutter peut ajouter
   `android.builtInKotlin=false` et `android.newDsl=false` à
   `android/gradle.properties` — ne pas les committer (`git checkout android/gradle.properties`).
 
-**Résultats** : console Firebase → Test Lab (plantages, captures, vidéo). Quota
-gratuit : 10 tests/jour sur appareils virtuels.
+**Résultats** : console Firebase → Test Lab (plantages, captures, vidéo). Quota :
+10 tests/jour sur le plan Spark ; sur le plan Blaze (le nôtre), un quota
+quotidien gratuit en minutes d'appareil, puis facturation à l'usage — vérifier
+la page Tarifs Firebase avant des campagnes répétées.
 
 ## TL;DR
 

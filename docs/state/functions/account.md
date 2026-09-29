@@ -42,7 +42,7 @@ Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-
 
 ### `createCheckoutSession` (FEAT-044 paiement web, PR #117 ; étendu 3 paliers FEAT-056)
 Signature `{plan: 'monthly'|'annual', level?: 'pro'|'max'|'ultra'}` → `{url, sessionId}`. Crée une **Stripe Checkout Session** d'abonnement et renvoie l'URL hostée. Fichier `callable/create_checkout_session.ts`.
-- **Routage Firestore** (ADR 0003) : utilise `dbForRequest(request)` → écrit la base prod ou staging selon l'Origin.
+- **Routage Firestore** (ADR 0003) : utilise `await dbForRequest(request)` → écrit la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 - **N'accorde AUCUN droit** : elle initie le paiement, le déverrouillage reste 100 % serveur via `revenueCatWebhook`.
 - **Paliers multi-tiers** (FEAT-056) : `pro` (achetable, `purchasable:true`), `max` (démo UI, `purchasable:false`), `ultra` (démo UI, `purchasable:false`). Seul `pro` rejette le checkout ; les autres renvoient `level_not_purchasable`. Signature de rétrocompatibilité : omission de `level` → `pro`.
 - **Lien de compte** : l'App User ID RevenueCat (= UID Firebase) est posé en metadata `rc_app_user_id` sur la **session ET** `subscription_data` (RevenueCat lit les deux) + `client_reference_id` en ceinture-bretelles. ⚠️ La clé DOIT correspondre exactement au champ configuré côté dashboard RevenueCat.
