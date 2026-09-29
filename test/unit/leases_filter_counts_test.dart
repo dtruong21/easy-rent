@@ -60,10 +60,11 @@ void main() {
   // Bail terminé.
   final termine = _makeItem(id: 'lt', status: LeaseStatus.terminated);
 
-  test('leaseMatchesFilter : active exclut late et renewable', () {
+  test('leaseMatchesFilter : active = tous les baux en cours', () {
     expect(leaseMatchesFilter(actif, LeaseFilter.active, now), isTrue);
-    expect(leaseMatchesFilter(retard, LeaseFilter.active, now), isFalse);
-    expect(leaseMatchesFilter(renouvelable, LeaseFilter.active, now), isFalse);
+    expect(leaseMatchesFilter(retard, LeaseFilter.active, now), isTrue);
+    expect(leaseMatchesFilter(renouvelable, LeaseFilter.active, now), isTrue);
+    expect(leaseMatchesFilter(termine, LeaseFilter.active, now), isFalse);
   });
 
   test('leaseMatchesFilter : renewable exclut late', () {
@@ -90,7 +91,7 @@ void main() {
     }
   });
 
-  test('leaseFilterCounts : priorité late > renewable > active', () {
+  test('leaseFilterCounts : active englobe late et renewable', () {
     final counts = leaseFilterCounts([
       actif,
       retard,
@@ -99,7 +100,7 @@ void main() {
     ], now);
     expect(counts, {
       LeaseFilter.all: 4,
-      LeaseFilter.active: 1,
+      LeaseFilter.active: 3,
       LeaseFilter.renewable: 1,
       LeaseFilter.late: 1,
       LeaseFilter.terminated: 1,

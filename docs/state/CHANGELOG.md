@@ -32,6 +32,9 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-09-29)
 
+### FIX baux : la puce « Actifs » compte tous les baux en cours (2026-09-29)
+- Vu au premier Robo Test Lab : « Actifs 0 » alors que 3 baux en cours étaient tous en retard. `leaseMatchesFilter` : « Actifs » = `status == active` (en retard et à renouveler inclus), comme « Loués » (biens) et « Avec bail » (locataires) ; « À renouveler » / « En retard » restent des sous-ensembles (priorité late > renewable entre eux, comme la pastille de carte).
+
 ### Cloud Functions : runtime Node.js 22 (2026-09-29)
 - `firebase.json` `nodejs20` → `nodejs22`, `engines.node` 22, `@types/node` ^22, jobs CI functions + règles en Node 22. Node 20 est décommissionné le 2026-10-30 (plus de déploiement possible après). `firebase-functions` reste en v6 (montée de version majeure à part).
 - Vérifié sous Node 22 : lint, build, 521 tests, 96 tests de règles, émulateur Functions (38 fonctions chargées). **Redéploiement de toutes les Functions requis** pour basculer le runtime.

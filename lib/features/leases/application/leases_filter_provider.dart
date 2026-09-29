@@ -30,16 +30,16 @@ final filteredLeasesProvider = Provider<AsyncValue<List<LeaseListItem>>>((ref) {
   });
 });
 
-/// Vrai si [item] correspond à [filter]. Priorité (FEAT-028) : late >
-/// renewable > active — un bail n'apparaît que dans un seul onglet.
+/// Vrai si [item] correspond à [filter]. « Actifs » = tous les baux en cours,
+/// y compris en retard ou à renouveler (comme « Loués » côté biens et « Avec
+/// bail » côté locataires) ; « À renouveler » et « En retard » en sont des
+/// sous-ensembles. Entre ces deux-là, priorité late > renewable (FEAT-028),
+/// alignée sur la pastille de statut des cartes.
 bool leaseMatchesFilter(LeaseListItem item, LeaseFilter filter, DateTime now) {
   final lease = item.lease;
   return switch (filter) {
     LeaseFilter.all => true,
-    LeaseFilter.active =>
-      lease.status == LeaseStatus.active &&
-          !item.isLate &&
-          !isLeaseRenewable(lease, now),
+    LeaseFilter.active => lease.status == LeaseStatus.active,
     LeaseFilter.renewable =>
       lease.status == LeaseStatus.active &&
           !item.isLate &&
