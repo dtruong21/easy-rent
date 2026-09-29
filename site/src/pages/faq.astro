@@ -2,6 +2,7 @@
 // site/src/pages/faq.astro
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { faqItems } from '../data/faq';
+import { jsonLdString } from '../lib/jsonld';
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -14,10 +15,10 @@ const jsonLd = {
 };
 ---
 <BaseLayout
-  title="Questions fréquentes — Baillan"
+  title="FAQ : quittances, loyers, charges et données — Baillan"
   description="Les réponses aux questions les plus courantes sur Baillan : quittances, loyers, charges, données et compte."
 >
-  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+  <script type="application/ld+json" slot="head" set:html={jsonLdString(jsonLd)} />
 
   <h1>Questions fréquentes</h1>
   <dl class="faq">
