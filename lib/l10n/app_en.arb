@@ -23,6 +23,14 @@
   "@commonEdit": {
     "description": "Generic edit action (buttons, menu items)."
   },
+  "commonMoreActions": "More actions",
+  "@commonMoreActions": {
+    "description": "Tooltip of the ⋮ overflow menu on list cards"
+  },
+  "commonRentCcPerMonthCaption": "incl. charges / month",
+  "@commonRentCcPerMonthCaption": {
+    "description": "Caption under the monthly rent (rent + charges) key figure on list cards"
+  },
   "commonBack": "Back",
   "@commonBack": {
     "description": "Generic back navigation action."
@@ -821,15 +829,6 @@
         "type": "String"
       },
       "tenantName": {
-        "type": "String"
-      }
-    }
-  },
-  "leasesCardRentPerMonth": "{amount} incl. charges / month",
-  "@leasesCardRentPerMonth": {
-    "description": "Lease card row showing the monthly rent including charges; {amount} is already formatted in euros (e.g. '850,00 €').",
-    "placeholders": {
-      "amount": {
         "type": "String"
       }
     }
@@ -2267,6 +2266,18 @@
   "@tenantsCreateLeaseButton": {
     "description": "Button/tooltip label to start creating a new lease for a tenant with no active lease (used on cards and table row actions)."
   },
+  "tenantsCallButton": "Call",
+  "@tenantsCallButton": {
+    "description": "Quick action: phone the tenant"
+  },
+  "tenantsEmailButton": "Send an email",
+  "@tenantsEmailButton": {
+    "description": "Quick action / menu: email the tenant"
+  },
+  "tenantsLaunchFailed": "Couldn't open the app",
+  "@tenantsLaunchFailed": {
+    "description": "Snackbar shown when the phone or email app could not be opened from a tenant card quick action / menu"
+  },
   "tenantsTableColumnName": "Name",
   "@tenantsTableColumnName": {
     "description": "Tenants table column header: tenant full name."
@@ -3398,15 +3409,6 @@
   "@receiptsCardStaleWarning": {
     "description": "Warning row shown on a receipt card body when the receipt is stale (superseded by a later correction)."
   },
-  "receiptsCardAmountCc": "{amount} incl. charges",
-  "@receiptsCardAmountCc": {
-    "description": "Amount row on a receipt card body; {amount} is already formatted in euros. 'CC' = 'charges comprises' (rent including charges), mirrors the leasesTableRentCc convention.",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "receiptsTimelineVoidReasonPrefix": "Reason: {reason}",
   "@receiptsTimelineVoidReasonPrefix": {
     "description": "Third line of a timeline item, shown when the receipt was voided with a reason; {reason} is free text entered by the landlord (not translated).",
@@ -3416,33 +3418,17 @@
       }
     }
   },
+  "receiptsCardTotalCaption": "rent + charges",
+  "@receiptsCardTotalCaption": {
+    "description": "Caption under the receipt total key figure"
+  },
   "receiptsOpenPdfLabel": "Open PDF",
   "@receiptsOpenPdfLabel": {
     "description": "Tooltip/button label to open a receipt's PDF (desktop actions row icon button, and the receipt-generated preview dialog's action button)."
   },
-  "receiptsOpenPdfMenuItem": "Open PDF",
-  "@receiptsOpenPdfMenuItem": {
-    "description": "Popup menu item label (mobile actions menu) to open a receipt's PDF; kept as a distinct key from receiptsOpenPdfLabel because the source French wording differs slightly ('Ouvrir PDF' vs 'Ouvrir le PDF')."
-  },
-  "receiptsOpenPdfButtonShort": "PDF",
-  "@receiptsOpenPdfButtonShort": {
-    "description": "Short button label (receipt card footer, OutlinedButton.icon) to open the PDF; identical text in both locales."
-  },
-  "receiptsShareMenuItem": "Share",
-  "@receiptsShareMenuItem": {
-    "description": "Popup menu item label (mobile actions menu) to share a receipt."
-  },
   "receiptsVoidTooltip": "Void this receipt",
   "@receiptsVoidTooltip": {
     "description": "Tooltip on the icon button voiding a receipt (desktop actions row and receipt card footer)."
-  },
-  "receiptsVoidMenuItem": "Void",
-  "@receiptsVoidMenuItem": {
-    "description": "Popup menu item label (mobile actions menu) to void a receipt; kept distinct from commonCancel (a dismiss action) because this means 'void/invalidate the receipt', a destructive domain action."
-  },
-  "receiptsActionsMenuTooltip": "Actions",
-  "@receiptsActionsMenuTooltip": {
-    "description": "Tooltip of the overflow (three-dot) popup menu button on a receipt row (mobile actions menu)."
   },
   "receiptsVoidSuccessSnackbar": "Receipt voided",
   "@receiptsVoidSuccessSnackbar": {

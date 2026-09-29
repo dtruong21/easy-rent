@@ -6,9 +6,9 @@ import 'package:easyrent/features/leases/domain/lease.dart';
 import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_status.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
 import 'package:easyrent/features/leases/presentation/widgets/lease_card.dart';
 import 'package:easyrent/features/leases/presentation/widgets/leases_card_view.dart';
-import 'package:easyrent/features/properties/presentation/widgets/property_color_dot.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -152,9 +152,9 @@ void main() {
     });
 
     testWidgets(
-      'chaque bail affiche la pastille de couleur d\'identité de son bien '
-      '(FEAT-057) — même sans propertyColorKey stockée (repli '
-      'déterministe)',
+      'chaque bail affiche un liseré de couleur d\'identité (FEAT-057) — '
+      'même sans propertyColorKey stockée (repli déterministe, jamais sans '
+      'couleur)',
       (tester) async {
         final items = [
           _makeItem(id: 'l1', propertyName: 'Bien 1'),
@@ -164,7 +164,11 @@ void main() {
         await tester.pumpWidget(_buildCardView(items));
         await tester.pumpAndSettle();
 
-        expect(find.byType(PropertyColorDot), findsNWidgets(2));
+        final cards = tester.widgetList<SummaryCard>(find.byType(SummaryCard));
+        expect(cards, hasLength(2));
+        for (final card in cards) {
+          expect(card.accentColor, isNotNull);
+        }
       },
     );
 
@@ -260,81 +264,124 @@ void main() {
   // Raccourci "Régulariser les charges" (FEAT-030)
   // ---------------------------------------------------------------------------
   group('LeaseCard — menu "Régulariser les charges"', () {
-    testWidgets('bail nu — menu overflow visible', (tester) async {
-      final item = _makeItem(id: 'ln', leaseType: LeaseType.unfurnished);
+    testWidgets(
+      'bail nu — item "Régulariser les charges" visible dans le menu ⋮',
+      (tester) async {
+        final item = _makeItem(id: 'ln', leaseType: LeaseType.unfurnished);
 
-      await tester.pumpWidget(_buildCardView([item]));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('lease_menu_ln')), findsOneWidget);
-    });
+        await tester.tap(find.byKey(const Key('lease_menu_ln')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets(
       'bail meublé en provisions (chargeMode absent → défaut FEAT-042) — '
-      'menu overflow visible',
+      'item "Régulariser les charges" visible dans le menu ⋮',
       (tester) async {
         final item = _makeItem(id: 'lf', leaseType: LeaseType.furnished);
 
         await tester.pumpWidget(_buildCardView([item]));
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('lease_menu_lf')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('lease_menu_lf')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsOneWidget,
+        );
       },
     );
 
-    testWidgets('bail meublé en forfait — menu overflow ABSENT', (
-      tester,
-    ) async {
-      final item = _makeItem(
-        id: 'lf2',
-        leaseType: LeaseType.furnished,
-        chargeMode: ChargeMode.forfait,
-      );
+    testWidgets(
+      'bail meublé en forfait — item "Régulariser les charges" ABSENT du menu ⋮',
+      (tester) async {
+        final item = _makeItem(
+          id: 'lf2',
+          leaseType: LeaseType.furnished,
+          chargeMode: ChargeMode.forfait,
+        );
 
-      await tester.pumpWidget(_buildCardView([item]));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('lease_menu_lf2')), findsNothing);
-    });
+        await tester.tap(find.byKey(const Key('lease_menu_lf2')));
+        await tester.pumpAndSettle();
 
-    testWidgets('bail mobilité — menu overflow ABSENT (forfait forcé)', (
-      tester,
-    ) async {
-      final item = _makeItem(id: 'lm', leaseType: LeaseType.mobility);
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsNothing,
+        );
+      },
+    );
 
-      await tester.pumpWidget(_buildCardView([item]));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'bail mobilité — item "Régulariser les charges" ABSENT du menu ⋮ '
+      '(forfait forcé)',
+      (tester) async {
+        final item = _makeItem(id: 'lm', leaseType: LeaseType.mobility);
 
-      expect(find.byKey(const Key('lease_menu_lm')), findsNothing);
-    });
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('lease_menu_lm')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets(
       'bail étudiant en provisions (chargeMode absent → défaut FEAT-042) — '
-      'menu overflow visible',
+      'item "Régulariser les charges" visible dans le menu ⋮',
       (tester) async {
         final item = _makeItem(id: 'ls', leaseType: LeaseType.student);
 
         await tester.pumpWidget(_buildCardView([item]));
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('lease_menu_ls')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('lease_menu_ls')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsOneWidget,
+        );
       },
     );
 
-    testWidgets('bail étudiant en forfait — menu overflow ABSENT', (
-      tester,
-    ) async {
-      final item = _makeItem(
-        id: 'ls2',
-        leaseType: LeaseType.student,
-        chargeMode: ChargeMode.forfait,
-      );
+    testWidgets(
+      'bail étudiant en forfait — item "Régulariser les charges" ABSENT du menu ⋮',
+      (tester) async {
+        final item = _makeItem(
+          id: 'ls2',
+          leaseType: LeaseType.student,
+          chargeMode: ChargeMode.forfait,
+        );
 
-      await tester.pumpWidget(_buildCardView([item]));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_buildCardView([item]));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('lease_menu_ls2')), findsNothing);
-    });
+        await tester.tap(find.byKey(const Key('lease_menu_ls2')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('menu_item_regularize_charges')),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets(
       'tap "Régulariser les charges" → navigue vers /leases/:id?action=regularize '

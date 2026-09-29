@@ -22,15 +22,30 @@ final filteredPropertiesProvider = Provider<AsyncValue<List<PropertyListItem>>>(
     final filter = ref.watch(propertyFilterProvider);
 
     return asyncItems.whenData((items) {
-      if (filter == PropertyFilter.all) return items;
-
-      return items.where((item) {
-        return switch (filter) {
-          PropertyFilter.all => true,
-          PropertyFilter.occupied => item.activeLeaseId != null,
-          PropertyFilter.vacant => item.activeLeaseId == null,
-        };
-      }).toList();
+      return items
+          .where((item) => propertyMatchesFilter(item, filter))
+          .toList();
     });
   },
 );
+
+/// Vrai si [item] correspond à [filter]. Source unique du filtrage (liste
+/// filtrée ET compteurs des puces).
+bool propertyMatchesFilter(PropertyListItem item, PropertyFilter filter) =>
+    switch (filter) {
+      PropertyFilter.all => true,
+      PropertyFilter.occupied => item.activeLeaseId != null,
+      PropertyFilter.vacant => item.activeLeaseId == null,
+    };
+
+/// Nombre d'éléments par filtre (compteurs des puces).
+Map<PropertyFilter, int> propertyFilterCounts(List<PropertyListItem> items) => {
+  for (final f in PropertyFilter.values)
+    f: items.where((i) => propertyMatchesFilter(i, f)).length,
+};
+
+/// Compteurs des puces — `null` tant que la liste n'est pas chargée.
+final propertyFilterCountsProvider = Provider<Map<PropertyFilter, int>?>((ref) {
+  final items = ref.watch(propertiesListItemsProvider).valueOrNull;
+  return items == null ? null : propertyFilterCounts(items);
+});

@@ -30,7 +30,15 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-28)
+## Changements (2026-08-03 → 2026-09-29)
+
+### FEAT-059 — Cartes de liste « chiffre clé » + puces de filtre (2026-09-29)
+- `SummaryCard` (core) : liseré couleur du bien, montant en gros à droite, 1 action rapide + menu ⋮ ; ~90 px au lieu de ~150. Adaptateurs : `PropertyCard`, `LeaseCard`, `TenantCard` (Appeler / email), `ReceiptCard` (Envoyer = `ShareReceiptButton`).
+- `FilterChipsBar` (core) : puces avec compteurs dérivés client (`…FilterCountsProvider`, prédicats `…MatchesFilter` extraits sans changement de règle) ; remplace dropdown mobile et `SegmentedButton` desktop.
+- Quittances mobile : timeline sans colonne de marqueurs, en-têtes d'année conservés.
+- Données : `PropertyListItem.currentRentCcCents`, `TenantListItem.activeLeaseChargesCents`. Android : intent `DIAL` dans `<queries>`.
+- Client uniquement — aucun déploiement backend.
+- Page Quittances : sélecteur de vue « Chronologie / Cartes » (libellés dédiés, `ViewModeToggle` accepte `cardsLabel`/`tableLabel`).
 
 ### PR #193/#194/#195 — FIX recette mobile iOS (2026-09-28)
 - **#193** Build iOS Xcode 27 : cible minimale 15.0 (Runner + pods), retrait du pod `FirebaseFirestore` précompilé (doublon avec Swift Package Manager, Flutter 3.44). Debug émulateur : Functions + Storage branchés (ports surchargeables par dart-define). Functions : `FieldValue`/`Timestamp` via `firebase-admin/firestore` (16 fichiers — le proxy de l'émulateur perdait `admin.firestore.FieldValue`) → **redéployer toutes les functions**.

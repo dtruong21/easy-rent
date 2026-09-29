@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
-import '../../../../core/ui/cards/card_action_button.dart';
-import '../../../../core/ui/cards/entity_card.dart';
-import '../../../../core/ui/cards/entity_card_density.dart';
-import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
+import '../../../../core/ui/cards/summary_card.dart';
 import '../../../../core/ui/theme/property_color.dart';
-import '../../../properties/presentation/widgets/property_color_dot.dart';
 import '../../application/void_receipt_controller.dart';
 import '../open_receipt_pdf.dart';
 import '../../domain/receipt.dart';
@@ -19,14 +15,14 @@ import 'receipt_status_mapper.dart';
 import 'share_receipt_button.dart';
 import 'void_receipt_dialog.dart';
 
-/// Carte v2 représentant une quittance dans la vue Cards.
+/// Carte d'une quittance dans les listes (Cards + Timeline) — adaptateur
+/// [SummaryCard] (spec 2026-09-29). Chiffre clé : montant total CC
+/// (`receipt.totalEuros`) + légende « loyer + charges ». Statut : pastille
+/// quittance. Action rapide : [ShareReceiptButton] existant. Menu ⋮ :
+/// Ouvrir le PDF · Annuler (masqué pendant l'annulation en cours, absent si
+/// déjà annulée).
 ///
-/// Utilise [EntityCard] pour un layout cohérent avec les autres entités.
-/// - Header : période (mois année) + [StatusPill] statut.
-/// - Body : montant CC, avertissement périmée/annulée.
-/// - Footer : "PDF" + [ShareReceiptButton] + bouton "Annuler".
-///
-/// Tap sur la carte → ouvre le PDF directement.
+/// Tap sur la carte → ouvre le PDF directement (inchangé).
 class ReceiptCard extends ConsumerWidget {
   const ReceiptCard({
     super.key,
@@ -59,56 +55,63 @@ class ReceiptCard extends ConsumerWidget {
     final pillData = receiptStatusPill(context, receipt);
     final periodLabel = receiptPeriodMonthYear(receipt);
     final secondary = receiptSecondaryLine(context, receipt);
+    final isVoiding =
+        ref.watch(voidReceiptControllerProvider(receipt.id))
+            is VoidReceiptSubmitting;
 
     _listenVoidState(context, ref, theme);
 
-    return EntityCard(
+    String? meta;
+    if (receipt.isStale && !receipt.isVoided) {
+      meta = l10n.receiptsCardStaleWarning;
+    } else if (receipt.isVoided && receipt.voidedReason != null) {
+      meta = l10n.receiptsTimelineVoidReasonPrefix(receipt.voidedReason!);
+    }
+
+    return SummaryCard(
       key: Key('receipt_card_${receipt.id}'),
       onTap: () => _openPdf(context, ref),
-      density: EntityCardDensity.compact,
-      accentColorKey: propertyColorKey,
+      accentColor: propertyColorKey?.resolveColor(context),
       semanticLabel: l10n.receiptsCardSemanticLabel(
         periodLabel,
         receipt.totalEuros,
       ),
-      header: EntityCardHeader(
-        leading: propertyColorKey != null
-            ? PropertyColorDot(colorKey: propertyColorKey!)
-            : null,
-        title: Text(
-          periodLabel,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: StatusPill(
-          tone: pillData.tone,
-          label: pillData.label,
-          icon: pillData.icon,
-          size: StatusPillSize.sm,
-        ),
-        subtitle: Text(
-          secondary,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+      title: periodLabel,
+      subtitle: secondary,
+      keyFigure: SummaryKeyFigure(
+        value: receipt.totalEuros,
+        caption: l10n.receiptsCardTotalCaption,
       ),
-      body: _ReceiptCardBody(receipt: receipt),
-      footer: _ReceiptCardFooter(
+      status: StatusPill(
+        tone: pillData.tone,
+        label: pillData.label,
+        icon: pillData.icon,
+        size: StatusPillSize.sm,
+      ),
+      meta: meta,
+      quickAction: ShareReceiptButton(
         receipt: receipt,
         leaseId: leaseId,
         tenantEmail: tenantEmail,
         tenantFirstName: tenantFirstName,
         propertyAddress: propertyAddress,
         landlordFullName: landlordFullName,
-        onOpenPdf: () => _openPdf(context, ref),
-        onVoid: () => _showVoidDialog(context, ref),
       ),
+      menuKey: Key('receipt_menu_${receipt.id}'),
+      menuItems: [
+        SummaryMenuItem(
+          key: Key('btn_pdf_card_${receipt.id}'),
+          label: l10n.receiptsOpenPdfLabel,
+          onSelected: () => _openPdf(context, ref),
+        ),
+        if (!receipt.isVoided && !isVoiding)
+          SummaryMenuItem(
+            key: Key('btn_void_card_${receipt.id}'),
+            label: l10n.receiptsVoidTooltip,
+            destructive: true,
+            onSelected: () => _showVoidDialog(context, ref),
+          ),
+      ],
     );
   }
 
@@ -166,145 +169,6 @@ class ReceiptCard extends ConsumerWidget {
           );
         },
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Body : montant + avertissements
-// ---------------------------------------------------------------------------
-
-class _ReceiptCardBody extends StatelessWidget {
-  const _ReceiptCardBody({required this.receipt});
-
-  final Receipt receipt;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = context.l10n;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ReceiptCardRow(
-          icon: Icons.euro_outlined,
-          text: l10n.receiptsCardAmountCc(receipt.totalEuros),
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        if (receipt.isStale && !receipt.isVoided) ...[
-          const SizedBox(height: 4),
-          _ReceiptCardRow(
-            icon: Icons.warning_amber_outlined,
-            text: l10n.receiptsCardStaleWarning,
-            color: theme.colorScheme.error,
-          ),
-        ],
-        if (receipt.isVoided && receipt.voidedReason != null) ...[
-          const SizedBox(height: 4),
-          _ReceiptCardRow(
-            icon: Icons.info_outline,
-            text: receipt.voidedReason!,
-            color: theme.colorScheme.error,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _ReceiptCardRow extends StatelessWidget {
-  const _ReceiptCardRow({
-    required this.icon,
-    required this.text,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: color),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Footer : PDF + Partager + Annuler
-// ---------------------------------------------------------------------------
-
-class _ReceiptCardFooter extends ConsumerWidget {
-  const _ReceiptCardFooter({
-    required this.receipt,
-    required this.leaseId,
-    this.tenantEmail,
-    this.tenantFirstName = '',
-    this.propertyAddress = '',
-    this.landlordFullName = '',
-    required this.onOpenPdf,
-    required this.onVoid,
-  });
-
-  final Receipt receipt;
-  final String leaseId;
-  final String? tenantEmail;
-  final String tenantFirstName;
-  final String propertyAddress;
-  final String landlordFullName;
-  final VoidCallback onOpenPdf;
-  final VoidCallback onVoid;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final l10n = context.l10n;
-    final voidState = ref.watch(voidReceiptControllerProvider(receipt.id));
-    final isVoiding = voidState is VoidReceiptSubmitting;
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        CardActionButton(
-          key: Key('btn_pdf_card_${receipt.id}'),
-          onPressed: onOpenPdf,
-          icon: Icons.picture_as_pdf_outlined,
-          label: l10n.receiptsOpenPdfButtonShort,
-        ),
-        ShareReceiptButton(
-          receipt: receipt,
-          leaseId: leaseId,
-          tenantEmail: tenantEmail,
-          tenantFirstName: tenantFirstName,
-          propertyAddress: propertyAddress,
-          landlordFullName: landlordFullName,
-        ),
-        if (!receipt.isVoided)
-          CardActionIconButton(
-            key: Key('btn_void_card_${receipt.id}'),
-            icon: const Icon(Icons.cancel_outlined, size: 20),
-            color: theme.colorScheme.error,
-            tooltip: l10n.receiptsVoidTooltip,
-            onPressed: isVoiding ? null : onVoid,
-          ),
-      ],
     );
   }
 }
