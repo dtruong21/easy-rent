@@ -201,7 +201,7 @@ class SummaryCard extends StatelessWidget {
               ],
               if (topAction != null) ...[
                 const SizedBox(width: 8),
-                Flexible(child: topAction),
+                _ActionSlot(child: topAction),
               ],
               if (menuItems.isNotEmpty) _buildMenu(context),
             ],
@@ -223,7 +223,7 @@ class SummaryCard extends StatelessWidget {
                 ),
                 if (bottomAction != null) ...[
                   const SizedBox(width: 8),
-                  Flexible(child: bottomAction),
+                  _ActionSlot(child: bottomAction),
                 ],
               ],
             ),
@@ -282,4 +282,21 @@ class SummaryCard extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Emplacement de l'action rapide : partage l'espace avec l'info voisine
+/// (comme avant) mais cale l'action à DROITE de son emplacement.
+///
+/// Sans l'`Align`, un `Flexible` seul plaçait l'action au début de sa moitié
+/// de rangée : sur une carte large elle flottait au milieu (recette web
+/// 2026-09-29).
+class _ActionSlot extends StatelessWidget {
+  const _ActionSlot({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Flexible(
+    child: Align(alignment: Alignment.centerRight, child: child),
+  );
 }

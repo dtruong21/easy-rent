@@ -184,4 +184,27 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('carte large : action rapide calée à droite (pas au milieu)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        SummaryCard(
+          title: 'Août 2026',
+          keyFigure: const SummaryKeyFigure(value: '1 395,67 €'),
+          meta: 'Payée le 29/09',
+          quickAction: IconButton(
+            key: const Key('qa'),
+            icon: const Icon(Icons.share),
+            onPressed: () {},
+          ),
+        ),
+        width: 800,
+      ),
+    );
+    final cardRight = tester.getTopRight(find.byType(SummaryCard)).dx;
+    final actionRight = tester.getTopRight(find.byKey(const Key('qa'))).dx;
+    expect(cardRight - actionRight, lessThan(24));
+  });
 }
