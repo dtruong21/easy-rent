@@ -146,6 +146,34 @@ const jsonLd = {
     </div>
   </section>
 
+  <section class="author" aria-labelledby="author-title">
+    <div class="wrap author-grid">
+      <h2 id="author-title">Un mot de l'auteur</h2>
+      <div class="letter">
+        <p>
+          Baillan est né d'un constat simple : la plupart des bailleurs
+          particuliers gèrent leurs locations dans un tableur, et le reste dans
+          leur tête. Ça tient, jusqu'au jour où il faut retrouver une quittance
+          ou justifier une régularisation de charges.
+        </p>
+        <p>
+          Je conçois et j'écris Baillan seul, au sein de Daki Studio. D'où le
+          parti pris : peu de fonctionnalités, mais chacune terminée, et
+          conforme au droit du bail.
+        </p>
+        <p>
+          Les retours que vous envoyez arrivent directement chez moi et
+          orientent la suite.
+        </p>
+        <p class="letter-sign">
+          <span class="letter-name">Daki Studio</span>
+          <span class="letter-role">Studio indépendant, auteur de Baillan</span>
+        </p>
+        <a class="text-link" href="/a-propos">En savoir plus sur Baillan</a>
+      </div>
+    </div>
+  </section>
+
   <section class="closing">
     <div class="wrap closing-grid">
       <div>
@@ -159,8 +187,7 @@ const jsonLd = {
       <div class="idea">
         <h2>Baillan se construit avec vous</h2>
         <p>
-          Une idée, un manque, une gêne ? Les retours arrivent directement chez la
-          personne qui écrit le code.
+          Une idée, un manque, une gêne ? Écrivez-le : chaque message est lu.
         </p>
         <a class="text-link" href={ideaFormUrl} target="_blank" rel="noopener">Proposer une idée</a>
       </div>
@@ -371,6 +398,35 @@ const jsonLd = {
   .steps-list b { font-size: 1.05rem; }
   .steps-list span { color: var(--color-ink-surface); max-width: 30ch; }
 
+  /* Mot de l'auteur : une lettre signée, en écho à la quittance ----------- */
+  .author {
+    padding: var(--space-section) 0;
+    border-top: 1px solid var(--color-rule);
+  }
+  .author-grid {
+    display: grid; gap: clamp(1.5rem, 5vw, 4.5rem);
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+  .author h2 { font-size: clamp(1.8rem, 3.4vw, 2.5rem); margin: 0; }
+  .letter { max-width: 36rem; }
+  .letter p {
+    font-family: var(--font-display);
+    font-size: 1.22rem; line-height: 1.65;
+    margin: 0 0 1.1rem;
+  }
+  .letter .letter-sign { margin: 1.8rem 0 1.6rem; line-height: 1.3; }
+  .letter-name {
+    display: block;
+    font-style: italic; font-size: 1.8rem;
+    color: var(--color-indigo-ink);
+  }
+  .letter-role {
+    display: block; margin-top: .3rem;
+    font-family: var(--font-text); font-size: .88rem;
+    color: var(--color-ink-muted);
+  }
+
   /* Clôture : bande kraft --------------------------------------------------- */
   .closing {
     padding: var(--space-section) 0;
@@ -387,7 +443,7 @@ const jsonLd = {
 
   /* Mobile ------------------------------------------------------------------ */
   @media (max-width: 52rem) {
-    .hero-grid, .yield-grid, .closing-grid { grid-template-columns: 1fr; }
+    .hero-grid, .yield-grid, .author-grid, .closing-grid { grid-template-columns: 1fr; }
     h1 { max-width: 14ch; }
     .receipt { transform: none; }
     .feat-list, .steps-list { grid-template-columns: 1fr; }
