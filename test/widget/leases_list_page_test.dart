@@ -386,7 +386,7 @@ void main() {
     );
 
     testWidgets(
-      'filtre "Actifs" — exclut les baux en retard (priorité late > active)',
+      'filtre "Actifs" — inclut les baux en retard (tous les baux en cours)',
       (tester) async {
         final repo = _FakeRepo(
           items: [
@@ -415,7 +415,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Bail Actif À Jour'), findsOneWidget);
-        expect(find.text('Bail En Retard'), findsNothing);
+        expect(find.text('Bail En Retard'), findsOneWidget);
       },
     );
 
