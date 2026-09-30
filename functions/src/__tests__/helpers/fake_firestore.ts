@@ -307,6 +307,13 @@ export class FakeWriteBatch {
 export class FakeFirestore {
   readonly store = new Map<string, DocData>();
 
+  /**
+   * Miroir de `Firestore.databaseId` du vrai SDK : `"(default)"` pour la prod,
+   * `"staging"` pour la base nommée du staging. Permet aux callables de savoir
+   * dans quel environnement `dbForRequest` les a routées.
+   */
+  constructor(readonly databaseId: string = "(default)") {}
+
   doc(path: string): FakeDocRef {
     return new FakeDocRef(path, this.store);
   }
@@ -484,7 +491,7 @@ export const fakeAdminFirestoreHolder: {
  * en production quand le doc n'existe nulle part.
  */
 export const fakeStagingFirestoreHolder: {db: FakeFirestore} = {
-  db: new FakeFirestore(),
+  db: new FakeFirestore("staging"),
 };
 
 /**

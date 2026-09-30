@@ -5184,6 +5184,14 @@
   "@deleteAccountWarningDownloadReminder": {
     "description": "Emphasized reminder below the warning list, urging the user to download documents before deletion since nothing can be recovered."
   },
+  "deleteAccountStoreSubscriptionWarning": "Deleting your account doesn't cancel a subscription bought through the App Store or Google Play. Cancel it in your store settings to stop billing.",
+  "@deleteAccountStoreSubscriptionWarning": {
+    "description": "Warning on the delete-account page for users whose Baillan subscription was bought through the App Store or Google Play (proStore = app_store / play_store): account deletion does not cancel the store subscription, so they must cancel it in their store settings."
+  },
+  "deleteAccountWebSubscriptionNotice": "Your Baillan subscription is canceled immediately, with no refund for the current period.",
+  "@deleteAccountWebSubscriptionNotice": {
+    "description": "Notice on the delete-account page for users with a paid Baillan subscription bought on the web (Stripe): the subscription is canceled immediately on account deletion, with no refund of the current period."
+  },
   "deleteAccountRetentionTitle": "Legal retention of rent receipts",
   "@deleteAccountRetentionTitle": {
     "description": "Heading of the receipts-retention notice box. Chrome UI only — the notice body itself stays French because it carries the binding legal citation (loi n° 89-462 du 6 juillet 1989), out of this extraction's scope."
@@ -5397,6 +5405,10 @@
   "proCancelRetry": "Try again",
   "@proCancelRetry": {
     "description": "FEAT-044e — Primary CTA on /pro/cancel; navigates back to /pro to retry the checkout."
+  },
+  "proStoreAppUnavailable": "Paid plans aren't available in the app yet.",
+  "@proStoreAppUnavailable": {
+    "description": "Neutral message shown on /pro in the iOS/Android store apps instead of plans, prices and purchase buttons (App Store 3.1.1 / Google Play Payments: no purchase outside in-app purchase). Must not mention the website."
   },
   "proUpgradeButton": "Upgrade to Pro",
   "@proUpgradeButton": {

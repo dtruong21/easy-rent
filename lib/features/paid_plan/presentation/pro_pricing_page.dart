@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/env.dart';
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../auth/data/landlord_tier_repository.dart';
@@ -34,6 +35,12 @@ import 'widgets/plan_level_label.dart';
 /// Aucun chemin de paiement (checkout ni changement de palier) n'est jamais
 /// rendu pour un palier non `purchasable` — testé par
 /// `test/widget/pro_pricing_page_test.dart`.
+///
+/// **Apps iOS/Android** ([isStoreApp]) : ni offres, ni prix, ni bouton — un
+/// message neutre. App Store 3.1.1 et la règle Paiements de Google Play
+/// interdisent tout achat hors achat intégré, et toute incitation à acheter
+/// ailleurs (donc aucune mention du site web). L'achat intégré viendra se
+/// brancher sur ce même garde-fou.
 class ProPricingPage extends ConsumerStatefulWidget {
   const ProPricingPage({super.key});
 
@@ -51,6 +58,25 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (isStoreApp) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.proPricingTitle)),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                l10n.proStoreAppUnavailable,
+                key: const Key('txt_pro_store_app_unavailable'),
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final plan = ref.watch(planEntitlementProvider);
     final snapshot = ref.watch(landlordTierProvider).valueOrNull;
     final period = _annual ? 'annual' : 'monthly';

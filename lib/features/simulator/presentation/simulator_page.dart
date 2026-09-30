@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
@@ -619,8 +620,12 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                             // uniquement pour les comptes FREE (les anons
                             // voient un CTA les invitant à créer un compte
                             // gratuit d'abord — trop tôt pour leur vendre un
-                            // futur plan payant).
-                            if (tier == SubscriptionTier.free)
+                            // futur plan payant). Jamais dans les apps
+                            // iOS/Android ([isStoreApp]) : contenu « bientôt »
+                            // + sollicitation de financement hors achat
+                            // intégré (App Store 2.1 / 3.1.1, règle Paiements
+                            // de Google Play).
+                            if (tier == SubscriptionTier.free && !isStoreApp)
                               const ComingSoonPaidPlanSection()
                             else if (sessionState == SessionState.anonymous)
                               _CreateFreeAccountFirstHint(),

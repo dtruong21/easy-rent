@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
@@ -72,11 +73,15 @@ class _ProGatedComparisonBody extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => context.go('/pro'),
-                child: Text(l10n.proUpgradeButton),
-              ),
+              // Apps iOS/Android : aucun CTA vers /pro (aucun achat hors
+              // achat intégré) — le message seul explique la limitation.
+              if (!isStoreApp) ...[
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => context.go('/pro'),
+                  child: Text(l10n.proUpgradeButton),
+                ),
+              ],
             ],
           ),
         ),

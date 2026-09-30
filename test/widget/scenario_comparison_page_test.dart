@@ -4,6 +4,7 @@
 /// aux ids manquants (soft-delete en cours de session).
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
@@ -355,5 +356,38 @@ void main() {
         );
       }
     }
+  });
+
+  group('ScenarioComparisonPage — app store (iOS/Android)', () {
+    setUp(() => debugIsStoreAppOverride = true);
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    testWidgets(
+      'free tier → écran verrouillé sans CTA vers /pro (aucun achat hors store)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildRouter(
+            scenarios: [
+              _scenario(id: 'A', name: 'Alpha'),
+              _scenario(id: 'B', name: 'Bravo'),
+            ],
+            tier: SubscriptionTier.free,
+            initialLocation: '/simulator/compare?ids=A,B',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('scenario_comparison_pro_gated')),
+          findsOneWidget,
+        );
+        expect(
+          find.text('La comparaison de scénarios est réservée au Plan Pro.'),
+          findsOneWidget,
+        );
+        expect(find.text('Passer à Pro'), findsNothing);
+        expect(find.byType(FilledButton), findsNothing);
+      },
+    );
   });
 }

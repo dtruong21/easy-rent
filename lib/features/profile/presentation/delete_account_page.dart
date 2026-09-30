@@ -9,6 +9,7 @@ import '../../auth/domain/delete_account_reauth_method.dart';
 import '../../auth/domain/delete_account_state.dart';
 import '../../auth/presentation/delete_account_error_l10n.dart';
 import '../../auth/presentation/widgets/password_field.dart';
+import 'widgets/delete_account_subscription_notice.dart';
 import 'widgets/delete_account_warning.dart';
 
 /// Page `/profile/delete-account` — suppression de compte in-app
@@ -138,6 +139,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const DeleteAccountWarning(),
+                const DeleteAccountSubscriptionNotice(),
                 const SizedBox(height: 24),
                 _ReauthSection(
                   method: method,

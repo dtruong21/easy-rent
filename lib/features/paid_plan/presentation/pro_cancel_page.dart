@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 
+/// Retour d'un checkout Stripe annulé (`/pro/cancel`).
+///
+/// Dans les apps iOS/Android ([isStoreApp]), « Réessayer » disparaît : il
+/// renverrait vers `/pro`, donc vers un achat hors achat intégré.
 class ProCancelPage extends StatelessWidget {
   const ProCancelPage({super.key});
 
@@ -47,11 +52,14 @@ class ProCancelPage extends StatelessWidget {
                       onPressed: () => context.go('/dashboard'),
                       child: Text(l10n.proCancelBackToDashboard),
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: () => context.go('/pro'),
-                      child: Text(l10n.proCancelRetry),
-                    ),
+                    if (!isStoreApp) ...[
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        key: const Key('btn_pro_cancel_retry'),
+                        onPressed: () => context.go('/pro'),
+                        child: Text(l10n.proCancelRetry),
+                      ),
+                    ],
                   ],
                 ),
               ],

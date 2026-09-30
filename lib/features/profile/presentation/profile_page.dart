@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/env.dart';
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../auth/application/auth_session_provider.dart';
@@ -212,10 +213,23 @@ class _ProfileHeader extends ConsumerWidget {
   }
 }
 
+/// La bannière « Passer à Pro » doit-elle s'afficher ? Oui seulement si les
+/// abonnements sont ouverts ([Env.subscriptionsEnabled]), hors apps iOS/Android
+/// ([isStoreApp] : aucun chemin d'achat hors achat intégré) et pour un compte
+/// pas encore payant. Fonction pure : `Env.subscriptionsEnabled` est figé à la
+/// compilation, elle rend la règle testable dans les deux états.
+@visibleForTesting
+bool proUpsellVisible({
+  required bool subscriptionsEnabled,
+  required bool storeApp,
+  required bool isPaid,
+}) => subscriptionsEnabled && !storeApp && !isPaid;
+
 /// Bannière « Passer à Pro » — masquée tant que [Env.subscriptionsEnabled]
 /// vaut `false` (freemium MVP, juillet 2026) : inutile de faire la publicité
 /// d'un abonnement impossible à souscrire (le checkout Stripe est lui-même
-/// masqué sur `/pro`, cf. `ProPricingPage`). Les gates fonctionnels (limite
+/// masqué sur `/pro`, cf. `ProPricingPage`), et toujours masquée dans les apps
+/// iOS/Android (cf. [proUpsellVisible]). Les gates fonctionnels (limite
 /// de scénarios, comparaison) restent inchangés — eux expliquent une
 /// limitation réelle, pas une simple incitation commerciale.
 class _ProUpsellCard extends ConsumerWidget {
@@ -223,10 +237,14 @@ class _ProUpsellCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!Env.subscriptionsEnabled) return const SizedBox.shrink();
-
     final isPaid = ref.watch(planEntitlementProvider).atLeast(PlanLevel.pro);
-    if (isPaid) return const SizedBox.shrink();
+    if (!proUpsellVisible(
+      subscriptionsEnabled: Env.subscriptionsEnabled,
+      storeApp: isStoreApp,
+      isPaid: isPaid,
+    )) {
+      return const SizedBox.shrink();
+    }
 
     final l10n = context.l10n;
     final theme = Theme.of(context);

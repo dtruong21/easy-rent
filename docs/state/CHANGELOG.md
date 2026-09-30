@@ -30,7 +30,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-29)
+## Changements (2026-08-03 → 2026-09-30)
+
+### FIX conformité stores (2026-09-30)
+- Audit stores : apps iOS/Android sans aucun achat hors store (`isStoreApp` : `/pro` = message neutre, entrées vers `/pro`, « Réactiver » Stripe et section « Prochainement Plan Pro » masqués) ; page de suppression de compte prévient pour les abonnements store (non résiliés) et web (résiliés, sans remboursement) ; `NSPhotoLibraryUsageDescription` ajouté (ITMS-90683). Décision : achat intégré RevenueCat avant la sortie des apps (Apple 3.1.3(b)).
+- Functions : `deleteAccount` résilie immédiatement les abonnements Stripe gérables **avant** la purge, pour les seuls comptes facturés web (clé par base du compte ; échec → `internal`, rien purgé ; sautée sous émulateur). **Redéploiement des Functions requis** — vérifier d'abord dans Secret Manager que `STRIPE_SECRET_KEY` est live et `STRIPE_SECRET_KEY_TEST` test, sinon les comptes facturés web ne peuvent pas être supprimés.
+- Functions (décision 2026-09-30) : `deleteAccount` choisit la clé Stripe par la **seule base routée** (`staging` → test, sinon live), Origin ignoré — l'URL Firebase Hosting de prod déclarée aux stores n'est plus refusée (`origin_not_allowed` → boucle « session trop ancienne ») et localhost n'obtient plus la clé test contre la prod.
+- Functions : `manageSubscription` accepte `cancel` **sans Origin** (apps natives, clé par base du compte) pour que « Résilier » marche dans les apps ; `reactivate`/`change_plan` sans Origin restent refusés (`origin_not_allowed`) avant tout appel Stripe. **Redéploiement des Functions requis.**
+- Ré-audit consigné dans `docs/STORE_COMPLIANCE.md` (target SDK 36, 16 Ko, permissions, iOS 15 / Xcode 27 vérifiés). Bloquant restant : mentions légales encore en brouillon dans l'app (Apple 2.1).
 
 ### FIX baux : la puce « Actifs » compte tous les baux en cours (2026-09-29)
 - Vu au premier Robo Test Lab : « Actifs 0 » alors que 3 baux en cours étaient tous en retard. `leaseMatchesFilter` : « Actifs » = `status == active` (en retard et à renouveler inclus), comme « Loués » (biens) et « Avec bail » (locataires) ; « À renouveler » / « En retard » restent des sous-ensembles (priorité late > renewable entre eux, comme la pastille de carte).

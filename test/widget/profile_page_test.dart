@@ -13,6 +13,7 @@
 /// - À propos et Se déconnecter inchangés
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_provider.dart';
 import 'package:easyrent/core/theme/theme_mode_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
@@ -701,6 +702,64 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('page faq'), findsOneWidget);
+    });
+  });
+
+  group('proUpsellVisible — bannière « Passer à Pro » du profil', () {
+    test(
+      'visible seulement si abonnements ouverts, hors app store, non payant',
+      () {
+        expect(
+          proUpsellVisible(
+            subscriptionsEnabled: true,
+            storeApp: false,
+            isPaid: false,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test('app store → jamais visible, même abonnements ouverts', () {
+      expect(
+        proUpsellVisible(
+          subscriptionsEnabled: true,
+          storeApp: true,
+          isPaid: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('abonnements fermés ou déjà payant → masquée', () {
+      expect(
+        proUpsellVisible(
+          subscriptionsEnabled: false,
+          storeApp: false,
+          isPaid: false,
+        ),
+        isFalse,
+      );
+      expect(
+        proUpsellVisible(
+          subscriptionsEnabled: true,
+          storeApp: false,
+          isPaid: true,
+        ),
+        isFalse,
+      );
+    });
+
+    testWidgets('app store → aucune bannière « Passer à Pro » rendue', (
+      tester,
+    ) async {
+      debugIsStoreAppOverride = true;
+      addTearDown(() => debugIsStoreAppOverride = false);
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Passer à Pro'), findsNothing);
     });
   });
 }

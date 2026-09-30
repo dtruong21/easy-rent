@@ -6,6 +6,7 @@
 /// `anon_demo_banner_test.dart`).
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
@@ -506,5 +507,131 @@ void main() {
         expect(find.textContaining('Une erreur est survenue'), findsOneWidget);
       },
     );
+  });
+
+  group('SubscriptionSection — app store (iOS/Android)', () {
+    setUp(() => debugIsStoreAppOverride = true);
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    testWidgets(
+      'abonnement web actif → statut + résiliation conservés, pas de « Changer d\'offre »',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              proWillRenew: true,
+              proExpiresAt: DateTime(2026, 9, 1),
+              proStore: 'web',
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('txt_subscription_status')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('btn_subscription_cancel')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('btn_subscription_change_plan')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'abonnement web sans origine connue (null) → résiliation conservée, pas de « Changer d\'offre »',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              proWillRenew: true,
+              proExpiresAt: DateTime(2026, 9, 1),
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('btn_subscription_cancel')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('btn_subscription_change_plan')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'abonnement web résilié (fin programmée) → statut affiché, « Réactiver » masqué',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              proWillRenew: false,
+              proExpiresAt: DateTime(2026, 9, 1),
+              proStore: 'web',
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('txt_subscription_status')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('btn_subscription_reactivate')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('btn_subscription_change_plan')),
+          findsNothing,
+        );
+      },
+    );
+
+    for (final store in ['app_store', 'play_store']) {
+      testWidgets('abonnement $store → message store, aucun bouton', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildApp(
+            snapshot: LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              proWillRenew: true,
+              proExpiresAt: DateTime(2026, 9, 1),
+              proStore: store,
+            ),
+            repo: _FakeSubscriptionRepository(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('txt_subscription_manage_on_store')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('btn_subscription_cancel')), findsNothing);
+        expect(
+          find.byKey(const Key('btn_subscription_reactivate')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('btn_subscription_change_plan')),
+          findsNothing,
+        );
+      });
+    }
   });
 }
