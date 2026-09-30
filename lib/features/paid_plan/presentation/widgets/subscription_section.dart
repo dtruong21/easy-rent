@@ -10,14 +10,10 @@ import '../../../auth/domain/plan_level.dart';
 import '../../../profile/presentation/widgets/section_header.dart';
 import '../../application/manage_subscription_controller.dart';
 import '../../data/subscription_repository.dart';
+import '../pro_pricing_cta.dart' show mobileStores;
 import 'plan_level_label.dart';
 import 'subscription_cancel_dialog.dart';
 import 'subscription_status_views.dart';
-
-/// Origines d'abonnement gérées par le store natif (résiliation IAP hors
-/// périmètre v1, cf. plan FEAT-044f §Hors périmètre — deep-link système
-/// `showManageSubscriptions`, non implémenté ici).
-const _mobileStores = {'app_store', 'play_store'};
 
 /// Section « Abonnement Baillan Pro » de `/profile` (FEAT-044f).
 ///
@@ -26,7 +22,9 @@ const _mobileStores = {'app_store', 'play_store'};
 /// convention que `ProfileCrashReportingSection`).
 ///
 /// Rendu selon [LandlordTierSnapshot] (`landlordTierProvider`) :
-/// - `proStore` ∈ {app_store, play_store} → message info, pas de bouton ;
+/// - `proStore` ∈ [mobileStores] → message info, pas de bouton (résiliation
+///   IAP hors périmètre v1, cf. plan FEAT-044f §Hors périmètre — deep-link
+///   système `showManageSubscriptions`, non implémenté ici) ;
 /// - web (store `null`/inconnu inclus, cf. plan §R5 — ne jamais cacher le
 ///   chemin de résiliation à un abonné web) + `proWillRenew != false` →
 ///   « Actif — renouvellement le … » + bouton destructif « Résilier » →
@@ -52,7 +50,7 @@ class SubscriptionSection extends ConsumerWidget {
 
     final l10n = context.l10n;
     final isBusy = ref.watch(manageSubscriptionControllerProvider).isLoading;
-    final isMobileStore = _mobileStores.contains(snapshot?.proStore);
+    final isMobileStore = mobileStores.contains(snapshot?.proStore);
     // Grandfathering I3 (FEAT-056) : `level` est non-null dès lors que
     // `atLeast(PlanLevel.pro)` a déjà validé l'accès à cette section (le
     // garde ci-dessus retourne `SizedBox.shrink()` sinon).

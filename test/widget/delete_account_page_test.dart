@@ -220,24 +220,43 @@ void main() {
       });
     }
 
-    for (final store in ['web', null]) {
-      testWidgets(
-        'abonnement web (proStore=$store) → résiliation immédiate sans remboursement',
-        (tester) async {
-          await pumpWith(
-            tester,
-            LandlordTierSnapshot(
-              tier: SubscriptionTier.paid,
-              planLevel: 'pro',
-              proStore: store,
-            ),
-          );
+    testWidgets(
+      'abonnement web (proStore=web) → résiliation immédiate sans remboursement',
+      (tester) async {
+        await pumpWith(
+          tester,
+          const LandlordTierSnapshot(
+            tier: SubscriptionTier.paid,
+            planLevel: 'pro',
+            proStore: 'web',
+          ),
+        );
 
-          expect(find.byKey(webKey), findsOneWidget);
-          expect(find.text(webNoticeFr), findsOneWidget);
-          expect(find.byKey(storeKey), findsNothing);
-        },
-      );
+        expect(find.byKey(webKey), findsOneWidget);
+        expect(find.text(webNoticeFr), findsOneWidget);
+        expect(find.byKey(storeKey), findsNothing);
+      },
+    );
+
+    // `web` est la SEULE valeur que le webhook écrit pour Stripe : promo,
+    // null ou une valeur inconnue ne prouvent aucune facturation Stripe — ne
+    // pas promettre une résiliation que le serveur ne fera pas.
+    for (final store in [null, 'promo', 'unknown_store']) {
+      testWidgets('palier payant avec proStore=$store → aucun avertissement', (
+        tester,
+      ) async {
+        await pumpWith(
+          tester,
+          LandlordTierSnapshot(
+            tier: SubscriptionTier.paid,
+            planLevel: 'pro',
+            proStore: store,
+          ),
+        );
+
+        expect(find.byKey(webKey), findsNothing);
+        expect(find.byKey(storeKey), findsNothing);
+      });
     }
 
     testWidgets('palier gratuit → aucun avertissement d\'abonnement', (

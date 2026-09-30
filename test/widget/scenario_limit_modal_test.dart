@@ -225,6 +225,8 @@ void main() {
           find.byKey(const Key('scenario_limit_upgrade_cta')),
           findsOneWidget,
         );
+        // Web : le CTA d'upgrade reste, donc la fermeture garde « Plus tard ».
+        expect(find.text('Plus tard'), findsOneWidget);
 
         await tester.tap(find.byKey(const Key('scenario_limit_upgrade_cta')));
         await tester.pumpAndSettle();
@@ -301,11 +303,13 @@ void main() {
           findsNothing,
         );
         expect(find.text('Passer à Pro'), findsNothing);
-        // La modale garde son message et sa fermeture.
+        // La modale garde son message et sa fermeture — libellé neutre : sans
+        // CTA d'upgrade, « Plus tard » renverrait à un achat indisponible.
         expect(find.text('Limite atteinte'), findsOneWidget);
-        expect(find.text('Plus tard'), findsOneWidget);
+        expect(find.text('Plus tard'), findsNothing);
+        expect(find.text('Fermer'), findsOneWidget);
 
-        await tester.tap(find.text('Plus tard'));
+        await tester.tap(find.text('Fermer'));
         await tester.pumpAndSettle();
         expect(
           find.byKey(const Key('scenario_limit_reached_modal')),
@@ -329,7 +333,8 @@ void main() {
       );
       expect(find.byKey(const Key('scenario_limit_upgrade_cta')), findsNothing);
       expect(find.textContaining('Passer à'), findsNothing);
-      expect(find.text('Plus tard'), findsOneWidget);
+      expect(find.text('Plus tard'), findsNothing);
+      expect(find.text('Fermer'), findsOneWidget);
     });
 
     testWidgets('tier anonymous → CTA « Créer un compte » inchangé', (
@@ -345,6 +350,8 @@ void main() {
         find.byKey(const Key('scenario_limit_signup_cta')),
         findsOneWidget,
       );
+      // Le CTA d'inscription reste : « Plus tard » garde son sens.
+      expect(find.text('Plus tard'), findsOneWidget);
     });
   });
 }
