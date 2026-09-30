@@ -9,7 +9,10 @@
 /// - Chemin malheureux (mot de passe erroné → erreur, pas de purge)
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/profile/presentation/delete_account_page.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -92,6 +95,7 @@ MockUser _userWithProvider(String providerId) => MockUser(
 Widget _buildPage({
   required _FakeAuthRepository authRepo,
   Locale locale = const Locale('fr'),
+  LandlordTierSnapshot? tier,
 }) {
   final router = GoRouter(
     initialLocation: '/profile/delete-account',
@@ -108,7 +112,11 @@ Widget _buildPage({
   );
 
   return ProviderScope(
-    overrides: [authRepositoryProvider.overrideWithValue(authRepo)],
+    overrides: [
+      authRepositoryProvider.overrideWithValue(authRepo),
+      if (tier != null)
+        landlordTierProvider.overrideWith((ref) => Stream.value(tier)),
+    ],
     child: MaterialApp.router(
       routerConfig: router,
       // Locale forcée (défaut FR) : les assertions FR ci-dessous valent les
@@ -166,6 +174,150 @@ void main() {
         expect(find.textContaining('5 ans'), findsOneWidget);
       },
     );
+  });
+
+  group('avertissement abonnement (toutes plateformes)', () {
+    const storeKey = Key('box_delete_account_store_subscription_warning');
+    const webKey = Key('box_delete_account_web_subscription_notice');
+    const storeWarningFr =
+        "La suppression du compte ne résilie pas un abonnement souscrit via "
+        "l'App Store ou Google Play. Résiliez-le dans les réglages de votre "
+        "store pour arrêter la facturation.";
+    const webNoticeFr =
+        'Votre abonnement Baillan est résilié immédiatement, sans '
+        'remboursement de la période en cours.';
+
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    Future<void> pumpWith(
+      WidgetTester tester,
+      LandlordTierSnapshot? tier, {
+      Locale locale = const Locale('fr'),
+    }) async {
+      final authRepo = _FakeAuthRepository(_userWithProvider('password'));
+      await tester.pumpWidget(
+        _buildPage(authRepo: authRepo, tier: tier, locale: locale),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    for (final store in ['app_store', 'play_store']) {
+      testWidgets('abonnement $store → alerte « résiliez dans le store »', (
+        tester,
+      ) async {
+        await pumpWith(
+          tester,
+          LandlordTierSnapshot(
+            tier: SubscriptionTier.paid,
+            planLevel: 'pro',
+            proStore: store,
+          ),
+        );
+
+        expect(find.byKey(storeKey), findsOneWidget);
+        expect(find.text(storeWarningFr), findsOneWidget);
+        expect(find.byKey(webKey), findsNothing);
+      });
+    }
+
+    for (final store in ['web', null]) {
+      testWidgets(
+        'abonnement web (proStore=$store) → résiliation immédiate sans remboursement',
+        (tester) async {
+          await pumpWith(
+            tester,
+            LandlordTierSnapshot(
+              tier: SubscriptionTier.paid,
+              planLevel: 'pro',
+              proStore: store,
+            ),
+          );
+
+          expect(find.byKey(webKey), findsOneWidget);
+          expect(find.text(webNoticeFr), findsOneWidget);
+          expect(find.byKey(storeKey), findsNothing);
+        },
+      );
+    }
+
+    testWidgets('palier gratuit → aucun avertissement d\'abonnement', (
+      tester,
+    ) async {
+      await pumpWith(
+        tester,
+        const LandlordTierSnapshot(tier: SubscriptionTier.free),
+      );
+
+      expect(find.byKey(storeKey), findsNothing);
+      expect(find.byKey(webKey), findsNothing);
+    });
+
+    testWidgets('snapshot pas encore résolu → aucun avertissement', (
+      tester,
+    ) async {
+      await pumpWith(tester, null);
+
+      expect(find.byKey(storeKey), findsNothing);
+      expect(find.byKey(webKey), findsNothing);
+    });
+
+    testWidgets('affiché aussi dans une app store (iOS/Android)', (
+      tester,
+    ) async {
+      debugIsStoreAppOverride = true;
+      await pumpWith(
+        tester,
+        const LandlordTierSnapshot(
+          tier: SubscriptionTier.paid,
+          planLevel: 'pro',
+          proStore: 'app_store',
+        ),
+      );
+
+      expect(find.byKey(storeKey), findsOneWidget);
+    });
+
+    testWidgets('EN — libellés anglais', (tester) async {
+      await pumpWith(
+        tester,
+        const LandlordTierSnapshot(
+          tier: SubscriptionTier.paid,
+          planLevel: 'pro',
+          proStore: 'play_store',
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.text(
+          "Deleting your account doesn't cancel a subscription bought "
+          'through the App Store or Google Play. Cancel it in your store '
+          'settings to stop billing.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('l\'avertissement précède la case de confirmation', (
+      tester,
+    ) async {
+      await pumpWith(
+        tester,
+        const LandlordTierSnapshot(
+          tier: SubscriptionTier.paid,
+          planLevel: 'pro',
+          proStore: 'web',
+        ),
+      );
+
+      expect(
+        tester.getTopLeft(find.byKey(webKey)).dy <
+            tester
+                .getTopLeft(find.byKey(const Key('check_delete_account_ack')))
+                .dy,
+        isTrue,
+      );
+    });
   });
 
   group('compte email (password)', () {

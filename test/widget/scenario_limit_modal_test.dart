@@ -1,6 +1,7 @@
 /// Tests widget pour la modal de limite de scénarios atteinte (BAILLAN-M1).
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/session_state.dart';
@@ -255,6 +256,94 @@ void main() {
       expect(
         find.byKey(const Key('scenario_limit_reached_modal')),
         findsNothing,
+      );
+    });
+  });
+
+  group('ScenarioLimitReachedModal — app store (iOS/Android)', () {
+    setUp(() => debugIsStoreAppOverride = true);
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    Future<void> triggerLimit(
+      WidgetTester tester, {
+      required SubscriptionTier tier,
+      required List<InvestmentScenario> scenarios,
+    }) async {
+      await tester.pumpWidget(
+        _buildPage(
+          tier: tier,
+          scenarios: scenarios,
+          paidPlanRepo: _FakePaidPlanInterestRepo(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _fillMinimalForm(tester);
+      await tester.ensureVisible(find.byKey(const Key('save_scenario_button')));
+      await tester.tap(find.byKey(const Key('save_scenario_button')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'tier free → modal sans CTA vers /pro, avec bouton de fermeture',
+      (tester) async {
+        await triggerLimit(
+          tester,
+          tier: SubscriptionTier.free,
+          scenarios: [_scenario('s1'), _scenario('s2'), _scenario('s3')],
+        );
+
+        expect(
+          find.byKey(const Key('scenario_limit_reached_modal')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('scenario_limit_upgrade_cta')),
+          findsNothing,
+        );
+        expect(find.text('Passer à Pro'), findsNothing);
+        // La modale garde son message et sa fermeture.
+        expect(find.text('Limite atteinte'), findsOneWidget);
+        expect(find.text('Plus tard'), findsOneWidget);
+
+        await tester.tap(find.text('Plus tard'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('scenario_limit_reached_modal')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('tier paid Pro (15/15) → aucun CTA « Passer à Max »', (
+      tester,
+    ) async {
+      await triggerLimit(
+        tester,
+        tier: SubscriptionTier.paid,
+        scenarios: [for (var i = 0; i < 15; i++) _scenario('s$i')],
+      );
+
+      expect(
+        find.byKey(const Key('scenario_limit_reached_modal')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('scenario_limit_upgrade_cta')), findsNothing);
+      expect(find.textContaining('Passer à'), findsNothing);
+      expect(find.text('Plus tard'), findsOneWidget);
+    });
+
+    testWidgets('tier anonymous → CTA « Créer un compte » inchangé', (
+      tester,
+    ) async {
+      await triggerLimit(
+        tester,
+        tier: SubscriptionTier.anonymous,
+        scenarios: [_scenario('s1')],
+      );
+
+      expect(
+        find.byKey(const Key('scenario_limit_signup_cta')),
+        findsOneWidget,
       );
     });
   });

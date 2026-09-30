@@ -56,6 +56,9 @@ class ActiveSubscriptionView extends StatelessWidget {
 }
 
 /// Résiliation déjà programmée — bouton non destructif « Réactiver ».
+///
+/// [onReactivate] `null` → bouton absent (apps iOS/Android : reprendre une
+/// facturation Stripe depuis l'app store serait un achat hors achat intégré).
 class ScheduledCancelView extends StatelessWidget {
   const ScheduledCancelView({
     super.key,
@@ -67,7 +70,7 @@ class ScheduledCancelView extends StatelessWidget {
 
   final DateTime? expiresAt;
   final bool isBusy;
-  final VoidCallback onReactivate;
+  final VoidCallback? onReactivate;
 
   /// Palier réel (FEAT-056 — « Pro »/« Max »/« Ultra ») : le message ne doit
   /// jamais dire « Pro » à un abonné Max/Ultra.
@@ -87,18 +90,20 @@ class ScheduledCancelView extends StatelessWidget {
           key: const Key('txt_subscription_status'),
           style: theme.textTheme.bodyMedium,
         ),
-        const SizedBox(height: 12),
-        OutlinedButton(
-          key: const Key('btn_subscription_reactivate'),
-          onPressed: isBusy ? null : onReactivate,
-          child: isBusy
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(l10n.subscriptionReactivateButton),
-        ),
+        if (onReactivate != null) ...[
+          const SizedBox(height: 12),
+          OutlinedButton(
+            key: const Key('btn_subscription_reactivate'),
+            onPressed: isBusy ? null : onReactivate,
+            child: isBusy
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.subscriptionReactivateButton),
+          ),
+        ],
       ],
     );
   }

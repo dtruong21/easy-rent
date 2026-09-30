@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/store_billing.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../auth/data/landlord_tier_repository.dart';
@@ -33,6 +34,12 @@ const _mobileStores = {'app_store', 'play_store'};
 /// - web + `proWillRenew == false` → « Pro jusqu'au …, puis Gratuit » +
 ///   bouton « Réactiver » (pas de confirmation — action symétrique, non
 ///   destructive).
+///
+/// **Apps iOS/Android** ([isStoreApp]) : le statut et la résiliation d'un
+/// abonnement web restent, mais « Réactiver » et « Changer d'offre »
+/// disparaissent — reprendre une facturation Stripe ou changer d'offre depuis
+/// une app store serait un achat hors achat intégré (App Store 3.1.1, règle
+/// Paiements de Google Play).
 class SubscriptionSection extends ConsumerWidget {
   const SubscriptionSection({super.key});
 
@@ -65,7 +72,7 @@ class SubscriptionSection extends ConsumerWidget {
           ScheduledCancelView(
             expiresAt: snapshot.proExpiresAt,
             isBusy: isBusy,
-            onReactivate: () => _reactivate(context, ref),
+            onReactivate: isStoreApp ? null : () => _reactivate(context, ref),
             levelLabel: levelLabel,
           )
         else
@@ -74,7 +81,7 @@ class SubscriptionSection extends ConsumerWidget {
             isBusy: isBusy,
             onCancel: () => _confirmCancel(context, ref),
           ),
-        if (!isMobileStore) ...[
+        if (!isMobileStore && !isStoreApp) ...[
           const SizedBox(height: 8),
           TextButton(
             key: const Key('btn_subscription_change_plan'),

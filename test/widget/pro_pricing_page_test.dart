@@ -12,6 +12,7 @@
 /// voir le groupe « Max/Ultra jamais achetables ».
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/breakpoints.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
@@ -312,5 +313,54 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  });
+
+  group('ProPricingPage — app store (iOS/Android) : ni prix ni achat', () {
+    setUp(() => debugIsStoreAppOverride = true);
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    for (final (label, tier, planLevel) in [
+      ('free', SubscriptionTier.free, null),
+      ('paid pro', SubscriptionTier.paid, 'pro'),
+    ]) {
+      testWidgets('tier $label — message neutre, aucune carte ni bouton', (
+        tester,
+      ) async {
+        _setWindowSize(tester, const Size(1280, 2200));
+        await tester.pumpWidget(_buildPage(tier: tier, planLevel: planLevel));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('txt_pro_store_app_unavailable')),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            "Les offres payantes ne sont pas encore proposées dans l'application.",
+          ),
+          findsOneWidget,
+        );
+
+        // Ni cartes d'offres, ni bascule mensuel/annuel, ni tableau comparatif.
+        for (final id in ['free', 'pro', 'max', 'ultra']) {
+          expect(find.byKey(Key('plan_card_$id')), findsNothing);
+        }
+        expect(find.byKey(const Key('switch_plan_period')), findsNothing);
+        expect(find.byType(PlanComparisonTable), findsNothing);
+
+        // Aucun bouton d'achat / de changement d'offre / de capture d'intérêt.
+        for (final id in ['pro', 'max', 'ultra']) {
+          expect(find.byKey(Key('btn_plan_subscribe_$id')), findsNothing);
+          expect(find.byKey(Key('btn_plan_change_$id')), findsNothing);
+          expect(find.byKey(Key('btn_plan_notify_$id')), findsNothing);
+        }
+        expect(find.byType(FilledButton), findsNothing);
+
+        // Aucun prix (€) ni mention du site web.
+        expect(find.textContaining('€'), findsNothing);
+        expect(find.textContaining('site'), findsNothing);
+        expect(find.textContaining('web'), findsNothing);
+      });
+    }
   });
 }

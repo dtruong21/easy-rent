@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/store_billing.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/plan_entitlement.dart';
@@ -15,6 +16,10 @@ import '../../../paid_plan/presentation/widgets/plan_level_label.dart';
 /// - `tier == paid` (Pro ou Max, plafonnés depuis FEAT-056 — seul Ultra est
 ///   illimité) : CTA « Passer à {palier suivant} » → `/pro`, palier suivant
 ///   dérivé du rang de l'enum [PlanLevel], jamais codé en dur.
+///
+/// Dans les apps iOS/Android ([isStoreApp]), le CTA vers `/pro` disparaît (aucun
+/// achat hors achat intégré) : la modale garde son message (aucun prix n'y
+/// figure) et son bouton « Plus tard ».
 Future<void> showScenarioLimitReachedModal(
   BuildContext context, {
   required PlanEntitlement plan,
@@ -81,7 +86,7 @@ class _ScenarioLimitReachedDialog extends StatelessWidget {
             },
             child: Text(l10n.simulatorLimitReachedSignupButton),
           )
-        else
+        else if (!isStoreApp)
           FilledButton(
             key: const Key('scenario_limit_upgrade_cta'),
             onPressed: () {
