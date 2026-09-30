@@ -7,10 +7,72 @@
 > **non contre-vérifiés** (limite de budget) — re-valider chaque valeur datée
 > au moment du remplissage des consoles.
 
+## Ré-audit du 2026-09-30
+
+> Vérifié sur l'APK debug et dans le code. **En cas de divergence avec les
+> sections ci-dessous (datées du 2026-07-07), cette section prime.**
+
+### Vérifié
+
+| Point | Résultat |
+|---|---|
+| **Android — API cible** | ✅ `targetSdk 36` / `compileSdk 36` → exigence Play du 31/08/2026 remplie |
+| **Android — pages 16 Ko** | ✅ toutes les `.so` arm64 ont des segments alignés à ≥ `0x4000` ; `zipalign -c -P 16` OK. Reste à confirmer l'absence d'avertissement au 1er upload AAB (§1.2) |
+| **Android — permissions** | ✅ `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, plus `com.google.android.c2dm.permission.RECEIVE` et `com.google.android.providers.gsf.permission.READ_GSERVICES` tirées par Firebase. Aucune permission sensible |
+| **iOS — cible et build** | ✅ deployment target **iOS 15.0** (et non 13), build avec **Xcode 27** |
+| **iOS — `NSPhotoLibraryUsageDescription`** | ✅ ajouté à `Info.plist` (rejet ITMS-90683 dû à `file_picker`) |
+
+### Corrigé dans le code
+
+- **Abonnement Pro : paiement Stripe web uniquement, jamais dans les apps.**
+  `isStoreApp` (`lib/core/config/store_billing.dart` : iOS/Android, pas le web)
+  masque tout ce qui mène à un achat hors store : `/pro` n'affiche plus qu'un
+  message neutre (« Les offres payantes ne sont pas encore proposées dans
+  l'application. » — ni prix, ni cartes, ni bouton, ni mention du site web),
+  tous les points d'entrée vers `/pro` sont cachés, « Réactiver » un abonnement
+  Stripe est caché (la résiliation reste possible), et la section
+  « Prochainement — Plan Pro » du simulateur (avec sa sollicitation de
+  financement) est masquée. Sur le web, rien ne change.
+- **Suppression de compte : résiliation Stripe + avertissements.** La callable
+  `deleteAccount` résilie **immédiatement** (sans remboursement de la période en
+  cours) les abonnements Stripe du compte **avant** toute purge ; si Stripe
+  échoue, rien n'est supprimé et l'utilisateur relance. Ne concerne que les
+  comptes facturés sur le web. La page de suppression prévient : un abonnement
+  **store** n'est **pas** résilié par la suppression (à résilier dans les
+  réglages du store) ; un abonnement **web** l'est.
+
+### Décision du 2026-09-30
+
+L'**achat intégré (RevenueCat) sera intégré AVANT la sortie des apps.** Apple
+**3.1.3(b)** (multiplateforme) : un abonnement web qui débloque l'app iOS doit
+aussi pouvoir s'acheter en achat intégré dans l'app. Tant que l'IAP n'est pas
+livré, les apps ne proposent aucun achat (cf. ci-dessus).
+
+### Reste bloquant
+
+- 🔴 **Mentions légales en brouillon dans l'app** (page marquée « Brouillon »,
+  « à compléter ») → rejet possible **2.1** (contenu provisoire). À finaliser
+  avant soumission ; recoupe le bloquant #5 du TL;DR.
+
+### Déploiement des Functions (précondition)
+
+Le correctif `deleteAccount` demande un **redéploiement des Functions**, et,
+**avant** de déployer, de confirmer dans Secret Manager que
+`STRIPE_SECRET_KEY` est une clé **live** (`sk_live_` / `rk_live_`, droits
+lecture/écriture sur les abonnements) et `STRIPE_SECRET_KEY_TEST` une clé
+**test** (`sk_test_`). Sinon les comptes facturés sur le web ne peuvent plus
+être supprimés (erreur `internal`) ; les comptes gratuits ne sont pas touchés.
+
+Écart résiduel assumé : un paiement web dont le webhook RevenueCat n'a pas
+encore écrit le store « web » sur le compte n'est pas résilié à la
+suppression (et la recherche Stripe est à cohérence différée).
+
+---
+
 ## TL;DR — verdict pour une release production
 
 **Le code et la config sont quasi prêts** (target API ✅, privacy manifest ✅,
-export compliance ✅, Xcode 26 ✅). Les vrais bloquants sont **fonctionnels et
+export compliance ✅, Xcode 27 ✅). Les vrais bloquants sont **fonctionnels et
 administratifs** :
 
 | # | Bloquant | Stores | Nature |
@@ -41,12 +103,12 @@ aujourd'hui et après la deadline du 31/08/2026 (§1.1).
 
 Sources : [target-sdk requirements](https://developer.android.com/google/play/requirements/target-sdk) · [support 11926878](https://support.google.com/googleplay/android-developer/answer/11926878) · [Android 17 release notes](https://developer.android.com/about/versions/17/release-notes)
 
-### 1.2 Pages mémoire 16 KB ⚠️ *(contre-vérifié — à vérifier au 1er AAB)*
+### 1.2 Pages mémoire 16 KB ✅ *(contre-vérifié ; APK debug OK le 2026-09-30 — à reconfirmer au 1er AAB)*
 
 Depuis le **01/11/2025** (extension expirée le 31/05/2026), tout upload ciblant
 API 35+ doit supporter les pages 16 KB sur appareils 64 bits — le Play Console
 **bloque** sinon. Flutter ≥ 3.24 (NDK r28) produit des binaires conformes ;
-notre 3.41 est très probablement OK, **mais** contrôler au premier upload AAB
+notre 3.41 est conforme (vérifié sur l'APK debug le 2026-09-30, cf. ré-audit en tête), **mais** contrôler au premier upload AAB
 l'absence d'avertissement 16 KB (libs natives des plugins Firebase/pdf).
 Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 
@@ -74,7 +136,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 | **Privacy manifest de l'app** (bloque l'upload depuis le 01/05/2024, erreur ITMS-91053) ([doc](https://developer.apple.com/documentation/bundleresources/adding-a-privacy-manifest-to-your-app-or-third-party-sdk)) | ✅ **fait** | `ios/Runner/PrivacyInfo.xcprivacy` créé, enregistré dans Xcode, embarqué dans Runner.app (vérifié au build) |
 | **Privacy manifests des SDKs tiers** (rejet ITMS-91061 depuis le 12/02/2025) — Firebase*, Flutter, shared_preferences… sont sur la [liste officielle](https://developer.apple.com/support/third-party-SDK-requirements/) | ⚠️ à vérifier | Pods récents (firebase-ios-sdk ≥ 10.22 embarque les manifests). Contrôler les mails ITMS-9105x au premier upload TestFlight |
 | **App Privacy labels** (App Store Connect) ([app-privacy-details](https://developer.apple.com/app-store/app-privacy-details/)) | 🔴 formulaire | Pré-rempli §5 — tout ce qui part vers Firestore est « collected », **y compris les données locataires** |
-| **SDK de build** : depuis le **28/04/2026**, upload = Xcode 26 / SDK iOS 26 minimum ([upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)) | ✅ ok | Xcode 26.6 sur la machine. Deployment target iOS 13 inchangé. Tester les surfaces natives (style Liquid Glass) : alerts, share sheet, SIWA |
+| **SDK de build** : depuis le **28/04/2026**, upload = Xcode 26 / SDK iOS 26 minimum ([upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)) | ✅ ok | Build avec **Xcode 27** sur la machine (≥ 26 requis). Deployment target **iOS 15.0** (vérifié le 2026-09-30). Tester les surfaces natives (style Liquid Glass) : alerts, share sheet, SIWA |
 | **Export compliance US** : chiffrement standard (HTTPS/TLS) → exempt | ✅ **fait** | `ITSAppUsesNonExemptEncryption = false` dans Info.plist |
 | **Déclaration chiffrement France** : gRPC/BoringSSL de Firestore = TLS standard **non fourni par l'OS** → lecture stricte = formulaire français App Store Connect ; pratique répandue de l'écosystème = exempt ([table officielle](https://developer.apple.com/help/app-store-connect/reference/export-compliance-documentation-for-encryption/)) | ⚠️ à trancher | Décision utilisateur. Risque zéro = déclaration simplifiée ANSSI (gratuite, une fois). Non bloquant en pratique pour la review |
 | **Questionnaire d'âge 2026** (système refondu, tranches iOS 26) | 🔴 formulaire | Dans le flux de soumission — app utilitaire, résultat attendu 4+/13+ |
@@ -86,7 +148,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 |---|---|---|
 | **DSA trader status — App Store** (enforcement depuis le 17/02/2025) | 🔴 bloquant | Sans déclaration vérifiée, pas de distribution UE. Coordonnées (adresse — boîte postale acceptée par Apple —, téléphone, email) **publiées** sur la fiche dans les 27 pays UE ([doc ASC](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/)) |
 | **DSA trader status — Play** | 🔴 bloquant | Même exigence dans Play Console (Business information), vérification identité/adresse ; infos publiées dans « About the developer » |
-| Statut **non-trader** possible en V1 ? | ⚠️ décision | V1 gratuite sans IAP → non-trader défendable. **Mais** FEAT-044 (freemium) imposera le statut trader → re-vérification. Recommandation : créer un **micro-entrepreneur (SIREN)** + email/téléphone/adresse dédiés dès maintenant, et envisager un **compte Play organisation** (supprime aussi l'exigence 12 testeurs × 14 j) |
+| Statut **non-trader** possible en V1 ? | ⚠️ décision | Le statut non-trader n'est plus défendable (décision du 2026-09-30) : l'achat intégré sera livré avant la sortie des apps et FEAT-044 (freemium) impose le statut trader → **déclarer le statut trader** (re-vérification incluse). Recommandation : créer un **micro-entrepreneur (SIREN)** + email/téléphone/adresse dédiés dès maintenant, et envisager un **compte Play organisation** (supprime aussi l'exigence 12 testeurs × 14 j) |
 | **Mentions légales LCEN** (art. 1-1, loi 2004-575) : identité éditeur + hébergeur accessibles depuis l'app | 🟠 gap légal | Hors review stores mais sanction pénale possible. Créer une page « Mentions légales » (route `/legal`) liée depuis Profil, avant release |
 | **Médiation de la consommation** (art. L612-1 c. conso) | ✅ plus tard | Non requis tant que l'app est 100 % gratuite. **Obligatoire avant FEAT-044** (adhésion médiateur ~200-400 €/an + CGV) |
 | **European Accessibility Act** (28/06/2025) | ✅ exempté | Exemption micro-entreprise (< 10 salariés, < 2 M€ CA). Bonnes pratiques WCAG conservées |
