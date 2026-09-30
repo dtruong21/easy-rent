@@ -9,14 +9,21 @@
  *
  * Purge (Admin SDK — les Security Rules n'autorisent aucun hard-delete
  * client), précédée d'une résiliation Stripe :
- *   (0) résilie IMMÉDIATEMENT (sans remboursement de la période en cours)
- *       l'abonnement Stripe web du compte, s'il y en a un — sinon l'utilisateur
- *       continuerait d'être facturé pour un compte qui n'existe plus. Retrouvé
- *       par la metadata `rc_app_user_id` = uid (aucun identifiant Stripe fourni
- *       par le client). Elle passe AVANT toute purge : si Stripe échoue, rien
- *       n'est supprimé, l'appel échoue en `internal` et l'utilisateur relance.
- *       Sautée sur l'émulateur Functions (pas de vraie clé Stripe). Un abonné
- *       via un store (IAP) n'a rien côté Stripe : le store gère sa résiliation ;
+ *   (0) si le compte est facturé sur le WEB (Stripe), résilie IMMÉDIATEMENT
+ *       (sans remboursement de la période en cours) son abonnement — sinon
+ *       l'utilisateur continuerait d'être facturé pour un compte qui n'existe
+ *       plus. « Facturé sur le web » se lit sur le doc landlord de la base
+ *       routée ([hasWebBilling]) : un compte gratuit, ou abonné via un store
+ *       (IAP, dont le store gère la résiliation), ou déjà purgé (relance) ne
+ *       touche PAS Stripe — sa suppression ne dépend donc jamais de la config
+ *       des secrets Stripe. Abonnement retrouvé par la metadata
+ *       `rc_app_user_id` = uid (aucun identifiant Stripe fourni par le client).
+ *       Elle passe AVANT toute purge : si Stripe échoue, rien n'est supprimé,
+ *       l'appel échoue en `internal` et l'utilisateur relance. Toute erreur de
+ *       configuration (clé absente / de mauvais mode) est journalisée et
+ *       renvoyée en `internal` — pas en `failed-precondition`, que le client lit
+ *       comme « reconnectez-vous ». Seul `origin_not_allowed` reste
+ *       `failed-precondition`. Sautée sur l'émulateur Functions ;
  *   (a) marque les quittances `receipts` du landlord — CONSERVÉES 5 ans
  *       (loi n° 89-462 du 6 juillet 1989 ; docs/LEGAL.md « droit à
  *       l'effacement ») : stamp `accountDeletedAt` + `retentionUntil`
@@ -73,6 +80,45 @@ const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
 
 /** Clé secrète Stripe TEST — servie aux comptes staging (issue #138). */
 const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
+
+/**
+ * Valeur de `proStore` / `entitlements.<palier>.store` écrite par le webhook
+ * RevenueCat pour un abonnement Stripe / RC Billing (`storeOf` dans
+ * `http/revenuecat_webhook.ts` : STRIPE, RC_BILLING → « web »). Un test
+ * verrouille la parité avec `storeOf`.
+ */
+const WEB_STORE = "web";
+
+/**
+ * PURE — le compte est-il (ou a-t-il été) facturé par Stripe ?
+ *
+ * Deux sources, écrites par le SEUL écrivain du droit (le webhook RevenueCat) :
+ *   - `proStore`, miroir du palier effectif : « web » tant qu'un palier web est
+ *     actif ;
+ *   - la map `entitlements` : les états EXPIRÉS y sont conservés (`store: "web"`
+ *     inclus) alors que `proStore` redevient null. Un abonnement web expiré côté
+ *     droit peut pourtant encore exister chez Stripe (past_due / unpaid) et
+ *     facturer : on regarde donc TOUS les paliers, actifs ou non.
+ *
+ * Doc absent (relance après une suppression menée à terme) → `false`. Forme
+ * inattendue → `false`, jamais d'exception : un doc atypique ne doit pas
+ * bloquer la suppression.
+ */
+export function hasWebBilling(
+  landlord: Record<string, unknown> | null | undefined,
+): boolean {
+  if (landlord === null || landlord === undefined) return false;
+  if (landlord.proStore === WEB_STORE) return true;
+
+  const entitlements = landlord.entitlements;
+  if (typeof entitlements !== "object" || entitlements === null) return false;
+  return Object.values(entitlements).some(
+    (state) =>
+      typeof state === "object" &&
+      state !== null &&
+      (state as {store?: unknown}).store === WEB_STORE,
+  );
+}
 
 /** Rétention légale des quittances : 5 ans (loi 6 juillet 1989 / art. 2224). */
 const RECEIPT_RETENTION_MS = 5 * 365.25 * 24 * 60 * 60 * 1000;
@@ -175,15 +221,24 @@ export const deleteAccount = onCall(
 
 /**
  * Résilie immédiatement (sans remboursement) tous les abonnements Stripe
- * gérables du compte. Étape (0) de la suppression : lève AVANT toute purge.
+ * gérables d'un compte facturé sur le web. Étape (0) de la suppression : lève
+ * AVANT toute purge.
  *
- * - Clé : Origin web → `resolveStripeKeyOrThrow` (donc `failed-precondition`
- *   `origin_not_allowed` pour une origine inattendue, relancée telle quelle) ;
- *   mobile (sans Origin) → environnement de la base qui porte le compte.
+ * - Portée : uniquement si le doc landlord de la base routée montre une
+ *   facturation web ([hasWebBilling]) — lu AVANT de construire Stripe ou de
+ *   résoudre la clé, pour que la suppression d'un compte gratuit/store ne
+ *   dépende jamais de la configuration des secrets Stripe.
+ * - Clé : Origin web → `resolveStripeKeyOrThrow` ; mobile (sans Origin) →
+ *   environnement de la base qui porte le compte.
  * - Recherche par metadata `rc_app_user_id` = uid : le client ne fournit jamais
  *   d'identifiant Stripe, donc ne peut viser l'abonnement d'autrui.
- * - Toute autre erreur (réseau, API Stripe) → `internal`, l'utilisateur peut
- *   relancer. Le journal ne porte que l'uid et des comptages — jamais la clé.
+ * - Erreurs : TOUTES journalisées. Le client mappe chaque `failed-precondition`
+ *   de deleteAccount sur « session trop ancienne, reconnectez-vous » : une
+ *   erreur de configuration serveur (clé absente / de mauvais mode) est donc
+ *   renvoyée en `internal`. Seul `origin_not_allowed` (plan) et
+ *   `invalid-argument` (uid malformé) gardent leur code. Le journal ne porte
+ *   que l'uid, le code et le message des HttpsError — constantes sans matériel
+ *   de clé — ou, pour une erreur Stripe brute, type/code/statut/requestId.
  */
 async function cancelStripeSubscriptions(
   request: CallableRequest,
@@ -197,12 +252,19 @@ async function cancelStripeSubscriptions(
     return;
   }
 
-  // Défense en profondeur avant l'interpolation de l'uid dans la requête de
-  // recherche Stripe (même garde que manageSubscription) : `invalid-argument`
-  // est une HttpsError, relancée telle quelle — rien n'a été purgé.
-  assertSafeUid(uid);
-
   try {
+    const landlordSnap = await db.doc(`landlords/${uid}`).get();
+    if (!hasWebBilling(landlordSnap.data())) {
+      logger.info(
+        `deleteAccount: no web billing, Stripe not called (uid=${uid})`,
+      );
+      return;
+    }
+
+    // Défense en profondeur avant l'interpolation de l'uid dans la requête de
+    // recherche Stripe (même garde que manageSubscription).
+    assertSafeUid(uid);
+
     const stripe = new Stripe(
       resolveStripeKeyForRequest(
         request.rawRequest?.headers?.origin,
@@ -229,7 +291,21 @@ async function cancelStripeSubscriptions(
         `for uid=${uid}`,
     );
   } catch (err) {
-    if (err instanceof HttpsError) throw err;
+    if (err instanceof HttpsError) {
+      logger.error(
+        `deleteAccount: Stripe step rejected for uid=${uid} ` +
+          `(${err.code}: ${err.message})`,
+      );
+      // `failed-precondition` = « reconnectez-vous » côté app. Sauf
+      // `origin_not_allowed`, c'est ici une erreur de configuration serveur.
+      if (
+        err.code === "failed-precondition" &&
+        err.message !== "origin_not_allowed"
+      ) {
+        throw new HttpsError("internal", "subscription cancel failed — retry");
+      }
+      throw err;
+    }
     // Ni message ni objet d'erreur brut : une erreur Stripe peut citer un
     // fragment de clé (« Invalid API Key provided: sk_live_****abcd »). Le
     // type/code/statut suffisent à retrouver l'appel via le request id.
