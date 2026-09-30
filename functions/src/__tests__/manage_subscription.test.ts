@@ -1,8 +1,9 @@
-import type {HttpsError} from "firebase-functions/v2/https";
-import {describe, expect, it} from "vitest";
+import type {CallableRequest, HttpsError} from "firebase-functions/v2/https";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import {
   assertSafeUid,
+  manageSubscription,
   parseAction,
   pickManageableSubscription,
   pickSubscriptionItem,
@@ -15,6 +16,41 @@ import {
   resolvePriceIdOrThrow,
   type PriceTable,
 } from "../entitlements/stripe_prices";
+import {STAGING_ORIGIN} from "../utils/db_router";
+
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
+
+// Faux Stripe (même patron que delete_account.test.ts) : la fausse classe
+// capture la clé passée au constructeur pour prouver l'environnement visé
+// (live/test) — ou qu'aucun client Stripe n'a été construit.
+const stripeMock = vi.hoisted(() => ({
+  keys: [] as string[],
+  search: vi.fn(),
+  update: vi.fn(),
+}));
+vi.mock("stripe", () => ({
+  default: class FakeStripe {
+    readonly subscriptions = {
+      search: stripeMock.search,
+      update: stripeMock.update,
+    };
+
+    constructor(key: string) {
+      stripeMock.keys.push(key);
+    }
+  },
+}));
+
+// `dbForRequest` (appel sans Origin) lit `admin.firestore()` : cf.
+// delete_account.test.ts pour le import() dynamique interne.
+vi.mock("firebase-admin", async () => {
+  const {makeFakeAdminModule} = await import("./helpers/fake_firestore");
+  return makeFakeAdminModule();
+});
 
 function sub(
   over: Partial<ManageableSubscriptionLike> & {id: string},
@@ -282,5 +318,164 @@ describe("★ change_plan — mêmes gardes serveur que le checkout", () => {
     expect(resolvePriceIdOrThrow(prices, "pro", "annual")).toBe(
       "price_pro_annual",
     );
+  });
+});
+
+// Décision utilisateur (2026-09-30) : « Résilier » doit marcher depuis les apps
+// iOS/Android, qui n'envoient pas d'Origin. Sans Origin, seule la résiliation
+// passe (clé choisie par la base du compte) ; réactiver ou changer d'offre
+// reste refusé — ce serait un achat hors achat intégré.
+describe("manageSubscription — handler (Origin web vs app native)", () => {
+  const LIVE_KEY = "sk_live_fake";
+  const TEST_KEY = "sk_test_fake";
+  const UID = "landlord-a";
+
+  let fakeDb: FakeFirestore;
+  let fakeStagingDb: FakeFirestore;
+
+  const renewingSub = {
+    id: "sub_1",
+    status: "active",
+    cancel_at_period_end: false,
+    created: 1_700_000_000,
+    items: {data: [{id: "si_1", price: {id: "price_pro_monthly"}}]},
+  };
+
+  function makeRequest(
+    data: Record<string, unknown>,
+    origin?: string,
+  ): CallableRequest {
+    return {
+      data,
+      auth: {uid: UID, token: {} as never, rawToken: ""},
+      rawRequest: {headers: origin === undefined ? {} : {origin}} as never,
+    } as CallableRequest;
+  }
+
+  beforeEach(() => {
+    fakeDb = new FakeFirestore();
+    fakeStagingDb = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db = fakeDb;
+    fakeStagingFirestoreHolder.db = fakeStagingDb;
+    vi.stubEnv("STRIPE_SECRET_KEY", LIVE_KEY);
+    vi.stubEnv("STRIPE_SECRET_KEY_TEST", TEST_KEY);
+    stripeMock.keys.length = 0;
+    stripeMock.search.mockReset().mockResolvedValue({data: [renewingSub]});
+    stripeMock.update
+      .mockReset()
+      .mockImplementation((_id: string, params: {cancel_at_period_end?: boolean}) =>
+        Promise.resolve({cancel_at_period_end: params.cancel_at_period_end}),
+      );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("cancel sans Origin + compte prod → clé LIVE, cancel_at_period_end: true", async () => {
+    fakeDb.seed(`landlords/${UID}`, {id: UID});
+
+    const result = await manageSubscription.run(
+      makeRequest({action: "cancel"}),
+    );
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(stripeMock.search).toHaveBeenCalledWith(
+      expect.objectContaining({query: `metadata['rc_app_user_id']:'${UID}'`}),
+    );
+    expect(stripeMock.update).toHaveBeenCalledWith("sub_1", {
+      cancel_at_period_end: true,
+    });
+    expect(result).toEqual({status: "updated", cancelAtPeriodEnd: true});
+  });
+
+  it("cancel avec Origin vide + compte staging → clé TEST (#138)", async () => {
+    fakeStagingDb.seed(`landlords/${UID}`, {id: UID});
+
+    await manageSubscription.run(makeRequest({action: "cancel"}, ""));
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+    expect(stripeMock.update).toHaveBeenCalledWith("sub_1", {
+      cancel_at_period_end: true,
+    });
+  });
+
+  it("cancel sans Origin + compte staging → clé TEST (#138)", async () => {
+    fakeStagingDb.seed(`landlords/${UID}`, {id: UID});
+
+    await manageSubscription.run(makeRequest({action: "cancel"}));
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+  });
+
+  it("cancel sans Origin + clé de mode incorrect → refus, aucun appel Stripe", async () => {
+    fakeDb.seed(`landlords/${UID}`, {id: UID});
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_COLLEE_DANS_LE_SLOT_LIVE");
+
+    await expect(
+      manageSubscription.run(makeRequest({action: "cancel"})),
+    ).rejects.toMatchObject({message: "stripe_key_mode_mismatch_live"});
+    expect(stripeMock.keys).toHaveLength(0);
+  });
+
+  for (const data of [
+    {action: "reactivate"},
+    {action: "change_plan", level: "pro", period: "annual"},
+  ]) {
+    it(`${data.action} sans Origin → origin_not_allowed, Stripe jamais construit`, async () => {
+      fakeDb.seed(`landlords/${UID}`, {id: UID});
+
+      await expect(
+        manageSubscription.run(makeRequest(data)),
+      ).rejects.toMatchObject({
+        code: "failed-precondition",
+        message: "origin_not_allowed",
+      });
+      expect(stripeMock.keys).toHaveLength(0);
+      expect(stripeMock.search).not.toHaveBeenCalled();
+      expect(stripeMock.update).not.toHaveBeenCalled();
+    });
+  }
+
+  // Chemins web : strictement inchangés (clé par l'Origin).
+  it("web : Origin prod → clé LIVE", async () => {
+    await manageSubscription.run(
+      makeRequest({action: "cancel"}, "https://app.baillan.com"),
+    );
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+  });
+
+  it("web : Origin staging → clé TEST", async () => {
+    await manageSubscription.run(
+      makeRequest({action: "cancel"}, STAGING_ORIGIN),
+    );
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+  });
+
+  it("web : Origin inattendu → origin_not_allowed, même pour cancel", async () => {
+    await expect(
+      manageSubscription.run(
+        makeRequest({action: "cancel"}, "https://evil.tld"),
+      ),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "origin_not_allowed",
+    });
+    expect(stripeMock.keys).toHaveLength(0);
+  });
+
+  it("web : reactivate depuis l'Origin prod → autorisé", async () => {
+    stripeMock.search.mockResolvedValue({
+      data: [{...renewingSub, cancel_at_period_end: true}],
+    });
+
+    const result = await manageSubscription.run(
+      makeRequest({action: "reactivate"}, "https://app.baillan.com"),
+    );
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(result).toEqual({status: "updated", cancelAtPeriodEnd: false});
   });
 });

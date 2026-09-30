@@ -87,8 +87,9 @@ export function stripeEnvForOrigin(origin: unknown): StripeEnv {
 /**
  * Clé Stripe à utiliser pour un appel callable, ou refus.
  *
- * Seule porte vers `sk_live` du code serveur : les callables ne doivent JAMAIS
- * lire `stripeSecret.value()` directement, sinon la garantie de #138 fuit par
+ * Avec [resolveStripeKeyForDb] (arrêt d'une facturation existante), seule porte
+ * vers `sk_live` du code serveur : les callables ne doivent JAMAIS lire
+ * `stripeSecret.value()` directement, sinon la garantie de #138 fuit par
  * l'appel oublié.
  *
  * @param origin  En-tête `Origin` de la requête (`request.rawRequest.headers`).
@@ -116,31 +117,33 @@ export function resolveStripeKeyOrThrow(
 }
 
 /**
- * Clé Stripe pour une callable appelée depuis le web OU depuis une app native.
+ * Clé Stripe choisie par la SEULE base Firestore qui porte le compte, jamais
+ * par l'Origin : base `staging` → clé test, toute autre base (`(default)`,
+ * prod) → clé live.
  *
- * - **Web** (Origin non vide) : [resolveStripeKeyOrThrow], inchangé — y compris
- *   son refus `origin_not_allowed` pour une origine inattendue.
- * - **Mobile** (Origin absent ou vide — une app native n'en envoie pas) :
- *   `resolveStripeKeyOrThrow` refuserait l'appel. L'environnement suit alors la
- *   base qui porte le compte (`dbForRequest` → base `staging` = `isStagingDb`),
- *   jamais un en-tête forgeable : compte staging → clé test, compte prod → clé
- *   live. Mêmes garde-fous de clé que le chemin web (clé absente ou de mauvais
- *   mode → refus, aucun repli sur la clé live).
+ * Pour les opérations qui ne font qu'ARRÊTER une facturation existante du
+ * compte appelant (suppression du compte, résiliation depuis une app native) :
+ * - la base est résolue par `dbForRequest` (web : par l'Origin — seul
+ *   `app.staging.baillan.com` va vers `staging` ; mobile : par la base qui
+ *   porte le doc landlord). Le staging ne reçoit donc jamais la clé live
+ *   (#138 tient), et un compte prod reçoit la live quelle que soit l'origine
+ *   web (URL Firebase Hosting, localhost…) — l'allowlist d'Origin de
+ *   [resolveStripeKeyOrThrow] y refusait des appels légitimes ;
+ * - forger l'Origin ne fait que choisir la base de SON propre compte : aucune
+ *   opération sur l'abonnement d'autrui (recherche par `rc_app_user_id` = uid).
  *
- * @param origin      En-tête `Origin` de la requête, s'il y en a un.
+ * Mêmes garde-fous que le chemin web : clé absente ou de mauvais mode → refus,
+ * aucun repli sur la clé live.
+ *
  * @param isStagingDb `true` si la base routée pour la requête est `staging`.
  * @param liveKey     Valeur du secret `STRIPE_SECRET_KEY`.
  * @param testKey     Valeur du secret `STRIPE_SECRET_KEY_TEST`.
  */
-export function resolveStripeKeyForRequest(
-  origin: unknown,
+export function resolveStripeKeyForDb(
   isStagingDb: boolean,
   liveKey: string,
   testKey: string,
 ): string {
-  if (typeof origin === "string" && origin.length > 0) {
-    return resolveStripeKeyOrThrow(origin, liveKey, testKey);
-  }
   return requireKeyForEnv(isStagingDb ? "test" : "live", liveKey, testKey);
 }
 

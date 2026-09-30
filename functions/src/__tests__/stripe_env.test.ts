@@ -3,7 +3,7 @@ import {describe, expect, it} from "vitest";
 import {STAGING_ORIGIN} from "../utils/db_router";
 import {
   PROD_ORIGINS,
-  resolveStripeKeyForRequest,
+  resolveStripeKeyForDb,
   resolveStripeKeyOrThrow,
   stripeEnvForOrigin,
   type StripeEnv,
@@ -166,73 +166,36 @@ describe("cohérence avec db_router", () => {
   });
 });
 
-// deleteAccount est appelée aussi depuis les apps natives, qui n'envoient PAS
-// d'Origin : `resolveStripeKeyOrThrow` les refuserait (`origin_not_allowed`).
-// Pour elles, l'environnement Stripe suit la base qui porte le compte — la même
-// règle que `dbForRequest` — et jamais un en-tête forgeable.
-describe("resolveStripeKeyForRequest — Origin web ou base du compte (mobile)", () => {
+// Arrêt d'une facturation existante (deleteAccount, résiliation depuis une app
+// native) : la clé suit la SEULE base routée du compte, jamais l'Origin
+// (décision 2026-09-30). L'allowlist d'Origin refusait des appels web
+// légitimes (URL Firebase Hosting de prod) ; la base, elle, ne peut valoir
+// `staging` que pour un compte de staging — #138 tient.
+describe("resolveStripeKeyForDb — clé par la base du compte", () => {
   const LIVE = "sk_live_xxx";
   const TEST = "sk_test_xxx";
 
-  it("Origin prod → clé live (délègue à resolveStripeKeyOrThrow)", () => {
-    expect(
-      resolveStripeKeyForRequest("https://app.baillan.com", false, LIVE, TEST),
-    ).toBe(LIVE);
+  it("base staging → clé test, jamais la live (#138)", () => {
+    expect(resolveStripeKeyForDb(true, LIVE, TEST)).toBe(TEST);
   });
 
-  it("Origin staging → clé test", () => {
-    expect(
-      resolveStripeKeyForRequest(STAGING_ORIGIN, true, LIVE, TEST),
-    ).toBe(TEST);
+  it("base prod → clé live", () => {
+    expect(resolveStripeKeyForDb(false, LIVE, TEST)).toBe(LIVE);
   });
 
-  it("Origin localhost → clé test", () => {
-    expect(
-      resolveStripeKeyForRequest("http://localhost:5000", true, LIVE, TEST),
-    ).toBe(TEST);
-  });
-
-  it("Origin inattendu → origin_not_allowed, même si la base est staging", () => {
+  it("mêmes garde-fous de clé que le chemin web (fail-secure)", () => {
     expect(() =>
-      resolveStripeKeyForRequest("https://evil.tld", true, LIVE, TEST),
-    ).toThrowError(/origin_not_allowed/);
-    expect(() =>
-      resolveStripeKeyForRequest("https://evil.tld", false, LIVE, TEST),
-    ).toThrowError(/origin_not_allowed/);
-  });
-
-  it("l'Origin l'emporte sur la base : Origin prod + base staging → live", () => {
-    expect(
-      resolveStripeKeyForRequest("https://baillan.com", true, LIVE, TEST),
-    ).toBe(LIVE);
-  });
-
-  it("sans Origin + base staging → clé test", () => {
-    expect(resolveStripeKeyForRequest(undefined, true, LIVE, TEST)).toBe(TEST);
-  });
-
-  it("sans Origin + base prod → clé live", () => {
-    expect(resolveStripeKeyForRequest(undefined, false, LIVE, TEST)).toBe(LIVE);
-  });
-
-  it("Origin vide traité comme absent (mobile)", () => {
-    expect(resolveStripeKeyForRequest("", true, LIVE, TEST)).toBe(TEST);
-    expect(resolveStripeKeyForRequest("", false, LIVE, TEST)).toBe(LIVE);
-  });
-
-  it("sans Origin : mêmes garde-fous de clé que le chemin web (fail-secure)", () => {
-    expect(() =>
-      resolveStripeKeyForRequest(undefined, true, LIVE, ""),
+      resolveStripeKeyForDb(true, LIVE, ""),
     ).toThrowError(/stripe_test_key_not_configured/);
     expect(() =>
-      resolveStripeKeyForRequest(undefined, false, "", TEST),
+      resolveStripeKeyForDb(false, "", TEST),
     ).toThrowError(/stripe_live_key_not_configured/);
     // Clé live collée dans le secret de test : jamais servie à une base staging.
     expect(() =>
-      resolveStripeKeyForRequest(undefined, true, LIVE, "sk_live_COLLEE"),
+      resolveStripeKeyForDb(true, LIVE, "sk_live_COLLEE"),
     ).toThrowError(/stripe_key_mode_mismatch_test/);
     expect(() =>
-      resolveStripeKeyForRequest(undefined, false, "sk_test_COLLEE", TEST),
+      resolveStripeKeyForDb(false, "sk_test_COLLEE", TEST),
     ).toThrowError(/stripe_key_mode_mismatch_live/);
   });
 });

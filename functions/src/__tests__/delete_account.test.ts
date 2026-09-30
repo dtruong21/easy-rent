@@ -147,6 +147,9 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  // Espions `logger` (et autres `vi.spyOn`) restaurés même si une assertion a
+  // échoué avant leur `mockRestore()` : aucun espion ne fuit dans le test suivant.
+  vi.restoreAllMocks();
 });
 
 describe("deleteAccount", () => {
@@ -527,19 +530,51 @@ describe("deleteAccount — résiliation de l'abonnement Stripe", () => {
     expect(fakeAuth.deletedUids).toHaveLength(0);
   });
 
-  it("Origin inattendu → failed-precondition origin_not_allowed, rien n'est purgé", async () => {
+  // Décision utilisateur (2026-09-30) : la clé suit la SEULE base routée,
+  // jamais l'Origin. L'allowlist d'origines refusait l'URL Firebase Hosting de
+  // prod (page de suppression déclarée aux stores) → boucle « session trop
+  // ancienne » ; et localhost obtenait la clé TEST contre la base de prod.
+  it("Origin inconnu (URL Firebase Hosting de prod) + base prod → clé LIVE, abonnement résilié", async () => {
     seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
 
-    await expect(
-      deleteAccount.run(makeRequest(LANDLORD_A, {origin: "https://evil.tld"})),
-    ).rejects.toMatchObject({
-      code: "failed-precondition",
-      message: "origin_not_allowed",
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: "https://easy-rent-54cd4.web.app"}),
+    );
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+  });
+
+  it("Origin localhost + base prod → clé LIVE (la base décide, pas l'Origin)", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+
+    await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: "http://localhost:5000"}),
+    );
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+  });
+
+  it("Origin staging → base staging → clé TEST (#138 : jamais la live)", async () => {
+    fakeStagingDb.seed(`landlords/${LANDLORD_A}`, {
+      id: LANDLORD_A,
+      ...WEB_BILLING,
     });
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
 
-    expect(stripeMock.search).not.toHaveBeenCalled();
-    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
-    expect(fakeAuth.deletedUids).toHaveLength(0);
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: "https://app.staging.baillan.com"}),
+    );
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeStagingDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
   });
 
   it("uid malformé (apostrophe) → invalid-argument, jamais interpolé dans la requête Stripe, rien n'est purgé", async () => {
@@ -702,25 +737,52 @@ describe("deleteAccount — la résiliation Stripe ne vise que les comptes factu
     expect(fakeStagingDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
   });
 
-  it("origin_not_allowed reste 'failed-precondition' (plan) mais est journalisé", async () => {
+  it("erreur non-Stripe → journal avec son `name`, jamais son message", async () => {
     seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
-    const logged: unknown[] = [];
-    const spy = vi.spyOn(logger, "error").mockImplementation(
-      (...args: unknown[]) => {
-        logged.push(args);
-      },
+    stripeMock.search.mockRejectedValue(
+      new TypeError(`fetch failed near ${LIVE_KEY}`),
     );
+    const logged: unknown[] = [];
+    vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
+      logged.push(args);
+    });
 
     await expect(
-      deleteAccount.run(makeRequest(LANDLORD_A, {origin: "https://evil.tld"})),
-    ).rejects.toMatchObject({
-      code: "failed-precondition",
-      message: "origin_not_allowed",
-    });
-    spy.mockRestore();
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
 
-    expect(JSON.stringify(logged)).toContain("origin_not_allowed");
+    const blob = JSON.stringify(logged);
+    expect(blob).toContain("TypeError");
+    expect(blob).not.toContain("fetch failed");
+    expect(blob).not.toContain(LIVE_KEY);
+  });
+
+  it("lecture du doc landlord en échec → 'internal', journalisée comme telle (pas comme un échec Stripe), rien purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    const realDoc = fakeDb.doc.bind(fakeDb);
+    vi.spyOn(fakeDb, "doc").mockImplementation((path: string) =>
+      path === `landlords/${LANDLORD_A}` ?
+        ({
+          get: () => Promise.reject(new Error("firestore unavailable")),
+        } as unknown as ReturnType<typeof realDoc>) :
+        realDoc(path),
+    );
+    const logged: unknown[] = [];
+    vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
+      logged.push(args);
+    });
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+
+    const blob = JSON.stringify(logged);
+    expect(blob).toContain("billing lookup failed");
+    expect(blob).not.toContain("Stripe cancellation failed");
+    expect(blob).not.toContain("firestore unavailable");
+    expect(stripeMock.keys).toHaveLength(0);
     expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
   });
 });
 

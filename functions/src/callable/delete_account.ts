@@ -18,12 +18,15 @@
  *       touche PAS Stripe — sa suppression ne dépend donc jamais de la config
  *       des secrets Stripe. Abonnement retrouvé par la metadata
  *       `rc_app_user_id` = uid (aucun identifiant Stripe fourni par le client).
+ *       Clé Stripe choisie par la SEULE base routée ([resolveStripeKeyForDb]) :
+ *       base `staging` → clé test, sinon clé live — l'Origin n'y joue aucun
+ *       rôle (décision 2026-09-30 : l'allowlist d'Origin refusait l'URL
+ *       Firebase Hosting de prod, page de suppression déclarée aux stores).
  *       Elle passe AVANT toute purge : si Stripe échoue, rien n'est supprimé,
  *       l'appel échoue en `internal` et l'utilisateur relance. Toute erreur de
  *       configuration (clé absente / de mauvais mode) est journalisée et
- *       renvoyée en `internal` — pas en `failed-precondition`, que le client lit
- *       comme « reconnectez-vous ». Seul `origin_not_allowed` reste
- *       `failed-precondition`. Sautée sur l'émulateur Functions ;
+ *       renvoyée en `internal` — jamais en `failed-precondition`, que le client
+ *       lit comme « reconnectez-vous ». Sautée sur l'émulateur Functions ;
  *   (a) marque les quittances `receipts` du landlord — CONSERVÉES 5 ans
  *       (loi n° 89-462 du 6 juillet 1989 ; docs/LEGAL.md « droit à
  *       l'effacement ») : stamp `accountDeletedAt` + `retentionUntil`
@@ -58,11 +61,7 @@ import * as admin from "firebase-admin";
 import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {defineSecret} from "firebase-functions/params";
 import {logger} from "firebase-functions/v2";
-import {
-  HttpsError,
-  onCall,
-  type CallableRequest,
-} from "firebase-functions/v2/https";
+import {HttpsError, onCall} from "firebase-functions/v2/https";
 import Stripe from "stripe";
 
 import {
@@ -70,7 +69,7 @@ import {
   requireAuthUid,
 } from "../utils/callable_helpers";
 import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
-import {resolveStripeKeyForRequest} from "../utils/stripe_env";
+import {resolveStripeKeyForDb} from "../utils/stripe_env";
 
 import {RC_APP_USER_ID_METADATA_KEY} from "./create_checkout_session";
 import {assertSafeUid, CANCELABLE_STATUSES} from "./manage_subscription";
@@ -162,7 +161,7 @@ export const deleteAccount = onCall(
 
     // (0) Résiliation Stripe — AVANT toute purge, hors du try/catch de purge :
     // un échec ici ne doit rien avoir supprimé (l'utilisateur relance).
-    await cancelStripeSubscriptions(request, db, uid);
+    await cancelStripeSubscriptions(db, uid);
 
     try {
       // (a) Quittances : rétention légale — stamp, jamais delete.
@@ -228,20 +227,19 @@ export const deleteAccount = onCall(
  *   facturation web ([hasWebBilling]) — lu AVANT de construire Stripe ou de
  *   résoudre la clé, pour que la suppression d'un compte gratuit/store ne
  *   dépende jamais de la configuration des secrets Stripe.
- * - Clé : Origin web → `resolveStripeKeyOrThrow` ; mobile (sans Origin) →
- *   environnement de la base qui porte le compte.
+ * - Clé : par la SEULE base routée ([resolveStripeKeyForDb]), jamais par
+ *   l'Origin — `staging` → test, sinon live.
  * - Recherche par metadata `rc_app_user_id` = uid : le client ne fournit jamais
  *   d'identifiant Stripe, donc ne peut viser l'abonnement d'autrui.
  * - Erreurs : TOUTES journalisées. Le client mappe chaque `failed-precondition`
  *   de deleteAccount sur « session trop ancienne, reconnectez-vous » : une
  *   erreur de configuration serveur (clé absente / de mauvais mode) est donc
- *   renvoyée en `internal`. Seul `origin_not_allowed` (plan) et
- *   `invalid-argument` (uid malformé) gardent leur code. Le journal ne porte
- *   que l'uid, le code et le message des HttpsError — constantes sans matériel
- *   de clé — ou, pour une erreur Stripe brute, type/code/statut/requestId.
+ *   renvoyée en `internal`. Seul `invalid-argument` (uid malformé) garde son
+ *   code. Le journal ne porte que l'uid, le code et le message des HttpsError —
+ *   constantes sans matériel de clé — ou, pour toute autre erreur, son nom et
+ *   type/code/statut/requestId (jamais son message).
  */
 async function cancelStripeSubscriptions(
-  request: CallableRequest,
   db: admin.firestore.Firestore,
   uid: string,
 ): Promise<void> {
@@ -252,22 +250,32 @@ async function cancelStripeSubscriptions(
     return;
   }
 
+  // Lecture Firestore séparée de l'appel Stripe : son échec doit se lire comme
+  // tel dans les journaux, pas comme une résiliation Stripe ratée.
+  let landlord: Record<string, unknown> | undefined;
   try {
-    const landlordSnap = await db.doc(`landlords/${uid}`).get();
-    if (!hasWebBilling(landlordSnap.data())) {
-      logger.info(
-        `deleteAccount: no web billing, Stripe not called (uid=${uid})`,
-      );
-      return;
-    }
+    landlord = (await db.doc(`landlords/${uid}`).get()).data();
+  } catch (err) {
+    logger.error(
+      `deleteAccount: billing lookup failed for uid=${uid}`,
+      describeError(err),
+    );
+    throw new HttpsError("internal", "billing lookup failed — retry");
+  }
+  if (!hasWebBilling(landlord)) {
+    logger.info(
+      `deleteAccount: no web billing, Stripe not called (uid=${uid})`,
+    );
+    return;
+  }
 
+  try {
     // Défense en profondeur avant l'interpolation de l'uid dans la requête de
     // recherche Stripe (même garde que manageSubscription).
     assertSafeUid(uid);
 
     const stripe = new Stripe(
-      resolveStripeKeyForRequest(
-        request.rawRequest?.headers?.origin,
+      resolveStripeKeyForDb(
         db.databaseId === STAGING_DATABASE_ID,
         stripeSecret.value(),
         stripeTestSecret.value(),
@@ -296,37 +304,42 @@ async function cancelStripeSubscriptions(
         `deleteAccount: Stripe step rejected for uid=${uid} ` +
           `(${err.code}: ${err.message})`,
       );
-      // `failed-precondition` = « reconnectez-vous » côté app. Sauf
-      // `origin_not_allowed`, c'est ici une erreur de configuration serveur.
-      if (
-        err.code === "failed-precondition" &&
-        err.message !== "origin_not_allowed"
-      ) {
+      // `failed-precondition` = « reconnectez-vous » côté app ; ici c'est
+      // toujours une erreur de configuration serveur (clé absente / de mauvais
+      // mode).
+      if (err.code === "failed-precondition") {
         throw new HttpsError("internal", "subscription cancel failed — retry");
       }
       throw err;
     }
     // Ni message ni objet d'erreur brut : une erreur Stripe peut citer un
     // fragment de clé (« Invalid API Key provided: sk_live_****abcd »). Le
-    // type/code/statut suffisent à retrouver l'appel via le request id.
+    // nom/type/code/statut suffisent à retrouver l'appel via le request id.
     logger.error(
       `deleteAccount: Stripe cancellation failed for uid=${uid}`,
-      describeStripeError(err),
+      describeError(err),
     );
     throw new HttpsError("internal", "subscription cancel failed — retry");
   }
 }
 
-/** Champs non sensibles d'une erreur Stripe, pour le journal. */
-function describeStripeError(err: unknown): Record<string, unknown> {
+/**
+ * Champs non sensibles d'une erreur, pour le journal : son `name` (classe —
+ * seul repère d'une erreur non-Stripe, ex. `TypeError`) et, pour une erreur
+ * Stripe, type/code/statut/requestId. JAMAIS `message`, qui peut citer un
+ * fragment de clé.
+ */
+function describeError(err: unknown): Record<string, unknown> {
   if (typeof err !== "object" || err === null) return {};
   const e = err as {
+    name?: unknown;
     type?: unknown;
     code?: unknown;
     statusCode?: unknown;
     requestId?: unknown;
   };
   return {
+    name: e.name,
     type: e.type,
     code: e.code,
     statusCode: e.statusCode,
