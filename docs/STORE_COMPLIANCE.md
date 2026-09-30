@@ -29,17 +29,24 @@
   masque tout ce qui mène à un achat hors store : `/pro` n'affiche plus qu'un
   message neutre (« Les offres payantes ne sont pas encore proposées dans
   l'application. » — ni prix, ni cartes, ni bouton, ni mention du site web),
-  tous les points d'entrée vers `/pro` sont cachés, « Réactiver » un abonnement
-  Stripe est caché (la résiliation reste possible), et la section
+  tous les points d'entrée vers `/pro` sont cachés, « Réactiver » et « Changer
+  d'offre » d'un abonnement Stripe sont cachés, et la section
   « Prochainement — Plan Pro » du simulateur (avec sa sollicitation de
-  financement) est masquée. Sur le web, rien ne change.
+  financement) est masquée. **La résiliation d'un abonnement web reste
+  possible depuis l'app** : la callable `manageSubscription` accepte `cancel`
+  sans en-tête Origin (cas des apps natives), avec la clé Stripe de la base qui
+  porte le compte ; `reactivate` et `change_plan` y restent refusés côté
+  serveur (`origin_not_allowed`). Sur le web, rien ne change.
 - **Suppression de compte : résiliation Stripe + avertissements.** La callable
   `deleteAccount` résilie **immédiatement** (sans remboursement de la période en
   cours) les abonnements Stripe du compte **avant** toute purge ; si Stripe
   échoue, rien n'est supprimé et l'utilisateur relance. Ne concerne que les
-  comptes facturés sur le web. La page de suppression prévient : un abonnement
-  **store** n'est **pas** résilié par la suppression (à résilier dans les
-  réglages du store) ; un abonnement **web** l'est.
+  comptes facturés sur le web. La clé Stripe suit la **base du compte**
+  (staging → test, prod → live), jamais l'origine web : la suppression marche
+  donc aussi depuis l'URL Firebase Hosting déclarée aux stores. La page de
+  suppression prévient : un abonnement **store** n'est **pas** résilié par la
+  suppression (à résilier dans les réglages du store) ; un abonnement **web**
+  (`proStore = web`) l'est.
 
 ### Décision du 2026-09-30
 
@@ -56,7 +63,8 @@ livré, les apps ne proposent aucun achat (cf. ci-dessus).
 
 ### Déploiement des Functions (précondition)
 
-Le correctif `deleteAccount` demande un **redéploiement des Functions**, et,
+Les correctifs `deleteAccount` et `manageSubscription` demandent un
+**redéploiement des Functions**, et,
 **avant** de déployer, de confirmer dans Secret Manager que
 `STRIPE_SECRET_KEY` est une clé **live** (`sk_live_` / `rk_live_`, droits
 lecture/écriture sur les abonnements) et `STRIPE_SECRET_KEY_TEST` une clé
@@ -77,11 +85,11 @@ administratifs** :
 
 | # | Bloquant | Stores | Nature |
 |---|---|---|---|
-| 1 | ✅ **Suppression de compte in-app** + page web publique de demande | Play **et** App Store | **Livré (FEAT-045, 2026-07-07)** — reste à déclarer l'URL `/delete-account` dans Data safety (§5) |
+| 1 | ✅ **Suppression de compte in-app** + page web publique de demande | Play **et** App Store | **Livré (FEAT-045, 2026-07-07)** — reste à déclarer l'URL `https://easy-rent-54cd4.web.app/delete-account` dans Data safety (§5) ; une fois baillan.com en ligne, la page vitrine `https://baillan.com/supprimer-mon-compte` pourra être déclarée à la place |
 | 2 | 🔴 **Formulaires consoles** : Data safety, App access (compte démo), Financial features, Privacy labels, questionnaire d'âge | Play + App Store | Administratif (tables pré-remplies §5) |
 | 3 | 🔴 **DSA « trader status »** (UE) — coordonnées vérifiées et **publiées** sur les fiches | Play + App Store | Administratif + décision (perso vs orga) |
 | 4 | 🟠 **Compte Play personnel nouveau** : test fermé **12 testeurs × 14 jours** avant l'accès production | Play | Calendrier (~3-4 semaines) |
-| 5 | 🟠 **Mentions légales LCEN** (page éditeur/hébergeur) | Obligation légale FR, hors review | Contenu à créer |
+| 5 | 🔴 **Mentions légales LCEN** (page éditeur/hébergeur) | Obligation légale FR + App Store 2.1 (contenu provisoire) | Page présente mais en brouillon, à finaliser |
 | 6 | 🟠 **Signing release** (keystore Android + Apple Developer Program) | Play + App Store | Déjà tracké dans [MOBILE.md](MOBILE.md) |
 
 **SDK 37 : rien à faire.** Android 17 (API 37, sorti le 16/06/2026) ne sera
@@ -116,7 +124,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 
 | Exigence | Statut | Action |
 |---|---|---|
-| **Suppression de compte** : chemin in-app **+ URL web** de demande (sans réinstaller), déclarés dans Data safety ([13327111](https://support.google.com/googleplay/android-developer/answer/13327111)) | ✅ **fait (FEAT-045)** | Écran Profil → « Supprimer mon compte » (re-auth fraîche + callable `deleteAccount` : purge Firestore + Storage + Auth ; rétention 5 ans des quittances loi 6/07/1989 **annoncée dans le flux** + privacy policy v1.2) + page publique `https://easy-rent-54cd4.web.app/delete-account` (l'essai anonyme s'y supprime directement). Reste : déclarer cette URL dans le formulaire Data safety |
+| **Suppression de compte** : chemin in-app **+ URL web** de demande (sans réinstaller), déclarés dans Data safety ([13327111](https://support.google.com/googleplay/android-developer/answer/13327111)) | ✅ **fait (FEAT-045)** | Écran Profil → « Supprimer mon compte » (re-auth fraîche + callable `deleteAccount` : purge Firestore + Storage + Auth ; rétention 5 ans des quittances loi 6/07/1989 **annoncée dans le flux** + privacy policy v1.2) + page publique `https://easy-rent-54cd4.web.app/delete-account` (l'essai anonyme s'y supprime directement). Reste : déclarer cette URL dans le formulaire Data safety — une fois baillan.com en ligne, la page vitrine `https://baillan.com/supprimer-mon-compte` pourra être déclarée à la place |
 | **Data safety form** ([10787469](https://support.google.com/googleplay/android-developer/answer/10787469)) | 🔴 formulaire | Pré-rempli §5 — inclut les **données de tiers (locataires)** |
 | **Test fermé nouveaux comptes perso** (créés après le 13/11/2023) : ≥ **12 testeurs opt-in 14 jours continus**, puis questionnaire d'accès production ([14151465](https://support.google.com/googleplay/android-developer/answer/14151465)) | 🟠 à vérifier | Si compte perso nouveau → prévoir 3-4 semaines. Comptes **organisation exemptés** (D-U-N-S requis) |
 | **App access** : identifiants de démo valides en permanence, instructions en anglais ([9859455](https://support.google.com/googleplay/android-developer/answer/9859455)) | 🔴 formulaire | Créer un compte `review@…` avec données de démo (1 bien, 1 locataire, 1 bail, paiements, 1 quittance) |
@@ -149,7 +157,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 | **DSA trader status — App Store** (enforcement depuis le 17/02/2025) | 🔴 bloquant | Sans déclaration vérifiée, pas de distribution UE. Coordonnées (adresse — boîte postale acceptée par Apple —, téléphone, email) **publiées** sur la fiche dans les 27 pays UE ([doc ASC](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/)) |
 | **DSA trader status — Play** | 🔴 bloquant | Même exigence dans Play Console (Business information), vérification identité/adresse ; infos publiées dans « About the developer » |
 | Statut **non-trader** possible en V1 ? | ⚠️ décision | Le statut non-trader n'est plus défendable (décision du 2026-09-30) : l'achat intégré sera livré avant la sortie des apps et FEAT-044 (freemium) impose le statut trader → **déclarer le statut trader** (re-vérification incluse). Recommandation : créer un **micro-entrepreneur (SIREN)** + email/téléphone/adresse dédiés dès maintenant, et envisager un **compte Play organisation** (supprime aussi l'exigence 12 testeurs × 14 j) |
-| **Mentions légales LCEN** (art. 1-1, loi 2004-575) : identité éditeur + hébergeur accessibles depuis l'app | 🟠 gap légal | Hors review stores mais sanction pénale possible. Créer une page « Mentions légales » (route `/legal`) liée depuis Profil, avant release |
+| **Mentions légales LCEN** (art. 1-1, loi 2004-575) : identité éditeur + hébergeur accessibles depuis l'app | 🔴 bloquant | Page présente mais en brouillon, à finaliser : la route `/legal` (liée depuis Profil) est marquée « Brouillon » → rejet possible App Store 2.1 (contenu provisoire), et sanction pénale possible hors stores |
 | **Médiation de la consommation** (art. L612-1 c. conso) | ✅ plus tard | Non requis tant que l'app est 100 % gratuite. **Obligatoire avant FEAT-044** (adhésion médiateur ~200-400 €/an + CGV) |
 | **European Accessibility Act** (28/06/2025) | ✅ exempté | Exemption micro-entreprise (< 10 salariés, < 2 M€ CA). Bonnes pratiques WCAG conservées |
 | **RGPD — données de tiers (locataires)** | 🟠 contenu | Compléter la privacy policy : le bailleur est responsable de traitement des données de ses locataires, Baillan fournit l'outil (Google/Firebase sous-traitant) ; rappeler le devoir d'information des locataires. Cohérent avec les déclarations §5 |
@@ -190,7 +198,8 @@ Aucun partage à des tiers, aucun tracking publicitaire, chiffrement en transit
    livrée (2026-07-07)** — purge Auth + Firestore + Storage (callable
    `deleteAccount`), révocation token Apple, mention rétention quittances,
    page web `/delete-account`, privacy policy v1.2. **Restent** : page
-   `/legal` (mentions LCEN) + § « données de tiers » dans la privacy policy.
+   `/legal` (mentions LCEN, présente mais en brouillon, à finaliser) +
+   § « données de tiers » dans la privacy policy.
 2. **Comptes & administratif** : type de compte Play (perso vs **organisation**
    — exempte du test fermé), Apple Developer Program, déclaration **DSA
    trader** des deux côtés (coordonnées dédiées, reco micro-entrepreneur).

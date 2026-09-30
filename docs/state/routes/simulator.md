@@ -15,5 +15,6 @@ Comportement :
 - Compte complet peut `push()` par-dessus shell (modal, retour via pop).
 - Scénarios persistés (collection `investment_scenarios`, `landlordId=uid` invariant).
 - Comparaison : accès par feature gate (Pro + statut entitlement) ⚠️ *pas encore gâté côté route* (cf. FEAT-055 wip dans la page elle-même).
+- **Apps iOS/Android** (`isStoreApp`, 2026-09-30 — aucun achat hors achat intégré) : modale de limite de scénarios sans CTA d'upgrade vers `/pro` (fermeture libellée « Fermer » ; le cas anonyme garde « Créer un compte » + « Plus tard ») ; `/simulator/compare` sans CTA « Passer à Pro » (message seul) ; tuile verrouillée « comparer » des scénarios sauvegardés masquée ; section « Prochainement — Plan Pro » (`ComingSoonPaidPlanSection`) masquée.
 
 **FEATs** : FEAT-018 (simulateur, 2 routes) + FEAT-055 (comparaison, 1 route, 2026-07-30).
