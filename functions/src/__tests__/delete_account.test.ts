@@ -1,6 +1,7 @@
 import {Timestamp} from "firebase-admin/firestore";
+import {logger} from "firebase-functions/v2";
 import type {CallableRequest} from "firebase-functions/v2/https";
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import {deleteAccount} from "../callable/delete_account";
 
@@ -9,7 +10,34 @@ import {
   FakeFirestore,
   FakeStorage,
   fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
 } from "./helpers/fake_firestore";
+
+// Faux Stripe : `deleteAccount` doit résilier l'abonnement AVANT toute purge.
+// Le holder est `vi.hoisted` car le factory de `vi.mock` est hoisted au-dessus
+// des imports. La fausse classe capture la clé passée au constructeur pour
+// prouver quel environnement (live/test) a été visé.
+const stripeMock = vi.hoisted(() => ({
+  keys: [] as string[],
+  search: vi.fn(),
+  cancel: vi.fn(),
+}));
+vi.mock("stripe", () => ({
+  default: class FakeStripe {
+    readonly subscriptions = {
+      search: stripeMock.search,
+      cancel: stripeMock.cancel,
+    };
+
+    constructor(key: string) {
+      stripeMock.keys.push(key);
+    }
+  },
+}));
+
+const LIVE_KEY = "sk_live_fake";
+const TEST_KEY = "sk_test_fake";
+const PROD_ORIGIN = "https://app.baillan.com";
 
 // Cf. expenses.test.ts pour la justification du import() dynamique interne
 // (le factory `vi.mock` est hoisted au-dessus des imports du fichier).
@@ -19,6 +47,7 @@ vi.mock("firebase-admin", async () => {
 });
 
 let fakeDb: FakeFirestore;
+let fakeStagingDb: FakeFirestore;
 let fakeStorage: FakeStorage;
 let fakeAuth: FakeAuthAdmin;
 
@@ -35,7 +64,8 @@ function makeRequest(
   {
     authTime = FRESH_AUTH_TIME(),
     signInProvider = "password",
-  }: {authTime?: number; signInProvider?: string} = {},
+    origin,
+  }: {authTime?: number; signInProvider?: string; origin?: string} = {},
 ): CallableRequest {
   return {
     data: {},
@@ -49,7 +79,8 @@ function makeRequest(
         rawToken: "",
       } :
       undefined,
-    rawRequest: {} as never,
+    // Web : Origin présent. Mobile : aucun en-tête `origin`.
+    rawRequest: {headers: origin === undefined ? {} : {origin}} as never,
   } as CallableRequest;
 }
 
@@ -74,11 +105,25 @@ function seedLandlordDataset(uid: string, suffix: string) {
 
 beforeEach(() => {
   fakeDb = new FakeFirestore();
+  fakeStagingDb = new FakeFirestore("staging");
   fakeStorage = new FakeStorage();
   fakeAuth = new FakeAuthAdmin();
   fakeAdminFirestoreHolder.db = fakeDb;
+  fakeStagingFirestoreHolder.db = fakeStagingDb;
   fakeAdminFirestoreHolder.storage = fakeStorage;
   fakeAdminFirestoreHolder.authAdmin = fakeAuth;
+
+  // Par défaut : secrets posés, l'utilisateur n'a AUCUN abonnement Stripe —
+  // les tests de purge existants restent centrés sur la purge.
+  vi.stubEnv("STRIPE_SECRET_KEY", LIVE_KEY);
+  vi.stubEnv("STRIPE_SECRET_KEY_TEST", TEST_KEY);
+  stripeMock.keys.length = 0;
+  stripeMock.search.mockReset().mockResolvedValue({data: []});
+  stripeMock.cancel.mockReset().mockResolvedValue({});
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("deleteAccount", () => {
@@ -307,5 +352,194 @@ describe("deleteAccount", () => {
     expect(fakeDb.peek("receipts/rcpt-449")?.accountDeletedAt).toBeInstanceOf(
       Date,
     );
+  });
+});
+
+// Sans cette étape, supprimer son compte laissait l'abonnement Stripe (web)
+// actif : l'utilisateur continuait d'être facturé pour un compte inexistant.
+describe("deleteAccount — résiliation de l'abonnement Stripe", () => {
+  const activeSub = {id: "sub_active", status: "active"};
+  const canceledSub = {id: "sub_old", status: "canceled"};
+
+  it("web prod : résilie l'abonnement actif (pas le canceled) avec la clé LIVE, puis purge", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    stripeMock.search.mockResolvedValue({data: [activeSub, canceledSub]});
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    // Recherche par metadata uid — jamais d'identifiant fourni par le client.
+    expect(stripeMock.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: `metadata['rc_app_user_id']:'${LANDLORD_A}'`,
+      }),
+    );
+    expect(stripeMock.cancel).toHaveBeenCalledTimes(1);
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+    expect(fakeAuth.deletedUids).toEqual([LANDLORD_A]);
+  });
+
+  it("résilie aussi trialing / past_due / unpaid, ignore incomplete_expired", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    stripeMock.search.mockResolvedValue({
+      data: [
+        {id: "sub_trial", status: "trialing"},
+        {id: "sub_due", status: "past_due"},
+        {id: "sub_unpaid", status: "unpaid"},
+        {id: "sub_exp", status: "incomplete_expired"},
+      ],
+    });
+
+    await deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}));
+
+    const cancelledIds = (stripeMock.cancel.mock.calls as string[][])
+      .map(([id]) => id)
+      .sort();
+    expect(cancelledIds).toEqual([
+      "sub_due",
+      "sub_trial",
+      "sub_unpaid",
+    ]);
+  });
+
+  it("mobile (sans Origin) + compte en base staging → clé TEST", async () => {
+    // Le doc landlord n'existe que dans la fausse base staging : c'est ce que
+    // `dbForRequest` interprète comme « compte de staging ».
+    fakeStagingDb.seed(`landlords/${LANDLORD_A}`, {id: LANDLORD_A});
+    fakeStagingDb.seed("properties/prop-s1", {landlordId: LANDLORD_A});
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+
+    const result = await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeStagingDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+  });
+
+  it("mobile (sans Origin) + compte en base prod → clé LIVE", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+
+    await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+  });
+
+  it("aucun abonnement → aucun cancel, purge effectuée", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(stripeMock.search).toHaveBeenCalledTimes(1);
+    expect(stripeMock.cancel).not.toHaveBeenCalled();
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+  });
+
+  it("cancel qui échoue → 'internal' et RIEN n'est purgé (l'utilisateur peut relancer)", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+    stripeMock.cancel.mockRejectedValue(new Error("stripe unavailable"));
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeDb.peek("properties/prop-a1")).toBeDefined();
+    expect(fakeDb.peek("receipts/rcpt-a1")?.accountDeletedAt).toBeUndefined();
+    expect(fakeStorage.deletedPrefixes).toHaveLength(0);
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("ne journalise jamais la clé Stripe ni le message brut de l'erreur", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+    // Une erreur Stripe peut citer un fragment de clé dans son message.
+    stripeMock.cancel.mockRejectedValue(
+      Object.assign(new Error(`Invalid API Key provided: ${LIVE_KEY}`), {
+        type: "StripeAuthenticationError",
+        statusCode: 401,
+      }),
+    );
+    const logged: unknown[] = [];
+    const spies = (["error", "info", "warn"] as const).map((level) =>
+      vi.spyOn(logger, level).mockImplementation((...args: unknown[]) => {
+        logged.push(args);
+      }),
+    );
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+    spies.forEach((spy) => spy.mockRestore());
+
+    const blob = JSON.stringify(logged);
+    expect(blob).toContain(LANDLORD_A);
+    expect(blob).toContain("StripeAuthenticationError");
+    expect(blob).not.toContain(LIVE_KEY);
+    expect(blob).not.toContain("Invalid API Key");
+  });
+
+  it("recherche Stripe en échec → 'internal' et RIEN n'est purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    stripeMock.search.mockRejectedValue(new Error("stripe unavailable"));
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("Origin inattendu → failed-precondition origin_not_allowed, rien n'est purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: "https://evil.tld"})),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "origin_not_allowed",
+    });
+
+    expect(stripeMock.search).not.toHaveBeenCalled();
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("uid malformé (apostrophe) → invalid-argument, jamais interpolé dans la requête Stripe, rien n'est purgé", async () => {
+    const evilUid = "x' OR metadata['a']:'b";
+    fakeDb.seed(`landlords/${evilUid}`, {id: evilUid});
+
+    await expect(
+      deleteAccount.run(makeRequest(evilUid, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "invalid-argument"});
+
+    expect(stripeMock.search).not.toHaveBeenCalled();
+    expect(fakeDb.peek(`landlords/${evilUid}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("émulateur Functions → aucun appel Stripe, purge effectuée", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    vi.stubEnv("FUNCTIONS_EMULATOR", "true");
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+
+    const result = await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    expect(stripeMock.keys).toHaveLength(0);
+    expect(stripeMock.search).not.toHaveBeenCalled();
+    expect(stripeMock.cancel).not.toHaveBeenCalled();
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
   });
 });

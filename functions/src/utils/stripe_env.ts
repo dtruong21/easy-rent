@@ -112,6 +112,47 @@ export function resolveStripeKeyOrThrow(
     );
   }
 
+  return requireKeyForEnv(env, liveKey, testKey);
+}
+
+/**
+ * Clé Stripe pour une callable appelée depuis le web OU depuis une app native.
+ *
+ * - **Web** (Origin non vide) : [resolveStripeKeyOrThrow], inchangé — y compris
+ *   son refus `origin_not_allowed` pour une origine inattendue.
+ * - **Mobile** (Origin absent ou vide — une app native n'en envoie pas) :
+ *   `resolveStripeKeyOrThrow` refuserait l'appel. L'environnement suit alors la
+ *   base qui porte le compte (`dbForRequest` → base `staging` = `isStagingDb`),
+ *   jamais un en-tête forgeable : compte staging → clé test, compte prod → clé
+ *   live. Mêmes garde-fous de clé que le chemin web (clé absente ou de mauvais
+ *   mode → refus, aucun repli sur la clé live).
+ *
+ * @param origin      En-tête `Origin` de la requête, s'il y en a un.
+ * @param isStagingDb `true` si la base routée pour la requête est `staging`.
+ * @param liveKey     Valeur du secret `STRIPE_SECRET_KEY`.
+ * @param testKey     Valeur du secret `STRIPE_SECRET_KEY_TEST`.
+ */
+export function resolveStripeKeyForRequest(
+  origin: unknown,
+  isStagingDb: boolean,
+  liveKey: string,
+  testKey: string,
+): string {
+  if (typeof origin === "string" && origin.length > 0) {
+    return resolveStripeKeyOrThrow(origin, liveKey, testKey);
+  }
+  return requireKeyForEnv(isStagingDb ? "test" : "live", liveKey, testKey);
+}
+
+/**
+ * Sélectionne la clé de l'environnement résolu, en fail-secure : clé absente
+ * → refus (jamais de repli sur la clé live), clé du mauvais mode → refus.
+ */
+function requireKeyForEnv(
+  env: "live" | "test",
+  liveKey: string,
+  testKey: string,
+): string {
   if (env === "test") {
     if (!testKey) {
       // Fail-secure : sans clé de test configurée, on refuse. Le repli sur la

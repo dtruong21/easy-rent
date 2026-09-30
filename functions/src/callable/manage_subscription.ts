@@ -57,7 +57,7 @@ const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
  * peut (dé)programmer sa résiliation ou changer son palier). Un
  * `canceled`/`incomplete_expired` n'a plus rien à gérer.
  */
-const CANCELABLE_STATUSES = new Set<string>([
+export const CANCELABLE_STATUSES: ReadonlySet<string> = new Set<string>([
   "active",
   "trialing",
   "past_due",

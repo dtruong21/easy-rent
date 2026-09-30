@@ -8,7 +8,15 @@
  * (`revokeTokenWithAuthorizationCode`, exigée par Apple).
  *
  * Purge (Admin SDK — les Security Rules n'autorisent aucun hard-delete
- * client) :
+ * client), précédée d'une résiliation Stripe :
+ *   (0) résilie IMMÉDIATEMENT (sans remboursement de la période en cours)
+ *       l'abonnement Stripe web du compte, s'il y en a un — sinon l'utilisateur
+ *       continuerait d'être facturé pour un compte qui n'existe plus. Retrouvé
+ *       par la metadata `rc_app_user_id` = uid (aucun identifiant Stripe fourni
+ *       par le client). Elle passe AVANT toute purge : si Stripe échoue, rien
+ *       n'est supprimé, l'appel échoue en `internal` et l'utilisateur relance.
+ *       Sautée sur l'émulateur Functions (pas de vraie clé Stripe). Un abonné
+ *       via un store (IAP) n'a rien côté Stripe : le store gère sa résiliation ;
  *   (a) marque les quittances `receipts` du landlord — CONSERVÉES 5 ans
  *       (loi n° 89-462 du 6 juillet 1989 ; docs/LEGAL.md « droit à
  *       l'effacement ») : stamp `accountDeletedAt` + `retentionUntil`
@@ -41,15 +49,30 @@
 
 import * as admin from "firebase-admin";
 import {FieldValue, Timestamp} from "firebase-admin/firestore";
+import {defineSecret} from "firebase-functions/params";
 import {logger} from "firebase-functions/v2";
-import {HttpsError, onCall} from "firebase-functions/v2/https";
+import {
+  HttpsError,
+  onCall,
+  type CallableRequest,
+} from "firebase-functions/v2/https";
+import Stripe from "stripe";
 
 import {
   assertRecentAuthForNonAnonymousAccount,
   requireAuthUid,
 } from "../utils/callable_helpers";
-import {dbForRequest} from "../utils/db_router";
+import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
+import {resolveStripeKeyForRequest} from "../utils/stripe_env";
 
+import {RC_APP_USER_ID_METADATA_KEY} from "./create_checkout_session";
+import {assertSafeUid, CANCELABLE_STATUSES} from "./manage_subscription";
+
+/** Clé secrète Stripe live (serveur uniquement) — secret déjà utilisé ailleurs. */
+const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
+
+/** Clé secrète Stripe TEST — servie aux comptes staging (issue #138). */
+const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
 
 /** Rétention légale des quittances : 5 ans (loi 6 juillet 1989 / art. 2224). */
 const RECEIPT_RETENTION_MS = 5 * 365.25 * 24 * 60 * 60 * 1000;
@@ -73,7 +96,11 @@ const PURGED_COLLECTIONS: readonly string[] = [
 const PURGE_PAGE_SIZE = 400;
 
 export const deleteAccount = onCall(
-  {region: "europe-west1", timeoutSeconds: 300},
+  {
+    region: "europe-west1",
+    timeoutSeconds: 300,
+    secrets: [stripeSecret, stripeTestSecret],
+  },
   async (request) => {
     const uid = requireAuthUid(request);
 
@@ -86,6 +113,10 @@ export const deleteAccount = onCall(
     await assertRecentAuthForNonAnonymousAccount(request, uid);
 
     const db = await dbForRequest(request);
+
+    // (0) Résiliation Stripe — AVANT toute purge, hors du try/catch de purge :
+    // un échec ici ne doit rien avoir supprimé (l'utilisateur relance).
+    await cancelStripeSubscriptions(request, db, uid);
 
     try {
       // (a) Quittances : rétention légale — stamp, jamais delete.
@@ -141,6 +172,91 @@ export const deleteAccount = onCall(
     }
   },
 );
+
+/**
+ * Résilie immédiatement (sans remboursement) tous les abonnements Stripe
+ * gérables du compte. Étape (0) de la suppression : lève AVANT toute purge.
+ *
+ * - Clé : Origin web → `resolveStripeKeyOrThrow` (donc `failed-precondition`
+ *   `origin_not_allowed` pour une origine inattendue, relancée telle quelle) ;
+ *   mobile (sans Origin) → environnement de la base qui porte le compte.
+ * - Recherche par metadata `rc_app_user_id` = uid : le client ne fournit jamais
+ *   d'identifiant Stripe, donc ne peut viser l'abonnement d'autrui.
+ * - Toute autre erreur (réseau, API Stripe) → `internal`, l'utilisateur peut
+ *   relancer. Le journal ne porte que l'uid et des comptages — jamais la clé.
+ */
+async function cancelStripeSubscriptions(
+  request: CallableRequest,
+  db: admin.firestore.Firestore,
+  uid: string,
+): Promise<void> {
+  if (process.env.FUNCTIONS_EMULATOR === "true") {
+    logger.info(
+      `deleteAccount: Stripe cancellation skipped on emulator (uid=${uid})`,
+    );
+    return;
+  }
+
+  // Défense en profondeur avant l'interpolation de l'uid dans la requête de
+  // recherche Stripe (même garde que manageSubscription) : `invalid-argument`
+  // est une HttpsError, relancée telle quelle — rien n'a été purgé.
+  assertSafeUid(uid);
+
+  try {
+    const stripe = new Stripe(
+      resolveStripeKeyForRequest(
+        request.rawRequest?.headers?.origin,
+        db.databaseId === STAGING_DATABASE_ID,
+        stripeSecret.value(),
+        stripeTestSecret.value(),
+      ),
+    );
+
+    const search = await stripe.subscriptions.search({
+      query: `metadata['${RC_APP_USER_ID_METADATA_KEY}']:'${uid}'`,
+      limit: 20,
+    });
+
+    let cancelled = 0;
+    for (const sub of search.data) {
+      if (!CANCELABLE_STATUSES.has(sub.status)) continue;
+      // Effet immédiat, sans prorata ni facture finale : aucun remboursement.
+      await stripe.subscriptions.cancel(sub.id);
+      cancelled++;
+    }
+    logger.info(
+      `deleteAccount: cancelled ${cancelled} Stripe subscription(s) ` +
+        `for uid=${uid}`,
+    );
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    // Ni message ni objet d'erreur brut : une erreur Stripe peut citer un
+    // fragment de clé (« Invalid API Key provided: sk_live_****abcd »). Le
+    // type/code/statut suffisent à retrouver l'appel via le request id.
+    logger.error(
+      `deleteAccount: Stripe cancellation failed for uid=${uid}`,
+      describeStripeError(err),
+    );
+    throw new HttpsError("internal", "subscription cancel failed — retry");
+  }
+}
+
+/** Champs non sensibles d'une erreur Stripe, pour le journal. */
+function describeStripeError(err: unknown): Record<string, unknown> {
+  if (typeof err !== "object" || err === null) return {};
+  const e = err as {
+    type?: unknown;
+    code?: unknown;
+    statusCode?: unknown;
+    requestId?: unknown;
+  };
+  return {
+    type: e.type,
+    code: e.code,
+    statusCode: e.statusCode,
+    requestId: e.requestId,
+  };
+}
 
 /**
  * Marque les quittances du landlord comme archivées suite à la suppression
