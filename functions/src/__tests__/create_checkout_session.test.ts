@@ -1,15 +1,45 @@
-import type {HttpsError} from "firebase-functions/v2/https";
-import {describe, expect, it} from "vitest";
+import type {CallableRequest, HttpsError} from "firebase-functions/v2/https";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import {
   assertCanOpenCheckout,
   buildCheckoutSessionParams,
+  createCheckoutSession,
   parseCheckoutRequest,
   parsePlanSelection,
   PLAN_LEVEL_METADATA_KEY,
   RC_APP_USER_ID_METADATA_KEY,
   type CheckoutConfig,
 } from "../callable/create_checkout_session";
+import {STAGING_ORIGIN} from "../utils/db_router";
+
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
+
+// Faux Stripe (même patron que manage_subscription.test.ts) : capture la clé du
+// constructeur et les appels à `checkout.sessions.create`, pour prouver qu'un
+// refus intervient AVANT tout appel Stripe.
+const stripeMock = vi.hoisted(() => ({
+  keys: [] as string[],
+  create: vi.fn(),
+}));
+vi.mock("stripe", () => ({
+  default: class FakeStripe {
+    readonly checkout = {sessions: {create: stripeMock.create}};
+
+    constructor(key: string) {
+      stripeMock.keys.push(key);
+    }
+  },
+}));
+
+vi.mock("firebase-admin", async () => {
+  const {makeFakeAdminModule} = await import("./helpers/fake_firestore");
+  return makeFakeAdminModule();
+});
 
 /** Les six offres configurées — l'état « tout est ouvert » côté Stripe. */
 const config: CheckoutConfig = {
@@ -326,7 +356,124 @@ describe("assertCanOpenCheckout — pas de second abonnement", () => {
     ).not.toThrow();
   });
 
-  it("doc landlord absent → laisse passer (ne jamais bloquer un paiement sur une lecture manquante)", () => {
-    expect(() => assertCanOpenCheckout(null)).not.toThrow();
+  it("OWASP-01 : doc landlord ABSENT → failed-precondition / landlord_not_found", () => {
+    // Un doc absent de la base routée n'est pas « un compte gratuit » : c'est un
+    // compte qui n'existe pas dans cet environnement (ex. un compte prod qui
+    // ouvre le checkout du staging). Aucune session Stripe pour lui.
+    const err = thrownBy(() => assertCanOpenCheckout(null));
+    expect(err.code).toBe("failed-precondition");
+    expect(err.message).toBe("landlord_not_found");
+  });
+});
+
+describe("createCheckoutSession — handler (OWASP-01 : doc landlord requis)", () => {
+  const UID = "landlord-a";
+  const LIVE_KEY = "sk_live_fake";
+  const TEST_KEY = "sk_test_fake";
+  const PROD_ORIGIN = "https://baillan.com";
+
+  let prodDb: FakeFirestore;
+  let stagingDb: FakeFirestore;
+
+  function makeRequest(origin?: string): CallableRequest {
+    return {
+      data: {level: "pro", period: "monthly"},
+      auth: {uid: UID, token: {email: "a@example.test"} as never, rawToken: ""},
+      rawRequest: {headers: origin === undefined ? {} : {origin}} as never,
+    } as CallableRequest;
+  }
+
+  beforeEach(() => {
+    prodDb = new FakeFirestore();
+    stagingDb = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db = prodDb;
+    fakeStagingFirestoreHolder.db = stagingDb;
+    vi.stubEnv("STRIPE_SECRET_KEY", LIVE_KEY);
+    vi.stubEnv("STRIPE_SECRET_KEY_TEST", TEST_KEY);
+    vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY", "price_pro_monthly");
+    stripeMock.keys.length = 0;
+    stripeMock.create.mockReset().mockResolvedValue({
+      url: "https://checkout.stripe.test/s",
+      id: "cs_test_1",
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("web prod, doc absent de (default) → refus landlord_not_found, AUCUN appel Stripe", async () => {
+    // Le compte n'existe que dans la base staging : hors de la base routée.
+    stagingDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+
+    const err = await createCheckoutSession
+      .run(makeRequest(PROD_ORIGIN))
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).code).toBe("failed-precondition");
+    expect((err as HttpsError).message).toBe("landlord_not_found");
+    expect(stripeMock.keys).toEqual([]);
+    expect(stripeMock.create).not.toHaveBeenCalled();
+  });
+
+  it("web staging, doc absent de staging → refus landlord_not_found, AUCUN appel Stripe", async () => {
+    // Compte prod qui tente le checkout de test du staging : il n'a pas de doc
+    // dans la base `staging` → refusé avant Stripe.
+    prodDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+
+    const err = await createCheckoutSession
+      .run(makeRequest(STAGING_ORIGIN))
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).code).toBe("failed-precondition");
+    expect((err as HttpsError).message).toBe("landlord_not_found");
+    expect(stripeMock.keys).toEqual([]);
+    expect(stripeMock.create).not.toHaveBeenCalled();
+  });
+
+  it("app native (sans Origin), aucun doc nulle part → refus landlord_not_found", async () => {
+    const err = await createCheckoutSession
+      .run(makeRequest())
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).message).toBe("landlord_not_found");
+    expect(stripeMock.create).not.toHaveBeenCalled();
+  });
+
+  it("web prod, compte gratuit présent → session Stripe créée avec la clé LIVE (inchangé)", async () => {
+    prodDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+
+    const result = (await createCheckoutSession.run(
+      makeRequest(PROD_ORIGIN),
+    )) as {url: string; sessionId: string};
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(stripeMock.create).toHaveBeenCalledOnce();
+    expect(result.sessionId).toBe("cs_test_1");
+    expect(result.url).toBe("https://checkout.stripe.test/s");
+  });
+
+  it("web staging, compte présent dans staging → clé TEST (inchangé)", async () => {
+    stagingDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+
+    await createCheckoutSession.run(makeRequest(STAGING_ORIGIN));
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+    expect(stripeMock.create).toHaveBeenCalledOnce();
+  });
+
+  it("compte déjà payant présent → already_subscribed_use_change_plan (inchangé)", async () => {
+    prodDb.seed(`landlords/${UID}`, {
+      id: UID,
+      subscriptionTier: "paid",
+      planLevel: "pro",
+    });
+
+    const err = await createCheckoutSession
+      .run(makeRequest(PROD_ORIGIN))
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).message).toBe("already_subscribed_use_change_plan");
+    expect(stripeMock.create).not.toHaveBeenCalled();
   });
 });

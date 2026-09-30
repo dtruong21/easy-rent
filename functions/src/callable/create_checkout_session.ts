@@ -159,12 +159,20 @@ export function parseCheckoutRequest(
  * a son propre chemin (`manageSubscription/change_plan`), qui modifie
  * l'abonnement existant au lieu d'en créer un.
  *
- * Doc landlord absent → on laisse passer : le compte ne peut pas être abonné,
- * et bloquer un paiement sur une lecture manquante coûterait un client.
+ * OWASP-01 — doc landlord ABSENT de la base routée → refus
+ * (`failed-precondition` / `landlord_not_found`). Un compte qui n'a pas de doc
+ * dans l'environnement visé n'y existe pas : ce n'est pas « un compte gratuit ».
+ * Le laisser passer permettait à un compte de l'AUTRE environnement (compte prod
+ * sur le checkout staging, en Stripe test) d'ouvrir une session de test, dont
+ * l'achat visait ensuite le doc prod. Aucun client légitime n'est bloqué : un
+ * compte réel a toujours son doc dans sa base (créé à l'inscription).
  */
 export function assertCanOpenCheckout(
   landlord: Record<string, unknown> | null,
 ): void {
+  if (landlord === null) {
+    throw new HttpsError("failed-precondition", "landlord_not_found");
+  }
   if (resolvePlan(landlord).tier === "paid") {
     throw new HttpsError(
       "failed-precondition",
