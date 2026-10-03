@@ -53,25 +53,20 @@ develop       ──●─●─●─●──●─●─●─●──●─
 
 ### À faire à la prochaine session (audit du 2026-10-03)
 
-Fait le 2026-10-03 : les 27 branches entièrement mergées dans `develop` ou
-`main` sont supprimées (confirmé par `git fetch --prune`). Reste :
+Fait le 2026-10-03 : 33 branches mergées supprimées (27 entièrement mergées dans
+`develop`/`main`, 6 dont la PR était mergée) — confirmé par `git fetch --prune`.
+Reste :
 
-1. **Supprimer (PR mergées, vérifié le 2026-10-03)** :
-   `feature/feat-015-detail-pages-enrichment` (#39),
-   `feature/feat-016-rgpd-consent` (#40), `fix/lease-input-hardening` (#6),
-   `chore/state-drift-detector` (#153), `ci/137-deploy-firestore-rules` (#152),
-   `claude/fervent-nash-0641cd` (#172/#173). Les retirer de cette liste une
-   fois supprimées.
-2. **Décider (aucune PR, contenu non vérifié)** :
+1. **Décider (aucune PR, contenu non vérifié)** :
    `claude/amazing-ardinghelli-29501a` (correctifs anon-auth, retrait du trigger
    `handleNewUser`), `claude/magical-jackson-d0116a` (correctifs nav, workflow APK
    Android), `claude/nice-grothendieck-c66baf` (OG card SEO, refresh docs/state ;
    probablement intégrée via PR #75), `feat/056-multi-tier-subscriptions`
    (épinglage Flutter en CI, couleur des cartes ; aucun commit 056 sur `develop`).
    Comparer leur contenu à `develop` avant suppression.
-3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
    à ne pas merger avant le DNS).
-4. Activer *Automatically delete head branches* (voir ci-dessus).
+3. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
 
