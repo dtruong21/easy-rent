@@ -23,14 +23,19 @@ Le SDK 27 rend en outre obligatoires, pour les apps construites avec lui :
 | **Écran de lancement** déclaré (rejet ITMS-90870 sinon) | ✅ `UILaunchStoryboardName = LaunchScreen` (`ios/Runner/Base.lproj/LaunchScreen.storyboard`) |
 | Cible minimale (Xcode 27 : iOS 15 minimum ; App Store : iOS 13+ depuis le 09/09/2026) | ✅ `MinimumOSVersion = 15.0` |
 | Linker `ld64` supprimé dans Xcode 27 | ✅ aucun drapeau `-ld64` / `-ld_classic` dans le projet |
-| **Liquid Glass** imposé (plus d'option de retrait) | ✅ pas de clé `UIDesignRequiresCompatibility` ; l'interface est dessinée par Flutter, seules les surfaces natives changent (alertes, feuille de partage, Se connecter avec Apple) — **à contrôler visuellement sur un simulateur iOS 27** (runtime non installé sur la machine : seul iOS 26.5) |
+| **Liquid Glass** imposé (plus d'option de retrait) | ✅ pas de clé `UIDesignRequiresCompatibility` ; l'interface est dessinée par Flutter, seules les surfaces natives changent (alertes, feuille de partage, Se connecter avec Apple) — contrôlé sur simulateur iOS 27 le 2026-10-03 (voir ci-dessous) |
 | iPad : `UIRequiresFullScreen` change de comportement | ✅ non utilisé ; les 4 orientations iPad sont déclarées |
 | API dépréciées à la cible 27 (`canOpenURL`, ressources à la demande, `PHAssetResource.originalFilename`) | ✅ sans effet : la cible reste iOS 15 |
 | Fichier de confidentialité embarqué | ✅ `PrivacyInfo.xcprivacy` présent dans `Runner.app` |
 
-Reste : (1) test visuel et fonctionnel sur un **simulateur iOS 27** (télécharger le runtime) ;
-(2) côté App Store Connect, questionnaire d'âge du nouveau système (exigé depuis le 31/01/2026),
-déjà listé dans les formulaires ci-dessous.
+**Test sur simulateur iOS 27.0 (24A434), iPhone 17 Pro, build de test `MOBILE_STAGING` (2026-10-03)** :
+- ✅ lancement (cycle de vie par scènes), connexion automatique, navigation, listes et quittances : aucune erreur ;
+- ✅ surfaces natives en Liquid Glass : feuille de partage du PDF de quittance, feuille « Enregistrer dans Fichiers » — rendu correct, annulation sans effet de bord ;
+- ✅ « Continuer avec Apple » au même niveau que Google sur l'écran de connexion (règle 4.8) ;
+- ❌ **« Se connecter avec Apple » échoue** (`firebase_auth/unknown`) : la capacité *Sign in with Apple* n'est pas encore configurée dans le projet iOS (aucun fichier d'entitlements). Gap connu, à régler avec le programme Apple Developer avant toute soumission (cf. [MOBILE.md](MOBILE.md)) — sans lui, refus en review (4.8 / 2.1).
+
+Reste : la capacité Sign in with Apple ci-dessus ; côté App Store Connect, le questionnaire d'âge du
+nouveau système (exigé depuis le 31/01/2026), déjà listé dans les formulaires ci-dessous.
 
 ## Ré-audit du 2026-09-30
 
