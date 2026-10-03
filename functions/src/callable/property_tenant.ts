@@ -34,7 +34,7 @@ import {
   optionalNumber,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireString,
 } from "../utils/callable_helpers";
@@ -90,7 +90,7 @@ async function precomputeSeedCount(
 export const createProperty = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // --- Validation (miroir de la rule `properties/create` + du payload
@@ -274,7 +274,7 @@ export const createProperty = onCall(
 export const createTenant = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // Validation (miroir de la rule `tenants/create` + du payload client

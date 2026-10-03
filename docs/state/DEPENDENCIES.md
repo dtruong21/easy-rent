@@ -186,8 +186,9 @@ npm run logs          # Stream logs
 ### firestore.rules
 
 - **isActive()** helper : rsc.data.deletedAt == null (soft-delete filter)
-- **isOwner(uid)** : auth.uid == uid
-- **isFullyAuthed()** : signé && !anonyme
+- **isOwner(uid)** : auth.uid == uid ET session de confiance (anonyme OU email vérifié/Google/Apple — OWASP-02)
+- **hasTrustedEmail()** : `email_verified == true` OU `sign_in_provider in ['google.com','apple.com']` (OWASP-02)
+- **isFullyAuthed()** : signé && !anonyme && hasTrustedEmail()
 - **isAnonymous()** : firebase.sign_in_provider == 'anonymous'
 - **preservesImmutables()** : landlordId, createdAt, deletedAt immuables côté client
 

@@ -28,7 +28,7 @@ import {
   dataOrFail,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireString,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
@@ -101,7 +101,7 @@ function asPayment(id: string, data: Record<string, unknown>): PaymentShape {
 export const generateReceipt = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const leaseId = requireString(data.leaseId, "leaseId");
@@ -303,7 +303,7 @@ export const generateReceipt = onCall(
 export const voidReceipt = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const receiptId = requireString(data.receiptId, "receiptId");
     const reason = requireString(data.reason, "reason");
@@ -337,7 +337,7 @@ export const voidReceipt = onCall(
 export const markReceiptAsSent = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const receiptId = requireString(data.receiptId, "receiptId");
     const email = optionalString(data.email, "email");

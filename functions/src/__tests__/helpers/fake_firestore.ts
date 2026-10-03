@@ -427,13 +427,16 @@ export class FakeStorage {
  * `getUserError` simulent un échec (ex. objet avec `code:
  * "auth/user-not-found"` pour les chemins idempotents). `providerDataByUid`
  * pilote la vérification autoritative de l'exemption anonyme (M1) — par
- * défaut, aucun provider lié (vrai compte anonyme).
+ * défaut, aucun provider lié (vrai compte anonyme). `emailVerifiedByUid`
+ * pilote `UserRecord.emailVerified` (OWASP-02).
  */
 export class FakeAuthAdmin {
   readonly deletedUids: string[] = [];
   deleteUserError: unknown = null;
   getUserError: unknown = null;
   readonly providerDataByUid = new Map<string, Array<{providerId: string}>>();
+  /** `UserRecord.emailVerified` par uid (défaut : false) — cf. OWASP-02. */
+  readonly emailVerifiedByUid = new Map<string, boolean>();
 
   private static toError(raw: unknown): Error {
     return raw instanceof Error ?
@@ -452,6 +455,7 @@ export class FakeAuthAdmin {
   getUser(uid: string): Promise<{
     uid: string;
     providerData: Array<{providerId: string}>;
+    emailVerified: boolean;
   }> {
     if (this.getUserError != null) {
       return Promise.reject(FakeAuthAdmin.toError(this.getUserError));
@@ -459,6 +463,7 @@ export class FakeAuthAdmin {
     return Promise.resolve({
       uid,
       providerData: this.providerDataByUid.get(uid) ?? [],
+      emailVerified: this.emailVerifiedByUid.get(uid) ?? false,
     });
   }
 }

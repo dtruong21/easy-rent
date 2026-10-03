@@ -22,7 +22,7 @@ import {
   asBag,
   dataOrFail,
   optionalString,
-  requireAuthUid,
+  requireVerifiedUid,
   requireInt,
   requireString,
   toTimestamp,
@@ -108,7 +108,7 @@ export function validateLineItems(
 export const finalizeChargeRegularization = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const leaseId = requireString(data.leaseId, "leaseId");
@@ -238,7 +238,7 @@ export const finalizeChargeRegularization = onCall(
 export const voidChargeStatement = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const statementId = requireString(data.statementId, "statementId");
     const reason = requireString(data.reason, "reason");
@@ -272,7 +272,7 @@ export const voidChargeStatement = onCall(
 export const markChargeStatementAsSent = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const statementId = requireString(data.statementId, "statementId");
     const email = optionalString(data.email, "email");

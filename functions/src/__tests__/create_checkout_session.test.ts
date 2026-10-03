@@ -378,7 +378,15 @@ describe("createCheckoutSession — handler (OWASP-01 : doc landlord requis)", (
   function makeRequest(origin?: string): CallableRequest {
     return {
       data: {level: "pro", period: "monthly"},
-      auth: {uid: UID, token: {email: "a@example.test"} as never, rawToken: ""},
+      auth: {
+        uid: UID,
+        token: {
+          email: "a@example.test",
+          email_verified: true,
+          firebase: {sign_in_provider: "password"},
+        } as never,
+        rawToken: "",
+      },
       rawRequest: {headers: origin === undefined ? {} : {origin}} as never,
     } as CallableRequest;
   }

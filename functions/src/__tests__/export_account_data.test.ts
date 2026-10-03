@@ -135,6 +135,18 @@ describe("exportAccountData", () => {
     });
   });
 
+  it("★ OWASP-02 : compte email/mot de passe NON vérifié → export autorisé (droit RGPD)", async () => {
+    // `makeRequest` ne pose volontairement pas `email_verified` : le token est
+    // celui d'un compte jamais vérifié. exportAccountData est EXEMPTÉE de
+    // `requireVerifiedUid` — le droit d'accès/portabilité (art. 15 et 20) ne
+    // doit pas dépendre de la vérification d'email.
+    const res = (await exportAccountData.run(
+      makeRequest(LANDLORD_A, {signInProvider: "password"}),
+    )) as ExportResult;
+
+    expect(res.account?.id).toBe(LANDLORD_A);
+  });
+
   it("compte anonyme → exempté de la garde de fraîcheur", async () => {
     // Par défaut FakeAuthAdmin.getUser renvoie providerData: [] pour tout uid
     // non renseigné dans providerDataByUid → confirmé anonyme.

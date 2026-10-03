@@ -32,7 +32,7 @@ import {
   type BillingPeriod,
   type PriceTable,
 } from "../entitlements/stripe_prices";
-import {asBag, requireAuthUid} from "../utils/callable_helpers";
+import {asBag, requireVerifiedUid} from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
 import {resolveStripeKeyOrThrow, stripeEnvForOrigin} from "../utils/stripe_env";
 
@@ -226,7 +226,7 @@ export function buildCheckoutSessionParams(args: {
 export const createCheckoutSession = onCall(
   {secrets: [stripeSecret, stripeTestSecret]},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const {level, period} = parseCheckoutRequest(asBag(request.data));
 
     // Garde anti-double-abonnement : lecture du doc landlord AVANT tout appel

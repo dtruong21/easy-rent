@@ -43,7 +43,7 @@ import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {
   asBag,
   dataOrFail,
-  requireAuthUid,
+  requireVerifiedUid,
   requireString,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
@@ -61,7 +61,7 @@ const SOFT_DELETABLE: ReadonlySet<string> = new Set([
 export const softDeleteEntity = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const collection = requireString(data.collection, "collection");

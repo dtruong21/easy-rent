@@ -33,16 +33,38 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
     }
 
-    // Compte complet : signé ET pas anonyme (email/password vérifié, Google,
-    // Apple). Toutes les collections métier (properties, tenants, leases,
-    // payments, receipts, documents) sont réservées à isFullyAuthed() —
-    // un anonyme ne peut PAS y écrire (seul le simulateur lui est ouvert).
-    function isFullyAuthed() {
-      return isSignedIn() && !isAnonymous();
+    // OWASP-02 — email de confiance : vérifié (`email_verified`, posé par
+    // Firebase Auth après clic sur le lien reçu) OU provider dont l'email est
+    // vérifié par le fournisseur d'identité (Google, Apple). Avant ce garde-fou,
+    // seul le client Flutter imposait la vérification (routeur + déconnexion
+    // forcée à la connexion) : un compte email/mot de passe jamais vérifié
+    // utilisait tout le produit via le SDK/REST. `get()` : le claim est absent
+    // des tokens anonymes et de certains providers — un accès direct ferait
+    // échouer l'évaluation (donc refuser) au lieu de retomber sur `false`.
+    function hasTrustedEmail() {
+      return request.auth.token.get('email_verified', false) == true
+        || request.auth.token.firebase.sign_in_provider in ['google.com', 'apple.com'];
     }
 
+    // Compte complet : signé, pas anonyme ET email de confiance (email/password
+    // vérifié, Google, Apple). Toutes les collections métier (properties,
+    // tenants, leases, payments, receipts, documents) sont réservées à
+    // isFullyAuthed() — un anonyme ne peut PAS y écrire (seul le simulateur lui
+    // est ouvert), pas plus qu'un compte email/mot de passe non vérifié.
+    function isFullyAuthed() {
+      return isSignedIn() && !isAnonymous() && hasTrustedEmail();
+    }
+
+    // Propriétaire d'un doc : même uid, ET session « de confiance » — soit un
+    // compte anonyme (essai sans compte, régi par ses propres rules), soit un
+    // compte à email de confiance. Un compte email/mot de passe NON vérifié
+    // n'est donc propriétaire de rien : ni lecture, ni écriture (OWASP-02).
+    // Seule exception, assumée et locale : la création de son propre doc
+    // `landlords/{uid}` à l'inscription (cf. match /landlords ci-dessous).
     function isOwner(landlordId) {
-      return isSignedIn() && request.auth.uid == landlordId;
+      return isSignedIn()
+        && request.auth.uid == landlordId
+        && (isAnonymous() || hasTrustedEmail());
     }
 
     function isActive(rsc) {
@@ -76,8 +98,17 @@ service cloud.firestore {
       // (defense-in-depth) si activé — `set({merge:true})` rend les 2
       // chemins idempotents. Si IP désactivée, c'est ce chemin qui crée le
       // doc.
-      allow create: if isFullyAuthed()
-        && isOwner(uid)
+      //
+      // OWASP-02 — EXCEPTION volontaire à isFullyAuthed()/isOwner() : à
+      // l'inscription email/mot de passe, `signUpWithPassword` écrit ce doc
+      // AVANT d'envoyer l'email de vérification puis de déconnecter
+      // l'utilisateur, donc alors que `email_verified == false`. On exige
+      // « non anonyme + propre uid » (+ les mêmes contraintes de champs
+      // qu'avant) ; rien d'autre n'est accessible à ce compte tant qu'il n'a
+      // pas vérifié son email.
+      allow create: if isSignedIn()
+        && !isAnonymous()
+        && request.auth.uid == uid
         && request.resource.data.id == uid
         && request.resource.data.email is string
         && request.resource.data.fullName is string
@@ -337,11 +368,13 @@ service cloud.firestore {
     // ====================================================================
     // charge_statements/{id} — IMMUABLES (loi 6 juillet 1989) → CF exclusive
     //
-    // Décompte de régularisation figé (FEAT-033). Pas de soft-delete
-    // (rétention 5 ans). Les décomptes annulés (isVoided) restent lisibles
-    // pour audit. Owner-scoped en get ET list (mêmes garanties que receipts :
-    // les décomptes d'un compte supprimé restent conservés et ne doivent
-    // résoudre pour personne).
+    // Décompte de régularisation figé (FEAT-033). Pas de soft-delete côté
+    // client : tant que le compte existe, les décomptes annulés (isVoided)
+    // restent lisibles pour audit. Contrairement aux quittances, ils ne sont
+    // PAS conservés après la suppression du compte : `deleteAccount` les
+    // supprime définitivement (hard-delete, RGPD art. 17 — cf.
+    // PURGED_COLLECTIONS), de même que `etat_des_lieux`. Owner-scoped en get ET
+    // list (mêmes garanties que receipts).
     // ====================================================================
     match /charge_statements/{id} {
       allow get:  if isOwner(resource.data.landlordId);

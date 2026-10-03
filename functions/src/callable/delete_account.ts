@@ -168,6 +168,10 @@ export const deleteAccount = onCall(
     secrets: [stripeSecret, stripeTestSecret],
   },
   async (request) => {
+    // OWASP-02 — EXEMPTÉE de `requireVerifiedUid` (volontairement) : le droit à
+    // l'effacement (RGPD art. 17) doit rester exerçable par un compte jamais
+    // vérifié (ex. inscrit avec l'adresse d'un tiers). Garde de fraîcheur
+    // ci-dessous inchangée.
     const uid = requireAuthUid(request);
 
     // AUDIT FEAT-045 (M1) : le claim `sign_in_provider == 'anonymous'` reste

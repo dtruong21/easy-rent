@@ -130,6 +130,12 @@ export function resolveUpgradeIdentity(
 export const finalizeAnonymousUpgrade = onCall(
   {region: "europe-west1"},
   async (request) => {
+    // OWASP-02 — EXEMPTÉE de `requireVerifiedUid` (volontairement) : le client
+    // l'appelle juste après le link email/mot de passe et AVANT l'envoi de
+    // l'email de vérification (`linkAnonymousWithEmailPassword`) — le compte
+    // est donc non vérifié par construction à cet instant. Elle ne donne
+    // aucun accès métier : elle bascule seulement le tier anonyme → free ;
+    // c'est la vérification de l'email qui débloque ensuite le compte complet.
     const uid = requireAuthUid(request);
     const data = asBag(request.data);
 

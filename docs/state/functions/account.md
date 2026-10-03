@@ -107,7 +107,8 @@ Fichier `scheduled/cleanup_expired_anon.ts`. Logs `firebase functions:log`.
 
 | Helper | Signature | Usage |
 |---|---|---|
-| `requireAuthUid()` | `(request) → string` | Extract + validate auth UID |
+| `requireAuthUid()` | `(request) → string` | Extract + validate auth UID. Réservé aux callables **exemptées** d'email vérifié : `deleteAccount`, `exportAccountData` (droits RGPD), `finalizeAnonymousUpgrade` (appelée avant l'email de vérification) |
+| `requireVerifiedUid()` | `(request) → Promise<string>` | **OWASP-02** — `requireAuthUid` + compte de confiance : `email_verified` / Google / Apple, ou anonyme (claim `anonymous` confirmé via Admin SDK : aucun provider lié, ou email/provider de confiance). Sinon `failed-precondition` / `email_not_verified`. Première ligne de TOUTES les autres callables (parité testée : `email_verification_guard.test.ts`) |
 | `assertRecentAuthForNonAnonymousAccount()` | `(request, uid) → Promise<void>` | Rejette `recent-login-required` si compte non-anonyme au token > 5 min ; anonyme exempté (providerData). Partagé par `deleteAccount` + `exportAccountData` |
 | `requireString()` | `(value, name) → string` | Non-empty string |
 | `requireInt()` | `(value, name, {min,max}) → number` | Integer borné |

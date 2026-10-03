@@ -23,6 +23,7 @@ import {
   fakeAdminFirestoreHolder,
   fakeStagingFirestoreHolder,
 } from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Faux Stripe (même patron que delete_account.test.ts) : la fausse classe
 // capture la clé passée au constructeur pour prouver l'environnement visé
@@ -347,7 +348,7 @@ describe("manageSubscription — handler (Origin web vs app native)", () => {
   ): CallableRequest {
     return {
       data,
-      auth: {uid: UID, token: {} as never, rawToken: ""},
+      auth: {uid: UID, token: VERIFIED_TOKEN, rawToken: ""},
       rawRequest: {headers: origin === undefined ? {} : {origin}} as never,
     } as CallableRequest;
   }

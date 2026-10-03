@@ -179,6 +179,22 @@ describe("deleteAccount", () => {
     ).rejects.toMatchObject({code: "unauthenticated"});
   });
 
+  it("★ OWASP-02 : compte email/mot de passe NON vérifié → suppression autorisée (droit RGPD)", async () => {
+    // `makeRequest` ne pose volontairement pas `email_verified` : le token est
+    // celui d'un compte jamais vérifié (ex. inscrit avec l'adresse d'un tiers).
+    // deleteAccount est EXEMPTÉE de `requireVerifiedUid` — le droit à
+    // l'effacement (art. 17) doit rester exerçable.
+    seedLandlordDataset(LANDLORD_A, "a1");
+
+    await deleteAccount.run(
+      makeRequest(LANDLORD_A, {signInProvider: "password"}),
+    );
+
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+    expect(fakeDb.peek("properties/prop-a1")).toBeUndefined();
+    expect(fakeAuth.deletedUids).toContain(LANDLORD_A);
+  });
+
   it("refuse un token non-anonyme trop ancien (recent-login-required)", async () => {
     seedLandlordDataset(LANDLORD_A, "a1");
 

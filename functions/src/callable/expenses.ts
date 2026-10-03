@@ -41,7 +41,7 @@ import {
   optionalInt,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireInt,
   requireString,
   toTimestamp,
@@ -213,7 +213,7 @@ export function resolveExpenseRecurrence(opts: {
 export const createExpense = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const propertyId = requireString(data.propertyId, "propertyId");
@@ -379,7 +379,7 @@ const EXPENSE_MUTABLE_FIELDS = new Set([
 export const updateExpense = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);
