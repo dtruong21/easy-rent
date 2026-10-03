@@ -68,12 +68,12 @@ Reste :
    `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`,
    `tool/generate_brand_assets.dart`) ont été repris le 2026-10-03 dans
    `chore/restore-mobile-release-files` (pin Flutter aligné sur `ci.yml`).
-   À faire : ouvrir la PR de cette branche vers `develop`, puis supprimer
+   PR #211 ouverte vers `develop` ; la merger, puis supprimer
    `claude/magical-jackson-d0116a`.
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
 3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
-   à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (jusqu'à sa PR).
+   à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (PR #211, jusqu'à son merge).
 4. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
