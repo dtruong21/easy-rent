@@ -155,21 +155,24 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # Évite de re-télécharger le jar de l'émulateur Firestore (~63 Mo) à chaque
-      # run. Clé statique versionnée : firebase-tools est épinglé, donc la
-      # version du jar est stable ; bumper le suffixe pour invalider au besoin.
-      - name: Cache Firestore emulator
+      # Évite de re-télécharger les jars des émulateurs Firestore (~63 Mo) et
+      # Storage (runtime des règles) à chaque run. Clé statique versionnée :
+      # firebase-tools est épinglé, donc la version des jars est stable ; bumper
+      # le suffixe pour invalider au besoin (v2 : ajout de l'émulateur Storage,
+      # OWASP-04 — une clé v1 déjà peuplée n'aurait contenu que Firestore).
+      - name: Cache Firebase emulators
         uses: actions/cache@v4
         with:
           path: ~/.cache/firebase/emulators
-          key: ${{ runner.os }}-firebase-emulators-v1
+          key: ${{ runner.os }}-firebase-emulators-v2
 
       - name: Install deps
         run: npm ci
         working-directory: functions
 
-      # Wrappe `firebase-tools@13 emulators:exec --only firestore` (projet
-      # demo-* : aucun credential requis) puis lance vitest sur rules-tests/.
-      - name: Test Firestore rules
+      # Wrappe `firebase-tools@13 emulators:exec --only firestore,storage`
+      # (projet demo-* : aucun credential requis) puis lance vitest sur
+      # rules-tests/ (firestore_rules + storage_rules).
+      - name: Test Firestore + Storage rules
         run: npm run test:rules
         working-directory: functions

@@ -17,7 +17,7 @@
     "logs": "firebase functions:log",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rules": "cd .. && npx -y firebase-tools@13 emulators:exec --only firestore --project demo-easyrent \"npm --prefix functions run test:rules:inner\"",
+    "test:rules": "cd .. && npx -y firebase-tools@13 emulators:exec --only firestore,storage --project demo-easyrent \"npm --prefix functions run test:rules:inner\"",
     "test:rules:inner": "vitest run --config vitest.rules.config.ts"
   },
   "dependencies": {

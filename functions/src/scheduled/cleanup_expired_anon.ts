@@ -11,10 +11,11 @@
  * heure creuse, hors fenêtre d'usage typique d'un bailleur FR.
  *
  * Pour chaque landlord expiré :
- *   (a) supprime les `investment_scenarios` où `landlordId == uid`
- *   (b) supprime `paid_plan_interest/{uid}` si présent
- *   (c) supprime `landlords/{uid}`
- *   (d) supprime l'utilisateur Firebase Auth (`admin.auth().deleteUser`)
+ *   (a) supprime l'utilisateur Firebase Auth (`admin.auth().deleteUser`)
+ *   (b) supprime les objets Storage `documents/{uid}/**` (OWASP-04)
+ *   (c) supprime les `investment_scenarios` où `landlordId == uid`
+ *   (d) supprime `paid_plan_interest/{uid}` si présent
+ *   (e) supprime `landlords/{uid}`
  *
  * Batch de 100 max par run (tient large dans les quotas Blaze — 540k
  * invocations/jour gratuites — et limite le risque de timeout sur un run
@@ -40,42 +41,51 @@ export const cleanupExpiredAnon = onSchedule(
     region: "europe-west1",
   },
   async () => {
-    const db = admin.firestore();
-    const now = Timestamp.now();
-
-    const expiredSnap = await db
-      .collection("landlords")
-      .where("isAnonymous", "==", true)
-      .where("anonExpiresAt", "<=", now)
-      .limit(BATCH_SIZE)
-      .get();
-
-    if (expiredSnap.empty) {
-      logger.info("cleanupExpiredAnon: no expired anonymous landlords");
-      return;
-    }
-
-    logger.info(
-      `cleanupExpiredAnon: purging ${expiredSnap.size} expired anonymous landlords`,
-    );
-
-    let purged = 0;
-    let failed = 0;
-
-    for (const doc of expiredSnap.docs) {
-      const uid = doc.id;
-      try {
-        await purgeLandlord(db, uid);
-        purged++;
-      } catch (err) {
-        failed++;
-        logger.error(`cleanupExpiredAnon: failed to purge uid=${uid}`, err);
-      }
-    }
-
-    logger.info(`cleanupExpiredAnon: done (purged=${purged}, failed=${failed})`);
+    await cleanupExpiredAnonImpl(admin.firestore(), Timestamp.now());
   },
 );
+
+/**
+ * Logique pure, testable avec le FakeFirestore (convention repo — cf.
+ * `purgeExpiredReceiptsImpl`). Retourne le décompte purgés / en échec.
+ */
+export async function cleanupExpiredAnonImpl(
+  db: admin.firestore.Firestore,
+  now: Timestamp,
+): Promise<{purged: number; failed: number}> {
+  const expiredSnap = await db
+    .collection("landlords")
+    .where("isAnonymous", "==", true)
+    .where("anonExpiresAt", "<=", now)
+    .limit(BATCH_SIZE)
+    .get();
+
+  if (expiredSnap.empty) {
+    logger.info("cleanupExpiredAnon: no expired anonymous landlords");
+    return {purged: 0, failed: 0};
+  }
+
+  logger.info(
+    `cleanupExpiredAnon: purging ${expiredSnap.size} expired anonymous landlords`,
+  );
+
+  let purged = 0;
+  let failed = 0;
+
+  for (const doc of expiredSnap.docs) {
+    const uid = doc.id;
+    try {
+      await purgeLandlord(db, uid);
+      purged++;
+    } catch (err) {
+      failed++;
+      logger.error(`cleanupExpiredAnon: failed to purge uid=${uid}`, err);
+    }
+  }
+
+  logger.info(`cleanupExpiredAnon: done (purged=${purged}, failed=${failed})`);
+  return {purged, failed};
+}
 
 async function purgeLandlord(
   db: admin.firestore.Firestore,
@@ -116,7 +126,19 @@ async function purgeLandlord(
     }
   }
 
-  // (b) scénarios simulateur du landlord.
+  // (b) fichiers Storage `documents/{uid}/**` (OWASP-04). Même style que
+  // l'étape (d) de `deleteAccount`. Le `/` final est indispensable : sans lui
+  // le préfixe `documents/anon-1` purgerait aussi `documents/anon-10/…`.
+  //
+  // AVANT la suppression du doc landlord (e) : si le bucket est indisponible
+  // l'erreur remonte, le doc landlord — la clé de découverte de ce cron — reste
+  // en place et le run suivant retente (Auth, déjà supprimé, renverra
+  // `user-not-found`, toléré plus haut). Les anonymes n'ont plus le droit
+  // d'écrire dans Storage ; ces objets sont ceux déposés avant le durcissement
+  // des règles.
+  await admin.storage().bucket().deleteFiles({prefix: `documents/${uid}/`});
+
+  // (c) scénarios simulateur du landlord.
   const scenariosSnap = await db
     .collection("investment_scenarios")
     .where("landlordId", "==", uid)
@@ -126,10 +148,10 @@ async function purgeLandlord(
     batch.delete(scenarioDoc.ref);
   }
 
-  // (c) intérêt Plan Pro, si présent.
+  // (d) intérêt Plan Pro, si présent.
   batch.delete(db.doc(`paid_plan_interest/${uid}`));
 
-  // (d) doc landlord lui-même.
+  // (e) doc landlord lui-même.
   batch.delete(db.doc(`landlords/${uid}`));
 
   await batch.commit();
