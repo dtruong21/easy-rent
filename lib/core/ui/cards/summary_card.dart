@@ -126,6 +126,10 @@ class SummaryCard extends StatelessWidget {
   static const double _padding = 12;
   static const double _rowGap = 6;
 
+  /// Part max de la largeur utile que le chiffre clé peut occuper avant d'être
+  /// réduit (le reste est réservé au titre, au menu et à l'espacement).
+  static const double _keyFigureMaxShare = 0.6;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -145,90 +149,104 @@ class SummaryCard extends StatelessWidget {
         _padding - 4,
         _padding - 2,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (subtitle != null)
+      child: LayoutBuilder(
+        builder: (context, constraints) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        subtitle!,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
-                ),
-              ),
-              if (hasKeyFigure) ...[
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      keyFigure!.value,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (keyFigure!.caption != null)
-                      Text(
-                        keyFigure!.caption!,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
-              if (topAction != null) ...[
-                const SizedBox(width: 8),
-                _ActionSlot(child: topAction),
-              ],
-              if (menuItems.isNotEmpty) _buildMenu(context),
-            ],
-          ),
-          if (hasBottomRow) ...[
-            const SizedBox(height: _rowGap),
-            Row(
-              children: [
-                if (status != null) ...[status!, const SizedBox(width: 8)],
-                Expanded(
-                  child: Text(
-                    meta ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+                    ],
                   ),
                 ),
-                if (bottomAction != null) ...[
+                if (hasKeyFigure) ...[
                   const SizedBox(width: 8),
-                  _ActionSlot(child: bottomAction),
+                  // Plafonné puis réduit si besoin : un montant très long ou un
+                  // texte agrandi ne doit jamais faire déborder la rangée ni
+                  // écraser le titre.
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * _keyFigureMaxShare,
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            keyFigure!.value,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (keyFigure!.caption != null)
+                            Text(
+                              keyFigure!.caption!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 11,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
+                if (topAction != null) ...[
+                  const SizedBox(width: 8),
+                  _ActionSlot(child: topAction),
+                ],
+                if (menuItems.isNotEmpty) _buildMenu(context),
               ],
             ),
+            if (hasBottomRow) ...[
+              const SizedBox(height: _rowGap),
+              Row(
+                children: [
+                  if (status != null) ...[status!, const SizedBox(width: 8)],
+                  Expanded(
+                    child: Text(
+                      meta ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  if (bottomAction != null) ...[
+                    const SizedBox(width: 8),
+                    _ActionSlot(child: bottomAction),
+                  ],
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
 
