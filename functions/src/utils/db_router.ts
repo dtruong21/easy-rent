@@ -6,7 +6,7 @@
  * Deux entrées selon la nature de l'appel :
  * - **Callables** ([dbForRequest]) : web (Origin présent) → routage par
  *   l'en-tête **Origin** ; mobile (Origin absent ou vide) → routage par la base
- *   qui porte le doc landlord, comme le webhook.
+ *   qui porte le doc landlord ([dbForLandlordUid], prod d'abord).
  * - **Webhook RevenueCat** (server-to-server, sans Origin) → routage par
  *   l'`environment` de l'event (`SANDBOX` → `staging`, `PRODUCTION` →
  *   `(default)`), via [firestoreForEnv] — jamais par la base qui porte le doc :

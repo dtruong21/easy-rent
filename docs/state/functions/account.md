@@ -45,6 +45,7 @@ Signature `{collection, docId}`. Soft-delete unifié (spec canonique) ; le soft-
 Signature `{plan: 'monthly'|'annual', level?: 'pro'|'max'|'ultra'}` → `{url, sessionId}`. Crée une **Stripe Checkout Session** d'abonnement et renvoie l'URL hostée. Fichier `callable/create_checkout_session.ts`.
 - **Routage Firestore** (ADR 0003) : utilise `await dbForRequest(request)` → écrit la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 - **N'accorde AUCUN droit** : elle initie le paiement, le déverrouillage reste 100 % serveur via `revenueCatWebhook`.
+- **Doc landlord absent → refus (OWASP-01, 2026-09-30)** : `assertCanOpenCheckout(null)` lève `failed-precondition` / `landlord_not_found` quand `landlords/{uid}` n'existe pas dans la base routée (avant, il laissait passer). Un compte de l'AUTRE environnement (compte prod sur le checkout staging, en Stripe test) ne peut plus ouvrir de session de test. Un compte réel a toujours son doc dans sa base (créé à l'inscription).
 - **Paliers multi-tiers** (FEAT-056) : `pro` (achetable, `purchasable:true`), `max` (démo UI, `purchasable:false`), `ultra` (démo UI, `purchasable:false`). Seul `pro` rejette le checkout ; les autres renvoient `level_not_purchasable`. Signature de rétrocompatibilité : omission de `level` → `pro`.
 - **Lien de compte** : l'App User ID RevenueCat (= UID Firebase) est posé en metadata `rc_app_user_id` sur la **session ET** `subscription_data` (RevenueCat lit les deux) + `client_reference_id` en ceinture-bretelles. ⚠️ La clé DOIT correspondre exactement au champ configuré côté dashboard RevenueCat.
 - **Redirections** : `{WEB_APP_BASE_URL}/pro/success?session_id=…` et `/pro/cancel` → routes GoRouter déclarées (voir routes/account).
@@ -66,7 +67,8 @@ Signature `{action: 'cancel'|'reactivate'|'change_plan', level?: 'pro'|'max'|'ul
 ## HTTP — `revenueCatWebhook` (FEAT-044, PR #114)
 
 `onRequest`, **1re fonction HTTP du codebase**. Fichier `http/revenuecat_webhook.ts`. Écrit `landlords/{uid}` via Admin SDK (bypass rules ; tier reste client-immuable).
-- **Routage Firestore** (ADR 0003) : utilise `dbForLandlordUid(uid)` qui cherche le doc landlord en **prod d'abord** (fail-safe), puis staging. Ce pattern évite de dépendre d'une metadata Stripe/RevenueCat qui pourrait dériver — le webhook reste correct même si la propagation metadata change. **Discipline** : pour tester un paiement staging, utiliser un uid **jamais utilisé en prod** (sinon le webhook routerait vers la mauvaise base).
+- **Routage Firestore** (ADR 0003, **OWASP-01 — 2026-09-30**) : la base est choisie par **`event.environment`** (`handleRevenueCatEvent`, `firestoreForEnv`), **jamais** par « la base qui porte le doc » : `SANDBOX` → base `staging` **uniquement** ; `PRODUCTION` → `(default)` **uniquement** ; absent / autre valeur → event **ignoré** (`ignored`) + `logger.warn` (uid + valeur bornée à 32 caractères, rien d'autre) ; event `TEST` → `ignored` sans log, avant tout routage. **Aucun repli** sur l'autre base : doc landlord absent de la base routée → `no_landlord`. Un achat Stripe test (staging) ne peut donc plus accorder un palier sur un compte prod (l'ancien routage `dbForLandlordUid` testait la prod d'abord). `dbForLandlordUid` ne sert plus qu'aux callables mobiles (`dbForRequest`).
+- **Conséquence connue (à traiter avec la feature achat intégré)** : les achats **sandbox** d'App Review / TestFlight / licence de test Google réalisés avec un compte **prod** sont routés vers `staging` (où ce compte n'a pas de doc → `no_landlord`) : **ils ne débloquent rien** tant qu'une allowlist serveur d'uid prod autorisés en sandbox n'est pas ajoutée (webhook + cron). Valeurs réelles d'`environment` à confirmer sur un event après déploiement.
 - **Auth** : header `Authorization` comparé en **temps constant** (`timingSafeEqual`) au secret `REVENUECAT_WEBHOOK_AUTH`. Non signé → 401. Non-POST → 405.
 - **Mapping type → accès** : `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION`/`PRODUCT_CHANGE`/`SUBSCRIPTION_EXTENDED` → `paid` ; `NON_RENEWING_PURCHASE` → `paid` non renouvelable ; `CANCELLATION`/`BILLING_ISSUE` → `paid` tant que non expiré (délai de grâce) ; `EXPIRATION`/`SUBSCRIPTION_PAUSED` → `free` ; `TRANSFER`/inconnu/`TEST` → no-op.
 - **Multi-paliers** (FEAT-056) : l'entitlement `rc_entitlement_id` reçu (ex: `"Bailan Pro"`, typo historique load-bearing) détermine le palier via lookup dans plan_matrix.generated.ts ; seul `pro` existe côté RevenueCat actuellement, donc `max`/`ultra` restent inatteignables côté webhook (pas d'rcEntitlementId).
@@ -82,11 +84,12 @@ Signature `{action: 'cancel'|'reactivate'|'change_plan', level?: 'pro'|'max'|'ul
 
 ### `cleanupExpiredAnon` (BAILLAN-M1)
 Cloud Scheduler + CF, **`0 3 * * *` en `Europe/Paris`** (et non « 2 AM UTC » comme indiqué jusqu'au 2026-07-21).
-1. Query `landlords` where `isAnonymous==true && anonExpiresAt < now()` ;
-2. Batch soft-delete par anonyme expiré : `leases`, `payments`, `receipts`, `properties`, `tenants`, `documents`, `expenses`, `investment_scenarios` ; puis **hard-delete** `landlords/{uid}` (vrai delete — rétention inutile anon) ;
-3. Log count (Cloud Logging) ; idempotent (`deletedAt` check).
+1. Query `landlords` where `isAnonymous==true && anonExpiresAt <= now()` (lot de 100 par run) ;
+2. Par anonyme expiré, dans cet ordre : (a) **Auth** `deleteUser` en premier (idempotent `auth/user-not-found` ; autre échec → abandon du compte, retenté au run suivant) ; (b) **Storage** `deleteFiles({prefix: "documents/{uid}/"})` (**OWASP-04, 2026-09-30** — le `/` final est indispensable ; avant le doc landlord pour que le run suivant retente si le bucket est indisponible) ; (c) `investment_scenarios` du landlord, (d) `paid_plan_interest/{uid}` et (e) `landlords/{uid}` hard-delete dans un même batch (un anonyme n'a de quota que pour les scénarios : 0 bien/locataire/bail/document) ;
+3. Log par uid purgé (registre RGPD art. 30) + décompte purgés/échecs ; échec isolé n'interrompt pas le lot.
+⚠️ **Redéploiement manuel des Functions requis** pour la purge Storage. Pas de `timeoutSeconds` explicite (défaut Cloud Functions) — suivi : le fixer si des lots volumineux apparaissent.
 
-Fichier `scheduled/cleanup_expired_anon.ts`. Logs `firebase functions:log`.
+Fichier `scheduled/cleanup_expired_anon.ts`. Tests `cleanup_expired_anon.test.ts`. Logs `firebase functions:log`.
 
 ### `reconcileEntitlements` (FEAT-044, PR #114 ; multi-paliers FEAT-056)
 `onSchedule` **`30 3 * * *` `Europe/Paris`**, région `europe-west1`, secret `REVENUECAT_API_KEY`. Filet de sécurité des webhooks manqués. Fichier `scheduled/reconcile_entitlements.ts`.
@@ -94,6 +97,7 @@ Fichier `scheduled/cleanup_expired_anon.ts`. Logs `firebase functions:log`.
 2. Re-vérifie chaque compte via l'API REST RevenueCat v1 (`/subscribers/{uid}`) ;
 3. Corrige : plus d'entitlement → `free` (`downgraded`, applique un downgrade du palier effectif) ; échéance repoussée → conserve `paid` + met à jour `proExpiresAt` (`renewed`, cas du RENEWAL manqué).
 - **Ne fait jamais d'upgrade** (`free` → `paid` reste du ressort du webhook seul). 
+- **Achats sandbox écartés (OWASP-01)** : `entitlementStatesFromSubscriber` (pure, testée) ignore tout entitlement dont le produit est `is_sandbox: true` dans `subscriber.subscriptions` de l'API RevenueCat (qui mélange achats prod et sandbox pour un même App User ID) ; un produit absent de `subscriptions` est traité comme prod (seul `is_sandbox === true` explicite écarte l'entitlement, pour ne pas rétrograder un client qui paie sur une réponse incomplète). Le cron opère sur `(default)` : il ne prolonge / ne monte plus de palier d'après un achat de test.
 - **Multi-paliers** : pour l'instant ne gère que le retrait du seul entitlement `pro` existant ; max/ultra restent out-of-scope webhook. Fetcher injectable → coeur testable sans réseau.
 
 ## Support & intérêt payant
