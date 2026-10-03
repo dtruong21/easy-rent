@@ -10,7 +10,11 @@
  * Déclenchement : Cloud Scheduler, tous les jours à 03:00 Europe/Paris —
  * heure creuse, hors fenêtre d'usage typique d'un bailleur FR.
  *
- * Pour chaque landlord expiré :
+ * Pour chaque landlord expiré, on relit d'abord l'utilisateur Auth : s'il
+ * porte un fournisseur lié (`providerData` non vide — email/Google/Apple),
+ * c'est un compte déjà upgradé (ex. `finalizeAnonymousUpgrade` interrompu
+ * après le `link` mais avant `isAnonymous: false`) et il est IGNORÉ sans rien
+ * toucher. Sinon :
  *   (a) supprime l'utilisateur Firebase Auth (`admin.auth().deleteUser`)
  *   (b) supprime les objets Storage `documents/{uid}/**` (OWASP-04)
  *   (c) supprime les `investment_scenarios` où `landlordId == uid`
@@ -25,6 +29,9 @@
  * supplémentaire d'un jour n'a aucun impact utilisateur ni RGPD (l'anonyme
  * n'a jamais donné de consentement à conserver, mais rien n'impose non plus
  * une purge à la milliseconde près).
+ *
+ * `timeoutSeconds: 300` : chaque compte liste/supprime en plus des objets
+ * GCS ; 100 comptes dépassent largement les 60 s par défaut.
  */
 
 import * as admin from "firebase-admin";
@@ -39,6 +46,7 @@ export const cleanupExpiredAnon = onSchedule(
     schedule: "0 3 * * *",
     timeZone: "Europe/Paris",
     region: "europe-west1",
+    timeoutSeconds: 300,
   },
   async () => {
     await cleanupExpiredAnonImpl(admin.firestore(), Timestamp.now());
@@ -47,7 +55,9 @@ export const cleanupExpiredAnon = onSchedule(
 
 /**
  * Logique pure, testable avec le FakeFirestore (convention repo — cf.
- * `purgeExpiredReceiptsImpl`). Retourne le décompte purgés / en échec.
+ * `purgeExpiredReceiptsImpl`). Retourne le décompte purgés / en échec ; les
+ * comptes ignorés car déjà liés (cf. `purgeLandlord`) ne comptent dans aucun
+ * des deux, ils sont seulement journalisés.
  */
 export async function cleanupExpiredAnonImpl(
   db: admin.firestore.Firestore,
@@ -71,26 +81,72 @@ export async function cleanupExpiredAnonImpl(
 
   let purged = 0;
   let failed = 0;
+  let skipped = 0;
 
   for (const doc of expiredSnap.docs) {
     const uid = doc.id;
     try {
-      await purgeLandlord(db, uid);
-      purged++;
+      const outcome = await purgeLandlord(db, uid);
+      if (outcome === "skipped") {
+        skipped++;
+      } else {
+        purged++;
+      }
     } catch (err) {
       failed++;
       logger.error(`cleanupExpiredAnon: failed to purge uid=${uid}`, err);
     }
   }
 
-  logger.info(`cleanupExpiredAnon: done (purged=${purged}, failed=${failed})`);
+  logger.info(
+    `cleanupExpiredAnon: done (purged=${purged}, failed=${failed}, ` +
+      `skipped=${skipped})`,
+  );
   return {purged, failed};
+}
+
+function errorCode(err: unknown): unknown {
+  return typeof err === "object" && err !== null && "code" in err ?
+    (err as {code: unknown}).code :
+    undefined;
 }
 
 async function purgeLandlord(
   db: admin.firestore.Firestore,
   uid: string,
-): Promise<void> {
+): Promise<"purged" | "skipped"> {
+  // (0) garde-fou : ne JAMAIS purger un compte qui n'est plus anonyme.
+  // `landlords.isAnonymous` peut être périmé : si `finalizeAnonymousUpgrade`
+  // échoue après avoir lié l'email/Google au compte Auth, le doc garde
+  // `isAnonymous: true` + `anonExpiresAt` expiré alors que l'utilisateur est
+  // devenu un vrai compte — supprimer Auth + Storage + Firestore détruirait
+  // ses données. Une relecture Auth (source de vérité) tranche.
+  //   - `auth/user-not-found` : Auth déjà supprimé (run précédent interrompu
+  //     plus loin) → on continue pour terminer Storage + Firestore.
+  //   - `providerData` non vide : compte lié → on ignore, rien n'est touché.
+  //   - autre erreur : on remonte, échec par compte comme pour `deleteUser`
+  //     (journalisé par l'appelant, retentative au prochain run).
+  let authUserExists = true;
+  try {
+    const user = await admin.auth().getUser(uid);
+    if (user.providerData.length > 0) {
+      logger.warn(
+        `cleanupExpiredAnon: skipping uid=${uid} — account is linked ` +
+          "(non-empty providerData), no longer anonymous",
+      );
+      return "skipped";
+    }
+  } catch (err) {
+    if (errorCode(err) !== "auth/user-not-found") {
+      throw err;
+    }
+    authUserExists = false;
+    logger.info(
+      `cleanupExpiredAnon: Auth user uid=${uid} not found, ` +
+        "proceeding with Storage + Firestore cleanup",
+    );
+  }
+
   // Ordre CRITIQUE : Auth SUPPRIMÉ EN PREMIER, Firestore ENSUITE.
   //
   // Si on nettoie Firestore d'abord et que `admin.auth().deleteUser` échoue,
@@ -99,30 +155,28 @@ async function purgeLandlord(
   // vient d'être vidé. En supprimant Auth d'abord, un échec laisse
   // Firestore intact et le prochain run retrouvera + retentera.
   //
-  // (a) suppression du compte Firebase Auth. Idempotent : un
-  // 'user-not-found' signifie qu'il a déjà été supprimé — on continue
-  // vers le nettoyage Firestore.
-  try {
-    await admin.auth().deleteUser(uid);
-  } catch (err) {
-    const code =
-      typeof err === "object" && err !== null && "code" in err
-        ? (err as {code: unknown}).code
-        : undefined;
-    if (code === "auth/user-not-found") {
-      logger.info(
-        `cleanupExpiredAnon: Auth user uid=${uid} already deleted, ` +
-          "proceeding with Firestore cleanup",
-      );
-    } else {
-      // Vrai échec : on abort — le cron retentera au prochain run car les
-      // docs Firestore restent (isAnonymous=true, anonExpiresAt<now).
-      logger.error(
-        `cleanupExpiredAnon: deleteUser failed for uid=${uid} — ` +
-          "aborting Firestore cleanup for retry next run",
-        err,
-      );
-      throw err;
+  // (a) suppression du compte Firebase Auth (sauté si `getUser` vient de
+  // confirmer qu'il n'existe plus). Idempotent : un 'user-not-found' tardif
+  // (course avec une autre suppression) est aussi toléré.
+  if (authUserExists) {
+    try {
+      await admin.auth().deleteUser(uid);
+    } catch (err) {
+      if (errorCode(err) === "auth/user-not-found") {
+        logger.info(
+          `cleanupExpiredAnon: Auth user uid=${uid} already deleted, ` +
+            "proceeding with Firestore cleanup",
+        );
+      } else {
+        // Vrai échec : on abort — le cron retentera au prochain run car les
+        // docs Firestore restent (isAnonymous=true, anonExpiresAt<now).
+        logger.error(
+          `cleanupExpiredAnon: deleteUser failed for uid=${uid} — ` +
+            "aborting Firestore cleanup for retry next run",
+          err,
+        );
+        throw err;
+      }
     }
   }
 
@@ -159,4 +213,5 @@ async function purgeLandlord(
   // Audit RGPD art. 30 (registre des traitements) — log par UID des
   // suppressions réussies pour tracer les purges automatiques.
   logger.info(`cleanupExpiredAnon: purged expired anon uid=${uid}`);
+  return "purged";
 }

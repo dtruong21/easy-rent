@@ -154,6 +154,88 @@ describe("cleanupExpiredAnon", () => {
     expect(fakeDb.peek("landlords/anon-y")).toBeDefined();
   });
 
+  it("compte lié depuis (providerData non vide) : ignoré, rien n'est touché", async () => {
+    // Cas réel : `finalizeAnonymousUpgrade` a lié l'email/Google puis a échoué
+    // avant de passer `isAnonymous` à false — le doc dit encore « anonyme
+    // expiré » alors que l'utilisateur est devenu un vrai compte.
+    seedAnon("anon-upgraded", PAST);
+    fakeDb.seed("investment_scenarios/s-up", {landlordId: "anon-upgraded"});
+    fakeDb.seed("paid_plan_interest/anon-upgraded", {landlordId: "anon-upgraded"});
+    fakeAuth.providerDataByUid.set("anon-upgraded", [{providerId: "password"}]);
+
+    const res = await run();
+
+    expect(res).toEqual({purged: 0, failed: 0});
+    expect(fakeAuth.deletedUids).toEqual([]);
+    expect(fakeStorage.deletedPrefixes).toEqual([]);
+    expect(fakeDb.peek("landlords/anon-upgraded")).toBeDefined();
+    expect(fakeDb.peek("investment_scenarios/s-up")).toBeDefined();
+    expect(fakeDb.peek("paid_plan_interest/anon-upgraded")).toBeDefined();
+  });
+
+  it("un compte lié n'empêche pas la purge d'un anonyme pur du même run", async () => {
+    seedAnon("anon-upgraded", PAST);
+    seedAnon("anon-pure", PAST);
+    fakeAuth.providerDataByUid.set("anon-upgraded", [{providerId: "google.com"}]);
+
+    const res = await run();
+
+    expect(res).toEqual({purged: 1, failed: 0});
+    expect(fakeAuth.deletedUids).toEqual(["anon-pure"]);
+    expect(fakeStorage.deletedPrefixes).toEqual(["documents/anon-pure/"]);
+    expect(fakeDb.peek("landlords/anon-upgraded")).toBeDefined();
+    expect(fakeDb.peek("landlords/anon-pure")).toBeUndefined();
+  });
+
+  it("anonyme pur (providerData vide) : purgé comme avant", async () => {
+    seedAnon("anon-pure", PAST);
+    fakeAuth.providerDataByUid.set("anon-pure", []);
+
+    const res = await run();
+
+    expect(res).toEqual({purged: 1, failed: 0});
+    expect(fakeAuth.deletedUids).toEqual(["anon-pure"]);
+    expect(fakeStorage.deletedPrefixes).toEqual(["documents/anon-pure/"]);
+    expect(fakeDb.peek("landlords/anon-pure")).toBeUndefined();
+  });
+
+  it("getUser → user-not-found : la purge Storage + Firestore va à son terme", async () => {
+    seedAnon("anon-gone", PAST);
+    fakeDb.seed("investment_scenarios/s-gone", {landlordId: "anon-gone"});
+    fakeAuth.getUserError = {code: "auth/user-not-found"};
+
+    const res = await run();
+
+    expect(res).toEqual({purged: 1, failed: 0});
+    // Utilisateur déjà supprimé : inutile (et impossible) de le re-supprimer.
+    expect(fakeAuth.deletedUids).toEqual([]);
+    expect(fakeStorage.deletedPrefixes).toEqual(["documents/anon-gone/"]);
+    expect(fakeDb.peek("landlords/anon-gone")).toBeUndefined();
+    expect(fakeDb.peek("investment_scenarios/s-gone")).toBeUndefined();
+  });
+
+  it("getUser en erreur (hors user-not-found) : compte ignoré, les autres traités", async () => {
+    seedAnon("anon-flaky", PAST);
+    seedAnon("anon-ok", PAST);
+    const original = fakeAuth.getUser.bind(fakeAuth);
+    vi.spyOn(fakeAuth, "getUser").mockImplementation((uid: string) =>
+      uid === "anon-flaky" ?
+        Promise.reject(
+          Object.assign(new Error("boom"), {code: "auth/internal-error"}),
+        ) :
+        original(uid),
+    );
+
+    const res = await run();
+
+    expect(res).toEqual({purged: 1, failed: 1});
+    expect(fakeAuth.deletedUids).toEqual(["anon-ok"]);
+    expect(fakeStorage.deletedPrefixes).toEqual(["documents/anon-ok/"]);
+    // Le doc reste : le prochain run retentera.
+    expect(fakeDb.peek("landlords/anon-flaky")).toBeDefined();
+    expect(fakeDb.peek("landlords/anon-ok")).toBeUndefined();
+  });
+
   it("aucun anonyme expiré : ne touche ni Storage ni Auth", async () => {
     seedAnon("anon-fresh", FUTURE);
 
