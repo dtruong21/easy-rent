@@ -63,17 +63,17 @@ Reste :
    `docs(state)`, `develop` a un état plus récent), `feat/056-multi-tier-subscriptions`
    (61 commits hors `main` ; billing FEAT-056, FEAT-055, FEAT-044f, couleur d'identité,
    cash flow, ADR 0003, épinglage Flutter présents dans `develop`).
-2. **Décider** : `claude/magical-jackson-d0116a` — 7 commits hors `main`, FEAT-024
-   déjà dans `develop` (Fastlane, signing, icônes, splash) et correctifs nav
-   remplacés par `49d6069`, **mais 6 fichiers n'existent que sur cette branche** :
-   `.github/workflows/mobile.yml` (build APK debug ; `docs/MOBILE.md` l'annonce
-   toujours), `docs/STORE_FORMS.md`, `docs/RUNBOOK_STORE_RELEASE.md`,
+2. **Supprimer** `claude/magical-jackson-d0116a` : ses 6 fichiers propres
+   (`mobile.yml`, `STORE_FORMS.md`, `RUNBOOK_STORE_RELEASE.md`,
    `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`,
-   `tool/generate_brand_assets.dart`. Les récupérer ou les abandonner, puis supprimer.
+   `tool/generate_brand_assets.dart`) ont été repris le 2026-10-03 dans
+   `chore/restore-mobile-release-files` (pin Flutter aligné sur `ci.yml`).
+   PR #211 ouverte vers `develop` ; la merger, puis supprimer
+   `claude/magical-jackson-d0116a`.
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
 3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
-   à ne pas merger avant le DNS).
+   à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (PR #211, jusqu'à son merge).
 4. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)

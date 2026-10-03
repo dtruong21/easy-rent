@@ -126,6 +126,11 @@ class SummaryCard extends StatelessWidget {
   static const double _padding = 12;
   static const double _rowGap = 6;
 
+  /// Part maximale de la rangée du haut laissée au chiffre clé. Au-delà, le
+  /// montant est réduit à l'échelle (jamais tronqué) : un montant géant ou une
+  /// police plus large (CI Linux) ne peut plus faire déborder la carte.
+  static const double _keyFigureMaxWidthFactor = 0.45;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -149,62 +154,75 @@ class SummaryCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (subtitle != null)
+          LayoutBuilder(
+            builder: (context, constraints) => Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        subtitle!,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onSurfaceVariant,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              if (hasKeyFigure) ...[
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      keyFigure!.value,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+                if (hasKeyFigure) ...[
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.hasBoundedWidth
+                          ? constraints.maxWidth * _keyFigureMaxWidthFactor
+                          : double.infinity,
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            keyFigure!.value,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (keyFigure!.caption != null)
+                            Text(
+                              keyFigure!.caption!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 11,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (keyFigure!.caption != null)
-                      Text(
-                        keyFigure!.caption!,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
-                ),
+                  ),
+                ],
+                if (topAction != null) ...[
+                  const SizedBox(width: 8),
+                  _ActionSlot(child: topAction),
+                ],
+                if (menuItems.isNotEmpty) _buildMenu(context),
               ],
-              if (topAction != null) ...[
-                const SizedBox(width: 8),
-                _ActionSlot(child: topAction),
-              ],
-              if (menuItems.isNotEmpty) _buildMenu(context),
-            ],
+            ),
           ),
           if (hasBottomRow) ...[
             const SizedBox(height: _rowGap),
