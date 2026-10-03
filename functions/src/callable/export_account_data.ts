@@ -16,7 +16,7 @@ import {
 import {dbForRequest} from "../utils/db_router";
 
 /** clé de sortie → nom de collection Firestore. */
-const EXPORTED_COLLECTIONS: Record<string, string> = {
+export const EXPORTED_COLLECTIONS: Record<string, string> = {
   properties: "properties",
   tenants: "tenants",
   leases: "leases",

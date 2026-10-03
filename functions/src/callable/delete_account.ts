@@ -36,9 +36,12 @@
  *   (b) supprime TOUTES les autres collections du landlord (properties,
  *       tenants, leases, payments, documents — y compris legalHold : le
  *       flux client avertit de télécharger avant —, expenses,
- *       investment_scenarios, support_requests) par pages de 400 ;
+ *       investment_scenarios, support_requests, charge_statements,
+ *       etat_des_lieux) par pages de 400 ;
  *   (c) supprime les singletons landlords/{uid} + paid_plan_interest/{uid} ;
- *   (d) purge Storage `documents/{uid}/**` ;
+ *   (d) purge Storage `documents/{uid}/**` (seul préfixe Storage du produit :
+ *       les PDF de décomptes de charges et d'états des lieux sont rendus côté
+ *       client, aucun fichier serveur à purger pour eux) ;
  *   (e) supprime le compte Firebase Auth EN DERNIER.
  *
  * Ordre inverse de cleanupExpiredAnon (Auth d'abord) : ici le retry est
@@ -125,8 +128,13 @@ const RECEIPT_RETENTION_MS = 5 * 365.25 * 24 * 60 * 60 * 1000;
 /**
  * Collections purgées par requête `landlordId == uid`.
  * `receipts` est volontairement ABSENTE (rétention légale, cf. docblock).
+ *
+ * Toute collection exportée par `exportAccountData` doit figurer ici OU dans
+ * [RETAINED_COLLECTIONS] : un test de parité (delete_account.test.ts) l'impose,
+ * pour qu'une future collection ne survive pas silencieusement à la
+ * suppression du compte (RGPD art. 17, OWASP-05).
  */
-const PURGED_COLLECTIONS: readonly string[] = [
+export const PURGED_COLLECTIONS: readonly string[] = [
   "properties",
   "tenants",
   "leases",
@@ -135,7 +143,20 @@ const PURGED_COLLECTIONS: readonly string[] = [
   "expenses",
   "investment_scenarios",
   "support_requests",
+  // Documents figés (noms, adresses, relevés) : aucune rétention légale ne les
+  // couvre côté plateforme (le cron de purge ne lit que `receipts`) — sans
+  // hard-delete ici ils survivraient indéfiniment (OWASP-05).
+  "charge_statements",
+  "etat_des_lieux",
 ];
+
+/**
+ * Collections volontairement CONSERVÉES après la suppression du compte
+ * (rétention légale, stampées par [stampRetainedReceipts]). Liste explicite
+ * plutôt qu'une absence : le test de parité distingue ainsi « retenue » de
+ * « oubliée ».
+ */
+export const RETAINED_COLLECTIONS: readonly string[] = ["receipts"];
 
 /** Pages de purge — sous la limite Firestore de 500 writes par batch. */
 const PURGE_PAGE_SIZE = 400;
