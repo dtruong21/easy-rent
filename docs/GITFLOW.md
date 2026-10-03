@@ -53,24 +53,10 @@ develop       ──●─●─●─●──●─●─●─●──●─
 
 ### À faire à la prochaine session (audit du 2026-10-03)
 
-Audit fait le 2026-10-03 ; la suppression a été bloquée (HTTP 403 du proxy de
-la session cloud, pas de droit de suppression de branche). Voir `docs/state/CHANGELOG.md`
-si une session ultérieure l'a exécutée.
+Fait le 2026-10-03 : les 27 branches entièrement mergées dans `develop` ou
+`main` sont supprimées (confirmé par `git fetch --prune`). Reste :
 
-1. **Supprimer (vérifiées entièrement mergées)** — dans `develop` :
-   `chore/functions-node22`, `chore/mobile-emulator-wiring`,
-   `chore/seed-testlab-staging`, `feat/list-summary-cards`,
-   `feat/testlab-staging-build`, `feat/vitrine-refonte`,
-   `fix/card-grid-mobile-height`, `fix/leases-active-filter`,
-   `fix/mobile-pdf-edl-onboarding`, `fix/owasp-security`, `fix/store-compliance`.
-   Dans `main` : `chore/mobile-build-fastlane`, `claude/crashlytics-mobile`,
-   `claude/handoff-keystore-accuracy`, `claude/handoff-note`,
-   `claude/legal-page-privacy`, `claude/store-launch-checklist`,
-   `codex/product-discovery-annonces`, `feature/036-charges-recuperables`,
-   `feature/041-depenses`, `feature/042-charge-mode`, `feature/043-i18n`,
-   `feature/045-account-deletion`, `feature/049-seo`, `feature/anon-auth-m1`,
-   `feature/crud-tenants`, `feature/feat-008-web-share-pivot`.
-2. **Décider (non mergées selon git, probablement squash-mergées)** :
+1. **Décider (non mergées selon git, probablement squash-mergées)** :
    `feature/feat-015-detail-pages-enrichment`, `feature/feat-016-rgpd-consent`,
    `fix/lease-input-hardening`, `claude/amazing-ardinghelli-29501a`,
    `claude/magical-jackson-d0116a`, `claude/nice-grothendieck-c66baf`,
@@ -78,9 +64,9 @@ si une session ultérieure l'a exécutée.
    `feat/056-multi-tier-subscriptions`, `claude/fervent-nash-0641cd`
    (1 commit hors `develop`, PR #172/#173 fermées). Vérifier l'état de chaque PR
    avant suppression.
-3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
    à ne pas merger avant le DNS).
-4. Activer *Automatically delete head branches* (voir ci-dessus).
+3. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
 
