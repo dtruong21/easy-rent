@@ -39,6 +39,43 @@ develop       ──●─●─●─●──●─●─●─●──●─
 > `feature/…` — les documents d'historique (plans, ADR) gardent ces noms tels
 > quels, ce sont des enregistrements de ce qui s'est passé.
 
+## 🧹 Hygiène des branches distantes
+
+- Une branche éphémère se supprime **dès que sa PR est mergée**. Activer
+  Settings → General → **Automatically delete head branches** pour que GitHub
+  le fasse seul.
+- Les merges `feat/fix/chore → develop` sont des **squash** : `git branch -r
+  --merged` ne détecte donc pas ces branches. Vérifier l'état de la PR avant de
+  supprimer une branche « non mergée ».
+- Audit : `git fetch --prune`, puis `git branch -r --merged origin/develop` et
+  `--merged origin/main` (sûrs à supprimer), puis `git push origin --delete <branche>`.
+  Ne jamais supprimer `main`, `develop` ni une branche liée à une PR ouverte.
+
+### À faire à la prochaine session (audit du 2026-10-03)
+
+Fait le 2026-10-03 : 33 branches mergées supprimées (27 entièrement mergées dans
+`develop`/`main`, 6 dont la PR était mergée) — confirmé par `git fetch --prune`.
+Reste :
+
+1. **Supprimer (contenu déjà dans `develop`, comparé le 2026-10-03)** :
+   `claude/amazing-ardinghelli-29501a` (seul commit hors `main` = retrait de
+   `handleNewUser`, déjà fait), `claude/nice-grothendieck-c66baf` (1 commit
+   `docs(state)`, `develop` a un état plus récent), `feat/056-multi-tier-subscriptions`
+   (61 commits hors `main` ; billing FEAT-056, FEAT-055, FEAT-044f, couleur d'identité,
+   cash flow, ADR 0003, épinglage Flutter présents dans `develop`).
+2. **Supprimer** `claude/magical-jackson-d0116a` : ses 6 fichiers propres
+   (`mobile.yml`, `STORE_FORMS.md`, `RUNBOOK_STORE_RELEASE.md`,
+   `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`,
+   `tool/generate_brand_assets.dart`) ont été repris le 2026-10-03 dans
+   `chore/restore-mobile-release-files` (pin Flutter aligné sur `ci.yml`).
+   PR #211 ouverte vers `develop` ; la merger, puis supprimer
+   `claude/magical-jackson-d0116a`.
+   Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
+   comparer par contenu, pas par `git log`.
+3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+   à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (PR #211, jusqu'à son merge).
+4. Activer *Automatically delete head branches* (voir ci-dessus).
+
 ## 🔒 Branch protection (à configurer sur GitHub)
 
 Pour les deux long-lived branches (`main` et `develop`) — Settings → Branches → Add branch protection rule :
