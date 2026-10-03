@@ -118,7 +118,7 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 
 ## 🔎 Audit OWASP du 2026-09-30 — correctifs et points d'attention
 
-Rapport complet : [`docs/security/owasp-audit-2026-09-30.md`](security/owasp-audit-2026-09-30.md) (21 constats ; le **statut des correctifs est en tête du rapport** : 6 constats ciblés corrigés sur la branche `fix/owasp-security` — OWASP-21, tests Storage, couvert au passage par OWASP-04 —, les autres reportés).
+Rapport complet : [`docs/security/owasp-audit-2026-09-30.md`](security/owasp-audit-2026-09-30.md) (21 constats ; le **statut des correctifs est en tête du rapport** : 6 constats traités : 01, 02, 05 corrigés ; 04, 06, 09 partiellement (voir le statut de l'audit) sur la branche `fix/owasp-security` — OWASP-21, tests Storage, couvert au passage par OWASP-04 —, les autres reportés).
 
 Garde-fous ajoutés par ces correctifs :
 

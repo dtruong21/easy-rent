@@ -12,7 +12,7 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 >
 > ⚠️ L'état décrivait ces triggers comme `onDocumentWritten (create/update/delete)` et « ignore soft-deleted (`deletedAt==null`) » : **les deux sont faux**. Erreur systémique corrigée dans tous les shards `functions/` (elle subsistait même dans les shards réputés vérifiés au refresh #133).
 
-## Callables (19) → shard
+## Callables (25) → shard
 
 | Callable | Feature | Shard |
 |---|---|---|
@@ -35,6 +35,12 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 | `createCheckoutSession` | FEAT-056 (checkout Stripe 3 paliers) | account |
 | `manageSubscription` | FEAT-056 (cancel/reactivate/change_plan actions) | account |
 | `createScenario` | FEAT-056 (création scénario gâtée par quota) | simulator |
+| `exportAccountData` | FEAT-047 (export RGPD art. 15/20) | account |
+| `updateDocumentCategory` | FIX 2026-09-15 | expenses-documents |
+| `finalizeChargeRegularization` | FEAT-033 (snapshot régularisation charges) | leases |
+| `voidChargeStatement` | FEAT-033 | leases |
+| `markChargeStatementAsSent` | FEAT-033 | leases |
+| `createEtatDesLieux` | FEAT-037 | leases |
 
 ## HTTP / webhooks (1) → shard
 
@@ -63,10 +69,10 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 
 | Scheduled | Cadence | Shard |
 |---|---|---|
-| `cleanupExpiredAnon` (BAILLAN-M1 ; purge aussi Storage `documents/{uid}/`, OWASP-04) | `0 3 * * *` **Europe/Paris** | account |
+| `cleanupExpiredAnon` (BAILLAN-M1 ; purge aussi Storage `documents/{uid}/`, OWASP-04 ; **ignore** les comptes dont `getUser().providerData` est non vide ; `timeoutSeconds: 300`) | `0 3 * * *` **Europe/Paris** | account |
 | `reconcileEntitlements` (FEAT-044, PR #114) | `30 3 * * *` Europe/Paris | account |
 
-> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-08-12) : **19 callables + 8 triggers déployés (`setUpdatedAt` on 7 collections + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables, pas de champ `updatedAt`).
+> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-08-12) : **25 callables (recompté 2026-09-30 : grep `export const … onCall` dans `functions/src/callable/`) + 8 triggers déployés (`setUpdatedAt` on 7 collections + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables, pas de champ `updatedAt`).
 >
 > Passe 2026-08-12 : table des callables corrigée (19, non 17) — manquaient `createCheckoutSession` + `manageSubscription` (FEAT-056, PR #154). Tests Vitest : 430 cas ; tests rules : 80 cas (l'ancien état disait 209 / 16, largement en retard).
 >

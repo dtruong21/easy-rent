@@ -48,8 +48,9 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 | **Rules & indexes** | ⚠️ **Partiel** | Même fichier source, mais déploiement CI ciblé par base (`develop`→`staging`, `main`→`(default)`) |
 | **Secrets** | ❌ **Non** | Un seul jeu (service account CI, secrets Functions) |
 
-> **Facturation (OWASP-01, 2026-09-30).** Un seul webhook RevenueCat (un seul
-> secret `REVENUECAT_WEBHOOK_AUTH`) sert les deux environnements, et le checkout
+> **Facturation (OWASP-01, 2026-09-30).** Vraisemblablement un seul webhook
+> RevenueCat (à confirmer dans la console RevenueCat ; un seul secret
+> `REVENUECAT_WEBHOOK_AUTH` côté Functions) sert les deux environnements, et le checkout
 > staging public tourne en Stripe **test**. Le webhook route donc chaque event
 > par son champ `environment` : `SANDBOX` (achat de test : Stripe test, sandbox
 > App Store, licence de test Google) → base `staging` **uniquement** ;
@@ -63,6 +64,12 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 > entitlements issus d'achats sandbox. Côté RevenueCat, vérifier dans les
 > réglages du webhook si une option de filtrage par environnement existe
 > (« Production only ») — action manuelle, non vérifiée par l'audit.
+>
+> **À confirmer après le déploiement des Functions** : les valeurs réelles
+> d'`environment` envoyées par RevenueCat. Un achat de test sur le staging avec
+> une carte de test Stripe doit produire un log `env="SANDBOX"` et écrire dans la
+> base `staging` (jamais dans `(default)`). Si la valeur diffère, l'event est
+> ignoré (fail-closed) : aucun palier accordé, à corriger avant d'ouvrir l'abonnement.
 
 ## 🌐 Hosting multi-site
 

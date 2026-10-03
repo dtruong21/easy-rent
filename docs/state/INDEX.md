@@ -20,13 +20,13 @@
 | `lib/core/router/app_router.dart` — shell nav et goBranch | ✅ **re-vérifié 2026-08-11** — correctif commit 49d6069 : `goBranch(index, initialLocation: true)` systématique, renversement de décision 2026-08-11 |
 | `storage.rules` | ✅ **re-vérifié 2026-09-30** (OWASP-04, commit 3221965) — écriture réservée aux comptes **non anonymes à email de confiance** (`hasTrustedEmail()` dupliquée de `firestore.rules`), nom d'objet `documents/{uid}/{20 car. alphanum.}.(pdf\|jpg\|png\|webp)` ; plafond 50 Mio inchangé (garde-fou, palier réel en callable) ; tests `functions/rules-tests/storage_rules.test.ts` (34 cas) ; déployé par la CI depuis `main` seulement |
 | `functions/src/callable/{create_checkout_session,manage_subscription,scenarios}.ts` + entitlements modules | ✅ **relu ligne à ligne 2026-08-02** — FEAT-056 callables multi-paliers, 3 actions (cancel/reactivate/change_plan), quota enforce |
-| `firestore.rules` (landlords : `planLevel`, `entitlements` gelés client ; investment_scenarios : `create if false`) | ✅ **re-vérifié 2026-08-02** — FEAT-056 contraintes immutabilité client, routing scenario création CF-exclusive |
+| `firestore.rules` (landlords : `planLevel`, `entitlements` gelés client ; investment_scenarios : `create if false`) | ✅ **re-vérifié 2026-09-30** (OWASP-02 : `hasTrustedEmail()`) — FEAT-056 contraintes immutabilité client, routing scenario création CF-exclusive |
 | `lib/core/router/app_router.dart` — routes `/pro/*` (`success`, `cancel`) | ✅ **vérifié 2026-08-02** — routes déclarées (lignes 234-247), corrigent une fausse info de l'état 2026-07-21 |
 | Domaine `account` (schéma/functions/routes) | ✅ **re-vérifié 2026-08-11** — FEAT-056 : `planLevel`, `entitlements` sur `landlords` ; correctifs : email nullable, finalizeAnonymousUpgrade renseigne identité |
 | Domaines `properties`, `leases`, `expenses-documents`, `simulator` — quotas FEAT-056 | ✅ **vérifié 2026-08-02** — grille `config/entitlements.json` appliquée callables ; `investment_scenarios/create` CF-exclusive |
 | `config/entitlements.json` (source canonique quotas) | ✅ **lu 2026-08-02** — 3 paliers, quotas par palier, statuts `purchasable`/`priceIndicative`, features matrix |
 | Domaine `leases` (schéma/functions) — `propertyAddress` composée | ✅ **re-vérifié 2026-08-12** — `createLease` compose rue+CP+ville via `composePropertyAddress()`, immuable après création (loi 6/7/1989). Repository Dart : `listActiveLeasesForProperty()` nouveau, statut retard dérivé requiert invalidation providers. Script backfill existe. |
-| `functions/` décompte précis | ✅ **re-compté 2026-08-12** — 19 callables (non 17), 8 triggers, 1 HTTP, 2 scheduled. Tests : 430 (non 209), rules : 80 (non 16). README/leases mis à jour. |
+| `functions/` décompte précis | ✅ **re-compté 2026-09-30** — 25 callables (grep `export const … onCall`), 8 triggers, 1 HTTP, 2 scheduled. (Tests/rules : décompte du 2026-08-12 — 430 / 80 — non re-mesuré.) |
 | `THEME.md`, `DESIGN_TOKENS.md` | ✅ **revus 2026-09-06** (FEAT-050) — source canonique `config/theme_tokens.json` + génération app/vitrine |
 | `DEPENDENCIES.md` | ⚠️ **non revu** — ignore notamment `stripe@^22.3.2` |
 

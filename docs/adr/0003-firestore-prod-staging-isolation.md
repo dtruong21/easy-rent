@@ -392,8 +392,9 @@ affirmation « Fail-safe identique : prod testée en premier → jamais mal-rout
 vrai compte prod » était **fausse** pour un achat de test.
 
 **Pourquoi.** Un seul projet Firebase héberge les deux bases, l'Auth est
-partagée, le checkout staging est public en Stripe **test** et un **seul**
-webhook RevenueCat reçoit tous les events. Un compte prod pouvait donc se
+partagée, le checkout staging est public en Stripe **test** et, vraisemblablement,
+un **seul** webhook RevenueCat reçoit tous les events (à confirmer dans la
+console RevenueCat). Un compte prod pouvait donc se
 connecter sur le staging, payer avec la carte de test publique, et le webhook —
 qui trouvait son doc en prod d'abord — lui accordait un palier payant **en
 production** (audit OWASP du 2026-09-30, constat OWASP-01). « La base qui porte
