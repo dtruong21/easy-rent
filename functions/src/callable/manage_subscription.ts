@@ -13,7 +13,7 @@
  * écrivain du droit, donc une source de désaccord avec la facturation.
  *
  * Frontière de sécurité : le client ne fournit JAMAIS d'identifiant Stripe. La
- * fonction dérive l'UID via `requireAuthUid` puis résout l'abonnement par la
+ * fonction dérive l'UID via `requireVerifiedUid` puis résout l'abonnement par la
  * metadata `rc_app_user_id` posée au checkout à la valeur de CE propriétaire
  * (`create_checkout_session.ts`, [RC_APP_USER_ID_METADATA_KEY]). Aucun paramètre
  * client ne peut donc viser l'abonnement d'autrui — l'IDOR est structurellement
@@ -45,7 +45,7 @@ import {
   type BillingPeriod,
   type PriceTable,
 } from "../entitlements/stripe_prices";
-import {asBag, requireAuthUid, requireString} from "../utils/callable_helpers";
+import {asBag, requireVerifiedUid, requireString} from "../utils/callable_helpers";
 import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
 import {
   resolveStripeKeyForDb,
@@ -256,7 +256,7 @@ function resolveChange(data: Record<string, unknown>): {
 export const manageSubscription = onCall(
   {secrets: [stripeSecret, stripeTestSecret]},
   async (request): Promise<ManageSubscriptionResult | ChangePlanResult> => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const action = parseAction(data.action);
     assertSafeUid(uid);

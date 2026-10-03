@@ -137,8 +137,9 @@ EasyRent/
 - Widget : `test/widget/...`
 - Integration : `test/integration/...`
 - Cloud Functions : `functions/src/__tests__/` (vitest) → `npm test` dans `functions/`
-- Règles Firestore : `functions/rules-tests/firestore_rules.test.ts` →
-  `npm run test:rules` (lance l'émulateur Firestore, projet `demo-easyrent`).
+- Règles Firestore + Storage : `functions/rules-tests/firestore_rules.test.ts` et
+  `functions/rules-tests/storage_rules.test.ts` → `npm run test:rules` (lance les
+  émulateurs Firestore **et** Storage, projet `demo-easyrent`).
   **Toujours tester le cross-user** : un landlord ne doit jamais lire/écrire
   les documents d'un autre (cf. DoD dans `CLAUDE.md`).
 - Toujours tester le chemin malheureux (inputs invalides, erreurs réseau, états vides)

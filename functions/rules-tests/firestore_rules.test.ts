@@ -159,8 +159,22 @@ afterAll(async () => {
   await env.cleanup();
 });
 
-const asOwnerA = () => env.authenticatedContext(LANDLORD_A).firestore();
-const asOtherB = () => env.authenticatedContext(LANDLORD_B).firestore();
+/**
+ * Token d'un compte email/mot de passe DONT L'EMAIL EST VÉRIFIÉ (OWASP-02) :
+ * les rules exigent `email_verified == true` ou un provider Google/Apple pour
+ * tout chemin « compte complet » ; sans ces claims, `authenticatedContext(uid)`
+ * représenterait un compte non vérifié. Les cas non vérifié / Google / Apple /
+ * anonyme sont testés explicitement dans le bloc « OWASP-02 » en fin de fichier.
+ */
+const VERIFIED_TOKEN = {
+  email_verified: true,
+  firebase: {sign_in_provider: "password"},
+} as const;
+
+const asVerifiedUid = (uid: string) =>
+  env.authenticatedContext(uid, VERIFIED_TOKEN).firestore();
+const asOwnerA = () => asVerifiedUid(LANDLORD_A);
+const asOtherB = () => asVerifiedUid(LANDLORD_B);
 
 describe("list — scoping owner obligatoire (audit FEAT-045 H1)", () => {
   for (const collection of LANDLORD_SCOPED_COLLECTIONS) {
@@ -260,7 +274,7 @@ describe("etat_des_lieux — immuables & owner-scoped (FEAT-037)", () => {
 });
 
 describe("FEAT-044 — gating création de biens (rules)", () => {
-  const asUid = (uid: string) => env.authenticatedContext(uid).firestore();
+  const asUid = asVerifiedUid;
 
   // Payload de provisioning landlord « compte complet » valide (miroir du
   // chemin client auth_repository.dart) ; `over` surcharge un champ à tester.
@@ -392,7 +406,7 @@ describe("FEAT-044 — gating création de biens (rules)", () => {
 // ==========================================================================
 describe("FEAT-056 — palier commercial et entitlements (rules)", () => {
   const PAID_UID = "landlord-paid-056";
-  const asUid = (uid: string) => env.authenticatedContext(uid).firestore();
+  const asUid = asVerifiedUid;
   const asAnon = (uid: string) =>
     env
       .authenticatedContext(uid, {
@@ -874,6 +888,309 @@ describe("investment_scenarios — écritures (create/update/delete)", () => {
     it("un scénario soft-deleted n'est plus lisible", async () => {
       await assertFails(
         asOwnerA().doc("investment_scenarios/scenario-deleted").get(),
+      );
+    });
+  });
+});
+
+// ==========================================================================
+// OWASP-02 — email vérifié exigé côté serveur
+//
+// Avant ce correctif, seul le client Flutter imposait la vérification d'email
+// (routeur + déconnexion forcée dans LoginController) : un compte
+// email/mot de passe jamais vérifié — éventuellement créé avec l'adresse d'un
+// tiers — utilisait tout le produit via le SDK/REST. Les rules exigent
+// désormais `email_verified == true` OU un provider Google/Apple (dont
+// l'email est vérifié par le fournisseur d'identité).
+//
+// Exceptions volontaires :
+//   - la CRÉATION du doc `landlords/{uid}` par son propriétaire reste ouverte
+//     à un compte non vérifié : `signUpWithPassword` écrit ce doc AVANT
+//     d'envoyer l'email de vérification puis de déconnecter l'utilisateur ;
+//   - les comptes ANONYMES (essai sans compte) gardent exactement leur
+//     comportement : leurs chemins sont régis par des rules dédiées.
+// ==========================================================================
+describe("OWASP-02 — email vérifié exigé par les rules", () => {
+  const ctx = (uid: string, token: Record<string, unknown>) =>
+    env.authenticatedContext(uid, token).firestore();
+  const asUnverified = (uid: string) =>
+    ctx(uid, {email_verified: false, firebase: {sign_in_provider: "password"}});
+  const asVerified = (uid: string) =>
+    ctx(uid, {email_verified: true, firebase: {sign_in_provider: "password"}});
+  // Google / Apple : on retire volontairement `email_verified` (false / absent)
+  // pour prouver que c'est bien le PROVIDER qui ouvre l'accès.
+  const asGoogle = (uid: string) =>
+    ctx(uid, {email_verified: false, firebase: {sign_in_provider: "google.com"}});
+  const asApple = (uid: string) =>
+    ctx(uid, {firebase: {sign_in_provider: "apple.com"}});
+  const asAnonymous = (uid: string) =>
+    ctx(uid, {firebase: {sign_in_provider: "anonymous"}});
+
+  /** Provisioning « compte complet » (miroir de signUpWithPassword). */
+  const signupDoc = (uid: string, over: Record<string, unknown> = {}) => ({
+    id: uid,
+    email: `${uid}@example.com`,
+    fullName: "Nouveau Bailleur",
+    isAnonymous: false,
+    subscriptionTier: "free",
+    rgpdConsentAt: new Date(),
+    rgpdConsentVersion: "v2-2026-07",
+    activePropertiesCount: 0,
+    activeTenantsCount: 0,
+    activeLeasesCount: 0,
+    createdAt: new Date(),
+    deletedAt: null,
+    ...over,
+  });
+
+  const FULL_ACCOUNTS = ["o2-unverified", "o2-verified", "o2-google", "o2-apple"];
+  const ANON = "o2-anon";
+
+  beforeAll(async () => {
+    await env.withSecurityRulesDisabled(async (c) => {
+      const db = c.firestore();
+      for (const uid of FULL_ACCOUNTS) {
+        await db.doc(`landlords/${uid}`).set(signupDoc(uid));
+        await db.doc(`properties/prop-${uid}`).set({
+          id: `prop-${uid}`,
+          landlordId: uid,
+          name: "Bien",
+          createdAt: new Date("2026-01-01"),
+          deletedAt: null,
+          activeLeaseCount: 0,
+        });
+        await db.doc(`investment_scenarios/scn-${uid}`).set({
+          id: `scn-${uid}`,
+          landlordId: uid,
+          name: "Scénario",
+          schemaVersion: 1,
+          scenarioJson: {purchasePriceCents: 1000000},
+          createdAt: new Date("2026-01-01"),
+          deletedAt: null,
+        });
+      }
+      await db.doc(`landlords/${ANON}`).set({
+        id: ANON,
+        email: null,
+        fullName: "",
+        isAnonymous: true,
+        subscriptionTier: "anonymous",
+        anonExpiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+        rgpdConsentAt: null,
+        createdAt: new Date("2026-01-01"),
+        deletedAt: null,
+      });
+      await db.doc(`investment_scenarios/scn-${ANON}`).set({
+        id: `scn-${ANON}`,
+        landlordId: ANON,
+        name: "Scénario anonyme",
+        schemaVersion: 1,
+        scenarioJson: {purchasePriceCents: 1000000},
+        createdAt: new Date("2026-01-01"),
+        deletedAt: null,
+      });
+    });
+  });
+
+  // --- Création du doc landlord à l'inscription (AVANT vérification) -----
+  describe("inscription — création de landlords/{uid}", () => {
+    it("★ compte email/mot de passe NON vérifié crée son propre doc → autorisé", async () => {
+      await assertSucceeds(
+        asUnverified("o2-new-unverified")
+          .doc("landlords/o2-new-unverified")
+          .set(signupDoc("o2-new-unverified"), {merge: true}),
+      );
+    });
+
+    it("compte vérifié / Google / Apple crée son doc → autorisé", async () => {
+      await assertSucceeds(
+        asVerified("o2-new-verified")
+          .doc("landlords/o2-new-verified")
+          .set(signupDoc("o2-new-verified")),
+      );
+      await assertSucceeds(
+        asGoogle("o2-new-google")
+          .doc("landlords/o2-new-google")
+          .set(signupDoc("o2-new-google")),
+      );
+      await assertSucceeds(
+        asApple("o2-new-apple")
+          .doc("landlords/o2-new-apple")
+          .set(signupDoc("o2-new-apple")),
+      );
+    });
+
+    it("non vérifié : créer le doc d'AUTRUI → refusé", async () => {
+      await assertFails(
+        asUnverified("o2-new-x")
+          .doc("landlords/o2-victim")
+          .set(signupDoc("o2-victim")),
+      );
+    });
+
+    it("non vérifié : les contraintes de champs restent celles d'aujourd'hui", async () => {
+      // tier payant auto-déclaré
+      await assertFails(
+        asUnverified("o2-new-paid")
+          .doc("landlords/o2-new-paid")
+          .set(signupDoc("o2-new-paid", {subscriptionTier: "paid"})),
+      );
+      // pas de consentement RGPD
+      await assertFails(
+        asUnverified("o2-new-norgpd")
+          .doc("landlords/o2-new-norgpd")
+          .set(signupDoc("o2-new-norgpd", {rgpdConsentVersion: ""})),
+      );
+      // planLevel auto-attribué
+      await assertFails(
+        asUnverified("o2-new-plan")
+          .doc("landlords/o2-new-plan")
+          .set(signupDoc("o2-new-plan", {planLevel: "ultra"})),
+      );
+    });
+  });
+
+  // --- Compte NON vérifié : plus rien d'autre n'est accessible -----------
+  describe("compte email/mot de passe non vérifié", () => {
+    const U = "o2-unverified";
+
+    it("ne lit pas son doc landlord", async () => {
+      await assertFails(asUnverified(U).doc(`landlords/${U}`).get());
+    });
+
+    it("claim `email_verified` ABSENT (fail-closed) → refusé comme non vérifié", async () => {
+      await assertFails(
+        ctx(U, {firebase: {sign_in_provider: "password"}})
+          .doc(`landlords/${U}`)
+          .get(),
+      );
+    });
+
+    it("ne met pas à jour son doc landlord", async () => {
+      await assertFails(
+        asUnverified(U).doc(`landlords/${U}`).update({fullName: "Autre nom"}),
+      );
+    });
+
+    it("ne liste ni ne lit ses données métier", async () => {
+      await assertFails(
+        asUnverified(U).collection("properties").where("landlordId", "==", U).get(),
+      );
+      await assertFails(asUnverified(U).doc(`properties/prop-${U}`).get());
+    });
+
+    it("ne modifie pas un bien", async () => {
+      await assertFails(
+        asUnverified(U).doc(`properties/prop-${U}`).update({name: "Renommé"}),
+      );
+    });
+
+    it("n'écrit pas paid_plan_interest", async () => {
+      await assertFails(
+        asUnverified(U).doc(`paid_plan_interest/${U}`).set({features: ["a"]}),
+      );
+    });
+
+    it("ne modifie pas un scénario d'investissement", async () => {
+      await assertFails(
+        asUnverified(U)
+          .doc(`investment_scenarios/scn-${U}`)
+          .update({name: "Renommé"}),
+      );
+    });
+  });
+
+  // --- Comptes de confiance : vérifié, Google, Apple ---------------------
+  describe.each([
+    ["email vérifié", "o2-verified", asVerified],
+    ["Google (email_verified absent/false)", "o2-google", asGoogle],
+    ["Apple (email_verified absent)", "o2-apple", asApple],
+  ] as const)("compte de confiance — %s", (_label, uid, as) => {
+    it("lit et met à jour son doc landlord", async () => {
+      await assertSucceeds(as(uid).doc(`landlords/${uid}`).get());
+      await assertSucceeds(
+        as(uid).doc(`landlords/${uid}`).update({fullName: "Nom modifié"}),
+      );
+    });
+
+    it("liste et lit ses données métier", async () => {
+      await assertSucceeds(
+        as(uid).collection("properties").where("landlordId", "==", uid).get(),
+      );
+      await assertSucceeds(as(uid).doc(`properties/prop-${uid}`).get());
+    });
+
+    it("modifie un bien, un scénario, écrit paid_plan_interest", async () => {
+      await assertSucceeds(
+        as(uid).doc(`properties/prop-${uid}`).update({name: "Renommé"}),
+      );
+      await assertSucceeds(
+        as(uid).doc(`investment_scenarios/scn-${uid}`).update({name: "Renommé"}),
+      );
+      await assertSucceeds(
+        as(uid).doc(`paid_plan_interest/${uid}`).set({features: ["a"]}),
+      );
+    });
+
+    it("cross-user : ne lit toujours pas les données d'un autre bailleur", async () => {
+      await assertFails(as(uid).doc("properties/doc-a").get());
+      await assertFails(
+        as(uid).collection("properties").where("landlordId", "==", LANDLORD_A).get(),
+      );
+    });
+  });
+
+  // --- Anonyme : comportement strictement inchangé ------------------------
+  describe("compte anonyme — comportement inchangé", () => {
+    it("lit son doc landlord et liste ses scénarios", async () => {
+      await assertSucceeds(asAnonymous(ANON).doc(`landlords/${ANON}`).get());
+      await assertSucceeds(
+        asAnonymous(ANON)
+          .collection("investment_scenarios")
+          .where("landlordId", "==", ANON)
+          .get(),
+      );
+    });
+
+    it("renouvelle anonExpiresAt (update anonyme)", async () => {
+      await assertSucceeds(
+        asAnonymous(ANON)
+          .doc(`landlords/${ANON}`)
+          .update({anonExpiresAt: new Date(Date.now() + 24 * 3600 * 1000)}),
+      );
+    });
+
+    it("modifie son scénario (simulateur)", async () => {
+      await assertSucceeds(
+        asAnonymous(ANON)
+          .doc(`investment_scenarios/scn-${ANON}`)
+          .update({name: "Renommé"}),
+      );
+    });
+
+    it("provisionne son doc landlord anonyme", async () => {
+      await assertSucceeds(
+        asAnonymous("o2-anon-new")
+          .doc("landlords/o2-anon-new")
+          .set({
+            id: "o2-anon-new",
+            email: null,
+            fullName: "",
+            isAnonymous: true,
+            subscriptionTier: "anonymous",
+            anonExpiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+            rgpdConsentAt: null,
+            deletedAt: null,
+          }),
+      );
+    });
+
+    it("n'accède toujours pas aux chemins « compte complet »", async () => {
+      await assertFails(
+        asAnonymous(ANON).doc(`paid_plan_interest/${ANON}`).set({features: ["a"]}),
+      );
+      await assertFails(
+        asAnonymous(ANON).doc(`properties/prop-${ANON}`).update({name: "x"}),
       );
     });
   });

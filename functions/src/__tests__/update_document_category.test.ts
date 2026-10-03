@@ -4,6 +4,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {updateDocumentCategory} from "../callable/documents";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Cf. documents.test.ts / expenses.test.ts pour la justification du mock hoisted.
 vi.mock("firebase-admin", async () => {
@@ -16,7 +17,7 @@ let fakeDb: FakeFirestore;
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }

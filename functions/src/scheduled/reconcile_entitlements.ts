@@ -21,6 +21,11 @@
  * (API RC authentifiée), pas un octroi d'accès. Refuser cette correction
  * laisserait durablement sous-servi un client qui paie.
  *
+ * OWASP-01 : les entitlements issus d'achats SANDBOX sont écartés du fetcher
+ * ([entitlementStatesFromSubscriber]) — ce cron opère sur `(default)` et peut
+ * prolonger / monter de palier un compte déjà payant : il ne doit jamais le
+ * faire d'après un achat de test.
+ *
  * On requête `proEntitlementActive == true` (ensemble borné = base d'abonnés)
  * → **aucun index composite requis**. Le coeur (`reconcileExpiredEntitlements`)
  * prend un *fetcher* injectable → testable sans appel réseau. La clé secrète v2
@@ -236,13 +241,58 @@ export async function reconcileExpiredEntitlements(
 }
 
 /**
- * Fetcher de production : API REST RevenueCat v1 (subscriber).
+ * Forme minimale de `subscriber` dans la réponse de l'API REST RevenueCat v1
+ * (`GET /v1/subscribers/{app_user_id}`), limitée aux champs consommés ici.
+ */
+export interface RcSubscriber {
+  entitlements?: Record<
+    string,
+    {expires_date?: string | null; product_identifier?: string | null}
+  >;
+  /** Clé = identifiant de produit ; `is_sandbox` = achat en mode test. */
+  subscriptions?: Record<string, {is_sandbox?: boolean}>;
+}
+
+/**
+ * PURE — états rapportés par RevenueCat, re-clés vers NOS ids de palier.
  *
- * Ne retient que les entitlements déclarés dans la table, re-clés vers nos ids
- * de palier — un entitlement étranger n'accorde jamais rien (W5). Un
- * entitlement sans `expires_date` (accès à vie) est traité comme non actif :
- * comportement conservé à l'identique d'avant FEAT-056, le produit ne vend
- * aucun accès à vie.
+ * Ne retient que les entitlements déclarés dans la table (W5 : un entitlement
+ * étranger n'accorde jamais rien). Un entitlement sans `expires_date` (accès à
+ * vie) est traité comme non actif : comportement conservé à l'identique d'avant
+ * FEAT-056, le produit ne vend aucun accès à vie.
+ *
+ * OWASP-01 — un entitlement adossé à un achat SANDBOX (`is_sandbox === true`
+ * sur son produit) est IGNORÉ. L'API mélange achats prod et sandbox pour un même
+ * App User ID ; or ce cron opère sur `(default)` (prod) et peut, sur un compte
+ * déjà payant, PROLONGER une échéance ou MONTER de palier d'après ce qu'elle
+ * rapporte. Sans ce filtre, un achat Stripe test (staging) ferait donc grimper
+ * un compte prod. Un produit absent de `subscriptions` est traité comme prod :
+ * seul un `is_sandbox: true` explicite écarte l'entitlement, pour ne pas
+ * rétrograder un client qui paie sur une réponse d'API incomplète.
+ */
+export function entitlementStatesFromSubscriber(
+  subscriber: RcSubscriber | undefined,
+): Partial<Record<LevelId, {expiresMs: number | null}>> {
+  const entitlements = subscriber?.entitlements ?? {};
+  const subscriptions = subscriber?.subscriptions ?? {};
+  const states: Partial<Record<LevelId, {expiresMs: number | null}>> = {};
+  for (const level of LEVELS) {
+    const rcId = rcEntitlementIdFor(level.id);
+    if (rcId === null) continue; // palier sans entitlement RC créé
+    const ent = entitlements[rcId];
+    if (!ent || !ent.expires_date) continue;
+    const productId = ent.product_identifier;
+    if (productId && subscriptions[productId]?.is_sandbox === true) continue;
+    const ms = Date.parse(ent.expires_date);
+    states[level.id] = {expiresMs: Number.isNaN(ms) ? null : ms};
+  }
+  return states;
+}
+
+/**
+ * Fetcher de production : API REST RevenueCat v1 (subscriber). La logique de
+ * tri (entitlements connus, achats sandbox écartés) vit dans
+ * [entitlementStatesFromSubscriber], pure et testée.
  */
 function makeRevenueCatFetcher(apiKey: string): EntitlementStatesFetcher {
   return async (uid) => {
@@ -251,22 +301,8 @@ function makeRevenueCatFetcher(apiKey: string): EntitlementStatesFetcher {
       {headers: {Authorization: `Bearer ${apiKey}`}},
     );
     if (!resp.ok) throw new Error(`RevenueCat API ${resp.status}`);
-    const body = (await resp.json()) as {
-      subscriber?: {
-        entitlements?: Record<string, {expires_date?: string | null}>;
-      };
-    };
-    const entitlements = body.subscriber?.entitlements ?? {};
-    const states: Partial<Record<LevelId, {expiresMs: number | null}>> = {};
-    for (const level of LEVELS) {
-      const rcId = rcEntitlementIdFor(level.id);
-      if (rcId === null) continue; // palier sans entitlement RC créé
-      const ent = entitlements[rcId];
-      if (!ent || !ent.expires_date) continue;
-      const ms = Date.parse(ent.expires_date);
-      states[level.id] = {expiresMs: Number.isNaN(ms) ? null : ms};
-    }
-    return states;
+    const body = (await resp.json()) as {subscriber?: RcSubscriber};
+    return entitlementStatesFromSubscriber(body.subscriber);
   };
 }
 

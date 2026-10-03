@@ -9,6 +9,7 @@ import {
   fakeAdminFirestoreHolder,
   fakeStagingFirestoreHolder,
 } from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Cf. expenses.test.ts pour la justification du import() dynamique interne.
 vi.mock("firebase-admin", async () => {
@@ -22,7 +23,7 @@ let fakeStagingDb: FakeFirestore;
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }

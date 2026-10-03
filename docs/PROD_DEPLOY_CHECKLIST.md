@@ -34,12 +34,13 @@ GitHub → Settings → Environments → `production` :
 
 ## C. Backend Firebase (si la release le modifie)
 
-> `deploy.yml` ne déploie **que le Hosting**. Rules / indexes / functions sont **manuels**.
+> `deploy.yml` déploie le Hosting, les rules + indexes Firestore et (depuis `main`) les rules Storage.
+> Seules les **Cloud Functions** sont **manuelles**.
 
 - [ ] Rules testées en émulateur : `cd functions && npm run test:rules` (cross-user OK)
-- [ ] `firebase deploy --only firestore:rules,firestore:indexes` appliqué
+- [ ] Rules + indexes Firestore : **auto** par `deploy.yml` (`firestore:staging` sur `develop`, `firestore:(default)` sur `main`) — vérifier l'étape dans le run
 - [ ] `cd functions && npm ci && npm run build && firebase deploy --only functions` (si functions changées)
-- [ ] `firebase deploy --only storage` (si `storage.rules` changé)
+- [ ] Rules Storage : **auto** par `deploy.yml` depuis `main` uniquement (cible `storage`, bucket partagé) — vérifier l'étape dans le run, puis **téléverser un document sur prod ET sur staging juste après le déploiement** (compte non anonyme à email vérifié ; un échec = règles Storage ou email non vérifié)
 
 ---
 

@@ -105,7 +105,7 @@ Décompte de régularisation de charges **figé** (snapshot immuable) au moment 
 | `sentToEmail` | string\|null | optionnel |
 | `schemaVersion` | int | `1` |
 
-**Immutabilité** : **aucun soft-delete** — rétention légale 5 ans (décret 87-713), les décomptes annulés (`isVoided`) restent lisibles pour audit, jamais supprimés. Tous les champs financiers/identité sont figés à la création ; seuls `isVoided*` et `sentAt*` sont mutables, et uniquement via les callables dédiés (jamais en écriture directe cliente).
+**Immutabilité** : **aucun soft-delete** — tant que le compte existe, les décomptes annulés (`isVoided`) restent lisibles pour audit, jamais supprimés. **À la suppression du compte, hard-delete** (`deleteAccount`, `PURGED_COLLECTIONS` — OWASP-05, 2026-09-30) : contrairement aux quittances, **aucune rétention plateforme** (les devoirs de conservation incombent au bailleur, PDF rendu côté client ; le flux de suppression avertit de télécharger ses documents, sans citer ce type précisément). Tous les champs financiers/identité sont figés à la création ; seuls `isVoided*` et `sentAt*` sont mutables, et uniquement via les callables dédiés (jamais en écriture directe cliente).
 
 **Règles Firestore** :
 - `get, list` : `isOwner(resource.data.landlordId)`
@@ -122,7 +122,7 @@ Décompte de régularisation de charges **figé** (snapshot immuable) au moment 
 
 ## `etat_des_lieux/{id}` (FEAT-037)
 
-Collection **immuable, CF exclusive** — état des lieux digitalisé. Parties + adresse bien + **domicile du bailleur** (décret 2016-382) sont figés à la création. Aucun soft-delete (document légal) ; rétention 5 ans (décret 2016-382).
+Collection **immuable, CF exclusive** — état des lieux digitalisé. Parties + adresse bien + **domicile du bailleur** (décret 2016-382) sont figés à la création. Aucun soft-delete (document légal) tant que le compte existe ; **hard-delete à la suppression du compte** (`deleteAccount`, `PURGED_COLLECTIONS` — OWASP-05, 2026-09-30), aucune rétention plateforme : la conservation (décret 2016-382) incombe au bailleur, qui télécharge le PDF (rendu côté client) avant de supprimer son compte.
 
 | Champ | Type | Notes |
 |---|---|---|
@@ -143,7 +143,7 @@ Collection **immuable, CF exclusive** — état des lieux digitalisé. Parties +
 | `createdAt` | timestamp | immuable, `serverTimestamp()` |
 | `schemaVersion` | int | `1` |
 
-**Immutabilité** : tous les champs sont figés à la création. Aucune mutation, aucun soft-delete, rétention légale 5 ans (décret 2016-382 : document probant).
+**Immutabilité** : tous les champs sont figés à la création. Aucune mutation, aucun soft-delete tant que le compte existe (document probant, décret 2016-382) ; hard-delete à la suppression du compte (OWASP-05, 2026-09-30), sans rétention plateforme.
 
 **Règles Firestore** :
 - `get, list` : `isOwner(resource.data.landlordId)` (propriétaire seul)

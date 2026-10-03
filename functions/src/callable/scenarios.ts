@@ -33,7 +33,7 @@ import {
   asBag,
   optionalInt,
   optionalString,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireInt,
   requireString,
@@ -177,7 +177,7 @@ export function buildScenarioDocument(args: {
 export const createScenario = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const inputs = parseScenarioInputs(asBag(request.data));
 
     const db = await dbForRequest(request);

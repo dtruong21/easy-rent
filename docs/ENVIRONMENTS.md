@@ -21,8 +21,9 @@ Concrètement :
   (Storage non isolé) — rester mesuré sur les uploads de test.
 - Le **code** des Cloud Functions déployé depuis `develop` tourne aussi sur la
   prod ; seul le routage des **writes Firestore** est isolé (par Origin côté
-  callables web, par compte — présence du landlord — côté webhook et appels
-  mobiles sans Origin).
+  callables web, par compte — présence du landlord — côté appels mobiles sans
+  Origin, par `event.environment` côté webhook RevenueCat — cf. « Facturation »
+  ci-dessous).
 - `firestore.rules` / `firestore.indexes.json` sont **identiques** sur les deux
   bases (même fichier source), mais la CI les déploie **base par base** :
   `develop` → `staging`, `main` → `(default)`. La prod ne bouge donc que sur un
@@ -46,6 +47,29 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 | **Cloud Functions** | ❌ **Non** | Un seul déploiement, région `europe-west1` |
 | **Rules & indexes** | ⚠️ **Partiel** | Même fichier source, mais déploiement CI ciblé par base (`develop`→`staging`, `main`→`(default)`) |
 | **Secrets** | ❌ **Non** | Un seul jeu (service account CI, secrets Functions) |
+
+> **Facturation (OWASP-01, 2026-09-30).** Vraisemblablement un seul webhook
+> RevenueCat (à confirmer dans la console RevenueCat ; un seul secret
+> `REVENUECAT_WEBHOOK_AUTH` côté Functions) sert les deux environnements, et le checkout
+> staging public tourne en Stripe **test**. Le webhook route donc chaque event
+> par son champ `environment` : `SANDBOX` (achat de test : Stripe test, sandbox
+> App Store, licence de test Google) → base `staging` **uniquement** ;
+> `PRODUCTION` → `(default)` **uniquement** ; absent ou autre valeur → ignoré et
+> journalisé. Il n'y a **aucun repli** sur l'autre base : un achat de test ne peut
+> plus accorder un palier sur un compte prod, et `createCheckoutSession` refuse
+> (`landlord_not_found`) un compte sans doc dans la base routée. Contrepartie : un
+> achat sandbox (App Review, TestFlight) fait avec un compte **prod** ne débloque
+> rien tant qu'une allowlist serveur d'uid prod n'existe pas (à prévoir avec la
+> feature achat intégré). Le cron `reconcileEntitlements` ignore lui aussi les
+> entitlements issus d'achats sandbox. Côté RevenueCat, vérifier dans les
+> réglages du webhook si une option de filtrage par environnement existe
+> (« Production only ») — action manuelle, non vérifiée par l'audit.
+>
+> **À confirmer après le déploiement des Functions** : les valeurs réelles
+> d'`environment` envoyées par RevenueCat. Un achat de test sur le staging avec
+> une carte de test Stripe doit produire un log `env="SANDBOX"` et écrire dans la
+> base `staging` (jamais dans `(default)`). Si la valeur diffère, l'event est
+> ignoré (fail-closed) : aucun palier accordé, à corriger avant d'ouvrir l'abonnement.
 
 ## 🌐 Hosting multi-site
 
@@ -184,7 +208,7 @@ environnement** (voir « Déploiement ») :
 |---|---|---|---|
 | Règles Firestore | `firestore.rules` | Par base | `develop` → base `staging` ; `main` → `(default)` |
 | Index composites | `firestore.indexes.json` | Par base | idem |
-| Règles Storage | `storage.rules` | Bucket unique (partagé) | `main` uniquement |
+| Règles Storage | `storage.rules` | Bucket unique (partagé) | `main` uniquement (`deploy.yml`, cible `storage`) |
 | Cloud Functions | `functions/src/` | Projet entier (partagé) | **personne — déploiement manuel** |
 
 > ⚠️ **Les Cloud Functions restent le point non isolé.** Un seul déploiement
@@ -202,7 +226,7 @@ environnement** (voir « Déploiement ») :
 Tests des règles avant tout déploiement :
 
 ```bash
-npm --prefix functions run test:rules   # émulateur, projet demo-easyrent
+npm --prefix functions run test:rules   # émulateurs Firestore + Storage, projet demo-easyrent
 ```
 
 ## 🚫 SEO — noindex sur staging

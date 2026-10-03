@@ -16,7 +16,7 @@ import {
 import {dbForRequest} from "../utils/db_router";
 
 /** clé de sortie → nom de collection Firestore. */
-const EXPORTED_COLLECTIONS: Record<string, string> = {
+export const EXPORTED_COLLECTIONS: Record<string, string> = {
   properties: "properties",
   tenants: "tenants",
   leases: "leases",
@@ -53,6 +53,9 @@ function serialize(value: unknown): unknown {
 export const exportAccountData = onCall(
   {region: "europe-west1", timeoutSeconds: 120},
   async (request) => {
+    // OWASP-02 — EXEMPTÉE de `requireVerifiedUid` (volontairement) : le droit
+    // d'accès / portabilité (RGPD art. 15 et 20) doit rester exerçable par un
+    // compte non vérifié. Garde de fraîcheur ci-dessous inchangée.
     const uid = requireAuthUid(request);
     await assertRecentAuthForNonAnonymousAccount(request, uid);
 

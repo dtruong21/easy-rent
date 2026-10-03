@@ -154,9 +154,9 @@ import {
   updateLease,
 } from "../callable/lease_payment";
 
-const LANDLORD_UID = "landlord-1";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
-type AuthData = NonNullable<CallableRequest["auth"]>;
+const LANDLORD_UID = "landlord-1";
 
 /**
  * Construit un `CallableRequest<T>` minimal pour `CallableFunction.run(...)`.
@@ -167,7 +167,7 @@ type AuthData = NonNullable<CallableRequest["auth"]>;
 function callableRequest<T>(uid: string, data: T): CallableRequest<T> {
   return {
     data,
-    auth: {uid, token: {} as AuthData["token"], rawToken: ""},
+    auth: {uid, token: VERIFIED_TOKEN, rawToken: ""},
     rawRequest: {} as CallableRequest<T>["rawRequest"],
     acceptsStreaming: false,
   };

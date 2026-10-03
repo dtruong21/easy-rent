@@ -15,6 +15,10 @@
  * client qui a payé — c'est exactement le cas du downgrade différé Apple/Google.
  *
  * Robustesse :
+ *   - **Routage prod/staging (OWASP-01)** : la base est choisie par
+ *     `event.environment` (`SANDBOX` → `staging`, `PRODUCTION` → `(default)`,
+ *     autre → ignoré), jamais par « la base qui porte le doc » : un achat en
+ *     mode test ne peut ainsi jamais accorder un palier sur un compte prod.
  *   - **Auth** : header `Authorization` comparé (temps constant) au secret
  *     partagé configuré côté dashboard RevenueCat ET dans Secret Manager
  *     (`firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH`). Non signé → 401.
@@ -46,7 +50,7 @@ import {
   levelForRcEntitlement,
   parseEntitlementStates,
 } from "../entitlements/plan";
-import {dbForLandlordUid} from "../utils/db_router";
+import {firestoreForEnv} from "../utils/db_router";
 
 /** Secret partagé du header Authorization du webhook RevenueCat. */
 const webhookAuth = defineSecret("REVENUECAT_WEBHOOK_AUTH");
@@ -68,6 +72,13 @@ export interface RcEvent {
   entitlement_ids?: string[] | null;
   entitlement_id?: string | null;
   store?: string | null;
+  /**
+   * Environnement de l'achat, posé par RevenueCat sur chaque event :
+   * `"PRODUCTION"` ou `"SANDBOX"` (achat en mode test : Stripe test, sandbox
+   * Apple, licence de test Google). C'est le SEUL critère de routage prod /
+   * staging du webhook — cf. [handleRevenueCatEvent].
+   */
+  environment?: string | null;
   expiration_at_ms?: number | null;
   event_timestamp_ms?: number | null;
 }
@@ -299,6 +310,57 @@ export async function applyRevenueCatEvent(
   });
 }
 
+/** Valeur d'`environment` sûre à journaliser (JSON, bornée à 32 caractères). */
+function environmentForLog(environment: unknown): string {
+  return (JSON.stringify(environment ?? null) ?? "null").slice(0, 32);
+}
+
+/**
+ * Route un event vers la base de SON environnement, puis l'applique.
+ *
+ * OWASP-01 — un seul projet Firebase héberge prod (`(default)`) et staging
+ * (base `staging`), avec une Auth partagée, un checkout staging public en Stripe
+ * test et UN seul webhook RevenueCat. Router par « la base qui porte le doc »
+ * (prod d'abord) laissait un compte prod payer avec la carte de test publique
+ * et obtenir un palier payant en prod. La base est donc choisie par
+ * `event.environment`, jamais par le contenu des bases :
+ *
+ *   - `"SANDBOX"`    → base `staging` UNIQUEMENT ;
+ *   - `"PRODUCTION"` → base `(default)` UNIQUEMENT ;
+ *   - absent / autre → event ignoré (fail-closed) et journalisé.
+ *
+ * Aucun repli sur l'autre base : doc absent de la base routée → `no_landlord`
+ * (cf. [applyRevenueCatEvent]). Un event SANDBOX visant un compte prod ne
+ * modifie donc RIEN, et un event PRODUCTION ne touche jamais le staging.
+ *
+ * Les events `TEST` (ping de config du dashboard) sont ignorés sans bruit, avant
+ * tout routage.
+ */
+export async function handleRevenueCatEvent(
+  event: RcEvent,
+  nowMs: number,
+): Promise<RcOutcome> {
+  if (event.type === "TEST") return "ignored";
+
+  let isStaging: boolean;
+  if (event.environment === "SANDBOX") {
+    isStaging = true;
+  } else if (event.environment === "PRODUCTION") {
+    isStaging = false;
+  } else {
+    // uid + valeur brute (bornée : l'event est authentifié mais son contenu ne
+    // l'est pas) — aucune autre donnée dans le log.
+    logger.warn(
+      "revenueCatWebhook: environment absent ou inconnu → ignoré " +
+        `app_user_id=${event.app_user_id} ` +
+        `environment=${environmentForLog(event.environment)}`,
+    );
+    return "ignored";
+  }
+
+  return applyRevenueCatEvent(firestoreForEnv(isStaging), event, nowMs);
+}
+
 export const revenueCatWebhook = onRequest(
   {secrets: [webhookAuth]},
   async (req, res) => {
@@ -338,15 +400,13 @@ export const revenueCatWebhook = onRequest(
     }
 
     try {
-      // ADR 0003 : le webhook n'a pas d'Origin (server-to-server). On route vers
-      // la base qui contient réellement le doc landlord (prod d'abord, puis dev)
-      // — un abonnement de test créé depuis staging bascule alors le tier dans
-      // `dev`, pas en prod.
-      const db = await dbForLandlordUid(event.app_user_id ?? "");
-      const outcome = await applyRevenueCatEvent(db, event, Date.now());
+      // ADR 0003 / OWASP-01 : le webhook n'a pas d'Origin (server-to-server).
+      // La base est choisie par `event.environment` (SANDBOX → staging,
+      // PRODUCTION → (default)), sans repli sur l'autre base.
+      const outcome = await handleRevenueCatEvent(event, Date.now());
       logger.info(
         `revenueCatWebhook: ${event.type} app_user_id=${event.app_user_id} ` +
-          `→ ${outcome}`,
+          `env=${environmentForLog(event.environment)} → ${outcome}`,
       );
       res.status(200).send("ok");
     } catch (err) {

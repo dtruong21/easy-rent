@@ -56,9 +56,10 @@ PWA française de gestion locative (+ apps natives iOS/Android). Stack : **Flutt
 - **Accès Firestore : jamais en direct** (ADR 0003, isolation prod/staging).
   Flutter → `firestoreProvider` ([`lib/core/config/firestore_provider.dart`](lib/core/config/firestore_provider.dart)) ;
   `FirebaseFirestore.instance` / `.instanceFor` interdits hors `main.dart`.
-  Functions → `dbForRequest(request)` pour les callables, `dbForLandlordUid(uid)`
-  pour le webhook ; `admin.firestore()` / `getFirestore()` interdits ailleurs dans
-  `functions/src/` (crons et triggers exceptés, volontairement sur `(default)`).
+  Functions → `dbForRequest(request)` pour les callables, `event.environment`
+  (`firestoreForEnv`) pour le webhook RevenueCat ; `admin.firestore()` /
+  `getFirestore()` interdits ailleurs dans `functions/src/` (crons et triggers
+  exceptés, volontairement sur `(default)`).
   [`scripts/check-db-isolation.sh`](scripts/check-db-isolation.sh) l'impose en CI —
   un accès direct fait échouer la PR.
 - **Règles Firestore obligatoires** sur toutes les collections (deny-by-default, isFullyAuthed/isOwner)

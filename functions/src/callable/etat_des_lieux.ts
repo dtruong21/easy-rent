@@ -13,7 +13,7 @@ import {
   asBag,
   dataOrFail,
   optionalString,
-  requireAuthUid,
+  requireVerifiedUid,
   requireInt,
   requireString,
   toTimestamp,
@@ -60,7 +60,7 @@ export function validateRooms(raw: unknown): EdlRoom[] {
 export const createEtatDesLieux = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const leaseId = requireString(data.leaseId, "leaseId");

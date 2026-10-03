@@ -27,7 +27,7 @@ import {
   optionalNumber,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireInt,
   requireString,
@@ -109,7 +109,7 @@ export function resolveChargeMode(
 export const createLease = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const propertyId = requireString(data.propertyId, "propertyId");
@@ -336,7 +336,7 @@ const LEASE_MUTABLE_FIELDS = new Set([
 export const updateLease = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);
@@ -558,7 +558,7 @@ export const updateLease = onCall(
 export const createPayment = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const leaseId = requireString(data.leaseId, "leaseId");
@@ -629,7 +629,7 @@ const PAYMENT_MUTABLE_FIELDS = new Set([
 export const updatePayment = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);

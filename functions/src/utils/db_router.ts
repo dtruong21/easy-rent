@@ -6,12 +6,12 @@
  * Deux entrées selon la nature de l'appel :
  * - **Callables** ([dbForRequest]) : web (Origin présent) → routage par
  *   l'en-tête **Origin** ; mobile (Origin absent ou vide) → routage par la base
- *   qui porte le doc landlord, comme le webhook.
- * - **Webhook RevenueCat** (server-to-server, sans Origin) → routage par la base
- *   qui contient réellement le doc landlord ([dbForLandlordUid]). C'est plus
- *   robuste que la metadata `env` prescrite par l'ADR : ça ne dépend d'aucune
- *   config RevenueCat/Stripe et reste correct même si la propagation de metadata
- *   change (voir l'amendement dans l'ADR 0003).
+ *   qui porte le doc landlord ([dbForLandlordUid], prod d'abord).
+ * - **Webhook RevenueCat** (server-to-server, sans Origin) → routage par
+ *   l'`environment` de l'event (`SANDBOX` → `staging`, `PRODUCTION` →
+ *   `(default)`), via [firestoreForEnv] — jamais par la base qui porte le doc :
+ *   ce routage-là laissait un achat de test accorder un palier sur un compte
+ *   prod (OWASP-01, cf. `handleRevenueCatEvent`).
  *
  * ⚠️ Ne JAMAIS appeler `admin.firestore()` / `getFirestore()` sans passer par
  * ce module dans le code qui écrit des données par requête utilisateur — sinon
@@ -83,17 +83,14 @@ export async function dbForRequest(
 }
 
 /**
- * Base Firestore contenant le doc `landlords/{uid}`, pour les flux
- * server-to-server SANS Origin (webhook RevenueCat) et pour les callables
- * mobiles ([dbForRequest]). Cherche d'abord la prod
- * `(default)` — fail-safe : un vrai compte prod ne doit jamais être écrit dans
- * `staging` —, puis `staging`. Un uid ne vit que dans UNE base (l'utilisateur s'est
- * inscrit sur prod OU staging), donc la 1re base qui porte le doc est la bonne.
- * Absent des deux → `(default)` (le webhook renverra `no_landlord`).
+ * Base Firestore contenant le doc `landlords/{uid}`, pour les callables mobiles
+ * ([dbForRequest]) — un client natif n'envoie pas d'Origin. Cherche d'abord la
+ * prod `(default)` — fail-safe : un vrai compte prod ne doit jamais être écrit
+ * dans `staging` —, puis `staging`. Absent des deux → `(default)`.
  *
- * ⚠️ Discipline : pour tester un paiement sur staging, utiliser un compte
- * JAMAIS utilisé en prod — sinon son doc existe aussi en `(default)` et le
- * webhook, qui teste prod d'abord, basculerait le compte prod.
+ * ⚠️ N'est PLUS utilisé par le webhook RevenueCat (routé par `event.environment`,
+ * OWASP-01) : « la base qui porte le doc » n'est pas une garde d'environnement —
+ * un même uid peut exister dans les deux bases (Auth partagée).
  */
 export async function dbForLandlordUid(uid: string): Promise<Firestore> {
   const prod = firestoreForEnv(false);

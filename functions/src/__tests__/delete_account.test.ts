@@ -1,9 +1,18 @@
+import * as fs from "node:fs";
+import {resolve} from "node:path";
+
 import {Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import type {CallableRequest} from "firebase-functions/v2/https";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
-import {deleteAccount, hasWebBilling} from "../callable/delete_account";
+import {
+  deleteAccount,
+  hasWebBilling,
+  PURGED_COLLECTIONS,
+  RETAINED_COLLECTIONS,
+} from "../callable/delete_account";
+import {EXPORTED_COLLECTIONS} from "../callable/export_account_data";
 import {storeOf} from "../http/revenuecat_webhook";
 
 import {
@@ -119,6 +128,17 @@ function seedLandlordDataset(
   fakeDb.seed(`expenses/exp-${suffix}`, {landlordId: uid, amountCents: 500});
   fakeDb.seed(`investment_scenarios/sc-${suffix}`, {landlordId: uid});
   fakeDb.seed(`support_requests/sup-${suffix}`, {landlordId: uid});
+  // Documents figés (FEAT-033 / FEAT-037) : portent noms et adresses.
+  fakeDb.seed(`charge_statements/cs-${suffix}`, {
+    landlordId: uid,
+    landlordFullName: "Jeanne Martin",
+    tenantFullName: "Paul Durand",
+  });
+  fakeDb.seed(`etat_des_lieux/edl-${suffix}`, {
+    landlordId: uid,
+    landlordAddress: "1 rue de la Paix, 75002 Paris",
+    propertyAddress: "2 rue des Lilas, 69003 Lyon",
+  });
   fakeDb.seed(`receipts/rcpt-${suffix}`, {
     landlordId: uid,
     receiptNumber: `2026-${suffix}`,
@@ -159,6 +179,22 @@ describe("deleteAccount", () => {
     ).rejects.toMatchObject({code: "unauthenticated"});
   });
 
+  it("★ OWASP-02 : compte email/mot de passe NON vérifié → suppression autorisée (droit RGPD)", async () => {
+    // `makeRequest` ne pose volontairement pas `email_verified` : le token est
+    // celui d'un compte jamais vérifié (ex. inscrit avec l'adresse d'un tiers).
+    // deleteAccount est EXEMPTÉE de `requireVerifiedUid` — le droit à
+    // l'effacement (art. 17) doit rester exerçable.
+    seedLandlordDataset(LANDLORD_A, "a1");
+
+    await deleteAccount.run(
+      makeRequest(LANDLORD_A, {signInProvider: "password"}),
+    );
+
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+    expect(fakeDb.peek("properties/prop-a1")).toBeUndefined();
+    expect(fakeAuth.deletedUids).toContain(LANDLORD_A);
+  });
+
   it("refuse un token non-anonyme trop ancien (recent-login-required)", async () => {
     seedLandlordDataset(LANDLORD_A, "a1");
 
@@ -195,6 +231,8 @@ describe("deleteAccount", () => {
       "expenses/exp-a1",
       "investment_scenarios/sc-a1",
       "support_requests/sup-a1",
+      "charge_statements/cs-a1",
+      "etat_des_lieux/edl-a1",
     ]) {
       expect(fakeDb.peek(path), path).toBeUndefined();
     }
@@ -232,6 +270,8 @@ describe("deleteAccount", () => {
 
     expect(fakeDb.peek(`landlords/${LANDLORD_B}`)).toBeDefined();
     expect(fakeDb.peek("properties/prop-b1")).toBeDefined();
+    expect(fakeDb.peek("charge_statements/cs-b1")).toBeDefined();
+    expect(fakeDb.peek("etat_des_lieux/edl-b1")).toBeDefined();
     expect(fakeDb.peek("receipts/rcpt-b1")?.accountDeletedAt).toBeUndefined();
     expect(fakeAuth.deletedUids).not.toContain(LANDLORD_B);
     expect(fakeStorage.deletedPrefixes).not.toContain(
@@ -361,6 +401,58 @@ describe("deleteAccount", () => {
 
     expect(fakeDb.peek("payments/pay-0")).toBeUndefined();
     expect(fakeDb.peek("payments/pay-449")).toBeUndefined();
+  });
+
+  it("purge par pages décomptes de charges et états des lieux (> PURGE_PAGE_SIZE docs)", async () => {
+    fakeDb.seed(`landlords/${LANDLORD_A}`, {id: LANDLORD_A});
+    for (let i = 0; i < 450; i++) {
+      fakeDb.seed(`charge_statements/cs-${i}`, {landlordId: LANDLORD_A});
+      fakeDb.seed(`etat_des_lieux/edl-${i}`, {landlordId: LANDLORD_A});
+    }
+    fakeDb.seed("charge_statements/cs-other", {landlordId: LANDLORD_B});
+    fakeDb.seed("etat_des_lieux/edl-other", {landlordId: LANDLORD_B});
+
+    await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    for (const path of [
+      "charge_statements/cs-0",
+      "charge_statements/cs-449",
+      "etat_des_lieux/edl-0",
+      "etat_des_lieux/edl-449",
+    ]) {
+      expect(fakeDb.peek(path), path).toBeUndefined();
+    }
+    expect(fakeDb.peek("charge_statements/cs-other")).toBeDefined();
+    expect(fakeDb.peek("etat_des_lieux/edl-other")).toBeDefined();
+  });
+
+  it("les décomptes de charges et états des lieux sont HARD-DELETE (jamais stampés pour rétention)", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+
+    await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    // Aucun résidu, pas même un doc marqué `retentionUntil` : le cron de purge
+    // ne lit que `receipts`, un doc stampé ici resterait donc éternellement.
+    expect(fakeDb.peek("charge_statements/cs-a1")).toBeUndefined();
+    expect(fakeDb.peek("etat_des_lieux/edl-a1")).toBeUndefined();
+  });
+
+  it("un retry après une purge interrompue (Storage KO) termine l'effacement des nouveaux types", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1");
+    fakeStorage.deleteFilesError = new Error("gcs unavailable");
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A)),
+    ).rejects.toMatchObject({code: "internal"});
+    expect(fakeDb.peek("charge_statements/cs-a1")).toBeUndefined();
+
+    // Résidu laissé entre-temps (ex. doc recréé) : le retry le purge aussi.
+    fakeDb.seed("etat_des_lieux/edl-late", {landlordId: LANDLORD_A});
+    fakeStorage.deleteFilesError = null;
+    const result = await deleteAccount.run(makeRequest(LANDLORD_A));
+
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek("etat_des_lieux/edl-late")).toBeUndefined();
+    expect(fakeAuth.deletedUids).toEqual([LANDLORD_A]);
   });
 
   it("stampe par chunks un volume de quittances > PURGE_PAGE_SIZE", async () => {
@@ -783,6 +875,58 @@ describe("deleteAccount — la résiliation Stripe ne vise que les comptes factu
     expect(stripeMock.keys).toHaveLength(0);
     expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
     expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+});
+
+// Parité export ↔ effacement (RGPD art. 15/20 vs art. 17, OWASP-05) : toute
+// collection que `exportAccountData` sait lire contient des données du
+// bailleur — elle doit être soit purgée, soit explicitement retenue. Ce test
+// aurait attrapé `charge_statements` (FEAT-033) et `etat_des_lieux` (FEAT-037),
+// exportés mais jamais effacés.
+describe("parité export ↔ effacement du compte", () => {
+  const exported = Object.values(EXPORTED_COLLECTIONS);
+
+  it("toute collection exportée est purgée OU explicitement retenue", () => {
+    const covered = new Set([...PURGED_COLLECTIONS, ...RETAINED_COLLECTIONS]);
+    const uncovered = exported.filter((name) => !covered.has(name));
+
+    expect(
+      uncovered,
+      `exportées mais ni purgées ni retenues : ${uncovered.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("une collection ne peut pas être à la fois purgée et retenue", () => {
+    const both = PURGED_COLLECTIONS.filter((name) =>
+      RETAINED_COLLECTIONS.includes(name),
+    );
+    expect(both).toEqual([]);
+  });
+
+  it("seules les quittances sont retenues (rétention légale 5 ans)", () => {
+    expect([...RETAINED_COLLECTIONS]).toEqual(["receipts"]);
+  });
+
+  it("toute collection de premier niveau des Security Rules est exportée ou est un singleton purgé", () => {
+    // Filet en amont de la parité : une collection ajoutée aux Rules mais
+    // oubliée dans l'export échapperait au test précédent.
+    const rules = fs.readFileSync(
+      resolve(__dirname, "../../../firestore.rules"),
+      "utf8",
+    );
+    const topLevel = [...rules.matchAll(/^ {4}match \/(\w+)\/\{/gm)].map(
+      (m) => m[1],
+    );
+    // Singletons clés par uid (purgés explicitement par deleteAccount, étape c).
+    const singletons = ["landlords", "paid_plan_interest"];
+    const known = new Set([...exported, ...singletons]);
+
+    expect(topLevel.length).toBeGreaterThan(10); // le scan a bien lu les Rules
+    const unknown = topLevel.filter((name) => !known.has(name));
+    expect(
+      unknown,
+      `collections des Rules ni exportées ni singletons : ${unknown.join(", ")}`,
+    ).toEqual([]);
   });
 });
 

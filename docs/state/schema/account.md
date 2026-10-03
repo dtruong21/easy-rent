@@ -47,7 +47,7 @@ Auth + tiers de compte (anonymous/free/paid). BAILLAN-M1 système 3-états.
 
 **Règles Firestore** :
 - `get` : isOwner(uid) && (resource==null \|\| isActive(rsc))
-- `create` compte : isFullyAuthed() + `rgpdConsentVersion` **chaîne non vide** (`firestore.rules:85-86` — la rule n'épingle AUCUNE version précise, contrairement à ce que ce shard affirmait jusqu'au 2026-08-11 ; c'est la callable qui impose `CURRENT_RGPD_VERSION`) + `email is string` + `fullName.size() > 0` ; planLevel/entitlements gelés à null/absent (FEAT-056)
+- `create` compte : `isSignedIn() && !isAnonymous() && auth.uid == uid` — **volontairement SANS `hasTrustedEmail()`** : `signUpWithPassword` écrit ce doc AVANT l'email de vérification (OWASP-02) ; tout le reste (get/update/données métier) exige un compte vérifié. + `rgpdConsentVersion` **chaîne non vide** (`firestore.rules:85-86` — la rule n'épingle AUCUNE version précise, contrairement à ce que ce shard affirmait jusqu'au 2026-08-11 ; c'est la callable qui impose `CURRENT_RGPD_VERSION`) + `email is string` + `fullName.size() > 0` ; planLevel/entitlements gelés à null/absent (FEAT-056)
 - `create` anon : isAnonymous() + anonExpiresAt <= now+15j ; planLevel/entitlements gelés à null/absent (FEAT-056)
 - `update` compte : isFullyAuthed() && preservesImmutables() && planLevel/entitlements immuables client (FEAT-056)
 - `update` anon : isAnonymous() && anonExpiresAt valide && planLevel/entitlements immuables (FEAT-056)

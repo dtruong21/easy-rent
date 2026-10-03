@@ -5,12 +5,17 @@ import {levelForRcEntitlement, rcEntitlementIdFor} from "../entitlements/plan";
 import {
   applyRevenueCatEvent,
   decideEntitlement,
+  handleRevenueCatEvent,
   isAuthorizedWebhook,
   storeOf,
   type RcEvent,
 } from "../http/revenuecat_webhook";
 
-import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
 
 vi.mock("firebase-admin", async () => {
   const {makeFakeAdminModule} = await import("./helpers/fake_firestore");
@@ -55,6 +60,7 @@ function evt(overrides: Partial<RcEvent> = {}): RcEvent {
     product_id: "pro_monthly",
     entitlement_ids: [PRO_RC_ENTITLEMENT_ID],
     store: "APP_STORE",
+    environment: "PRODUCTION",
     expiration_at_ms: IN_30D,
     event_timestamp_ms: NOW,
     ...overrides,
@@ -524,5 +530,167 @@ describe("🔴 compte legacy (aucune map `entitlements`)", () => {
     const doc = fakeDb.peek(`landlords/${UID}`);
     expect(doc?.subscriptionTier).toBe("free");
     expect(doc?.planLevel).toBeNull();
+  });
+});
+
+// OWASP-01 — le mode test ne peut JAMAIS accorder un palier en prod.
+//
+// Une seule Cloud Function et un seul webhook RevenueCat servent prod
+// (`(default)`) ET staging (base `staging`, Stripe en mode test, app publique).
+// La base cible est donc choisie par l'`environment` de l'event — jamais par
+// « quelle base porte le doc », qui laissait un compte prod payer avec la carte
+// de test publique et se voir accorder un palier payant en prod. Aucun repli
+// sur l'autre base : un event SANDBOX sur un compte prod ne touche RIEN.
+describe("handleRevenueCatEvent — routage par environnement (OWASP-01)", () => {
+  let prodDb: FakeFirestore;
+  let stagingDb: FakeFirestore;
+
+  beforeEach(() => {
+    prodDb = new FakeFirestore();
+    stagingDb = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db = prodDb;
+    fakeStagingFirestoreHolder.db = stagingDb;
+  });
+
+  function seedIn(db: FakeFirestore) {
+    db.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      isAnonymous: false,
+      subscriptionTier: "free",
+      deletedAt: null,
+    });
+  }
+
+  it("SANDBOX + doc seulement en prod → no_landlord, RIEN écrit en prod", async () => {
+    seedIn(prodDb);
+    const before = structuredClone(prodDb.peek(`landlords/${UID}`));
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("no_landlord");
+    expect(prodDb.peek(`landlords/${UID}`)).toEqual(before);
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(stagingDb.peek(`landlords/${UID}`)).toBeUndefined();
+  });
+
+  it("SANDBOX + doc en staging → staging mis à jour, prod intacte", async () => {
+    seedIn(stagingDb);
+    seedIn(prodDb);
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(prodDb.peek(`landlords/${UID}`)?.proEntitlementActive).toBeUndefined();
+  });
+
+  it("PRODUCTION + doc en prod → prod mis à jour (comportement inchangé)", async () => {
+    seedIn(prodDb);
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "PRODUCTION"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    const doc = prodDb.peek(`landlords/${UID}`);
+    expect(doc?.subscriptionTier).toBe("paid");
+    expect(doc?.proEntitlementActive).toBe(true);
+    expect(doc?.proStore).toBe("app_store");
+  });
+
+  it("PRODUCTION + doc seulement en staging → no_landlord, RIEN écrit en staging", async () => {
+    seedIn(stagingDb);
+    const before = structuredClone(stagingDb.peek(`landlords/${UID}`));
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "PRODUCTION"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("no_landlord");
+    expect(stagingDb.peek(`landlords/${UID}`)).toEqual(before);
+    expect(prodDb.peek(`landlords/${UID}`)).toBeUndefined();
+  });
+
+  it("environnement absent → ignoré, aucune base modifiée", async () => {
+    seedIn(prodDb);
+    seedIn(stagingDb);
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: undefined}),
+      NOW,
+    );
+
+    expect(outcome).toBe("ignored");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it.each(["", "sandbox", "production", "Sandbox", "STAGING", "TEST"])(
+    "environnement inconnu %j → ignoré, aucune base modifiée",
+    async (environment) => {
+      seedIn(prodDb);
+      seedIn(stagingDb);
+
+      const outcome = await handleRevenueCatEvent(evt({environment}), NOW);
+
+      expect(outcome).toBe("ignored");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    },
+  );
+
+  it("environnement non-chaîne (nombre, objet) → ignoré", async () => {
+    seedIn(prodDb);
+    for (const bad of [1, {a: 1}, ["SANDBOX"]]) {
+      const outcome = await handleRevenueCatEvent(
+        evt({environment: bad as unknown as string}),
+        NOW,
+      );
+      expect(outcome).toBe("ignored");
+    }
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("event TEST → ignoré quel que soit l'environnement (inchangé)", async () => {
+    seedIn(prodDb);
+    seedIn(stagingDb);
+    for (const environment of ["SANDBOX", "PRODUCTION", undefined]) {
+      expect(
+        await handleRevenueCatEvent(evt({type: "TEST", environment}), NOW),
+      ).toBe("ignored");
+    }
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("scénario OWASP-01 : compte prod + achat Stripe test (SANDBOX) → jamais payant en prod", async () => {
+    // Le même uid vit en prod ET en staging (Auth partagée : le compte prod
+    // s'est connecté sur le staging public). Avant le correctif, le routage
+    // « base qui porte le doc, prod d'abord » écrivait le palier en PROD.
+    seedIn(prodDb);
+    seedIn(stagingDb);
+
+    for (const type of ["INITIAL_PURCHASE", "RENEWAL", "PRODUCT_CHANGE"]) {
+      await handleRevenueCatEvent(
+        evt({type, environment: "SANDBOX", event_timestamp_ms: NOW}),
+        NOW,
+      );
+    }
+
+    const prod = prodDb.peek(`landlords/${UID}`);
+    expect(prod?.subscriptionTier).toBe("free");
+    expect(prod?.proEntitlementActive).toBeUndefined();
+    expect(prod?.entitlements).toBeUndefined();
+    expect(prod?.planLevel).toBeUndefined();
   });
 });

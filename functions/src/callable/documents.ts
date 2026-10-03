@@ -42,7 +42,7 @@ import {
   asBag,
   dataOrFail,
   optionalString,
-  requireAuthUid,
+  requireVerifiedUid,
   requireString,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
@@ -260,7 +260,7 @@ export function assertRealSizeWithinPlan(
 export const createDocument = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // v2 (FEAT-041b) : leaseId devient optionnel, propertyId apparaît en
@@ -407,7 +407,7 @@ export const createDocument = onCall(
 export const getDocumentDownloadUrl = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const documentId = requireString(data.documentId, "documentId");
 
@@ -461,7 +461,7 @@ export const getDocumentDownloadUrl = onCall(
 export const updateDocumentCategory = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const documentId = requireString(data.documentId, "documentId");
     const category = requireString(data.category, "category");
