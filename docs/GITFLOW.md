@@ -72,9 +72,13 @@ Reste :
    `claude/magical-jackson-d0116a`.
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
-3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+3. **Supprimer (doublons, 2026-10-03)** : `fix/summary-card-keyfigure-overflow` (PR #213 fermée,
+   doublon de #210 mergée) et `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif
+   que #210). Seule différence non reprise : la note `docs/SECURITY.md` sur les deux résolveurs
+   Stripe et le garde-fou `check-stripe-isolation.sh` — à reprendre dans une PR docs si utile.
+4. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
    à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (PR #211, jusqu'à son merge).
-4. Activer *Automatically delete head branches* (voir ci-dessus).
+5. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
 
