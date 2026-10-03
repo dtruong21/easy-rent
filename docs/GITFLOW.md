@@ -57,16 +57,24 @@ Fait le 2026-10-03 : 33 branches mergées supprimées (27 entièrement mergées 
 `develop`/`main`, 6 dont la PR était mergée) — confirmé par `git fetch --prune`.
 Reste :
 
-1. **Décider (aucune PR, contenu non vérifié)** :
-   `claude/amazing-ardinghelli-29501a` (correctifs anon-auth, retrait du trigger
-   `handleNewUser`), `claude/magical-jackson-d0116a` (correctifs nav, workflow APK
-   Android), `claude/nice-grothendieck-c66baf` (OG card SEO, refresh docs/state ;
-   probablement intégrée via PR #75), `feat/056-multi-tier-subscriptions`
-   (épinglage Flutter en CI, couleur des cartes ; aucun commit 056 sur `develop`).
-   Comparer leur contenu à `develop` avant suppression.
-2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+1. **Supprimer (contenu déjà dans `develop`, comparé le 2026-10-03)** :
+   `claude/amazing-ardinghelli-29501a` (seul commit hors `main` = retrait de
+   `handleNewUser`, déjà fait), `claude/nice-grothendieck-c66baf` (1 commit
+   `docs(state)`, `develop` a un état plus récent), `feat/056-multi-tier-subscriptions`
+   (61 commits hors `main` ; billing FEAT-056, FEAT-055, FEAT-044f, couleur d'identité,
+   cash flow, ADR 0003, épinglage Flutter présents dans `develop`).
+2. **Décider** : `claude/magical-jackson-d0116a` — 7 commits hors `main`, FEAT-024
+   déjà dans `develop` (Fastlane, signing, icônes, splash) et correctifs nav
+   remplacés par `49d6069`, **mais 6 fichiers n'existent que sur cette branche** :
+   `.github/workflows/mobile.yml` (build APK debug ; `docs/MOBILE.md` l'annonce
+   toujours), `docs/STORE_FORMS.md`, `docs/RUNBOOK_STORE_RELEASE.md`,
+   `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`,
+   `tool/generate_brand_assets.dart`. Les récupérer ou les abandonner, puis supprimer.
+   Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
+   comparer par contenu, pas par `git log`.
+3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
    à ne pas merger avant le DNS).
-3. Activer *Automatically delete head branches* (voir ci-dessus).
+4. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
 
