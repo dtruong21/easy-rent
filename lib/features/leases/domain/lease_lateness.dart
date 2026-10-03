@@ -51,14 +51,14 @@ bool isLeaseLate({
     return false;
   }
 
-  // Tronque à la partie date CIVILE LOCALE (cf. doc `_dateOnly` pour le
+  // Tronque à la partie date CIVILE LOCALE (cf. doc `leaseLocalDate` pour le
   // détail du bug de fuseau que cette conversion neutralise — `startDate`
   // relu depuis Firestore est un DateTime UTC, décalé d'un jour par rapport
   // au calendrier local selon l'heure de la journée).
   final dueMonth = _currentDueMonth(
-    startDate: _dateOnly(lease.startDate),
+    startDate: leaseLocalDate(lease.startDate),
     paymentDay: lease.paymentDay,
-    now: _dateOnly(now),
+    now: leaseLocalDate(now),
     graceDays: graceDays,
   );
 
@@ -74,8 +74,44 @@ bool isLeaseLate({
   return !coveredByAnyPayment;
 }
 
+/// Mois calendaire dont le loyer est actuellement dû et impayable-sans-retard
+/// dépassé, pour un bail démarrant [startDate] avec échéance [paymentDay].
+///
+/// Wrapper public de [_currentDueMonth] renvoyant le 1er jour du mois (midi
+/// local, pour éviter tout effet de bord de fuseau à l'affichage) — utilisable
+/// directement avec `FrenchDate.frenchMonthYear`. `null` si aucun mois n'est
+/// encore dû (bail trop récent / 1ʳᵉ échéance dans le délai de grâce).
+DateTime? leaseCurrentDueMonth({
+  required DateTime startDate,
+  required int paymentDay,
+  required DateTime now,
+  int graceDays = kDefaultLeaseGraceDays,
+}) {
+  final ym = _currentDueMonth(
+    startDate: leaseLocalDate(startDate),
+    paymentDay: paymentDay,
+    now: leaseLocalDate(now),
+    graceDays: graceDays,
+  );
+  if (ym == null) return null;
+  return DateTime(ym.year, ym.month, 1, 12);
+}
+
 /// Représente un mois calendaire (année + mois, sans jour).
 typedef _YearMonth = ({int year, int month});
+
+/// Date d'échéance du mois [month]/[year] pour un jour d'échéance [paymentDay],
+/// clampée au dernier jour du mois si celui-ci est plus court. Publique pour
+/// être réutilisée (indicateur de ponctualité des paiements).
+DateTime leaseDueDate({
+  required int paymentDay,
+  required int year,
+  required int month,
+}) {
+  final lastDay = _lastDayOfMonth(year, month);
+  final day = paymentDay > lastDay ? lastDay : paymentDay;
+  return DateTime(year, month, day);
+}
 
 /// Calcule le « mois dû courant » : le mois calendaire le plus récent tel
 /// que son échéance + [graceDays] est `<= now`, en partant du premier mois
@@ -128,11 +164,8 @@ _YearMonth _firstEligibleDueMonth(DateTime startDate, int paymentDay) {
 
 /// Date d'échéance du mois [ym] pour un jour d'échéance [paymentDay],
 /// clampé au dernier jour du mois si celui-ci est plus court.
-DateTime _dueDateFor(_YearMonth ym, int paymentDay) {
-  final lastDay = _lastDayOfMonth(ym.year, ym.month);
-  final day = paymentDay > lastDay ? lastDay : paymentDay;
-  return DateTime(ym.year, ym.month, day);
-}
+DateTime _dueDateFor(_YearMonth ym, int paymentDay) =>
+    leaseDueDate(paymentDay: paymentDay, year: ym.year, month: ym.month);
 
 /// Dernier jour du mois [month] de l'année [year] (28-31).
 int _lastDayOfMonth(int year, int month) {
@@ -156,8 +189,8 @@ bool _paymentCoversMonth(Payment payment, _YearMonth month) {
     month.month,
     _lastDayOfMonth(month.year, month.month),
   );
-  final periodStart = _dateOnly(payment.periodStart);
-  final periodEnd = _dateOnly(payment.periodEnd);
+  final periodStart = leaseLocalDate(payment.periodStart);
+  final periodEnd = leaseLocalDate(payment.periodEnd);
   return !periodStart.isAfter(lastDay) && !periodEnd.isBefore(firstDay);
 }
 
@@ -182,7 +215,10 @@ bool _paymentCoversMonth(Payment payment, _YearMonth month) {
 /// `.toLocal()` avant troncature neutralise ce décalage en ramenant tout
 /// sur le même calendrier civil (Europe/Paris) que celui utilisé à la
 /// saisie (date picker local) et par `DateTime.now()`.
-DateTime _dateOnly(DateTime dt) {
+/// Public (partagé avec `payment_punctuality.dart`) — même normalisation
+/// date-civile-locale requise partout où l'on lit `.year/.month/.day` d'une
+/// date relue depuis Firestore (instant UTC).
+DateTime leaseLocalDate(DateTime dt) {
   final local = dt.toLocal();
   return DateTime(local.year, local.month, local.day);
 }

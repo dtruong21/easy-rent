@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/ui/theme/app_icon_size.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
@@ -112,9 +114,11 @@ class LeaseReceiptsPage extends ConsumerWidget {
                     message: l10n.receiptsEmptyStateMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_go_payments_empty'),
-                      onPressed: () =>
-                          context.push('/leases/$leaseId/payments/new'),
-                      icon: const Icon(Icons.add),
+                      // Fiche du bail = liste des paiements + bouton
+                      // « générer la quittance » (le libellé dit « Voir les
+                      // paiements » : ouvrir un formulaire vide trompait).
+                      onPressed: () => context.push('/leases/$leaseId'),
+                      icon: const Icon(Icons.list_alt_outlined),
                       label: Text(l10n.receiptsEmptyStateGoPaymentsButton),
                     ),
                   );
@@ -139,6 +143,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
                   tenantFirstName: tenantFirstName,
                   propertyAddress: propertyAddress,
                   landlordFullName: landlordFullName,
+                  propertyColorKey: propertyColorKey,
                 );
               },
             ),
@@ -168,7 +173,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+            Icon(
+              Icons.error_outline,
+              size: AppIconSize.hero,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: 16),
             Text(
               l10n.receiptsListErrorTitle,

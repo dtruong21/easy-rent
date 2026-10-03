@@ -172,19 +172,23 @@ class _BannerContent extends StatelessWidget {
               const SizedBox(width: 8),
             ],
             if (propertyId != null)
-              GestureDetector(
-                onTap: () => context.push('/properties/$propertyId'),
-                child: Text(
-                  propertyAddress.isNotEmpty
-                      ? '$propertyName · $propertyAddress'
-                      : propertyName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                    color: theme.colorScheme.primary,
+              // Flexible : sans contrainte de largeur, l'ellipsis ne s'applique
+              // pas et une adresse longue débordait (mobile, 2026-09-28).
+              Flexible(
+                child: GestureDetector(
+                  onTap: () => context.push('/properties/$propertyId'),
+                  child: Text(
+                    propertyAddress.isNotEmpty
+                        ? '$propertyName · $propertyAddress'
+                        : propertyName,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      color: theme.colorScheme.primary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               )
             else

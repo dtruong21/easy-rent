@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/store_billing.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../auth/data/landlord_tier_repository.dart';
@@ -9,14 +10,10 @@ import '../../../auth/domain/plan_level.dart';
 import '../../../profile/presentation/widgets/section_header.dart';
 import '../../application/manage_subscription_controller.dart';
 import '../../data/subscription_repository.dart';
+import '../pro_pricing_cta.dart' show mobileStores;
 import 'plan_level_label.dart';
 import 'subscription_cancel_dialog.dart';
 import 'subscription_status_views.dart';
-
-/// Origines d'abonnement gérées par le store natif (résiliation IAP hors
-/// périmètre v1, cf. plan FEAT-044f §Hors périmètre — deep-link système
-/// `showManageSubscriptions`, non implémenté ici).
-const _mobileStores = {'app_store', 'play_store'};
 
 /// Section « Abonnement Baillan Pro » de `/profile` (FEAT-044f).
 ///
@@ -25,7 +22,9 @@ const _mobileStores = {'app_store', 'play_store'};
 /// convention que `ProfileCrashReportingSection`).
 ///
 /// Rendu selon [LandlordTierSnapshot] (`landlordTierProvider`) :
-/// - `proStore` ∈ {app_store, play_store} → message info, pas de bouton ;
+/// - `proStore` ∈ [mobileStores] → message info, pas de bouton (résiliation
+///   IAP hors périmètre v1, cf. plan FEAT-044f §Hors périmètre — deep-link
+///   système `showManageSubscriptions`, non implémenté ici) ;
 /// - web (store `null`/inconnu inclus, cf. plan §R5 — ne jamais cacher le
 ///   chemin de résiliation à un abonné web) + `proWillRenew != false` →
 ///   « Actif — renouvellement le … » + bouton destructif « Résilier » →
@@ -33,6 +32,12 @@ const _mobileStores = {'app_store', 'play_store'};
 /// - web + `proWillRenew == false` → « Pro jusqu'au …, puis Gratuit » +
 ///   bouton « Réactiver » (pas de confirmation — action symétrique, non
 ///   destructive).
+///
+/// **Apps iOS/Android** ([isStoreApp]) : le statut et la résiliation d'un
+/// abonnement web restent, mais « Réactiver » et « Changer d'offre »
+/// disparaissent — reprendre une facturation Stripe ou changer d'offre depuis
+/// une app store serait un achat hors achat intégré (App Store 3.1.1, règle
+/// Paiements de Google Play).
 class SubscriptionSection extends ConsumerWidget {
   const SubscriptionSection({super.key});
 
@@ -45,7 +50,7 @@ class SubscriptionSection extends ConsumerWidget {
 
     final l10n = context.l10n;
     final isBusy = ref.watch(manageSubscriptionControllerProvider).isLoading;
-    final isMobileStore = _mobileStores.contains(snapshot?.proStore);
+    final isMobileStore = mobileStores.contains(snapshot?.proStore);
     // Grandfathering I3 (FEAT-056) : `level` est non-null dès lors que
     // `atLeast(PlanLevel.pro)` a déjà validé l'accès à cette section (le
     // garde ci-dessus retourne `SizedBox.shrink()` sinon).
@@ -65,7 +70,7 @@ class SubscriptionSection extends ConsumerWidget {
           ScheduledCancelView(
             expiresAt: snapshot.proExpiresAt,
             isBusy: isBusy,
-            onReactivate: () => _reactivate(context, ref),
+            onReactivate: isStoreApp ? null : () => _reactivate(context, ref),
             levelLabel: levelLabel,
           )
         else
@@ -74,7 +79,7 @@ class SubscriptionSection extends ConsumerWidget {
             isBusy: isBusy,
             onCancel: () => _confirmCancel(context, ref),
           ),
-        if (!isMobileStore) ...[
+        if (!isMobileStore && !isStoreApp) ...[
           const SizedBox(height: 8),
           TextButton(
             key: const Key('btn_subscription_change_plan'),

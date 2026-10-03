@@ -22,7 +22,8 @@
  * provisioning). Voir `functions/scripts/backfill_active_properties_count.ts`.
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
@@ -33,7 +34,7 @@ import {
   optionalNumber,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireString,
 } from "../utils/callable_helpers";
@@ -89,7 +90,7 @@ async function precomputeSeedCount(
 export const createProperty = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // --- Validation (miroir de la rule `properties/create` + du payload
@@ -172,7 +173,7 @@ export const createProperty = onCall(
       {min: 0},
     );
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const propertyRef = db.collection("properties").doc();
 
@@ -206,7 +207,7 @@ export const createProperty = onCall(
         );
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(propertyRef, {
         id: propertyRef.id,
         landlordId: uid,
@@ -252,7 +253,7 @@ export const createProperty = onCall(
       // qu'un increment (qui partirait de 0 et sous-compterait).
       if (hasCounter) {
         tx.update(landlordRef, {
-          activePropertiesCount: admin.firestore.FieldValue.increment(1),
+          activePropertiesCount: FieldValue.increment(1),
           updatedAt: now,
         });
       } else {
@@ -273,7 +274,7 @@ export const createProperty = onCall(
 export const createTenant = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // Validation (miroir de la rule `tenants/create` + du payload client
@@ -304,7 +305,7 @@ export const createTenant = onCall(
     const guarantorEmail = optionalString(data.guarantorEmail, "guarantorEmail");
     const guarantorPhone = optionalString(data.guarantorPhone, "guarantorPhone");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const tenantRef = db.collection("tenants").doc();
 
@@ -330,7 +331,7 @@ export const createTenant = onCall(
         throw new HttpsError("resource-exhausted", errorCodeFor("tenants"));
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(tenantRef, {
         id: tenantRef.id,
         landlordId: uid,
@@ -356,7 +357,7 @@ export const createTenant = onCall(
       });
       if (hasCounter) {
         tx.update(landlordRef, {
-          activeTenantsCount: admin.firestore.FieldValue.increment(1),
+          activeTenantsCount: FieldValue.increment(1),
           updatedAt: now,
         });
       } else {

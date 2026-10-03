@@ -17,6 +17,7 @@ import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_matrix.g.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_section.dart';
+import '../../charge_regularization/presentation/widgets/charge_statement_history_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../profile/application/landlord_profile_provider.dart';
@@ -35,6 +36,7 @@ import '../domain/lease_submit_error.dart';
 import 'lease_submit_error_l10n.dart';
 import 'lease_type_l10n.dart';
 import 'widgets/close_lease_dialog.dart';
+import 'widgets/payment_reminder_button.dart';
 
 final _log = Logger('LeaseDetailPage');
 
@@ -134,24 +136,15 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Charger le contexte nécessaire au bouton de partage des quittances.
     final asyncTenant = ref.watch(tenantDetailProvider(lease.tenantId));
     final asyncProperty = ref.watch(propertyDetailProvider(lease.propertyId));
-    final asyncProfile = ref.watch(landlordProfileProvider);
 
     // Extraire les valeurs dès qu'elles sont disponibles — null sinon
     // (le bouton de partage se désactive gracieusement).
     final tenantEmail = asyncTenant.valueOrNull?.email;
-    final tenantFirstName = asyncTenant.valueOrNull?.firstName ?? '';
-    final tenantLastName = asyncTenant.valueOrNull?.lastName ?? '';
-    final tenantFullName = '$tenantFirstName $tenantLastName'.trim();
-    // Adresse COMPLÈTE : `address` ne porte en pratique que la rue, le code
-    // postal et la ville vivant dans des champs séparés du bien. Elle part
-    // dans le PDF de régularisation de charges (champ « Logement : ») et dans
-    // le texte de partage (cf. property_address.dart).
     final property = asyncProperty.valueOrNull;
-    final propertyAddress = composePropertyAddress(
-      address: property?.address,
-      postalCode: property?.postalCode,
-      city: property?.city,
-    );
+    // FEAT-031 : contexte nécessaire au bouton de relance de paiement
+    // (locataire complet, nom du bailleur, adresse composée du bien).
+    final tenant = asyncTenant.valueOrNull;
+    final landlordProfile = ref.watch(landlordProfileProvider).valueOrNull;
     // Couleur d'identité (FEAT-057) : le bien est déjà chargé ci-dessus pour
     // l'adresse — aucune lecture supplémentaire pour la propager aux
     // sections Paiements/Quittances de cette même page.
@@ -161,8 +154,6 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
             stored: property.colorKey,
           )
         : null;
-    final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
-    final landlordAddress = asyncProfile.valueOrNull?.address ?? '';
 
     // FEAT-028 : le retard est calculé au niveau de la liste (l'info
     // paiement n'est pas portée par le Lease seul). On réutilise le cache
@@ -203,11 +194,6 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           builder: (_) => ChargeRegularizationDialog(
             leaseId: lease.id,
             propertyId: lease.propertyId,
-            landlordFullName: landlordFullName,
-            landlordAddress: landlordAddress,
-            tenantFullName: tenantFullName,
-            tenantFirstName: tenantFirstName,
-            propertyAddress: propertyAddress,
             tenantEmail: tenantEmail,
           ),
         );
@@ -233,20 +219,36 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StatusCard(lease: lease, isLate: isLate),
+            if (isLate &&
+                tenant != null &&
+                landlordProfile != null &&
+                property != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: PaymentReminderButton(
+                  lease: lease,
+                  tenant: tenant,
+                  landlordFullName: landlordProfile.fullName ?? '',
+                  propertyAddress: composePropertyAddress(
+                    address: property.address,
+                    postalCode: property.postalCode,
+                    city: property.city,
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             // FEAT-030 : remontée juste après le statut — la régularisation
             // des charges était auparavant enterrée après _InfoCard (3ᵉ
             // carte), peu visible pour qui arrive par navigation normale
             // (pas via le raccourci liste ci-dessus).
-            ChargeRegularizationSection(
-              lease: lease,
-              landlordFullName: landlordFullName,
-              landlordAddress: landlordAddress,
-              tenantFullName: tenantFullName,
-              tenantFirstName: tenantFirstName,
-              propertyAddress: propertyAddress,
-              tenantEmail: tenantEmail,
-            ),
+            ChargeRegularizationSection(lease: lease, tenantEmail: tenantEmail),
+            const SizedBox(height: 16),
+            // Historique des décomptes figés (FEAT-033 Task 9) — pas gaté par
+            // les mêmes conditions PRO/légal que la section ci-dessus : un
+            // décompte déjà figé reste consultable même si le bail ou
+            // l'abonnement changent ensuite. Ne s'affiche que s'il existe au
+            // moins un décompte.
+            ChargeStatementHistorySection(leaseId: lease.id),
             const SizedBox(height: 16),
             _InfoCard(lease: lease, propertyColorKey: propertyColorKey),
             const SizedBox(height: 16),
@@ -261,6 +263,8 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
             ),
             const SizedBox(height: 16),
             DocumentsSection(leaseId: lease.id),
+            const SizedBox(height: 16),
+            _EtatDesLieuxTile(leaseId: lease.id),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)
@@ -349,6 +353,31 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
         ),
       );
     }
+  }
+}
+
+/// Tuile d'accès à la liste des états des lieux du bail (FEAT-037, tâche 7).
+///
+/// Patron `_ReceiptsSummaryEntry` (`receipts_list_section.dart`) simplifié :
+/// pas de résumé chiffré ici, juste l'accès à
+/// `/leases/:id/etat-des-lieux` — la liste complète affiche déjà le compte et
+/// le bouton PDF par ligne.
+class _EtatDesLieuxTile extends StatelessWidget {
+  const _EtatDesLieuxTile({required this.leaseId});
+
+  final String leaseId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        key: const Key('tile_etat_des_lieux'),
+        leading: const Icon(Icons.fact_check_outlined),
+        title: Text(context.l10n.edlListTitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/leases/$leaseId/etat-des-lieux'),
+      ),
+    );
   }
 }
 

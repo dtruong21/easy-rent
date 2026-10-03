@@ -13,6 +13,71 @@
 > instructions d'application à l'app Flutter ne valent plus. Les annotations
 > « caduc » datées 2026-09-06 signalent les points précis inversés.
 
+## État de la vitrine au lancement (2026-09-29) — à lire en premier
+
+Surface crawlable = `site/` (Astro, zéro JS exécutable). Mécanique décrite dans
+`site/README.md` (section « SEO — où vit quoi »). Résumé :
+
+- **`<head>` par page** : titre et description uniques, canonical (via
+  `getCanonicalUrl`), `robots` explicite (`index, follow, max-image-preview:large`
+  en prod ; `noindex, nofollow` en staging et sur la 404), Open Graph complet
+  (`og:site_name`, `og:locale` fr_FR, image 1200x630 + alt), Twitter Card
+  `summary_large_image`, `theme-color` lu dans `config/theme_tokens.json`, favicons
+  Baillan (SVG vectoriel + ICO + apple-touch-icon).
+- **JSON-LD** : accueil = `WebSite` + `SoftwareApplication` (offre gratuite
+  « jusqu'à 2 biens », `operatingSystem: Web`) + auteur `Organization` « Daki Studio »
+  (nom seul, aucune donnée légale). FAQ = `FAQPage`, généré depuis la même source
+  que le contenu affiché.
+- **hreflang : volontairement absent.** Site FR uniquement, une URL par page ; un
+  hreflang vers rien serait faux. À ajouter avec les URLs `/en/*` réelles.
+- **Sitemap** : `sitemap-index.xml` + `sitemap-0.xml` (5 URLs, sans la 404),
+  référencé par `robots.txt` en prod uniquement.
+- **Staging** : `X-Robots-Tag` + `robots.txt` Disallow + meta noindex.
+- **Performance** : polices EB Garamond en WOFF2 (~28 Ko chacune, contre ~62 Ko en
+  TTF), préchargement de Medium + Italic (celles du haut de page) au lieu de
+  Regular, cache 30 j sur `/fonts/**` et 7 j sur icônes/favicons (auparavant
+  `max-age=0` : chaque page revalidait polices et icônes). Zéro image raster
+  dans les pages, donc pas de risque LCP image ; le LCP est le `h1`.
+
+### Checklist de lancement (bloquants en gras)
+
+1. **Compléter `mentions-legales.astro`** (éditeur, forme juridique, SIREN,
+   directeur de la publication, contact) — la page dit elle-même de ne pas être
+   déployée en l'état. Puis retirer son encart `.todo`.
+2. **Retirer la règle `X-Robots-Tag: noindex, nofollow` de la cible `marketing`**
+   dans `firebase.json` (marquée TRANSITOIRE) — tant qu'elle est là, la prod est
+   invisible pour Google, quoi que disent les balises.
+3. Brancher `baillan.com` sur la cible `marketing` (runbook de bascule), rediriger
+   `www` vers l'apex.
+4. Search Console : propriété de domaine (DNS), soumettre
+   `https://baillan.com/sitemap-index.xml`, inspecter `/` et `/faq`.
+5. Tester l'aperçu social : LinkedIn Post Inspector, Sharing Debugger Facebook,
+   aperçu iMessage/WhatsApp — l'image doit répondre en 200 sur
+   `https://baillan.com/icons/og-image-1200x630.png`.
+6. Lighthouse mobile sur `/` en prod (LCP, CLS) : c'est la mesure qui dira si un
+   ajustement des polices de repli (`size-adjust`) est utile.
+7. **`web/index.html` (app)** référence encore
+   `https://baillan.com/icons/og-image-1200x630.png` (résolu par la vitrine
+   désormais) et `https://baillan.com/icons/Icon-512.png` (JSON-LD `logo`) qui, lui,
+   n'existera pas sur la vitrine. L'app est `noindex` ; à nettoyer avec la bascule
+   de domaine.
+
+### Recommandations non implémentées
+
+- **Carte OG** : l'image actuelle (fond encre, Cochin) date de FEAT-049 ; la
+  vitrine est papier/EB Garamond. À refaire dans la charte de la vitrine, texte
+  aligné sur le titre (« quittances, loyers, charges »).
+- **Contenu pour les requêtes hors marque** : la vitrine ne compte que 4 pages
+  indexables + la FAQ. Le levier SEO réel est éditorial : pages « modèle de quittance
+  de loyer », « régularisation des charges locatives », « rendement locatif net vs
+  brut », « délai de grâce / retard de loyer » (chacune sourcée sur la loi de 1989 et
+  le décret 87-713), liées depuis l'accueil et la FAQ.
+- **Polices de repli** : `size-adjust` / `ascent-override` sur un `@font-face` de
+  repli pour neutraliser le décalage au swap si Lighthouse montre du CLS.
+- **`AboutPage` / `Organization` enrichie** une fois la structure juridique créée.
+
+---
+
 > Synthèse de l'audit SEO (FEAT-049). Source de vérité pour l'implémentation.
 > **Fait structurant** : l'UI est rendue en **CanvasKit** (peinte dans un `<canvas>`).
 > Les crawlers n'indexent PAS le canvas → aujourd'hui, pour Google, chaque page

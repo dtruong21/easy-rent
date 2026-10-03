@@ -7,7 +7,8 @@
 // document n'est PAS archivé comme `document`/`receipt` Firestore en V1 —
 // il est généré à la volée à partir de données saisies et partagé
 // directement (Web Share), voir commentaire détaillé dans
-// `application/charge_regularization_share_controller.dart`.
+// `application/charge_statement_finalize_controller.dart` (flow de
+// partage général).
 
 import 'dart:typed_data';
 
@@ -18,6 +19,7 @@ import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
 import '../../../core/utils/pdf_brand_fonts.dart';
 import 'charge_regularization_balance.dart';
+import 'charge_statement.dart';
 
 /// Snapshot des données nécessaires pour rendre l'avis de régularisation.
 class ChargeRegularizationPdfData {
@@ -36,6 +38,26 @@ class ChargeRegularizationPdfData {
   final String propertyAddress;
   final ChargeRegularizationBalance balance;
   final DateTime generatedAt;
+
+  /// Construit les données PDF à partir d'un décompte figé (FEAT-033) — le
+  /// PDF re-rendu est identique à celui émis lors de la finalisation, car
+  /// entièrement dérivé des champs immuables de [s] (aucune source externe,
+  /// aucune re-synchronisation).
+  factory ChargeRegularizationPdfData.fromStatement(ChargeStatement s) {
+    return ChargeRegularizationPdfData(
+      landlordFullName: s.landlordFullName,
+      landlordAddress: s.landlordAddress,
+      tenantFullName: s.tenantFullName,
+      propertyAddress: s.propertyAddress,
+      balance: ChargeRegularizationBalance(
+        periodStart: s.periodStart,
+        periodEnd: s.periodEnd,
+        provisionsCollectedCents: s.provisionsCollectedCents,
+        actualExpensesCents: s.actualExpensesCents,
+      ),
+      generatedAt: s.createdAt,
+    );
+  }
 }
 
 /// Rend le PDF de l'avis de régularisation (A4 portrait, EB Garamond

@@ -3,6 +3,7 @@ import {describe, expect, it} from "vitest";
 import {STAGING_ORIGIN} from "../utils/db_router";
 import {
   PROD_ORIGINS,
+  resolveStripeKeyForDb,
   resolveStripeKeyOrThrow,
   stripeEnvForOrigin,
   type StripeEnv,
@@ -174,5 +175,39 @@ describe("cohérence avec db_router", () => {
   it("l'origine staging de db_router n'est jamais une origine live", () => {
     expect(stripeEnvForOrigin(STAGING_ORIGIN)).toBe<StripeEnv>("test");
     expect(PROD_ORIGINS).not.toContain(STAGING_ORIGIN);
+  });
+});
+
+// Arrêt d'une facturation existante (deleteAccount, résiliation depuis une app
+// native) : la clé suit la SEULE base routée du compte, jamais l'Origin
+// (décision 2026-09-30). L'allowlist d'Origin refusait des appels web
+// légitimes (URL Firebase Hosting de prod) ; la base, elle, ne peut valoir
+// `staging` que pour un compte de staging — #138 tient.
+describe("resolveStripeKeyForDb — clé par la base du compte", () => {
+  const LIVE = "sk_live_xxx";
+  const TEST = "sk_test_xxx";
+
+  it("base staging → clé test, jamais la live (#138)", () => {
+    expect(resolveStripeKeyForDb(true, LIVE, TEST)).toBe(TEST);
+  });
+
+  it("base prod → clé live", () => {
+    expect(resolveStripeKeyForDb(false, LIVE, TEST)).toBe(LIVE);
+  });
+
+  it("mêmes garde-fous de clé que le chemin web (fail-secure)", () => {
+    expect(() =>
+      resolveStripeKeyForDb(true, LIVE, ""),
+    ).toThrowError(/stripe_test_key_not_configured/);
+    expect(() =>
+      resolveStripeKeyForDb(false, "", TEST),
+    ).toThrowError(/stripe_live_key_not_configured/);
+    // Clé live collée dans le secret de test : jamais servie à une base staging.
+    expect(() =>
+      resolveStripeKeyForDb(true, LIVE, "sk_live_COLLEE"),
+    ).toThrowError(/stripe_key_mode_mismatch_test/);
+    expect(() =>
+      resolveStripeKeyForDb(false, "sk_test_COLLEE", TEST),
+    ).toThrowError(/stripe_key_mode_mismatch_live/);
   });
 });

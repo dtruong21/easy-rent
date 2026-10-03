@@ -36,6 +36,11 @@
 	     Compliance » à chaque upload App Store Connect (FEAT-024). -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- file_picker embarque du code d'accès aux photos : sans texte
+	     d'explication, l'envoi App Store Connect peut être refusé
+	     (ITMS-90683), même si l'app n'ouvre que le sélecteur de fichiers. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Baillan accède à vos photos uniquement quand vous choisissez d'ajouter un document ou un justificatif.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<!-- Callbacks OAuth firebase_auth signInWithProvider (FEAT-024).

@@ -17,8 +17,8 @@ import '../../auth/domain/subscription_tier.dart';
 import 'widgets/plan_level_label.dart';
 
 /// Origines d'abonnement gérées par le store natif — changement de palier
-/// impossible depuis le web (FEAT-056 §4.4, même liste que
-/// `subscription_section.dart`).
+/// impossible depuis le web (FEAT-056 §4.4). Liste UNIQUE, partagée par
+/// `SubscriptionSection` et `DeleteAccountSubscriptionNotice`.
 const mobileStores = {'app_store', 'play_store'};
 
 bool isCurrentLevel(PlanEntitlement plan, String levelId) =>

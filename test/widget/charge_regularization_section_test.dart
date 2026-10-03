@@ -165,11 +165,6 @@ Widget _buildSection(
       home: Scaffold(
         body: ChargeRegularizationSection(
           lease: lease,
-          landlordFullName: 'Marie Martin',
-          landlordAddress: '1 rue de Paris, 75001 Paris',
-          tenantFullName: 'Jean Dupont',
-          tenantFirstName: 'Jean',
-          propertyAddress: '2 rue de Lyon, 69001 Lyon',
           tenantEmail: 'jean.dupont@example.com',
         ),
       ),

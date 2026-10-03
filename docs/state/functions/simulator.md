@@ -11,7 +11,7 @@ Signature `{name, notes, purchasePriceCents, ...}` (financials) → `{id, create
 - **Pourquoi callable** : jusqu'ici les scénarios étaient quota-free (le client écrivait direct) ; seul le simulateur lui était ouvert aux anonymes. Dès lors que le nombre **différencie** Pro/Max/Ultra, un plafond non-vérifié serveur serait contournable (écrit le document soi-même, bypasse les rules). Les Firestore Rules ne savent ni compter ni agréger → pas d'agrégation possible au create → callable obligatoire. L'ancienne `investment_scenarios/create` est passée à `if false`.
 - **Validation** : tout le parsing client de `parseScenarioInputs` — c'est lui qui validait avant dans les rules. Payloads financiers (en centimes), montants positifs, durée et taux dans les bornes, `name` ≤ 120 chars.
 - **Quota live, pas de compteur** : compté par `count()` live sur `investment_scenarios where deletedAt==null` pour le UID. Volume petit et borné (max 30 en Ultra) ; soft-delete universel → zéro compteur à entretenir.
-- **Routing Firestore** (ADR 0003) : via `dbForRequest(request)`.
+- **Routing Firestore** (ADR 0003) : via `await dbForRequest(request)` — web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 - **Idempotence** : deux appels simultanés à la borne peuvent créer un doc de trop (race condition acceptée, volume borné, non lucratif, se résorbe à la suppression suivante — même pattern que documents).
 
 ## Trigger

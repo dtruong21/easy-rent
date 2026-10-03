@@ -31,10 +31,11 @@
 **Accès Firestore côté Flutter (ADR 0003)** : **via `firestoreProvider`** (`lib/core/config/firestore_provider.dart`) **uniquement**. `FirebaseFirestore.instance` interdit hors `main.dart` — un check CI (`scripts/check-db-isolation.sh`) l'impose. La règle sépare prod (base `(default)`) de staging web (base `staging`).
 
 **Helper functions (Firestore rules, Couche 1)** — default deny + allowlist :
-- `isOwner(uid)` : `auth.uid == document.landlordId`
+- `isOwner(uid)` : `auth.uid == document.landlordId` ET (`isAnonymous()` OU `hasTrustedEmail()`) — un compte email/mot de passe NON vérifié n'est propriétaire de rien (OWASP-02)
 - `isActive(rsc)` : `resource.data.deletedAt == null`
 - `preservesImmutables(rsc)` : garde-fou mutations
-- `isFullyAuthed()` : `isSignedIn() && !isAnonymous()` (email/pwd, Google, Apple)
+- `hasTrustedEmail()` : `request.auth.token.get('email_verified', false) == true` OU `sign_in_provider in ['google.com','apple.com']` (OWASP-02)
+- `isFullyAuthed()` : `isSignedIn() && !isAnonymous() && hasTrustedEmail()` (email/pwd **vérifié**, Google, Apple)
 - `isAnonymous()` : claim `firebase.sign_in_provider == 'anonymous'` (BAILLAN-M1)
 - `isSignedIn()` : auth non-null (anon inclus)
 

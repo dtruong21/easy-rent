@@ -19,6 +19,7 @@
  * en mode forfait (un forfait ne se ventile pas).
  */
 
+import type * as FirestoreModule from "firebase-admin/firestore";
 import type {CallableRequest} from "firebase-functions/v2/https";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
@@ -133,15 +134,18 @@ vi.mock("firebase-admin", () => {
     },
   });
 
-  return {
-    firestore: Object.assign(fakeFirestore, {
-      FieldValue: {
-        serverTimestamp: () => "__server-timestamp__",
-        increment: (n: number) => ({__increment: n}),
-      },
-    }),
-  };
+  return {firestore: fakeFirestore};
 });
+
+// Ce fichier a son propre store ad hoc (sentinel `{__increment}`), distinct
+// de la FakeFirestore : il surcharge le mock global de `setupFiles`.
+vi.mock("firebase-admin/firestore", async (importOriginal) => ({
+  ...(await importOriginal<typeof FirestoreModule>()),
+  FieldValue: {
+    serverTimestamp: () => "__server-timestamp__",
+    increment: (n: number) => ({__increment: n}),
+  },
+}));
 
 // Import après le mock (hoisted par vitest de toute façon, mais explicite).
 import {
@@ -150,9 +154,9 @@ import {
   updateLease,
 } from "../callable/lease_payment";
 
-const LANDLORD_UID = "landlord-1";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
-type AuthData = NonNullable<CallableRequest["auth"]>;
+const LANDLORD_UID = "landlord-1";
 
 /**
  * Construit un `CallableRequest<T>` minimal pour `CallableFunction.run(...)`.
@@ -163,7 +167,7 @@ type AuthData = NonNullable<CallableRequest["auth"]>;
 function callableRequest<T>(uid: string, data: T): CallableRequest<T> {
   return {
     data,
-    auth: {uid, token: {} as AuthData["token"], rawToken: ""},
+    auth: {uid, token: VERIFIED_TOKEN, rawToken: ""},
     rawRequest: {} as CallableRequest<T>["rawRequest"],
     acceptsStreaming: false,
   };

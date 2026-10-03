@@ -1,0 +1,242 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../receipts/data/web_share_service_bridge.dart';
+import '../data/charge_statement_repository.dart';
+import '../domain/charge_regularization_balance.dart';
+import '../domain/charge_regularization_pdf_renderer.dart';
+import '../domain/charge_regularization_share_error_reason.dart';
+import '../domain/charge_regularization_share_payload_builder.dart';
+import '../domain/charge_regularization_share_state.dart';
+import '../domain/charge_statement.dart';
+
+final _log = Logger('ChargeStatementFinalizeController');
+
+/// Signature de [renderChargeRegularizationPdf] — indirection Riverpod pour
+/// permettre aux tests d'injecter un renderer factice (le rendu réel
+/// embarque des polices et est coûteux à exécuter dans une suite unitaire,
+/// cf. FEAT-033 task-7 brief : "ne pas rendre un vrai PDF dans le test").
+typedef ChargeRegularizationPdfRenderer =
+    Future<Uint8List> Function(ChargeRegularizationPdfData data);
+
+final chargeRegularizationPdfRendererProvider =
+    Provider<ChargeRegularizationPdfRenderer>(
+      (ref) => renderChargeRegularizationPdf,
+    );
+
+/// Orchestration finalisation + génération PDF (depuis snapshot figé) +
+/// partage + marquage "envoyé" de l'avis de régularisation des charges
+/// (FEAT-033).
+///
+/// Contrairement à l'ancien flux volatile (V1.2, FEAT-029, supprimé en
+/// revue finale FEAT-033), ce contrôleur :
+/// - appelle `finalize` AVANT de rendre le PDF — un décompte `ChargeStatement`
+///   immuable est créé côté serveur (callable `finalizeChargeRegularization`,
+///   Task 6/7) ;
+/// - re-rend le PDF exclusivement à partir de ce snapshot figé
+///   ([ChargeRegularizationPdfData.fromStatement]), jamais depuis les valeurs
+///   de formulaire en direct ;
+/// - marque le décompte comme envoyé (`markAsSent`) après un partage réussi.
+///
+/// Réutilise la mécanique de partage (Web Share API + fallback téléchargement
+/// + mailto:, mêmes exceptions) de l'ancien flux volatile (V1.2, FEAT-029,
+/// supprimé en revue finale FEAT-033).
+class ChargeStatementFinalizeController
+    extends StateNotifier<ChargeRegularizationShareState> {
+  ChargeStatementFinalizeController(this._ref)
+    : super(const ChargeRegularizationShareState.idle());
+
+  final Ref _ref;
+
+  /// Finalise le décompte (snapshot serveur immuable), rend le PDF depuis ce
+  /// snapshot, puis partage et marque le décompte comme envoyé.
+  ///
+  /// Le décompte figé (`statement`, relu via `getById` juste après
+  /// `finalize()`) est l'**unique** source de vérité pour tout champ
+  /// d'identité rendu ou partagé (PDF, sujet/corps du message, titre du
+  /// partage natif) — nom du bailleur, prénom du locataire, adresse du bien,
+  /// etc. Cette méthode n'accepte donc AUCUN de ces champs en paramètre : ils
+  /// ne pourraient que diverger du snapshot figé entre le remplissage du
+  /// formulaire et l'appel (profil bailleur modifié entre-temps, préremplissage
+  /// obsolète), ce qui casserait la garantie légale "preuve figée"
+  /// (art. 23 loi du 6 juillet 1989). Seul [tenantEmail] reste un paramètre :
+  /// le décompte ne porte pas d'email (mailto:/markAsSent uniquement).
+  Future<void> finalizeAndShare({
+    required String leaseId,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+    required int actualExpensesCents,
+    required String actualExpensesSource,
+    required List<Map<String, dynamic>> lineItems,
+    String? tenantEmail,
+  }) async {
+    state = const ChargeRegularizationShareState.preparing();
+
+    try {
+      final repo = _ref.read(chargeStatementRepositoryProvider);
+
+      final result = await repo.finalize(
+        leaseId: leaseId,
+        periodStart: periodStart,
+        periodEnd: periodEnd,
+        actualExpensesCents: actualExpensesCents,
+        actualExpensesSource: actualExpensesSource,
+        lineItems: lineItems,
+      );
+      final statement = await repo.getById(result.statementId);
+
+      await _renderShareAndMarkSent(
+        statement: statement,
+        // Toujours issu du snapshot figé — jamais d'un paramètre de
+        // formulaire (cf. doc ci-dessus).
+        tenantFirstName: statement.tenantFirstName,
+        landlordFullName: statement.landlordFullName,
+        tenantEmail: tenantEmail,
+      );
+    } on ShareAbortedException {
+      _log.info('partage annulé par l\'utilisateur (AbortError)');
+      state = const ChargeRegularizationShareState.idle();
+    } on ShareReceiptException catch (e, st) {
+      _log.warning('erreur de partage', e, st);
+      state = ChargeRegularizationShareState.error(
+        message: ChargeRegularizationShareErrorReason.shareFailed.name,
+      );
+    } catch (e, st) {
+      _log.severe('erreur inattendue finalisation/génération/partage', e, st);
+      state = ChargeRegularizationShareState.error(
+        message: ChargeRegularizationShareErrorReason.unknown.name,
+      );
+    }
+  }
+
+  /// Re-partage un décompte déjà finalisé, sans re-finaliser — utilisé par
+  /// l'historique (re-partage d'un décompte existant, Task 9). Le PDF est
+  /// re-rendu à l'identique depuis le snapshot figé [s].
+  Future<void> shareExisting(
+    ChargeStatement s, {
+    String? tenantEmail,
+    String? tenantFirstName,
+    String? landlordFullName,
+  }) async {
+    state = const ChargeRegularizationShareState.preparing();
+
+    try {
+      await _renderShareAndMarkSent(
+        statement: s,
+        tenantFirstName: tenantFirstName ?? s.tenantFirstName,
+        landlordFullName: landlordFullName ?? s.landlordFullName,
+        tenantEmail: tenantEmail,
+      );
+    } on ShareAbortedException {
+      _log.info('re-partage annulé par l\'utilisateur (AbortError)');
+      state = const ChargeRegularizationShareState.idle();
+    } on ShareReceiptException catch (e, st) {
+      _log.warning('erreur de re-partage', e, st);
+      state = ChargeRegularizationShareState.error(
+        message: ChargeRegularizationShareErrorReason.shareFailed.name,
+      );
+    } catch (e, st) {
+      _log.severe('erreur inattendue re-partage', e, st);
+      state = ChargeRegularizationShareState.error(
+        message: ChargeRegularizationShareErrorReason.unknown.name,
+      );
+    }
+  }
+
+  /// Rend le PDF depuis [statement] (snapshot figé), le partage, puis marque
+  /// le décompte comme envoyé une fois le partage réussi. Laisse les
+  /// exceptions se propager — chaque appelant public gère ses propres
+  /// transitions d'état (idle/error).
+  Future<void> _renderShareAndMarkSent({
+    required ChargeStatement statement,
+    required String tenantFirstName,
+    required String landlordFullName,
+    String? tenantEmail,
+  }) async {
+    final webShare = _ref.read(webShareServiceProvider);
+    final pdfRenderer = _ref.read(chargeRegularizationPdfRendererProvider);
+
+    final pdfBytes = await pdfRenderer(
+      ChargeRegularizationPdfData.fromStatement(statement),
+    );
+
+    final payload = ChargeRegularizationSharePayloadBuilder.build(
+      balance: ChargeRegularizationBalance(
+        periodStart: statement.periodStart,
+        periodEnd: statement.periodEnd,
+        provisionsCollectedCents: statement.provisionsCollectedCents,
+        actualExpensesCents: statement.actualExpensesCents,
+      ),
+      tenantFirstName: tenantFirstName,
+      propertyAddress: statement.propertyAddress,
+      landlordFullName: landlordFullName,
+    );
+
+    bool usedNativeShare;
+
+    if (webShare.canShareFiles()) {
+      await webShare.sharePdf(
+        title: payload.subject,
+        text: payload.body,
+        pdfBytes: pdfBytes,
+        filename: payload.filename,
+      );
+      if (tenantEmail != null && tenantEmail.isNotEmpty) {
+        await webShare.copyToClipboard(tenantEmail);
+      }
+      usedNativeShare = true;
+    } else {
+      // Fallback : data URL + téléchargement, puis mailto: si un email
+      // locataire est disponible (même mécanisme que l'ancien flux volatile
+      // V1.2, FEAT-029, supprimé en revue finale FEAT-033).
+      final base64 = base64Encode(pdfBytes);
+      final dataUrl = 'data:application/pdf;base64,$base64';
+      await launchUrl(Uri.parse(dataUrl), mode: LaunchMode.externalApplication);
+
+      if (tenantEmail != null && tenantEmail.isNotEmpty) {
+        final mailtoUri = Uri(
+          scheme: 'mailto',
+          path: tenantEmail,
+          queryParameters: {'subject': payload.subject, 'body': payload.body},
+        );
+        await launchUrl(mailtoUri, mode: LaunchMode.externalApplication);
+      }
+      usedNativeShare = false;
+    }
+
+    // Un décompte annulé (isVoided) ne doit jamais être re-marqué "envoyé" —
+    // `markChargeStatementAsSent` lève `failed-precondition` côté serveur sur
+    // un décompte voidé (functions/src/callable/charge_statements.ts), ce qui
+    // ferait échouer ce partage avec une erreur alors que le partage
+    // lui-même (permettre au bailleur de re-télécharger la preuve annulée
+    // pour ses archives) a bien réussi.
+    if (!statement.isVoided) {
+      await _ref
+          .read(chargeStatementRepositoryProvider)
+          .markAsSent(id: statement.id, email: tenantEmail);
+    }
+
+    _log.info(
+      'décompte de régularisation partagé et marqué envoyé '
+      '(id=${statement.id}, native=$usedNativeShare, voided=${statement.isVoided})',
+    );
+    state = ChargeRegularizationShareState.shared(
+      usedNativeShare: usedNativeShare,
+    );
+  }
+
+  /// Remet le controller à l'état idle.
+  void reset() => state = const ChargeRegularizationShareState.idle();
+}
+
+/// Provider autoDispose du contrôleur de finalisation — [autoDispose]
+/// garantit un state propre entre deux ouvertures du dialog.
+final chargeStatementFinalizeControllerProvider =
+    StateNotifierProvider.autoDispose<
+      ChargeStatementFinalizeController,
+      ChargeRegularizationShareState
+    >((ref) => ChargeStatementFinalizeController(ref));

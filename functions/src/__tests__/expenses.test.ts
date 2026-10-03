@@ -13,6 +13,7 @@ import {
 } from "../callable/expenses";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // ----------------------------------------------------------------------------
 // Mock `firebase-admin` — cf. helpers/fake_firestore.ts pour la justification
@@ -34,7 +35,7 @@ let fakeDb: FakeFirestore;
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }

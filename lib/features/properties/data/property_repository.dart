@@ -179,6 +179,7 @@ class FirestorePropertyRepository implements PropertyRepository {
         currentRentLabel:
             '${MoneyFormat.formatEurosFromCents(rent + charges)} CC / mois',
         currentRentHcCents: rentHcCents,
+        currentRentCcCents: rentHcCents == null ? null : rent + charges,
       );
     }).toList();
   }

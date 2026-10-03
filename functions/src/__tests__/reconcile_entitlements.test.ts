@@ -10,9 +10,12 @@
  *     PALIER d'un compte déjà payant, dans les deux sens.
  */
 
+import {Timestamp} from "firebase-admin/firestore";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
+import {rcEntitlementIdFor} from "../entitlements/plan";
 import {
+  entitlementStatesFromSubscriber,
   reconcileExpiredEntitlements,
   reconcileLandlord,
   type EntitlementStatesFetcher,
@@ -101,7 +104,7 @@ describe("reconcileLandlord — non-régression palier unique", () => {
     const doc = fakeDb.peek("landlords/u1");
     expect(doc?.subscriptionTier).toBe("paid");
     expect(doc?.planLevel).toBe("pro");
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_30D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_30D));
   });
 
   it("rien n'a bougé → unchanged", async () => {
@@ -169,7 +172,7 @@ describe("reconcileLandlord — correction de palier (FEAT-056)", () => {
     const doc = fakeDb.peek("landlords/u1");
     expect(doc?.subscriptionTier).toBe("paid"); // surtout pas `free`
     expect(doc?.planLevel).toBe("pro");
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_30D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_30D));
   });
 
   it("chevauchement : deux paliers actifs → le rang le plus élevé gagne", async () => {
@@ -281,5 +284,103 @@ describe("reconcileExpiredEntitlements", () => {
     expect(fakeDb.peek("landlords/ok")?.subscriptionTier).toBe("free");
     // 'boom' reste inchangé → sera retenté au prochain run.
     expect(fakeDb.peek("landlords/boom")?.subscriptionTier).toBe("paid");
+  });
+});
+
+// OWASP-01 — le cron ne doit ni accorder, ni prolonger, ni monter de palier à
+// partir d'un achat SANDBOX. L'API REST RevenueCat mélange achats prod et
+// sandbox pour un même App User ID : `subscriptions[<produit>].is_sandbox`
+// est le seul marqueur. Le cron n'opère que sur la base `(default)` — une
+// entrée sandbox n'a rien à y faire.
+describe("entitlementStatesFromSubscriber — achats sandbox ignorés (OWASP-01)", () => {
+  const PRO_ID = rcEntitlementIdFor("pro") as string;
+  const ULTRA_ID = rcEntitlementIdFor("ultra") as string;
+  const iso = (ms: number) => new Date(ms).toISOString();
+
+  it("entitlement adossé à un achat PRODUCTION → retenu", () => {
+    const states = entitlementStatesFromSubscriber({
+      entitlements: {
+        [PRO_ID]: {expires_date: iso(IN_30D), product_identifier: "pro_monthly"},
+      },
+      subscriptions: {pro_monthly: {is_sandbox: false}},
+    });
+    expect(states).toEqual({pro: {expiresMs: IN_30D}});
+  });
+
+  it("entitlement adossé à un achat SANDBOX → ignoré (jamais accordé/prolongé)", () => {
+    const states = entitlementStatesFromSubscriber({
+      entitlements: {
+        [PRO_ID]: {expires_date: iso(IN_60D), product_identifier: "pro_monthly"},
+      },
+      subscriptions: {pro_monthly: {is_sandbox: true}},
+    });
+    expect(states).toEqual({});
+  });
+
+  it("prod + sandbox sur deux paliers → seul le palier prod est retenu", () => {
+    const states = entitlementStatesFromSubscriber({
+      entitlements: {
+        [PRO_ID]: {expires_date: iso(IN_30D), product_identifier: "pro_monthly"},
+        [ULTRA_ID]: {
+          expires_date: iso(IN_60D),
+          product_identifier: "ultra_monthly",
+        },
+      },
+      subscriptions: {
+        pro_monthly: {is_sandbox: false},
+        ultra_monthly: {is_sandbox: true},
+      },
+    });
+    expect(states).toEqual({pro: {expiresMs: IN_30D}});
+  });
+
+  it("produit absent de `subscriptions` → traité comme prod (aucune rétrogradation à l'aveugle)", () => {
+    const states = entitlementStatesFromSubscriber({
+      entitlements: {
+        [PRO_ID]: {expires_date: iso(IN_30D), product_identifier: "pro_monthly"},
+      },
+    });
+    expect(states).toEqual({pro: {expiresMs: IN_30D}});
+  });
+
+  it("entitlement étranger ou sans échéance → ignoré (inchangé)", () => {
+    const states = entitlementStatesFromSubscriber({
+      entitlements: {
+        "Unknown Entitlement": {expires_date: iso(IN_30D)},
+        [PRO_ID]: {expires_date: null},
+      },
+    });
+    expect(states).toEqual({});
+  });
+
+  it("subscriber absent → aucun état", () => {
+    expect(entitlementStatesFromSubscriber(undefined)).toEqual({});
+    expect(entitlementStatesFromSubscriber({})).toEqual({});
+  });
+
+  it("★ bout en bout : un Ultra sandbox ne monte pas un compte prod Pro et ne prolonge rien", async () => {
+    seedActivePro("prod-pro", IN_30D);
+    const body = {
+      entitlements: {
+        [PRO_ID]: {expires_date: iso(IN_30D), product_identifier: "pro_monthly"},
+        [ULTRA_ID]: {
+          expires_date: iso(IN_60D),
+          product_identifier: "ultra_monthly",
+        },
+      },
+      subscriptions: {
+        pro_monthly: {is_sandbox: false},
+        ultra_monthly: {is_sandbox: true},
+      },
+    };
+    const res = await reconcileExpiredEntitlements(
+      fakeDb,
+      () => Promise.resolve(entitlementStatesFromSubscriber(body)),
+      NOW,
+    );
+    expect(res.levelChanged).toBe(0);
+    const doc = fakeDb.peek("landlords/prod-pro");
+    expect(doc?.subscriptionTier).toBe("paid");
+    expect(doc?.planLevel).not.toBe("ultra");
   });
 });

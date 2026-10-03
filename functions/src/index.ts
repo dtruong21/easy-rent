@@ -77,8 +77,14 @@ export {
   markReceiptAsSent,
 } from "./callable/receipts";
 export {
+  finalizeChargeRegularization,
+  voidChargeStatement,
+  markChargeStatementAsSent,
+} from "./callable/charge_statements";
+export {
   createDocument,
   getDocumentDownloadUrl,
+  updateDocumentCategory,
 } from "./callable/documents";
 export {
   createExpense,
@@ -88,8 +94,10 @@ export {
 export {createScenario} from "./callable/scenarios";
 export {finalizeAnonymousUpgrade} from "./callable/finalize_anonymous_upgrade";
 export {deleteAccount} from "./callable/delete_account";
+export {exportAccountData} from "./callable/export_account_data";
 export {createCheckoutSession} from "./callable/create_checkout_session";
 export {manageSubscription} from "./callable/manage_subscription";
+export {createEtatDesLieux} from "./callable/etat_des_lieux";
 
 // ---------- HTTP (webhooks) ----------
 export {revenueCatWebhook} from "./http/revenuecat_webhook";
@@ -97,3 +105,4 @@ export {revenueCatWebhook} from "./http/revenuecat_webhook";
 // ---------- Scheduled ----------
 export {cleanupExpiredAnon} from "./scheduled/cleanup_expired_anon";
 export {reconcileEntitlements} from "./scheduled/reconcile_entitlements";
+export {purgeExpiredReceipts} from "./scheduled/purge_expired_receipts";

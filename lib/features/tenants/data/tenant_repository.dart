@@ -290,6 +290,7 @@ class FirestoreTenantRepository implements TenantRepository {
         currentPropertyName: lease['propertyName'] as String?,
         activeLeasePeriodLabel: periodLabel,
         activeLeaseRentCents: lease['rentAmountCents'] as int?,
+        activeLeaseChargesCents: lease['chargesAmountCents'] as int?,
         currentPropertyId: propertyId,
         currentPropertyColorKey: propertyId != null
             ? colorKeyByPropertyId[propertyId]
@@ -328,6 +329,7 @@ class FirestoreTenantRepository implements TenantRepository {
             .toIso8601String(),
         'status': raw['status'],
         'rent_amount_cents': raw['rentAmountCents'],
+        'payment_day': raw['paymentDay'],
       };
     }).toList();
   }

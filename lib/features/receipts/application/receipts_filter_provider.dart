@@ -44,6 +44,41 @@ final receiptAvailableYearsProvider = Provider.family
     });
 
 // ---------------------------------------------------------------------------
+// Prédicat + compteurs statut
+// ---------------------------------------------------------------------------
+
+/// Vrai si [r] correspond au filtre de statut (règles inchangées).
+bool receiptMatchesStatus(Receipt r, ReceiptStatusFilter f) => switch (f) {
+  ReceiptStatusFilter.all => true,
+  ReceiptStatusFilter.sent => r.hasBeenShared && !r.isVoided,
+  ReceiptStatusFilter.paid => r.paymentIds.isNotEmpty && !r.isVoided,
+  ReceiptStatusFilter.voided => r.isVoided,
+};
+
+/// Compteurs par statut, restreints à [year] quand il est défini.
+Map<ReceiptStatusFilter, int> receiptStatusCounts(
+  List<Receipt> receipts,
+  int? year,
+) {
+  final inYear = year == null
+      ? receipts
+      : receipts.where((r) => r.periodStart.year == year).toList();
+  return {
+    for (final f in ReceiptStatusFilter.values)
+      f: inYear.where((r) => receiptMatchesStatus(r, f)).length,
+  };
+}
+
+/// Compteurs des puces — `null` tant que la liste n'est pas chargée. Restreint
+/// à l'année sélectionnée ([receiptYearFilterProvider]).
+final receiptStatusCountsProvider = Provider.family
+    .autoDispose<Map<ReceiptStatusFilter, int>?, String>((ref, leaseId) {
+      final receipts = ref.watch(leaseReceiptsProvider(leaseId)).valueOrNull;
+      final year = ref.watch(receiptYearFilterProvider(leaseId));
+      return receipts == null ? null : receiptStatusCounts(receipts, year);
+    });
+
+// ---------------------------------------------------------------------------
 // Liste filtrée (statut + année)
 // ---------------------------------------------------------------------------
 
@@ -62,15 +97,9 @@ final filteredReceiptsProvider = Provider.family
 
         // Filtre par statut.
         if (filter != ReceiptStatusFilter.all) {
-          filtered = filtered.where((r) {
-            return switch (filter) {
-              ReceiptStatusFilter.all => true,
-              ReceiptStatusFilter.sent => r.hasBeenShared && !r.isVoided,
-              ReceiptStatusFilter.paid =>
-                r.paymentIds.isNotEmpty && !r.isVoided,
-              ReceiptStatusFilter.voided => r.isVoided,
-            };
-          }).toList();
+          filtered = filtered
+              .where((r) => receiptMatchesStatus(r, filter))
+              .toList();
         }
 
         // Filtre par année.

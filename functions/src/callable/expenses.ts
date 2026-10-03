@@ -28,7 +28,8 @@
  * contournable).
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 
@@ -40,7 +41,7 @@ import {
   optionalInt,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireInt,
   requireString,
   toTimestamp,
@@ -212,7 +213,7 @@ export function resolveExpenseRecurrence(opts: {
 export const createExpense = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const propertyId = requireString(data.propertyId, "propertyId");
@@ -288,7 +289,7 @@ export const createExpense = onCall(
       throw new HttpsError("invalid-argument", "notes must be <= 2000 chars");
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const propertyRef = db.doc(`properties/${propertyId}`);
     const leaseRef = leaseId ? db.doc(`leases/${leaseId}`) : null;
     const documentRef = documentId ? db.doc(`documents/${documentId}`) : null;
@@ -325,7 +326,7 @@ export const createExpense = onCall(
         assertOwnedAndActive(document, uid, "document");
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(expenseRef, {
         id: expenseRef.id,
         landlordId: uid,
@@ -378,7 +379,7 @@ const EXPENSE_MUTABLE_FIELDS = new Set([
 export const updateExpense = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);
@@ -392,7 +393,7 @@ export const updateExpense = onCall(
       }
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const expenseRef = db.doc(`expenses/${id}`);
 
     return await db.runTransaction(async (tx) => {
@@ -573,7 +574,7 @@ export const updateExpense = onCall(
 
       tx.update(expenseRef, {
         ...cleanPatch,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       return {updated: true};

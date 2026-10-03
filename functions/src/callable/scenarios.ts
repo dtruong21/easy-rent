@@ -25,7 +25,7 @@
  * dépassement est borné, non lucratif, et se résorbe à la suppression suivante.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
@@ -33,7 +33,7 @@ import {
   asBag,
   optionalInt,
   optionalString,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireInt,
   requireString,
@@ -177,10 +177,10 @@ export function buildScenarioDocument(args: {
 export const createScenario = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const inputs = parseScenarioInputs(asBag(request.data));
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
     if (!landlordSnap.exists) {
       throw new HttpsError("not-found", "landlord not found");
@@ -206,7 +206,7 @@ export const createScenario = onCall(
         id: ref.id,
         landlordId: uid,
         inputs,
-        now: admin.firestore.FieldValue.serverTimestamp(),
+        now: FieldValue.serverTimestamp(),
       }),
     );
 

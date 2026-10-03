@@ -8,7 +8,6 @@
 /// [computeSnapshotForProperty], le même moteur que la fiche d'un bien).
 library;
 
-import 'package:easyrent/core/finance/real_expense_charges.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/portfolio_yield_section.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
@@ -166,8 +165,6 @@ void main() {
         // (9600 - 2100) / 200000 * 100 = 3.75% net ; brut = 9600/200000*100 = 4.8%
         expect(summary.avgYieldGrossPercent, closeTo(4.8, 0.01));
         expect(summary.avgYieldNetPercent, closeTo(3.75, 0.01));
-        // 800 - 0 (pas de prêt) - 2100/12 = 800 - 175 = 625€
-        expect(summary.totalMonthlyCashflowCents, 62500);
       },
     );
 
@@ -230,7 +227,6 @@ void main() {
         expect(summary.totalCount, 2);
         expect(summary.avgYieldGrossPercent, isNull);
         expect(summary.avgYieldNetPercent, isNull);
-        expect(summary.totalMonthlyCashflowCents, isNull);
       },
     );
 
@@ -261,8 +257,6 @@ void main() {
       expect(summary.avgYieldGrossPercent, closeTo(4.5, 0.01));
       // Même pondération appliquée au net : (5.76×100k + 3.84×300k)/400k = 4.32%.
       expect(summary.avgYieldNetPercent, closeTo(4.32, 0.01));
-      // Cash flow = somme (pas pondérée) : 480€ + 960€ = 1440€.
-      expect(summary.totalMonthlyCashflowCents, 144000);
     });
 
     test('portfolio vide → computedCount et totalCount à 0, rien à null', () {
@@ -272,53 +266,25 @@ void main() {
       expect(summary.totalCount, 0);
       expect(summary.avgYieldGrossPercent, isNull);
       expect(summary.avgYieldNetPercent, isNull);
-      expect(summary.totalMonthlyCashflowCents, isNull);
     });
+  });
 
-    test('dépenses réelles fournies pour un bien → cash flow agrégé bascule '
-        'sur le réel pour ce bien uniquement (une seule requête landlord-wide '
-        'groupée côté appelant, cf. groupRealChargesByProperty)', () {
-      final now = DateTime(2026, 1, 1);
-      final items = [
-        _makeItem(
-          id: 'p-real',
-          purchasePriceCents: 20000000,
-          activeLeaseId: 'lease-1',
-          rentHcCents: 80000,
-          propertyTaxAnnualCents: 120000, // déclaré, ignoré si bascule
-        ),
-        _makeItem(
-          id: 'p-forecast',
-          purchasePriceCents: 20000000,
-          activeLeaseId: 'lease-2',
-          rentHcCents: 80000,
-          propertyTaxAnnualCents: 120000, // reste prévisionnel (pas de réel)
-        ),
-      ];
-
-      final summary = computePortfolioYield(
-        items,
-        realChargesByPropertyId: {
-          'p-real': PropertyRealCharges(
-            propertyTax: [
-              // Couverture ≥ 1 an.
-              RealChargeEntry(
-                amountCents: 50000,
-                expenseDate: DateTime(2024, 6, 1),
-              ),
-              RealChargeEntry(
-                amountCents: 240000,
-                expenseDate: DateTime(2025, 6, 1),
-              ),
-            ],
-          ),
-        },
-        now: now,
-      );
-
-      // p-real : 80000 - 240000/12 = 80000 - 20000 = 60000.
-      // p-forecast (prévisionnel inchangé) : 80000 - 120000/12 = 70000.
-      expect(summary.totalMonthlyCashflowCents, 130000);
+  group('yieldTierFor — paliers de couleur', () {
+    test('null → none (pas de palier)', () {
+      expect(yieldTierFor(null), YieldTier.none);
+    });
+    test('négatif → negative', () {
+      expect(yieldTierFor(-0.01), YieldTier.negative);
+      expect(yieldTierFor(-5), YieldTier.negative);
+    });
+    test('positif et < 10 % → low (0 inclus)', () {
+      expect(yieldTierFor(0), YieldTier.low);
+      expect(yieldTierFor(5), YieldTier.low);
+      expect(yieldTierFor(9.99), YieldTier.low);
+    });
+    test('≥ 10 % → good (borne incluse)', () {
+      expect(yieldTierFor(10), YieldTier.good);
+      expect(yieldTierFor(15.5), YieldTier.good);
     });
   });
 
@@ -364,6 +330,9 @@ void main() {
       // Formaté via toStringAsFixed (non localisé) — cf. _PortfolioKpiCard.
       expect(find.text('4.80 %'), findsOneWidget);
       expect(find.textContaining('1 bien'), findsOneWidget);
+      // Verrou de régression : la carte cash-flow a été retirée (dédup avec
+      // le graphe mensuel) — un re-ajout silencieux doit être détecté ici.
+      expect(find.byKey(const Key('kpi_portfolio_cashflow')), findsNothing);
     });
   });
 }

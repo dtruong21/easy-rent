@@ -4,7 +4,12 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createProperty, createTenant} from "../callable/property_tenant";
 import {softDeleteEntity} from "../callable/soft_delete";
 
-import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Cf. expenses.test.ts pour la justification du import() dynamique interne.
 vi.mock("firebase-admin", async () => {
@@ -13,11 +18,12 @@ vi.mock("firebase-admin", async () => {
 });
 
 let fakeDb: FakeFirestore;
+let fakeStagingDb: FakeFirestore;
 
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }
@@ -63,6 +69,10 @@ function seedProperty(id: string) {
 beforeEach(() => {
   fakeDb = new FakeFirestore();
   fakeAdminFirestoreHolder.db = fakeDb;
+  // Base `staging` fraîche à chaque test (vide → un appel mobile dont le
+  // landlord est en prod retombe sur la prod, comme avant le routage par compte).
+  fakeStagingDb = new FakeFirestore();
+  fakeStagingFirestoreHolder.db = fakeStagingDb;
 });
 
 describe("createProperty — gating free-tier (FEAT-044)", () => {
@@ -554,5 +564,34 @@ describe("createProperty / createTenant — palier effectif (FEAT-056)", () => {
       code: "resource-exhausted",
       message: "tenant_limit_reached",
     });
+  });
+});
+
+// ============================================================================
+// Routage par compte des callables mobiles (build de test Test Lab, ADR 0003) :
+// `dbForRequest` sans Origin → base qui porte `landlords/{uid}`. `makeRequest`
+// n'envoie aucun en-tête (`rawRequest: {}`), donc c'est un appel « mobile ».
+// ============================================================================
+describe("createProperty — routage mobile par compte (ADR 0003)", () => {
+  it("mobile sans Origin, landlord uniquement en staging → bien écrit en staging, rien en prod", async () => {
+    // Le compte de test n'existe que dans la base `staging` (pas en prod).
+    fakeStagingDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: "free",
+      deletedAt: null,
+      activePropertiesCount: 0,
+    });
+
+    const res = await createProperty.run(makeRequest(UID, validPayload()));
+
+    const propertyId = (res as {propertyId: string}).propertyId;
+    expect(propertyId).toBeTruthy();
+    // Le bien et le compteur atterrissent dans la base staging...
+    expect(fakeStagingDb.peek(`properties/${propertyId}`)?.landlordId).toBe(UID);
+    expect(fakeStagingDb.peek(`landlords/${UID}`)?.activePropertiesCount).toBe(1);
+    // ...et RIEN n'est écrit côté prod (ni bien, ni doc landlord).
+    expect(fakeDb.peek(`properties/${propertyId}`)).toBeUndefined();
+    expect(fakeDb.peek(`landlords/${UID}`)).toBeUndefined();
   });
 });

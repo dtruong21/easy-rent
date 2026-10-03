@@ -6,7 +6,7 @@ Paiements (FEAT-006/029) + quittances (FEAT-007). Fichiers : `functions/src/call
 
 ## Callables — Payments
 
-**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+**ADR 0003** : tous les callables écrivant Firestore utilisent `await dbForRequest(request)` pour router vers la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 
 ### `createPayment` (FEAT-006)
 Client invoke.
@@ -44,3 +44,9 @@ Fetch receipt (auth + owner check) ; transaction : set `sentAt=now()`, `sentToEm
 |---|---|---|
 | `setUpdatedAtPayments` | `onDocumentUpdated(payments)` | Standard `setUpdatedAt` (voir README). Fichier `set_updated_at.ts` |
 | `recomputeReceiptStale` | `onDocumentUpdated(payments)` | **Se déclenche uniquement au changement de `deletedAt`** (soft-delete ou restauration d'un paiement), **pas** au changement de montant. Query les receipts où `paymentIds` array-contains le paiement, relit tous leurs paiements, pose `isStale = (≥ 1 paiement a deletedAt != null)`. Client rejoue `generateReceipt` si stale. Quittances immuables — flag `isStale` seulement. Fichier `recompute_receipt_stale.ts`. |
+
+## Scheduled Functions
+
+| Scheduled | Cron / Région | Logique |
+|---|---|---|
+| `purgeExpiredReceipts` | Quotidien 03:00 Europe/Paris, région europe-west1 (base `(default)`) | Hard-delete RGPD `receipts where retentionUntil <= now` (champ posé par `stampRetainedReceipts` lors de la suppression de compte, FEAT-045 ; valeur = suppression + 5 ans). Pagination paginée 400, hard-limit MAX_DELETES_PER_RUN 2000/run. Idempotent, aucun accès Storage. Fonction pure `purgeExpiredReceiptsImpl(db, now)`. Fichier `functions/src/scheduled/purge_expired_receipts.ts`. ✅ Testé : `functions/src/__tests__/purge_expired_receipts.test.ts` (5 cas). |

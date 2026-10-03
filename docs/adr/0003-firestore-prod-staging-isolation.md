@@ -295,6 +295,8 @@ webhook).
   `admin.firestore()`/`getFirestore()` dans `callable/`+`http/`).
 
 ### Déviation — routage du webhook par présence du landlord, PAS par metadata `env`
+> ⚠️ **Remplacé le 2026-09-30** : le webhook est désormais routé par `event.environment` — voir « Amendement 2026-09-30 » en bas de page.
+
 Le plan prévoyait (jalon 3) de propager une metadata `env` sur la Checkout
 Session Stripe, que RevenueCat aurait relayée dans ses events, lue par le
 webhook. **Abandonné** au profit de `dbForLandlordUid(uid)` : le webhook cherche
@@ -325,10 +327,104 @@ en `(default)` et le webhook (qui teste prod d'abord) basculerait le compte prod
   sable `dev` pour le mobile (utiliser l'émulateur). Côté callables, un build
   mobile n'a de toute façon pas d'en-tête `Origin` → `dbForRequest` route aussi
   vers `(default)` : les deux couches sont **cohérentes** (mobile = prod partout,
-  pas de split-brain).
+  pas de split-brain). (→ amendé le 2026-09-29, voir « Amendement 2026-09-29 » en
+  bas de page.)
 - Les crons (`reconcile_entitlements`, `cleanup_expired_anon`) et le trigger
   `recompute_receipt_stale` restent sur `(default)` — ils ne traitent pas la
   base `dev`. Conséquence staging : un entitlement expiré en `dev` n'est pas
   rattrapé par le reconcile (seul l'event webhook `EXPIRATION`/`CANCELLATION`,
   routé vers `dev`, le gère) ; les triggers de dénormalisation ne se déclenchent
   pas sur `dev`. Acceptable pour un environnement de preview.
+
+## Amendement 2026-09-29 — routage mobile par compte
+
+**Motivation.** Lancer un build Android de test sur le Firebase Test Lab (Robo)
+sans polluer la prod : le build doit lire/écrire dans la base `staging`. La
+limitation « mobile = `(default)` partout » (ci-dessus) empêchait tout bac à
+sable mobile — l'émulateur ne couvre pas le Test Lab.
+
+**Décision.**
+- `dbForRequest(request)` devient **asynchrone** (`Promise<Firestore>`) ; les 24
+  sites d'appel des 13 callables font `await dbForRequest(request)`.
+- **Web, inchangé** : Origin présent → routage par l'en-tête `Origin`
+  (`https://app.staging.baillan.com` → `staging`, tout le reste → `(default)`).
+- **Appels sans Origin** (app native, Origin absent ou vide) → `dbForLandlordUid`
+  (`request.auth?.uid`) : base qui porte `landlords/{uid}`, **prod d'abord**
+  (fail-safe), puis `staging`, absent des deux → `(default)`.
+- **Côté app** : `Env.useMobileStaging` (`MOBILE_STAGING`, désactivé en release
+  via `kReleaseMode`) fait viser la base `staging` à `firestoreProvider` ; un
+  auto-login à un compte de test dédié (`dart-defines.testlab.json`, gitignoré)
+  évite de saisir des identifiants dans Robo.
+- **Portée de la limitation antérieure : CLIENT uniquement.** « Tout build mobile
+  → `(default)` » reste vrai pour le **client** : un build sans `MOBILE_STAGING`
+  (donc toute release) lit/écrit `(default)` en direct. Côté **serveur**, en
+  revanche, les callables de **tout** build mobile — release comprise — sont
+  désormais routés par compte (`dbForLandlordUid`, prod d'abord).
+- **Conséquence : split-brain pour un compte staging-only connecté sur un build
+  store/release.** Le client lit `(default)` (vide) alors que ses callables
+  écrivent dans `staging`. D'où la discipline ci-dessous : le compte de test
+  staging ne doit **jamais** être utilisé sur un build store ni en prod. Pas
+  d'exposition cross-user ni de donnée prod : le compte n'existe qu'en `staging`
+  et les callables restent bornés à son propre uid.
+
+**Coût.** **+1 lecture Firestore par appel callable mobile** (2 pour le compte de
+test staging : prod puis staging). **Toutes les Functions sont à redéployer**
+(déploiement manuel, hors CI).
+
+**Discipline.** Le compte de test doit être **staging-only** : créé sur
+`app.staging.baillan.com`, doc `landlords/{uid}` présent en `staging` **avant** le
+run (sinon repli sur la prod), **jamais utilisé en prod** (même contrainte que
+pour le webhook : un uid présent dans les deux bases est routé en prod). Email
+vérifié requis (le routeur de l'app bloque les comptes non vérifiés).
+
+**Sécurité.** Un client non-navigateur peut forger l'`Origin`, mais ne route que
+ses propres écritures, sans impact cross-user : les callables (Admin SDK, qui
+contourne les règles Firestore) sont bornés à `request.auth.uid` par leurs
+propres contrôles (`requireAuthUid`, `landlordId === uid`) ; les règles Firestore
+protègent, elles, l'accès client direct sur les deux bases. Procédure opérationnelle : [`docs/MOBILE.md`](../MOBILE.md#test-lab-robo).
+
+## Amendement 2026-09-30 — routage du webhook par `event.environment` (OWASP-01)
+
+**Ce qui est remplacé.** La section « Déviation — routage du webhook par
+présence du landlord » (`dbForLandlordUid`, prod d'abord) ne décrit plus le
+webhook RevenueCat. Elle est conservée telle quelle pour l'historique ; son
+affirmation « Fail-safe identique : prod testée en premier → jamais mal-router un
+vrai compte prod » était **fausse** pour un achat de test.
+
+**Pourquoi.** Un seul projet Firebase héberge les deux bases, l'Auth est
+partagée, le checkout staging est public en Stripe **test** et, vraisemblablement,
+un **seul** webhook RevenueCat reçoit tous les events (à confirmer dans la
+console RevenueCat). Un compte prod pouvait donc se
+connecter sur le staging, payer avec la carte de test publique, et le webhook —
+qui trouvait son doc en prod d'abord — lui accordait un palier payant **en
+production** (audit OWASP du 2026-09-30, constat OWASP-01). « La base qui porte
+le doc » n'est pas une garde d'environnement : un même uid peut exister dans les
+deux bases.
+
+**Décision.** Le webhook choisit la base par l'`environment` de l'event
+(`handleRevenueCatEvent` + `firestoreForEnv`, `functions/src/http/revenuecat_webhook.ts`
+et `functions/src/utils/db_router.ts`) :
+- `SANDBOX` (achat de test) → base `staging` **uniquement** ;
+- `PRODUCTION` → base `(default)` **uniquement** ;
+- absent ou autre valeur → event ignoré (fail-closed) et journalisé (uid + valeur
+  brute bornée) ;
+- **aucun repli** sur l'autre base : doc landlord absent de la base routée →
+  `no_landlord`.
+
+Mesures associées : `createCheckoutSession` refuse (`failed-precondition` /
+`landlord_not_found`) quand `landlords/{uid}` est absent de la base routée ;
+le cron `reconcileEntitlements` ignore les entitlements dont le produit est
+`is_sandbox: true`. `dbForLandlordUid` reste utilisé uniquement par
+`dbForRequest` pour les appels mobiles sans Origin (amendement 2026-09-29).
+
+**Conséquences.**
+- La discipline « tester un paiement staging avec un uid jamais utilisé en prod »
+  n'est plus nécessaire côté webhook.
+- Les achats **sandbox** d'App Review / TestFlight / licence de test Google faits
+  avec un compte **prod** sont routés vers `staging` et ne débloquent donc rien :
+  à traiter avec la feature achat intégré par une allowlist serveur d'uid prod
+  autorisés en sandbox (webhook + cron). Les valeurs réelles d'`environment`
+  restent à confirmer sur un event après déploiement.
+- **Functions à redéployer manuellement** (webhook, checkout, cron).
+- Reste ouvert : l'isolation structurelle (projet Firebase distinct pour le
+  staging) — constat OWASP-07, non traité.

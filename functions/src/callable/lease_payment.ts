@@ -15,7 +15,7 @@
  * bail actif décrémente le compteur dans softDeleteEntity.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
@@ -27,7 +27,7 @@ import {
   optionalNumber,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireInt,
   requireString,
@@ -109,7 +109,7 @@ export function resolveChargeMode(
 export const createLease = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const propertyId = requireString(data.propertyId, "propertyId");
@@ -191,7 +191,7 @@ export const createLease = onCall(
       "entryInventoryDone",
     );
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const leaseRef = db.collection("leases").doc();
     const propertyRef = db.doc(`properties/${propertyId}`);
     const tenantRef = db.doc(`tenants/${tenantId}`);
@@ -245,7 +245,7 @@ export const createLease = onCall(
         }
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(leaseRef, {
         id: leaseRef.id,
         landlordId: uid,
@@ -289,16 +289,16 @@ export const createLease = onCall(
 
       if (status === "active") {
         tx.update(propertyRef, {
-          activeLeaseCount: admin.firestore.FieldValue.increment(1),
+          activeLeaseCount: FieldValue.increment(1),
         });
         tx.update(tenantRef, {
-          activeLeaseCount: admin.firestore.FieldValue.increment(1),
+          activeLeaseCount: FieldValue.increment(1),
         });
         // FEAT-044 : compteur de baux actifs du bailleur — sème la vraie valeur
         // (recomptée) sur un compte legacy sans compteur, sinon incrémente.
         if (leaseHasCounter) {
           tx.update(landlordRef, {
-            activeLeasesCount: admin.firestore.FieldValue.increment(1),
+            activeLeasesCount: FieldValue.increment(1),
           });
         } else {
           tx.update(landlordRef, {
@@ -336,7 +336,7 @@ const LEASE_MUTABLE_FIELDS = new Set([
 export const updateLease = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);
@@ -387,7 +387,7 @@ export const updateLease = onCall(
       }
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const leaseRef = db.doc(`leases/${id}`);
 
     // FEAT-044 : fail-closed sur activeLeasesCount absent (compte legacy) —
@@ -517,7 +517,7 @@ export const updateLease = onCall(
 
       tx.update(leaseRef, {
         ...cleanPatch,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       if (delta !== 0) {
@@ -525,10 +525,10 @@ export const updateLease = onCall(
         const tenantId = lease.tenantId;
         if (typeof propertyId === "string" && typeof tenantId === "string") {
           tx.update(db.doc(`properties/${propertyId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(delta),
+            activeLeaseCount: FieldValue.increment(delta),
           });
           tx.update(db.doc(`tenants/${tenantId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(delta),
+            activeLeaseCount: FieldValue.increment(delta),
           });
         }
         // FEAT-044 : compteur de baux actifs du bailleur. Écriture absolue
@@ -558,7 +558,7 @@ export const updateLease = onCall(
 export const createPayment = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const leaseId = requireString(data.leaseId, "leaseId");
@@ -582,7 +582,7 @@ export const createPayment = onCall(
     const notes = optionalString(data.notes, "notes");
     const reference = optionalString(data.reference, "reference");
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const leaseRef = db.doc(`leases/${leaseId}`);
     const paymentRef = db.collection("payments").doc();
 
@@ -591,7 +591,7 @@ export const createPayment = onCall(
       const lease = dataOrFail(leaseSnap, "lease not found");
       assertOwnedAndActive(lease, uid, "lease");
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(paymentRef, {
         id: paymentRef.id,
         landlordId: uid,
@@ -629,7 +629,7 @@ const PAYMENT_MUTABLE_FIELDS = new Set([
 export const updatePayment = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);
@@ -657,7 +657,7 @@ export const updatePayment = onCall(
       }
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`payments/${id}`);
     const snap = await ref.get();
     const p = dataOrFail(snap, "payment not found");
@@ -665,7 +665,7 @@ export const updatePayment = onCall(
 
     await ref.update({
       ...cleanPatch,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return {updated: true};

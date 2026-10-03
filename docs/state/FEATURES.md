@@ -38,12 +38,13 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-029 | Charges — motif paiement + régularisation annuelle | ✅ done | leases | 871ebff |
 | FEAT-029b | Découvrabilité régularisation (?action=regularize) | ✅ done | leases | 514666f |
 | FEAT-030 | Navigation retour corrigée (pop/push) | ✅ done | dashboard | 7db144d |
-| FEAT-031 | Rappels paiement automatiques (attente infra email) | 📋 planned | payments-receipts | — |
-| FEAT-032 | Dashboard — trésorerie graphique (encaissé vs dû) | 📋 planned | dashboard | — |
-| FEAT-033 | Archivage régularisations charges (absorbé par 041 V1) | 💡 idea | leases | — |
-| FEAT-034 | Import multi-colonnes CSV (properties/tenants/leases) | 📋 planned | properties | — |
+| FEAT-031 | Relance de paiement assistée (client-side) — automatisation cron = V2 | ✅ done | leases | feat/payment-reminder-assisted |
+| FEAT-032 | Dashboard — trésorerie graphique (encaissé vs dû) | ❌ superseded 2026-09-15 (par FEAT-027) | dashboard | — |
+| FEAT-033 | Archivage régularisations charges — snapshot figé (`charge_statements`, immuable) | ✅ done + staging 2026-09-14 (PR #182, functions déployées) | leases | PR #182 |
+| FEAT-034 | Import multi-colonnes CSV (properties/tenants/leases) | ❌ abandonné 2026-09-14 | properties | — |
 | FEAT-035 | 2FA TOTP | 📋 planned | account | — |
 | FEAT-036 | Charges récupérables vs non-récupérables (décret 87-713) | ✅ done | leases | PR #66 |
+| FEAT-037 | État des lieux digital (V1 : saisie + PDF décret 2016-382, collection immuable) | ✅ done | leases | feat/037-etat-des-lieux |
 | FEAT-041 | Suivi dépenses unifié V1 (expenses + documents v2) | ✅ done | expenses-documents | PR #67 |
 | FEAT-042 | Mode de charges (provisions/forfait) + éligibilité régul. | ✅ done | leases | PR #68 |
 | FEAT-043 | Internationalisation FR/EN (i18n, gen_l10n) | ✅ done | account | PR #71 |
@@ -53,6 +54,8 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-044d | Paiement — Stripe Checkout Session web (back-end, ADR 0002 approche A) | ✅ done | account | PR #117 |
 | FEAT-044e | Paiement — **intégration client** — web ✅ (paywall `/pro/*` + Stripe Checkout, 75fcbd3) / IAP mobile 📋 (pas de `purchases_flutter`) | 🚧 wip | account | 75fcbd3, docs/plans/FEAT-044-payment-revenuecat-plan.md |
 | FEAT-045 | Suppression compte in-app + /delete-account (loi 6/7/1989) | ✅ done | account | PR #69 |
+| FEAT-046 | Purge différée des quittances archivées (cron `retentionUntil`, RGPD art. 5.1.e) | ✅ done | account | feat/046-receipt-purge-cron |
+| FEAT-047 | Export des données RGPD (art. 15/20) — callable `exportAccountData` + tuile Profil | ✅ done | account | PR #180 (2026-09-12) |
 | FEAT-048 | FAQ produit publique /faq | ✅ done | account | PR #69 |
 | FEAT-049 | SEO du PWA — quick-wins (Option A) + domaine canonique baillan.com | ✅ done | account | PR #73, #121 |
 | FEAT-050 | Site marketing statique crawlable (Option B) | 🚧 v1 construite (bascule domaine en attente) | account | docs/backlog/050-marketing-site-seo.md |
@@ -61,3 +64,5 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-054 | Isolation prod/staging — base Firestore `staging` (web ; Auth/Storage/Functions restent partagés) | ✅ done | account | PR #145 (impl.), PR #140 (cadrage), ADR 0003 |
 | FEAT-055 | Comparaison de scénarios de simulation (Pro) | ✅ done | simulator | PR #139 (cadrage), PR #148-#151 (impl. + responsive, 2026-07-24+27) |
 | FEAT-056 | Abonnements Pro/Max/Ultra — 3 paliers payants (grille quotas) | 🚧 wip | account, properties, leases, expenses-documents, simulator | branche `feat/056-multi-tier-subscriptions` — back-end callables ✅ (createCheckoutSession, manageSubscription, createScenario) · webhook + cron ✅ · Cloud Functions déployées ✅ · staging rules+indexes ✅ (PR #152 CI) · prod rules/indexes ⏳ (PR #154 non mergé) · Stripe 6 prix test ✅ · RevenueCat 3 entitlements (Pro achetable, Max/Ultra démo) ✅ · client UI Pro 🚧 (FEAT-044e) |
+| FEAT-058 | Onboarding progressif jusqu'à la 1re quittance | ✅ done | dashboard | feat/onboarding-to-first-receipt |
+| FEAT-059 | Cartes de liste « chiffre clé » + puces de filtre (biens, baux, locataires, quittances) | ✅ done | properties, leases, tenants, receipts | feat/list-summary-cards, docs/superpowers/specs/2026-09-29-mobile-list-cards-design.md |

@@ -13,12 +13,23 @@
  * écrivain du droit, donc une source de désaccord avec la facturation.
  *
  * Frontière de sécurité : le client ne fournit JAMAIS d'identifiant Stripe. La
- * fonction dérive l'UID via `requireAuthUid` puis résout l'abonnement par la
+ * fonction dérive l'UID via `requireVerifiedUid` puis résout l'abonnement par la
  * metadata `rc_app_user_id` posée au checkout à la valeur de CE propriétaire
  * (`create_checkout_session.ts`, [RC_APP_USER_ID_METADATA_KEY]). Aucun paramètre
  * client ne peut donc viser l'abonnement d'autrui — l'IDOR est structurellement
  * impossible. `change_plan` ne fait PAS exception : il n'accepte qu'un palier
  * et une périodicité, jamais un subscription id, un item id ni un price id.
+ *
+ * Web vs apps natives (décision 2026-09-30) :
+ * - **Web** (Origin présent) : clé Stripe par l'Origin
+ *   ([resolveStripeKeyOrThrow], issue #138), toutes actions.
+ * - **Apps iOS/Android** (Origin absent ou vide) : SEULE `cancel` est acceptée
+ *   — un abonné web doit pouvoir résilier depuis l'app. Clé choisie par la base
+ *   qui porte le compte (`dbForRequest` → [resolveStripeKeyForDb] : `staging` →
+ *   test, sinon live). `reactivate` et `change_plan` y sont refusées
+ *   (`origin_not_allowed`) AVANT tout appel Stripe : reprendre ou modifier une
+ *   facturation Stripe depuis une app store serait un achat hors achat intégré
+ *   (App Store 3.1.1, règle Paiements de Google Play).
  */
 
 import {defineSecret} from "firebase-functions/params";
@@ -34,8 +45,12 @@ import {
   type BillingPeriod,
   type PriceTable,
 } from "../entitlements/stripe_prices";
-import {asBag, requireAuthUid, requireString} from "../utils/callable_helpers";
-import {resolveStripeKeyOrThrow} from "../utils/stripe_env";
+import {asBag, requireVerifiedUid, requireString} from "../utils/callable_helpers";
+import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
+import {
+  resolveStripeKeyForDb,
+  resolveStripeKeyOrThrow,
+} from "../utils/stripe_env";
 
 import {
   parsePlanSelection,
@@ -57,7 +72,7 @@ const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
  * peut (dé)programmer sa résiliation ou changer son palier). Un
  * `canceled`/`incomplete_expired` n'a plus rien à gérer.
  */
-const CANCELABLE_STATUSES = new Set<string>([
+export const CANCELABLE_STATUSES: ReadonlySet<string> = new Set<string>([
   "active",
   "trialing",
   "past_due",
@@ -241,10 +256,18 @@ function resolveChange(data: Record<string, unknown>): {
 export const manageSubscription = onCall(
   {secrets: [stripeSecret, stripeTestSecret]},
   async (request): Promise<ManageSubscriptionResult | ChangePlanResult> => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const action = parseAction(data.action);
     assertSafeUid(uid);
+
+    // App native (aucun Origin) : seule la résiliation est permise, et le refus
+    // tombe AVANT toute résolution d'offre ou tout appel Stripe (cf. docblock).
+    const origin = request.rawRequest?.headers?.origin;
+    const fromNativeApp = typeof origin !== "string" || origin.length === 0;
+    if (fromNativeApp && action !== "cancel") {
+      throw new HttpsError("failed-precondition", "origin_not_allowed");
+    }
 
     // Résolution de l'offre visée AVANT tout appel Stripe : un palier non
     // vendable (`level_not_purchasable`) ou sans price configuré
@@ -254,15 +277,23 @@ export const manageSubscription = onCall(
     // (palier résolu sans action, ou l'inverse) ne soit représentable.
     const change = action === "change_plan" ? resolveChange(data) : null;
 
-    // Issue #138 : clé résolue par l'Origin de l'appel. Sans ce garde-fou,
-    // un `cancel`/`change_plan` lancé depuis staging opérait sur les vrais
-    // abonnements du compte Stripe de production.
+    // Issue #138 : web → clé résolue par l'Origin de l'appel. Sans ce
+    // garde-fou, un `cancel`/`change_plan` lancé depuis staging opérait sur les
+    // vrais abonnements du compte Stripe de production. App native (`cancel`
+    // seul) → clé de la base qui porte le compte : un compte staging n'obtient
+    // jamais la clé live.
     const stripe = new Stripe(
-      resolveStripeKeyOrThrow(
-        request.rawRequest?.headers?.origin,
-        stripeSecret.value(),
-        stripeTestSecret.value(),
-      ),
+      fromNativeApp ?
+        resolveStripeKeyForDb(
+          (await dbForRequest(request)).databaseId === STAGING_DATABASE_ID,
+          stripeSecret.value(),
+          stripeTestSecret.value(),
+        ) :
+        resolveStripeKeyOrThrow(
+          origin,
+          stripeSecret.value(),
+          stripeTestSecret.value(),
+        ),
     );
 
     const search = await stripe.subscriptions.search({

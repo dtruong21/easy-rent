@@ -21,19 +21,19 @@
 
 | Chemin | Page | Type | Notes |
 |---|---|---|---|
-| `/profile` | ProfilePage | read | hub réglages (ordre 2026-07-07 : Compte détails/mot de passe/**suppression** · Apparence · Aide **FAQ**/contact/légal · À propos · Session) |
+| `/profile` | ProfilePage | read | hub réglages (ordre 2026-07-07 : Compte détails/mot de passe/**suppression** · Apparence · Aide **FAQ**/contact/légal · À propos · Session). **Apps iOS/Android** (`isStoreApp`, 2026-09-30) : bannière « Passer à Pro » masquée ; `SubscriptionSection` garde statut + « Résilier » (callable `manageSubscription` `cancel`, accepté sans Origin) mais masque « Réactiver » et « Changer d'offre » |
 | `/profile/details` | ProfileDetailsPage | write | email/fullName (FEAT-025, immutables) |
 | `/profile/password` | ChangePasswordPage | write | `reauthenticateWithPassword` + `updatePassword` ; gated `hasPasswordProvider` |
 | `/profile/support` | SupportPage | write | formulaire contact (FEAT-025, collection `support_requests`) |
-| `/profile/delete-account` | DeleteAccountPage | write | **FEAT-045** — re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée |
+| `/profile/delete-account` | DeleteAccountPage | write | **FEAT-045** — re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée. **Avis abonnement** (`DeleteAccountSubscriptionNotice`, toutes plateformes, palier payant) : `proStore` ∈ `mobileStores` (app_store/play_store) → « la suppression ne résilie pas, résiliez dans le store » ; `proStore == 'web'` → « résilié immédiatement, sans remboursement » ; `promo`/`null`/autre → rien |
 
 ## Pro/Abonnements (shell branche 3, fullyAuth, FEAT-044e/FEAT-056 intégration client web)
 
 | Chemin | Page | Type | Notes |
 |---|---|---|---|
-| `/pro` | ProPricingPage | read | **FEAT-056** : cartes 3 paliers (Pro achetable, Max/Ultra démonstration) + FAQ, CTA menant à checkout |
+| `/pro` | ProPricingPage | read | **FEAT-056** : cartes 3 paliers (Pro achetable, Max/Ultra démonstration) + FAQ, CTA menant à checkout. **Apps iOS/Android** (`isStoreApp`) : message neutre seul (`txt_pro_store_app_unavailable`) — ni offres, ni prix, ni bouton, aucune mention du web |
 | `/pro/success` | ProSuccessPage | read | **FEAT-044e/056** : redirection Stripe Checkout post-paiement réussi ; extract `session_id` de query param ; confirmation + CTA retour dashboard |
-| `/pro/cancel` | ProCancelPage | read | **FEAT-044e/056** : redirection Stripe Checkout post-annulation ; invite à réessayer ou revenir |
+| `/pro/cancel` | ProCancelPage | read | **FEAT-044e/056** : redirection Stripe Checkout post-annulation ; invite à réessayer ou revenir. **Apps iOS/Android** : « Réessayer » masqué (seul le retour reste) |
 
 ## Provider
 

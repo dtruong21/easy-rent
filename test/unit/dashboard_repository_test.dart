@@ -8,6 +8,7 @@ library;
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -17,38 +18,29 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeDashboardRepository implements DashboardRepository {
   final LoyersMoisKpi _loyers;
   final RetardsKpi _retards;
-  final RenouvellementsKpi _renouvellements;
   final DocsPendingKpi _docs;
   final List<MonthlyCollectedRent> _monthly;
   final List<ActivityItem> _activity;
-  final bool _onboarding;
 
   const _FakeDashboardRepository({
     LoyersMoisKpi? loyers,
     RetardsKpi? retards,
-    RenouvellementsKpi? renouvellements,
     DocsPendingKpi? docs,
     List<MonthlyCollectedRent>? monthly,
     List<ActivityItem>? activity,
-    bool onboarding = false,
   }) : _loyers =
            loyers ??
            const LoyersMoisKpi(encaissedCents: 85000, dueCents: 90000),
        _retards = retards ?? const RetardsKpi(count: 0),
-       _renouvellements = renouvellements ?? const RenouvellementsKpi(count: 0),
        _docs = docs ?? const DocsPendingKpi(count: 0),
        _monthly = monthly ?? const [],
-       _activity = activity ?? const [],
-       _onboarding = onboarding;
+       _activity = activity ?? const [];
 
   @override
   Future<LoyersMoisKpi> fetchLoyersMois() async => _loyers;
 
   @override
   Future<RetardsKpi> fetchRetards() async => _retards;
-
-  @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async => _renouvellements;
 
   @override
   Future<DocsPendingKpi> fetchDocsPending() async => _docs;
@@ -63,7 +55,15 @@ class _FakeDashboardRepository implements DashboardRepository {
       _activity.take(limit).toList();
 
   @override
-  Future<bool> isLandlordOnboarding() async => _onboarding;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -102,22 +102,6 @@ void main() {
       );
       final kpi = await repo.fetchRetards();
       expect(kpi.count, 3);
-    });
-  });
-
-  group('fetchRenouvellements', () {
-    test('retourne count=0 par défaut', () async {
-      final repo = const _FakeDashboardRepository();
-      final kpi = await repo.fetchRenouvellements();
-      expect(kpi.count, 0);
-    });
-
-    test('retourne count configuré', () async {
-      final repo = _FakeDashboardRepository(
-        renouvellements: const RenouvellementsKpi(count: 2),
-      );
-      final kpi = await repo.fetchRenouvellements();
-      expect(kpi.count, 2);
     });
   });
 
@@ -177,18 +161,6 @@ void main() {
       final repo = _FakeDashboardRepository(activity: items);
       final result = await repo.fetchRecentActivity(limit: 5);
       expect(result.length, 5);
-    });
-  });
-
-  group('isLandlordOnboarding', () {
-    test('retourne false par défaut', () async {
-      final repo = const _FakeDashboardRepository();
-      expect(await repo.isLandlordOnboarding(), isFalse);
-    });
-
-    test('retourne true si configuré', () async {
-      final repo = const _FakeDashboardRepository(onboarding: true);
-      expect(await repo.isLandlordOnboarding(), isTrue);
     });
   });
 }

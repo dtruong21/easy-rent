@@ -47,12 +47,13 @@ dans Authentication → Templates. **Pas de magic link.**
 | Cible | Comment | Déclencheur |
 |---|---|---|
 | **Hosting** (app web) | `deploy.yml` → `firebase deploy --only hosting:<target>` | **Auto** : push `main` → prod (`baillan.com`), push `develop` → staging (`stage.baillan.com`). **Manuel** : Actions → Deploy → Run workflow (`target` = prod/dev). |
-| **Firestore rules + indexes** | **Manuel** : `firebase deploy --only firestore:rules,firestore:indexes` | Avant le deploy app si `firestore.rules` / `firestore.indexes.json` changent (DoD). |
+| **Firestore rules + indexes** | `deploy.yml` → cible `firestore:staging` (`develop`) ou `firestore:(default)` (`main`) | **Auto** : même run que le Hosting (cf. [`ENVIRONMENTS.md`](ENVIRONMENTS.md)). Rien à faire à la main, sauf rollback (§5). |
 | **Cloud Functions** | **Manuel** : `cd functions && npm ci && npm run build && firebase deploy --only functions` | Avant le deploy app si des functions changent. |
-| **Storage rules** | **Manuel** : `firebase deploy --only storage` | Si `storage.rules` change. |
+| **Storage rules** | `deploy.yml` → cible `storage` | **Auto, depuis `main` uniquement** (bucket partagé prod/staging : jamais déployé depuis `develop`). Vérifier après le deploy prod qu'un téléversement de document fonctionne (cf. checklist §C). |
 
-> ⚠️ `deploy.yml` ne déploie **que le Hosting**. Les rules, indexes et Cloud Functions
-> ne sont **pas** automatisés — ne pas les oublier quand une feature en dépend.
+> ⚠️ `deploy.yml` déploie le **Hosting**, les **rules + indexes Firestore** et, depuis
+> `main`, les **rules Storage**. Les **Cloud Functions** ne sont **pas** automatisées
+> (déploiement manuel délibéré) — ne pas les oublier quand une feature en dépend.
 
 ---
 
@@ -60,8 +61,9 @@ dans Authentication → Templates. **Pas de magic link.**
 
 1. **Staging d'abord** : merger vers `develop` → `deploy.yml` publie `stage.baillan.com`.
    Tester (voir [`PROD_DEPLOY_CHECKLIST.md`](PROD_DEPLOY_CHECKLIST.md)).
-2. **Backend si besoin** : si la release change rules/indexes/functions, les déployer
-   manuellement (cf. §2) — validés au préalable en émulateur (`npm run test:rules`) puis staging.
+2. **Backend si besoin** : si la release change des Cloud Functions, les déployer
+   manuellement (cf. §2). Rules/indexes (Firestore) et rules Storage partent avec
+   `deploy.yml` — validés au préalable en émulateur (`npm run test:rules`) puis staging.
 3. **Prod** : merger `develop` → `main` et push. `deploy.yml` (target auto = prod)
    build + publie `baillan.com`, puis **tague la release** (`vX.Y.Z` + GitHub Release
    via `tool/release/release.sh`).

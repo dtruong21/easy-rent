@@ -17,6 +17,36 @@
       ],
       "headers": [
         {
+          "//": "Sécurité HTTP (OWASP-06). Clés distinctes de Cache-Control : aucun conflit avec les règles de cache ci-dessous (Firebase n'applique la règle dernière-matchante que PAR clé). HSTS : ajouté par défaut par Firebase Hosting (constaté en prod), donc non redéfini ici. Permissions-Policy : l'app n'utilise ni caméra, ni micro, ni géolocalisation, ni Payment Request (Stripe Checkout = redirection pleine page vers checkout.stripe.com). CSP : seule frame-ancestors 'none' est APPLIQUÉE ; la politique complète est en Report-Only (non bloquante) — à observer dans la console du navigateur sur le staging avant de la promouvoir en CSP appliquée. Les 7 sha256 de script-src couvrent les scripts inline exécutables : les 2 de web/index.html (migration SW + auto-réparation du cache) et les 5 injectés au boot par FlutterFire (firebase_core_web 2.24.1, SDK JS 11.9.1, un par service core/firestore/functions/auth/storage, variante Trusted Types de Chromium). Toute modification de ces scripts ou toute montée de version FlutterFire change les hashes : la console du navigateur affiche le hash attendu, à recalculer ici avant de promouvoir en CSP appliquée (Firefox suit une variante non-Trusted-Types à hashes différents). Popup Google/Apple (signInWithPopup) : script https://apis.google.com/js/api.js + iframe https://easy-rent-54cd4.firebaseapp.com/__/auth/iframe (domaine d'auth Firebase ; les chemins réservés /__/ ne reçoivent pas les en-têtes de firebase.json — constaté sur /__/auth/iframe.js). Pas d'endpoint Stripe en connect-src : le client n'appelle jamais l'API Stripe (URL de Checkout renvoyée par une callable puis navigation pleine page). Cross-Origin-Opener-Policy volontairement absent : il casserait le popup d'authentification.",
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=(), payment=()"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'none'"
+            },
+            {
+              "key": "Content-Security-Policy-Report-Only",
+              "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-GZbvNiKAuxhwnRXbvNfPPXsuKZYCprCUklNeu5Hx+f4=' 'sha256-cFfOiV/YDpE1d3eBTCxzsdJePIzxt2cj73OvKFsZ+9s=' 'sha256-lxybZtu/9pEo9t2cXF8OdVCueZV6paBpNEQpBgqbYWA=' 'sha256-Kd6jrSJ+A8S4mbnMXfLL0WXdMJ02uYTrwrdvhPTpDug=' 'sha256-NgGZv0N7ml5Cnqo6sP6SR+wvDZmu359jxvlmnBvBdx8=' 'sha256-JAe3kXNkLbcxHg2ubdnFd1ozxf8byMAcYA7B4I7gV5I=' 'sha256-5LqYaNspg9CFrAptOVe5769ZJbQQLi/9/zqrBNhPepc=' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' data: blob: https://www.gstatic.com https://fonts.gstatic.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://europe-west1-easy-rent-54cd4.cloudfunctions.net; frame-src https://easy-rent-54cd4.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+            }
+          ]
+        },
+        {
           "//": "Entry points: jamais cachés — le browser doit toujours re-vérifier pour récupérer le dernier index.html / bootstrap / SW.",
           "source": "/index.html",
           "headers": [
@@ -101,6 +131,36 @@
       ],
       "headers": [
         {
+          "//": "Sécurité HTTP (OWASP-06). Clés distinctes de Cache-Control : aucun conflit avec les règles de cache ci-dessous (Firebase n'applique la règle dernière-matchante que PAR clé). HSTS : ajouté par défaut par Firebase Hosting (constaté en prod), donc non redéfini ici. Permissions-Policy : l'app n'utilise ni caméra, ni micro, ni géolocalisation, ni Payment Request (Stripe Checkout = redirection pleine page vers checkout.stripe.com). CSP : seule frame-ancestors 'none' est APPLIQUÉE ; la politique complète est en Report-Only (non bloquante) — à observer dans la console du navigateur sur le staging avant de la promouvoir en CSP appliquée. Les 7 sha256 de script-src couvrent les scripts inline exécutables : les 2 de web/index.html (migration SW + auto-réparation du cache) et les 5 injectés au boot par FlutterFire (firebase_core_web 2.24.1, SDK JS 11.9.1, un par service core/firestore/functions/auth/storage, variante Trusted Types de Chromium). Toute modification de ces scripts ou toute montée de version FlutterFire change les hashes : la console du navigateur affiche le hash attendu, à recalculer ici avant de promouvoir en CSP appliquée (Firefox suit une variante non-Trusted-Types à hashes différents). Popup Google/Apple (signInWithPopup) : script https://apis.google.com/js/api.js + iframe https://easy-rent-54cd4.firebaseapp.com/__/auth/iframe (domaine d'auth Firebase ; les chemins réservés /__/ ne reçoivent pas les en-têtes de firebase.json — constaté sur /__/auth/iframe.js). Pas d'endpoint Stripe en connect-src : le client n'appelle jamais l'API Stripe (URL de Checkout renvoyée par une callable puis navigation pleine page). Cross-Origin-Opener-Policy volontairement absent : il casserait le popup d'authentification.",
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=(), payment=()"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'none'"
+            },
+            {
+              "key": "Content-Security-Policy-Report-Only",
+              "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-GZbvNiKAuxhwnRXbvNfPPXsuKZYCprCUklNeu5Hx+f4=' 'sha256-cFfOiV/YDpE1d3eBTCxzsdJePIzxt2cj73OvKFsZ+9s=' 'sha256-lxybZtu/9pEo9t2cXF8OdVCueZV6paBpNEQpBgqbYWA=' 'sha256-Kd6jrSJ+A8S4mbnMXfLL0WXdMJ02uYTrwrdvhPTpDug=' 'sha256-NgGZv0N7ml5Cnqo6sP6SR+wvDZmu359jxvlmnBvBdx8=' 'sha256-JAe3kXNkLbcxHg2ubdnFd1ozxf8byMAcYA7B4I7gV5I=' 'sha256-5LqYaNspg9CFrAptOVe5769ZJbQQLi/9/zqrBNhPepc=' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' data: blob: https://www.gstatic.com https://fonts.gstatic.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://europe-west1-easy-rent-54cd4.cloudfunctions.net; frame-src https://easy-rent-54cd4.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'"
+            }
+          ]
+        },
+        {
           "//": "Entry points: jamais cachés — le browser doit toujours re-vérifier pour récupérer le dernier index.html / bootstrap / SW.",
           "source": "/index.html",
           "headers": [
@@ -175,6 +235,17 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "headers": [
         {
+          "//": "Sécurité HTTP (OWASP-06). Clés distinctes de X-Robots-Tag et Cache-Control : aucun conflit avec les règles ** voisines ni avec les règles par chemin. HSTS : ajouté par défaut par Firebase Hosting, non redéfini ici. CSP APPLIQUÉE (la vitrine Astro est statique, zéro JS exécutable — seuls des blocs application/ld+json, qui sont des données et non des scripts) : un <style> inline par page (style-src 'unsafe-inline'), feuille /_astro/*.css, 3 polices WOFF2 auto-hébergées (/fonts/), favicon/icônes locaux, aucune ressource externe ; le lien Tally s'ouvre dans un nouvel onglet (navigation, non régie par la CSP). Vérifié sur site/dist (6 pages). Si un script, une police ou une image externe est un jour ajouté à la vitrine, élargir script-src / font-src / img-src ici.",
+          "source": "**",
+          "headers": [
+            { "key": "X-Content-Type-Options", "value": "nosniff" },
+            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+            { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+            { "key": "X-Frame-Options", "value": "DENY" },
+            { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" }
+          ]
+        },
+        {
           "//": "Avec cleanUrls, Firebase route headers sur le CHEMIN demandé (/, /about), pas sur le fichier physique (index.html) : **/*.html ne matche donc jamais une clean URL et retombait sur le défaut Firebase (max-age=3600). ** attrape toutes les pages HTML aussi ; il reste placé AVANT /_astro/** et /{robots.txt,sitemap*.xml} qui gagnent pour leurs chemins via la sémantique dernière-règle-matchante (cf. commentaire ligne ~76, bloc prod).",
           "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
@@ -182,6 +253,19 @@
         {
           "source": "/_astro/**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        },
+        {
+          "//": "Polices et icônes de la vitrine : noms STABLES (non fingerprintés, contrairement à /_astro/**), donc pas immutable — mais 30 j / 7 j au lieu du max-age=0 de la règle ** (chaque page revalidait 2 polices + favicon). Règle placée APRÈS ** : dernière règle matchante gagne pour Cache-Control.",
+          "source": "/fonts/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+        },
+        {
+          "source": "/icons/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+        },
+        {
+          "source": "/{favicon.ico,favicon.svg,apple-touch-icon.png}",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
         },
         {
           "//": "@astrojs/sitemap (Task 7, FEAT-050) génère sitemap-index.xml + sitemap-0.xml, jamais sitemap.xml — le glob doit matcher ces noms réels, sinon les deux fichiers retombent sur le max-age=0 de la règle ** ci-dessus.",
@@ -197,6 +281,17 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "headers": [
         {
+          "//": "Sécurité HTTP (OWASP-06). Clés distinctes de X-Robots-Tag et Cache-Control : aucun conflit avec les règles ** voisines ni avec les règles par chemin. HSTS : ajouté par défaut par Firebase Hosting, non redéfini ici. CSP APPLIQUÉE (la vitrine Astro est statique, zéro JS exécutable — seuls des blocs application/ld+json, qui sont des données et non des scripts) : un <style> inline par page (style-src 'unsafe-inline'), feuille /_astro/*.css, 3 polices WOFF2 auto-hébergées (/fonts/), favicon/icônes locaux, aucune ressource externe ; le lien Tally s'ouvre dans un nouvel onglet (navigation, non régie par la CSP). Vérifié sur site/dist (6 pages). Si un script, une police ou une image externe est un jour ajouté à la vitrine, élargir script-src / font-src / img-src ici.",
+          "source": "**",
+          "headers": [
+            { "key": "X-Content-Type-Options", "value": "nosniff" },
+            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+            { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+            { "key": "X-Frame-Options", "value": "DENY" },
+            { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" }
+          ]
+        },
+        {
           "source": "**",
           "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
         },
@@ -204,6 +299,19 @@
           "//": "Avec cleanUrls, **/*.html ne matche jamais une clean URL (Firebase route headers sur le chemin demandé, pas le fichier physique) — retombait sur le défaut Firebase (max-age=3600). ** couvre toute page HTML ; clé Cache-Control distincte du X-Robots-Tag de la règle précédente, donc les deux headers s'appliquent sans conflit.",
           "source": "**",
           "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+        },
+        {
+          "//": "Même cache que la prod pour les polices et icônes (cf. cible marketing) : le staging doit mesurer les mêmes performances que la prod.",
+          "source": "/fonts/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+        },
+        {
+          "source": "/icons/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+        },
+        {
+          "source": "/{favicon.ico,favicon.svg,apple-touch-icon.png}",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
         }
       ]
     }
@@ -229,7 +337,7 @@
     {
       "source": "functions",
       "codebase": "default",
-      "runtime": "nodejs20",
+      "runtime": "nodejs22",
       "region": "europe-west1",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [

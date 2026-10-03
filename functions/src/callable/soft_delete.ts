@@ -37,13 +37,13 @@
  * pattern côté création.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {
   asBag,
   dataOrFail,
-  requireAuthUid,
+  requireVerifiedUid,
   requireString,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
@@ -61,7 +61,7 @@ const SOFT_DELETABLE: ReadonlySet<string> = new Set([
 export const softDeleteEntity = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const collection = requireString(data.collection, "collection");
@@ -74,7 +74,7 @@ export const softDeleteEntity = onCall(
       );
     }
 
-    const db = dbForRequest(request);
+    const db = await dbForRequest(request);
     const ref = db.doc(`${collection}/${id}`);
 
     // La purge Storage est un effet de BORD : elle ne peut pas vivre dans la
@@ -145,8 +145,8 @@ export const softDeleteEntity = onCall(
       }
 
       tx.update(ref, {
-        deletedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        deletedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       // Soft-delete d'un bail ACTIF : décrémenter le activeLeaseCount
@@ -162,10 +162,10 @@ export const softDeleteEntity = onCall(
         const tenantId = doc.tenantId;
         if (typeof propertyId === "string" && typeof tenantId === "string") {
           tx.update(db.doc(`properties/${propertyId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(-1),
+            activeLeaseCount: FieldValue.increment(-1),
           });
           tx.update(db.doc(`tenants/${tenantId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(-1),
+            activeLeaseCount: FieldValue.increment(-1),
           });
         }
       }

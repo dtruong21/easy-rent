@@ -30,14 +30,11 @@ import '../chart_period_l10n.dart';
 /// dashboard principal : changer de période (6/12/24 mois) ne recharge QUE ce
 /// graphique, pas les KPI ni l'activité récente.
 ///
-/// **Ne pas confondre avec la section « Rentabilité portfolio » juste
-/// au-dessus** : celle-ci affiche un cash flow LISSÉ (moyenne sur 12 mois
-/// glissants, avec bascule réel/prévisionnel par catégorie de charge) — ce
-/// graphique-ci montre le réel BRUT mois par mois, forcément plus irrégulier
-/// (une grosse facture de travaux peut créer un mois franchement négatif).
-/// Les deux sont légitimes et ne se contredisent pas ; le sous-titre
-/// ([AppLocalizations.dashboardMonthlyChartMethodologyCaption]) le rappelle
-/// explicitement pour ne jamais laisser l'utilisateur croire à une erreur.
+/// C'est la seule représentation du cash flow sur le dashboard : le réel
+/// BRUT mois par mois, forcément irrégulier (une grosse facture de travaux
+/// peut créer un mois franchement négatif). Le sous-titre
+/// ([AppLocalizations.dashboardMonthlyChartMethodologyCaption]) rappelle la
+/// méthodologie (loyers encaissés, dépenses réelles, mensualité de prêt).
 ///
 /// Deux sélecteurs dans l'en-tête, persistés séparément :
 /// - Format ([chartFormatProvider]) : [ChartFormat.bars] (1 barre/mois,
@@ -208,11 +205,8 @@ class _ChartHeader extends ConsumerWidget {
       children: [
         selectorsRow,
         const SizedBox(height: 4),
-        // Différencie explicitement ce graphique (réel, brut, non lissé) de
-        // la section « Rentabilité portfolio » juste au-dessus (cash flow
-        // lissé sur 12 mois glissants) — sans ça, un mois franchement
-        // négatif ici pourrait sembler contredire un cash flow agrégé positif
-        // là-haut.
+        // Rappelle la méthodologie du cash flow réel, brut, non lissé —
+        // seule représentation du cash flow affichée sur le dashboard.
         Text(
           l10n.dashboardMonthlyChartMethodologyCaption,
           style: theme.textTheme.bodySmall?.copyWith(

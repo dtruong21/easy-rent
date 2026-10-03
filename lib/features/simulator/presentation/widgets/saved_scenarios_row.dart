@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/store_billing.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/entity_card.dart';
 import '../../../../core/ui/cards/entity_card_density.dart';
@@ -295,6 +296,9 @@ class _CompareScenariosToggle extends StatelessWidget {
     }
 
     if (!hasComparison) {
+      // Apps iOS/Android : la tuile verrouillée ne mène qu'à /pro (achat hors
+      // achat intégré) — on ne l'affiche pas plutôt que d'offrir un cul-de-sac.
+      if (isStoreApp) return const SizedBox.shrink();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

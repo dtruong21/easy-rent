@@ -34,7 +34,9 @@ Obligations à respecter :
     (`retentionUntil`)
   - **Tout le reste est hard-delete immédiat** (biens, locataires, baux,
     paiements, documents — y compris `legalHold` —, dépenses, simulations,
-    profil, fichiers Storage, compte Auth). Position assumée : les devoirs
+    décomptes de charges, états des lieux, profil, fichiers Storage, compte
+    Auth ; décomptes et états des lieux ajoutés le 2026-09-30, constat
+    OWASP-05). Position assumée : les devoirs
     de conservation des baux (5 ans) et pièces comptables (10 ans)
     incombent au **bailleur** pour ses propres documents — le flux de
     suppression l'avertit explicitement de les télécharger avant ; la

@@ -33,7 +33,7 @@
   protégés par `preservesImmutables()`.
 - Toute query filtrant `deletedAt` a son **index composite** déclaré dans
   `firestore.indexes.json` (28 à ce jour).
-- **Cloud Functions** : Node 20 + TypeScript, dans `functions/src/`
+- **Cloud Functions** : Node 22 + TypeScript, dans `functions/src/`
   (`callable/`, `triggers/`, `scheduled/`, `http/`). Les écritures sensibles
   (`leases`, `payments`, `documents`, `expenses`) sont **exclusives aux CF** —
   le client n'écrit pas directement.
@@ -100,7 +100,7 @@ EasyRent/
 ├── android/ ios/              # Apps natives (FEAT-024)
 ├── assets/                    # Fonts, images
 ├── tool/                      # Scripts Dart (branding/, release/, seed/)
-├── functions/                 # Cloud Functions Node 20 + TS
+├── functions/                 # Cloud Functions Node 22 + TS
 │   ├── src/                   # callable/ triggers/ scheduled/ http/ utils/
 │   ├── rules-tests/           # Tests règles Firestore (émulateur)
 │   └── scripts/
@@ -137,8 +137,9 @@ EasyRent/
 - Widget : `test/widget/...`
 - Integration : `test/integration/...`
 - Cloud Functions : `functions/src/__tests__/` (vitest) → `npm test` dans `functions/`
-- Règles Firestore : `functions/rules-tests/firestore_rules.test.ts` →
-  `npm run test:rules` (lance l'émulateur Firestore, projet `demo-easyrent`).
+- Règles Firestore + Storage : `functions/rules-tests/firestore_rules.test.ts` et
+  `functions/rules-tests/storage_rules.test.ts` → `npm run test:rules` (lance les
+  émulateurs Firestore **et** Storage, projet `demo-easyrent`).
   **Toujours tester le cross-user** : un landlord ne doit jamais lire/écrire
   les documents d'un autre (cf. DoD dans `CLAUDE.md`).
 - Toujours tester le chemin malheureux (inputs invalides, erreurs réseau, états vides)

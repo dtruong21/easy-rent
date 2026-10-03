@@ -10,6 +10,7 @@ import '../../leases/domain/lease_lateness.dart';
 import '../../payments/domain/payment.dart';
 import '../domain/activity_item.dart';
 import '../domain/dashboard_kpi.dart';
+import '../domain/onboarding_progress.dart';
 
 final _log = Logger('DashboardRepository');
 
@@ -21,7 +22,6 @@ final _log = Logger('DashboardRepository');
 abstract interface class DashboardRepository {
   Future<LoyersMoisKpi> fetchLoyersMois();
   Future<RetardsKpi> fetchRetards();
-  Future<RenouvellementsKpi> fetchRenouvellements();
   Future<DocsPendingKpi> fetchDocsPending();
 
   /// Loyers encaissés mois par mois sur les [months] derniers mois
@@ -34,7 +34,9 @@ abstract interface class DashboardRepository {
   /// de `MonthlyCollectedRent`).
   Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(int months);
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5});
-  Future<bool> isLandlordOnboarding();
+
+  /// Progression d'onboarding dérivée (5 signaux + id d'un bail). Lecture seule.
+  Future<OnboardingProgress> fetchOnboardingProgress();
 }
 
 class FirestoreDashboardRepository implements DashboardRepository {
@@ -164,24 +166,6 @@ class FirestoreDashboardRepository implements DashboardRepository {
         .length;
     _log.fine('fetchRetards: count=$retards');
     return RetardsKpi(count: retards);
-  }
-
-  @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async {
-    final uid = _uid;
-    final today = DateTime.now();
-    final in30Days = today.add(const Duration(days: 30));
-
-    final qs = await _firestore
-        .collection('leases')
-        .where('landlordId', isEqualTo: uid)
-        .where('deletedAt', isNull: true)
-        .where('status', isEqualTo: 'active')
-        .where('endDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
-        .where('endDate', isLessThanOrEqualTo: Timestamp.fromDate(in30Days))
-        .get();
-    _log.fine('fetchRenouvellements: count=${qs.docs.length}');
-    return RenouvellementsKpi(count: qs.docs.length);
   }
 
   @override
@@ -368,31 +352,39 @@ class FirestoreDashboardRepository implements DashboardRepository {
   }
 
   @override
-  Future<bool> isLandlordOnboarding() async {
+  Future<OnboardingProgress> fetchOnboardingProgress() async {
     final uid = _uid;
+
+    Query<Map<String, dynamic>> owned(String col) => _firestore
+        .collection(col)
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isNull: true)
+        .limit(1);
+
     final results = await Future.wait([
+      owned('properties').get(),
+      owned('tenants').get(),
+      owned('leases').get(),
+      owned('payments').get(),
+      // receipts : collection immuable read-only (pas de deletedAt) ; un
+      // receipt compte même s'il est ensuite isVoided — l'aha, c'est de
+      // l'avoir généré.
       _firestore
-          .collection('properties')
+          .collection('receipts')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-      _firestore
-          .collection('tenants')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-      _firestore
-          .collection('leases')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
           .limit(1)
           .get(),
     ]);
-    final isEmpty = results.every((qs) => qs.docs.isEmpty);
-    _log.fine('isLandlordOnboarding=$isEmpty');
-    return isEmpty;
+
+    final leaseDocs = results[2].docs;
+    return OnboardingProgress(
+      hasProperty: results[0].docs.isNotEmpty,
+      hasTenant: results[1].docs.isNotEmpty,
+      hasLease: leaseDocs.isNotEmpty,
+      hasPayment: results[3].docs.isNotEmpty,
+      hasReceipt: results[4].docs.isNotEmpty,
+      firstLeaseId: leaseDocs.isNotEmpty ? leaseDocs.first.id : null,
+    );
   }
 
   static DateTime _activityDate(ActivityItem item) => item.when(

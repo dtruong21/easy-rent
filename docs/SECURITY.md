@@ -116,6 +116,28 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 - Aucun pattern `sk_test_` (Stripe test) ni `whsec_` (signature webhook Stripe, non utilisée aujourd'hui)
 - `docs/SECURITY.md` est **exclu du scan** (il cite les patterns) : ne jamais y coller une vraie valeur, le filet ne rattrapera pas
 
+## 🔎 Audit OWASP du 2026-09-30 — correctifs et points d'attention
+
+Rapport complet : [`docs/security/owasp-audit-2026-09-30.md`](security/owasp-audit-2026-09-30.md) (21 constats ; le **statut des correctifs est en tête du rapport** : 6 constats traités : 01, 02, 05 corrigés ; 04, 06, 09 partiellement (voir le statut de l'audit) sur la branche `fix/owasp-security` — OWASP-21, tests Storage, couvert au passage par OWASP-04 —, les autres reportés).
+
+Garde-fous ajoutés par ces correctifs :
+
+- **Facturation (OWASP-01)** — le webhook RevenueCat route chaque event par `event.environment` : `SANDBOX` → base `staging` uniquement, `PRODUCTION` → `(default)` uniquement, autre/absent → ignoré ; aucun repli sur l'autre base. `createCheckoutSession` refuse (`landlord_not_found`) un compte sans doc dans la base routée ; le cron `reconcileEntitlements` ignore les entitlements `is_sandbox`. Voir [`docs/ENVIRONMENTS.md`](ENVIRONMENTS.md) (« Facturation ») et l'amendement 2026-09-30 de l'[ADR 0003](adr/0003-firestore-prod-staging-isolation.md).
+- **Email vérifié (OWASP-02)** — `hasTrustedEmail()` (`email_verified == true` ou provider `google.com` / `apple.com`) est exigée par `isFullyAuthed()` et `isOwner()` dans `firestore.rules` ; seule exception : la création de son propre `landlords/{uid}` à l'inscription (avant la vérification). Côté Functions, `requireVerifiedUid` garde 22 callables ; exemptées : `deleteAccount`, `exportAccountData` (droits RGPD) et `finalizeAnonymousUpgrade` (appelée avant la vérification). Un test de parité impose de classer toute nouvelle callable (gardée ou exemptée).
+- **Storage (OWASP-04)** — écriture sous `documents/{uid}/` réservée aux comptes non anonymes à email de confiance (condition dupliquée de `firestore.rules` : toute évolution de l'une doit être reportée dans l'autre), nom d'objet contraint à `{id 20 car.}.(pdf|jpg|png|webp)`, 50 Mio max ; `cleanupExpiredAnon` purge `documents/{uid}/` des anonymes expirés. Tests : `functions/rules-tests/storage_rules.test.ts`. Les objets orphelins (jamais rattachés à un document) ne sont pas purgés (reporté).
+- **RGPD (OWASP-05)** — `deleteAccount` hard-delete aussi `charge_statements` et `etat_des_lieux` ; un test de parité impose que toute collection exportée soit purgée ou retenue (seules les `receipts` sont retenues). Les comptes supprimés avant le correctif peuvent avoir laissé ces documents (script ponctuel non écrit).
+- **En-têtes HTTP (OWASP-06)** — sur les 4 cibles Hosting : `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options: DENY`. App : `frame-ancestors 'none'` appliqué + CSP complète en **Report-Only** (pas encore bloquante) ; vitrine : CSP appliquée. Détail dans [`docs/state/DEPENDENCIES.md`](state/DEPENDENCIES.md).
+- **Dépendances (OWASP-09)** — `npm audit fix` sur `functions/` (lockfile uniquement) : advisories de prod 16 (5 high) → 9 (2 high) ; le reste exige firebase-admin 14 / firebase-functions 7 (montée majeure, reportée).
+
+> ⚠️ **Couplage CSP / `web/index.html`.** La CSP Report-Only de l'app épingle par **sha256** les 2 scripts inline de `web/index.html` (+ 5 scripts injectés par FlutterFire). Modifier le contenu d'un de ces scripts, ou monter FlutterFire, change le hash : à recalculer dans `firebase.json` (blocs `prod` et `stage`) avant de promouvoir la politique en CSP appliquée. Le hash porte sur le texte entre `<script>` et `</script>` — les commentaires HTML autour ne le changent pas. Recalcul : `python3 -c "import re,hashlib,base64;s=open('web/index.html',encoding='utf-8').read();[print('sha256-'+base64.b64encode(hashlib.sha256(m.encode()).digest()).decode()) for m in re.findall(r'<script>(.*?)</script>',s,re.S)]"` (scripts inline sans attribut uniquement ; la console du navigateur indique aussi le hash attendu).
+
+**Déploiement de ces correctifs** (rien n'est déployé par le simple merge de la branche) :
+- **Cloud Functions : redéploiement manuel requis** (webhook, checkout, cron de réconciliation, `deleteAccount`, garde des callables, `cleanupExpiredAnon`) — hors CI.
+- `firestore.rules` : déployées par la CI (`develop` → `firestore:staging`, `main` → `firestore:(default)`).
+- `storage.rules` : déployées par `deploy.yml` depuis `main` uniquement (bucket partagé).
+- En-têtes Hosting : déployés avec le Hosting par la CI.
+- **Action manuelle recommandée dans RevenueCat** : vérifier les réglages d'environnement du webhook. Un filtre « Production only » ferait doublon avec le routage serveur, mais couperait aussi les events `SANDBOX` qui alimentent la base `staging` (les tests de paiement staging ne la mettraient plus à jour) — à n'activer que si ce besoin disparaît. À confirmer aussi : les valeurs réelles d'`environment` reçues (`SANDBOX` / `PRODUCTION`) sur un event après déploiement.
+
 ## ⚠️ Patterns sensibles à connaître
 
 ### ~~Flag de session GUC pour bypass contrôlé de trigger (`app.*`)~~ — OBSOLÈTE (FEAT-019)

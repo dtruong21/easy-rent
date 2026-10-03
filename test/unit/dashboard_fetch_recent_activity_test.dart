@@ -7,6 +7,7 @@ library;
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
@@ -53,9 +54,6 @@ class _FakeMultiSourceRepository implements DashboardRepository {
   @override
   Future<RetardsKpi> fetchRetards() async => const RetardsKpi(count: 0);
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
   @override
@@ -63,7 +61,15 @@ class _FakeMultiSourceRepository implements DashboardRepository {
     int months,
   ) async => [];
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 // ---------------------------------------------------------------------------

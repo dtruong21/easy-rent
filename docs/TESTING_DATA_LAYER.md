@@ -79,8 +79,8 @@ même coût — pas d'émulateur, pas de réseau, tourne dans la CI existante.
 
 ### Niveau 3 — Émulateur, pour l'application réelle des règles (ciblé)
 
-`npm run test:rules` dans `functions/` (émulateur Firestore + vitest) est le seul
-endroit où les règles sont réellement évaluées. `investment_scenarios` y était
+`npm run test:rules` dans `functions/` (émulateurs Firestore + Storage + vitest) est
+le seul endroit où les règles sont réellement évaluées. `investment_scenarios` y était
 couvert pour le **list-scoping** seulement (via `LANDLORD_SCOPED_COLLECTIONS`) ;
 ses écritures ne l'étaient pas — c'est ajouté par ce ticket (cf. §4).
 

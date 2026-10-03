@@ -13,6 +13,7 @@ import '../../application/lease_payments_provider.dart';
 import '../../application/payment_form_controller.dart';
 import '../../domain/payment.dart';
 import 'payment_list_tile.dart';
+import 'payment_punctuality_indicator.dart';
 
 final _log = Logger('PaymentListSection');
 
@@ -94,6 +95,16 @@ class _PaymentListContent extends ConsumerWidget {
                 Text(
                   context.l10n.paymentsSectionTitle,
                   style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PaymentPunctualityIndicator(
+                      leaseId: leaseId,
+                      paymentDay: lease.paymentDay,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 Tooltip(

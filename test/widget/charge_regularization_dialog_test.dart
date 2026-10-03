@@ -155,6 +155,14 @@ class _MockWebShare implements WebShareService {
 
   @override
   Future<List<int>> fetchBytes(String url) async => Uint8List(0);
+
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------
@@ -235,11 +243,6 @@ Widget _buildDialog({
               builder: (_) => const ChargeRegularizationDialog(
                 leaseId: 'lease-1',
                 propertyId: 'prop-1',
-                landlordFullName: 'Marie Martin',
-                landlordAddress: '1 rue de Paris, 75001 Paris',
-                tenantFullName: 'Jean Dupont',
-                tenantFirstName: 'Jean',
-                propertyAddress: '2 rue de Lyon, 69001 Lyon',
                 tenantEmail: 'jean.dupont@example.com',
               ),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/french_date.dart';
+import '../../../core/ui/theme/app_icon_size.dart';
 import '../../../core/utils/money_format.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
@@ -106,7 +107,7 @@ class _RecurrenceChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.autorenew, size: 11, color: color),
+          Icon(Icons.autorenew, size: AppIconSize.xs, color: color),
           const SizedBox(width: 3),
           Text(
             label,

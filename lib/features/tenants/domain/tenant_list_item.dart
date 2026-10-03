@@ -19,6 +19,7 @@ class TenantListItem {
     this.currentPropertyName,
     this.activeLeasePeriodLabel,
     this.activeLeaseRentCents,
+    this.activeLeaseChargesCents,
     this.currentPropertyId,
     this.currentPropertyColorKey,
   });
@@ -40,6 +41,10 @@ class TenantListItem {
 
   /// Loyer du bail actif en centimes, ou `null` si sans bail.
   final int? activeLeaseRentCents;
+
+  /// Charges mensuelles du bail actif en centimes, ou `null` si sans bail.
+  /// Avec [activeLeaseRentCents] : chiffre clé « CC / mois » des cartes.
+  final int? activeLeaseChargesCents;
 
   /// Identifiant du bien occupé, ou `null` si sans bail.
   ///
@@ -91,10 +96,12 @@ class TenantListItem {
     String? propertyName;
     String? periodLabel;
     int? rentCents;
+    int? chargesCents;
 
     if (activeLease != null) {
       leaseId = activeLease['id'] as String?;
       rentCents = activeLease['rent_amount_cents'] as int?;
+      chargesCents = activeLease['charges_amount_cents'] as int?;
 
       final property = activeLease['property'] as Map<String, dynamic>?;
       if (property != null) {
@@ -120,6 +127,7 @@ class TenantListItem {
       currentPropertyName: propertyName,
       activeLeasePeriodLabel: periodLabel,
       activeLeaseRentCents: rentCents,
+      activeLeaseChargesCents: chargesCents,
     );
   }
 }

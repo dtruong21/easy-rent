@@ -24,8 +24,10 @@ final _log = Logger('OpenReceiptPdf');
 /// 1. **Web** — URL `blob:` via [WebShareService.openPdfBytes]. Acceptée en
 ///    navigation, rendue par la visionneuse intégrée, et sans la limite de
 ///    taille des URLs `data:` (~2 Mo sur Chrome).
-/// 2. **Hors Web** — repli sur l'URL `data:`, que `launchUrl` sait ouvrir : la
-///    restriction est propre aux navigateurs.
+/// 2. **Mobile** — feuille de partage système via [WebShareService.openPdfBytes]
+///    (aperçu natif). Le repli `data:` n'ouvre rien sur iOS (recette
+///    2026-09-28).
+/// 3. **Desktop** — repli sur l'URL `data:`, que `launchUrl` sait ouvrir.
 ///
 /// Extrait en fonction partagée parce que trois écrans ouvrent une quittance
 /// (menu d'actions compact, menu étendu, dialogue d'aperçu) et divergeaient

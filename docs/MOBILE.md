@@ -107,6 +107,102 @@ flutter build ios --simulator      # iOS simulateur (pas de codesign)
 flutter run -d <device>            # run direct émulateur/simulateur
 ```
 
+## Test Lab (Robo)
+
+Build Android **debug** de test, lancé sur le Firebase Test Lab (Robo) contre la
+base Firestore **`staging`** — jamais la prod. Détails d'architecture :
+[`ENVIRONMENTS.md`](ENVIRONMENTS.md) (« Build de test mobile ») et ADR 0003
+(amendement 2026-09-29).
+
+**Prérequis**
+
+- **Functions déployées avec le routage mobile par compte** (`dbForRequest`
+  async, appels sans `Origin` routés par compte). Sans ce déploiement, les
+  callables du build de test écrivent en prod.
+- **Compte de test** semé par
+  [`tool/seed/seed_testlab_staging.mjs`](../tool/seed/seed_testlab_staging.mjs)
+  (à lancer soi-même, compte owner) :
+
+  ```bash
+  gcloud auth application-default login          # une fois
+  node tool/seed/seed_testlab_staging.mjs --yes-staging
+  ```
+
+  Le script crée (ou reprend) le compte Auth `testlab.robo@example.com` (email
+  marqué vérifié, mot de passe aléatoire renouvelé à chaque run), écrit son doc
+  `landlords/{uid}` **uniquement** dans `staging` (profil complet, palier
+  `paid`), crée un jeu de données réaliste via les vraies callables (routées vers
+  `staging` par l'Origin de l'app web staging — marche **sans** le redéploiement
+  des Functions) et remplit `dart-defines.testlab.json` (gitignoré ; le mot de
+  passe n'est jamais affiché). Il **refuse** tout compte qui a un doc landlord en
+  prod, avant d'y toucher. Rejouable : pas de nouveau seed si des biens existent.
+  Vérifiable d'abord sur les émulateurs (mode décrit en tête du script).
+  - Le doc `landlords/{uid}` doit exister dans `staging` **avant** de lancer
+    Test Lab : s'il est absent, les callables mobiles retombent sur la prod.
+  - **Email vérifié** obligatoire : le routeur de l'app ne laisse passer que les
+    comptes non anonymes avec `emailVerified == true`
+    (`auth_session_provider.dart`) ; sinon Robo reste bloqué sur l'écran de
+    vérification. Le script le positionne.
+  - **Ne jamais utiliser ce compte en prod** : le routage mobile cherche la prod
+    d'abord, un compte présent dans les deux bases serait routé en prod.
+  - **Mot de passe dédié** : les identifiants d'auto-login sont des constantes de
+    compilation, lisibles dans l'APK debug (que Test Lab stocke dans le bucket du
+    projet). Le script génère un mot de passe aléatoire propre à ce compte.
+
+**Vérification préalable (smoke test) — avant le premier run Robo**
+
+Après le déploiement des Functions : lancer le build de test (émulateur Android
+ou appareil, **sans** `USE_FIREBASE_EMULATOR`), créer une entité (par ex. un
+bien) et vérifier dans la console Firebase qu'elle apparaît dans la base
+**`staging`** et **pas** dans `(default)`.
+Tant que les Functions ne sont pas redéployées, les callables du build de test
+écrivent encore en prod : **ne pas lancer Test Lab avant ce contrôle.**
+
+**Build et lancement**
+
+```bash
+# 1. Dart-defines (fichier gitignoré) : écrit par le script de seed ci-dessus.
+#    (À la main : cp dart-defines.testlab.example.json dart-defines.testlab.json
+#     puis renseigner TEST_AUTO_LOGIN_EMAIL / _PASSWORD.)
+
+# 2. Build APK debug
+flutter build apk --debug --dart-define-from-file=dart-defines.testlab.json
+
+# 3. Lancement Robo (modèles disponibles : gcloud firebase test android models list)
+gcloud firebase test android run --type robo \
+  --app build/app/outputs/flutter-apk/app-debug.apk \
+  --device model=MediumPhone.arm,version=34 \
+  --device model=Pixel2.arm,version=30 \
+  --timeout 300s --project easy-rent-54cd4
+```
+
+**À savoir**
+
+- `MOBILE_STAGING` et l'auto-login n'ont **aucun effet en release**
+  (`kReleaseMode`) : le build de test est un APK debug, la release store n'est
+  pas concernée.
+- L'app se connecte seule au compte de test au démarrage et affiche un ruban
+  violet « STAGING » (le ruban « EMULATOR » prime si l'émulateur est aussi actif ;
+  dans ce cas l'auto-login est ignoré, le compte de test n'existant pas dans
+  l'Auth local).
+- **Risque Robo — écrans destructifs.** L'auto-login rend la session « récente » :
+  Robo peut donc atteindre les écrans sensibles du compte (déconnexion,
+  « Supprimer mon compte » — qui supprime l'utilisateur Auth **partagé** —,
+  changement d'email ou de mot de passe). Reprise après incident : relancer
+  `node tool/seed/seed_testlab_staging.mjs --yes-staging` (recrée le compte et
+  réécrit `dart-defines.testlab.json`), puis reconstruire l'APK.
+- **Comptes anonymes résiduels.** Les comptes anonymes que Robo pourrait créer ne
+  sont pas nettoyés par `cleanup_expired_anon` (il ne scanne que `(default)`) :
+  à purger à la main s'ils s'accumulent.
+- Effet de bord d'un `flutter build apk` local : Flutter peut ajouter
+  `android.builtInKotlin=false` et `android.newDsl=false` à
+  `android/gradle.properties` — ne pas les committer (`git checkout android/gradle.properties`).
+
+**Résultats** : console Firebase → Test Lab (plantages, captures, vidéo). Quota :
+10 tests/jour sur le plan Spark ; sur le plan Blaze (le nôtre), un quota
+quotidien gratuit en minutes d'appareil, puis facturation à l'usage — vérifier
+la page Tarifs Firebase avant des campagnes répétées.
+
 ## TL;DR
 
 Le codebase est **déjà largement portable** : les seuls points web-only sont
@@ -238,9 +334,11 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
   > ⚠️ **`--dart-define=APP_ENV=prod` obligatoire sur les builds de release
   > mobile.** Sans lui, `APP_ENV` retombe sur son défaut `'dev'` → l'app afficherait
   > le badge « DEV/STAGING » à de vrais utilisateurs. La base Firestore, elle,
-  > reste protégée quoi qu'il arrive : le `firestoreProvider` route tout build
-  > mobile vers `(default)` via le garde `kIsWeb` (ADR 0003) — mais l'affichage
-  > `Env.isProd` dépend bien de ce flag.
+  > reste protégée quoi qu'il arrive : le `firestoreProvider` route **tout build
+  > mobile de release** vers `(default)` (garde `kIsWeb` ; `MOBILE_STAGING` est
+  > ignoré en release — ADR 0003) — mais l'affichage `Env.isProd` dépend bien de
+  > ce flag. Seul le build **debug** de test avec `MOBILE_STAGING` vise `staging`
+  > (cf. [Test Lab (Robo)](#test-lab-robo)).
 
   Le build number (= nb de commits) est strictement croissant → un nouveau
   build à uploader sur le store aura toujours un numéro supérieur au précédent

@@ -12,7 +12,7 @@ cd easy-rent && git checkout develop
 
 ## 2. Prérequis à installer (NE sont PAS dans Git)
 - **Flutter 3.41.2** — ⚠️ version **épinglée** dans `.github/workflows/ci.yml` ; matcher cette version en local pour éviter les divergences (assertion `ListTile`/`DecoratedBox` sur Flutter plus récent).
-- **Node.js 20** — pour les Cloud Functions.
+- **Node.js 22** — pour les Cloud Functions.
 - **firebase-tools** : `npm i -g firebase-tools` (ou `npx -y firebase-tools@latest`).
 - (optionnel) **gh** CLI pour les PRs.
 

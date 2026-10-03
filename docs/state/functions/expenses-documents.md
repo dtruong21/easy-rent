@@ -6,7 +6,7 @@ Dépenses (FEAT-041a) + documents (FEAT-008, v2 FEAT-041b). Fichiers : `function
 
 ## Callables — Documents
 
-**ADR 0003** : tous les callables écrivant Firestore utilisent `dbForRequest(request)` pour router vers la base prod ou staging par Origin.
+**ADR 0003** : tous les callables écrivant Firestore utilisent `await dbForRequest(request)` pour router vers la base prod ou staging : web par Origin, mobile par compte (`dbForLandlordUid`, prod d'abord).
 
 ### `createDocument` (v3, FEAT-008/FEAT-041b/FEAT-044/FEAT-056)
 Client invoke. **v3 (2026-08-03+) : taille RÉELLE lue depuis Storage, paliers différenciés par tier.**
@@ -28,6 +28,9 @@ Client invoke. **v3 (2026-08-03+) : taille RÉELLE lue depuis Storage, paliers d
 
 ### `getDocumentDownloadUrl` (FEAT-008)
 Client invoke. Génère une **URL signée court-terme (5 min)** pour télécharger le fichier. Ownership check (`landlordId==uid`) + refus si `deletedAt!=null`. **Retour** : `{downloadUrl, downloadUrlExpiresAt}`. Fichier `documents.ts`.
+
+### `updateDocumentCategory` (FIX 2026-09-15)
+Client invoke. **Seule mutation autorisée** sur un document (les Rules posent `update: if false`). Reclasse la `category` (seul champ mutable ; les 5 colonnes immuables restent figées) et **recalcule `legalHold`** depuis la nouvelle catégorie, comme `createDocument`. Ownership check (`landlordId==uid`) + refus si `deletedAt!=null` + validation `ALLOWED_CATEGORIES`. **Garde-fou rétention** : refuse (`FAILED_PRECONDITION` code `document_under_legal_hold`) si le document est **déjà** sous `legalHold` — même logique que `softDeleteEntity`. **Retour** : `{documentId, category, legalHold}`. Fichier `documents.ts`. Client : `FirestoreDocumentsRepository.updateCategory` (relit via `getById`) ; le contrôleur mappe le refus vers `UpdateCategoryErrorReason.legalHold`. ✅ **Testé** : `functions/src/__tests__/update_document_category.test.ts` (8 cas) + `test/unit/update_category_controller_test.dart`. Corrige le stub client qui jetait `UnsupportedError` (action « Modifier la catégorie » cassée en prod).
 
 ### Soft-delete de documents — via `softDeleteEntity('documents')` + Storage cleanup
 Pas de callable dédié (`softDeleteDocument` n'existe pas) : le soft-delete passe par le `softDeleteEntity` universel (spec canonique → account). Flow : fetch document ; si `legalHold==true` → FAILED_PRECONDITION (immutable) ; sinon `deletedAt=now()` **PUIS** `deleteStorageObject(storagePath, uid)` (best-effort, idempotent). **Retour** : `{success:true, storageDeleted, alreadyDeleted}`. Fichier `soft_delete.ts`. Détail du cleanup → `functions/src/utils/storage_cleanup.ts`.

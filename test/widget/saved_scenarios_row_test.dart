@@ -4,6 +4,7 @@
 /// nombre de scénarios + tier). Non-régression : hors sélection, tap → nav.
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
@@ -266,6 +267,49 @@ void main() {
       expect(find.byKey(const Key('compare_toggle_button')), findsOneWidget);
       expect(find.byKey(const Key('chip_select_A')), findsNothing);
       expect(lastLocation, isNull);
+    });
+  });
+
+  group('SavedScenariosRow — app store (iOS/Android)', () {
+    setUp(() => debugIsStoreAppOverride = true);
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    testWidgets(
+      '2 scénarios + free → tuile verrouillée vers /pro masquée (aucun achat hors store)',
+      (tester) async {
+        await tester.pumpWidget(
+          _mount(
+            scenarios: [
+              _scenario(id: 'A', name: 'Alpha'),
+              _scenario(id: 'B', name: 'Bravo'),
+            ],
+            tier: SubscriptionTier.free,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('compare_toggle_pro_only')), findsNothing);
+        expect(find.byKey(const Key('compare_toggle_button')), findsNothing);
+        expect(find.byIcon(Icons.lock_outline), findsNothing);
+        expect(lastLocation, isNull);
+      },
+    );
+
+    testWidgets('2 scénarios + paid → bouton Comparer inchangé', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _mount(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.paid,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('compare_toggle_button')), findsOneWidget);
     });
   });
 }
