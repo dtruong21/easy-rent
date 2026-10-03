@@ -30,7 +30,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-30)
+## Changements (2026-08-03 → 2026-10-03)
+
+### FIX cartes : un montant géant ne fait plus déborder `SummaryCard` (2026-10-03)
+- Vu à la première CI depuis le retour du quota Actions : `receipts_card_view_test` « pire cas desktop 1280 px » débordait de 3,1 px sur Linux (police de secours plus large pour « € » et l'espace fine). Le chiffre clé est plafonné à 45 % de la rangée et réduit à l'échelle au-delà (jamais tronqué) ; nouveau test reproductible (carte de 240 px, 1 234 567,89 €).
 
 ### FIX sécurité OWASP (2026-09-30)
 - Audit [`docs/security/owasp-audit-2026-09-30.md`](../security/owasp-audit-2026-09-30.md) (21 constats) : 6 constats traités sur `fix/owasp-security` : 01, 02, 05 corrigés ; 04, 06, 09 partiellement (voir le statut de l'audit) ; OWASP-21 (tests Storage) couvert au passage par OWASP-04 ; statut par constat en tête du rapport.

@@ -185,6 +185,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  // Montant géant + carte étroite : le chiffre clé ne doit jamais faire
+  // déborder la rangée, quelle que soit la police (la CI Linux rend « € » et
+  // l'espace fine avec une police de secours plus large que macOS). Il est
+  // réduit à l'échelle, jamais tronqué : c'est un montant.
+  testWidgets(
+    'montant géant, carte étroite : aucun débordement, montant entier',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          SummaryCard(
+            title: 'Studio',
+            keyFigure: const SummaryKeyFigure(
+              value: '1 234 567,89 €',
+              caption: 'loyer + charges',
+            ),
+            menuItems: [SummaryMenuItem(label: 'Modifier', onSelected: () {})],
+          ),
+          width: 240,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('1 234 567,89 €'), findsOneWidget);
+    },
+  );
+
   testWidgets('carte large : action rapide calée à droite (pas au milieu)', (
     tester,
   ) async {
