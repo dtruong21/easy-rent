@@ -39,6 +39,49 @@ develop       ──●─●─●─●──●─●─●─●──●─
 > `feature/…` — les documents d'historique (plans, ADR) gardent ces noms tels
 > quels, ce sont des enregistrements de ce qui s'est passé.
 
+## 🧹 Hygiène des branches distantes
+
+- Une branche éphémère se supprime **dès que sa PR est mergée**. Activer
+  Settings → General → **Automatically delete head branches** pour que GitHub
+  le fasse seul.
+- Les merges `feat/fix/chore → develop` sont des **squash** : `git branch -r
+  --merged` ne détecte donc pas ces branches. Vérifier l'état de la PR avant de
+  supprimer une branche « non mergée ».
+- Audit : `git fetch --prune`, puis `git branch -r --merged origin/develop` et
+  `--merged origin/main` (sûrs à supprimer), puis `git push origin --delete <branche>`.
+  Ne jamais supprimer `main`, `develop` ni une branche liée à une PR ouverte.
+
+### À faire à la prochaine session (audit du 2026-10-03)
+
+Audit fait le 2026-10-03 ; la suppression a été bloquée (HTTP 403 du proxy de
+la session cloud, pas de droit de suppression de branche). Voir `docs/state/CHANGELOG.md`
+si une session ultérieure l'a exécutée.
+
+1. **Supprimer (vérifiées entièrement mergées)** — dans `develop` :
+   `chore/functions-node22`, `chore/mobile-emulator-wiring`,
+   `chore/seed-testlab-staging`, `feat/list-summary-cards`,
+   `feat/testlab-staging-build`, `feat/vitrine-refonte`,
+   `fix/card-grid-mobile-height`, `fix/leases-active-filter`,
+   `fix/mobile-pdf-edl-onboarding`, `fix/owasp-security`, `fix/store-compliance`.
+   Dans `main` : `chore/mobile-build-fastlane`, `claude/crashlytics-mobile`,
+   `claude/handoff-keystore-accuracy`, `claude/handoff-note`,
+   `claude/legal-page-privacy`, `claude/store-launch-checklist`,
+   `codex/product-discovery-annonces`, `feature/036-charges-recuperables`,
+   `feature/041-depenses`, `feature/042-charge-mode`, `feature/043-i18n`,
+   `feature/045-account-deletion`, `feature/049-seo`, `feature/anon-auth-m1`,
+   `feature/crud-tenants`, `feature/feat-008-web-share-pivot`.
+2. **Décider (non mergées selon git, probablement squash-mergées)** :
+   `feature/feat-015-detail-pages-enrichment`, `feature/feat-016-rgpd-consent`,
+   `fix/lease-input-hardening`, `claude/amazing-ardinghelli-29501a`,
+   `claude/magical-jackson-d0116a`, `claude/nice-grothendieck-c66baf`,
+   `chore/state-drift-detector`, `ci/137-deploy-firestore-rules`,
+   `feat/056-multi-tier-subscriptions`, `claude/fervent-nash-0641cd`
+   (1 commit hors `develop`, PR #172/#173 fermées). Vérifier l'état de chaque PR
+   avant suppression.
+3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+   à ne pas merger avant le DNS).
+4. Activer *Automatically delete head branches* (voir ci-dessus).
+
 ## 🔒 Branch protection (à configurer sur GitHub)
 
 Pour les deux long-lived branches (`main` et `develop`) — Settings → Branches → Add branch protection rule :
