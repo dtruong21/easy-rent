@@ -81,9 +81,11 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 **`STRIPE_SECRET_KEY`** :
 1. Dashboard Stripe → Developers → API keys → « Roll key »
 2. `firebase functions:secrets:set STRIPE_SECRET_KEY` (colle la nouvelle valeur)
-3. Re-déployer les Functions qui la déclarent (`create_checkout_session`, `manage_subscription`) — un secret n'est relu qu'au déploiement d'une nouvelle révision
+3. Re-déployer les Functions qui la déclarent (`create_checkout_session`, `manage_subscription`, `delete_account`) — un secret n'est relu qu'au déploiement d'une nouvelle révision
 
-⚠️ `STRIPE_SECRET_KEY` doit porter une clé **live** et `STRIPE_SECRET_KEY_TEST` une clé **test** : `resolveStripeKeyOrThrow` vérifie le préfixe et refuse l'appel en cas d'inversion. Coller une clé live dans le secret de test rouvrirait l'issue #138 — c'est la faute de frappe que cette vérification existe pour attraper.
+⚠️ `STRIPE_SECRET_KEY` doit porter une clé **live** et `STRIPE_SECRET_KEY_TEST` une clé **test** : `resolveStripeKeyOrThrow` (clé choisie par l'Origin) et `resolveStripeKeyForDb` (clé choisie par la base routée : suppression de compte, résiliation mobile) vérifient le préfixe et refusent l'appel en cas d'inversion. Coller une clé live dans le secret de test rouvrirait l'issue #138 — c'est la faute de frappe que cette vérification existe pour attraper.
+
+🔒 `scripts/check-stripe-isolation.sh` (CI) impose que tout fichier de `functions/src/` qui construit un client Stripe ou lit un secret `STRIPE_*` passe par l'un de ces deux résolveurs. Tout nouveau résolveur doit être ajouté à la liste `RESOLVERS` du script **et** passer par `requireKeyForEnv`.
 4. Stripe laisse une fenêtre de grâce configurable sur l'ancienne clé : surveiller les logs avant de la révoquer définitivement
 
 **`REVENUECAT_API_KEY` / `REVENUECAT_WEBHOOK_AUTH`** :

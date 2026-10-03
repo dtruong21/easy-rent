@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Garde-fou issue #138 — isolation Stripe prod/staging.
 #
-# La clé `sk_live` ne doit être atteignable que par `resolveStripeKeyOrThrow`
-# (functions/src/utils/stripe_env.ts). Sans ce garde-fou, un dev qui construit
+# La clé `sk_live` ne doit être atteignable que par les résolveurs de
+# functions/src/utils/stripe_env.ts : `resolveStripeKeyOrThrow` (clé choisie par
+# l'Origin — checkout, résiliation web) ou `resolveStripeKeyForDb` (clé choisie
+# par la base routée — suppression de compte, résiliation mobile). Les deux
+# passent par `requireKeyForEnv` (fail-secure : clé absente ou de mauvais mode →
+# refus, jamais de repli sur la clé live). Sans ce garde-fou, un dev qui construit
 # un client Stripe sur un secret brut rouvre #138 en silence : la fonction sert
 # la clé live à un appel venu de staging, et un test du paywall encaisse de
 # l'argent réel. Les tests unitaires ne l'attrapent pas — ils verrouillent la
@@ -24,6 +28,10 @@ fi
 
 fail=0
 
+# Résolveurs autorisés (cf. en-tête). Un nouveau résolveur doit être ajouté ICI
+# ET passer par `requireKeyForEnv` dans stripe_env.ts.
+RESOLVERS='resolveStripeKeyOrThrow|resolveStripeKeyForDb'
+
 # Fichiers exemptés : le résolveur lui-même et les tests.
 is_exempt() {
   case "$1" in
@@ -33,8 +41,8 @@ is_exempt() {
   esac
 }
 
-# Règle 1 — tout fichier qui construit un client Stripe doit passer par le
-# résolveur.
+# Règle 1 — tout fichier qui construit un client Stripe doit passer par un
+# résolveur autorisé.
 #
 # `IFS= read -r` (sans `-Z`/`-d ''`) : `$(...)` non quoté découperait les
 # chemins contenant une espace en plusieurs faux fichiers, et `-Z` n'est pas
@@ -43,22 +51,22 @@ is_exempt() {
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   is_exempt "$f" && continue
-  if ! grep -q "resolveStripeKeyOrThrow" "$f"; then
-    echo "❌ Client Stripe construit sans resolveStripeKeyOrThrow : $f"
+  if ! grep -qE "$RESOLVERS" "$f"; then
+    echo "❌ Client Stripe construit sans résolveur ($RESOLVERS) : $f"
     fail=1
   fi
 done <<EOF
 $(grep -rl --include="*.ts" "new Stripe(" functions/src/ 2>/dev/null || true)
 EOF
 
-# Règle 2 — tout fichier qui déclare ou lit un secret Stripe doit passer par le
-# résolveur. Couvre `defineSecret("STRIPE_...")` ET `process.env.STRIPE_...`,
+# Règle 2 — tout fichier qui déclare ou lit un secret Stripe doit passer par un
+# résolveur autorisé. Couvre `defineSecret("STRIPE_...")` ET `process.env.STRIPE_...`,
 # les secrets v2 étant aussi exposés en variable d'environnement.
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   is_exempt "$f" && continue
-  if ! grep -q "resolveStripeKeyOrThrow" "$f"; then
-    echo "❌ Secret Stripe atteint sans resolveStripeKeyOrThrow : $f"
+  if ! grep -qE "$RESOLVERS" "$f"; then
+    echo "❌ Secret Stripe atteint sans résolveur ($RESOLVERS) : $f"
     fail=1
   fi
 done <<EOF
