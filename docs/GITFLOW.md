@@ -72,8 +72,8 @@ Reste :
    `claude/magical-jackson-d0116a`.
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
-3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine`, `chore/restore-mobile-release-files` (jusqu'à sa PR) (PR #162 ouverte,
-   à ne pas merger avant le DNS).
+3. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
+   à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (jusqu'à sa PR).
 4. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
