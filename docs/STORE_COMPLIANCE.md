@@ -7,6 +7,31 @@
 > **non contre-vérifiés** (limite de budget) — re-valider chaque valeur datée
 > au moment du remplissage des consoles.
 
+## SDK iOS 27 — vérification du 2026-10-03
+
+Apple accepte les apps construites avec Xcode 27 / SDK iOS 27 depuis le
+10/09/2026 ; **à partir d'avril 2027**, tout envoi iOS/iPadOS devra être
+construit avec le SDK iOS 27 ou plus récent
+([upcoming requirements](https://developer.apple.com/news/upcoming-requirements/),
+[annonce](https://9to5mac.com/2026/09/10/apple-now-accepting-app-store-submissions-built-for-ios-27-macos-27-more/)).
+Le SDK 27 rend en outre obligatoires, pour les apps construites avec lui :
+
+| Exigence du SDK iOS 27 | Statut Baillan (vérifié sur le build release du 2026-10-03) |
+|---|---|
+| Build avec **Xcode 27** / SDK **iOS 27** (obligatoire en avril 2027) | ✅ machine de dev : Xcode 27.0 (27A266a), SDK iphoneos 27.0. `flutter build ios --release --no-codesign` réussi ; `Info.plist` de l'app : `DTSDKName = iphoneos27.0`, `DTXcode = 2700` |
+| **Cycle de vie par scènes (UIScene)** — sans lui, l'app ne se lance plus | ✅ `UIApplicationSceneManifest` + `SceneDelegate` (`FlutterSceneDelegate`) + moteur implicite (`FlutterImplicitEngineDelegate` dans `AppDelegate`) |
+| **Écran de lancement** déclaré (rejet ITMS-90870 sinon) | ✅ `UILaunchStoryboardName = LaunchScreen` (`ios/Runner/Base.lproj/LaunchScreen.storyboard`) |
+| Cible minimale (Xcode 27 : iOS 15 minimum ; App Store : iOS 13+ depuis le 09/09/2026) | ✅ `MinimumOSVersion = 15.0` |
+| Linker `ld64` supprimé dans Xcode 27 | ✅ aucun drapeau `-ld64` / `-ld_classic` dans le projet |
+| **Liquid Glass** imposé (plus d'option de retrait) | ✅ pas de clé `UIDesignRequiresCompatibility` ; l'interface est dessinée par Flutter, seules les surfaces natives changent (alertes, feuille de partage, Se connecter avec Apple) — **à contrôler visuellement sur un simulateur iOS 27** (runtime non installé sur la machine : seul iOS 26.5) |
+| iPad : `UIRequiresFullScreen` change de comportement | ✅ non utilisé ; les 4 orientations iPad sont déclarées |
+| API dépréciées à la cible 27 (`canOpenURL`, ressources à la demande, `PHAssetResource.originalFilename`) | ✅ sans effet : la cible reste iOS 15 |
+| Fichier de confidentialité embarqué | ✅ `PrivacyInfo.xcprivacy` présent dans `Runner.app` |
+
+Reste : (1) test visuel et fonctionnel sur un **simulateur iOS 27** (télécharger le runtime) ;
+(2) côté App Store Connect, questionnaire d'âge du nouveau système (exigé depuis le 31/01/2026),
+déjà listé dans les formulaires ci-dessous.
+
 ## Ré-audit du 2026-09-30
 
 > Vérifié sur l'APK debug et dans le code. **En cas de divergence avec les
@@ -144,7 +169,7 @@ Source : [page-sizes](https://developer.android.com/guide/practices/page-sizes)
 | **Privacy manifest de l'app** (bloque l'upload depuis le 01/05/2024, erreur ITMS-91053) ([doc](https://developer.apple.com/documentation/bundleresources/adding-a-privacy-manifest-to-your-app-or-third-party-sdk)) | ✅ **fait** | `ios/Runner/PrivacyInfo.xcprivacy` créé, enregistré dans Xcode, embarqué dans Runner.app (vérifié au build) |
 | **Privacy manifests des SDKs tiers** (rejet ITMS-91061 depuis le 12/02/2025) — Firebase*, Flutter, shared_preferences… sont sur la [liste officielle](https://developer.apple.com/support/third-party-SDK-requirements/) | ⚠️ à vérifier | Pods récents (firebase-ios-sdk ≥ 10.22 embarque les manifests). Contrôler les mails ITMS-9105x au premier upload TestFlight |
 | **App Privacy labels** (App Store Connect) ([app-privacy-details](https://developer.apple.com/app-store/app-privacy-details/)) | 🔴 formulaire | Pré-rempli §5 — tout ce qui part vers Firestore est « collected », **y compris les données locataires** |
-| **SDK de build** : depuis le **28/04/2026**, upload = Xcode 26 / SDK iOS 26 minimum ([upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)) | ✅ ok | Build avec **Xcode 27** sur la machine (≥ 26 requis). Deployment target **iOS 15.0** (vérifié le 2026-09-30). Tester les surfaces natives (style Liquid Glass) : alerts, share sheet, SIWA |
+| **SDK de build** : depuis le **28/04/2026**, upload = Xcode 26 / SDK iOS 26 minimum ([upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)) | ✅ ok | Build avec **Xcode 27** / SDK iOS 27 (≥ 26 requis aujourd'hui, **27 requis en avril 2027** — cf. « SDK iOS 27 » en tête). Deployment target **iOS 15.0**. Tester les surfaces natives (style Liquid Glass) sur iOS 27 : alerts, share sheet, SIWA |
 | **Export compliance US** : chiffrement standard (HTTPS/TLS) → exempt | ✅ **fait** | `ITSAppUsesNonExemptEncryption = false` dans Info.plist |
 | **Déclaration chiffrement France** : gRPC/BoringSSL de Firestore = TLS standard **non fourni par l'OS** → lecture stricte = formulaire français App Store Connect ; pratique répandue de l'écosystème = exempt ([table officielle](https://developer.apple.com/help/app-store-connect/reference/export-compliance-documentation-for-encryption/)) | ⚠️ à trancher | Décision utilisateur. Risque zéro = déclaration simplifiée ANSSI (gratuite, une fois). Non bloquant en pratique pour la review |
 | **Questionnaire d'âge 2026** (système refondu, tranches iOS 26) | 🔴 formulaire | Dans le flux de soumission — app utilitaire, résultat attendu 4+/13+ |
