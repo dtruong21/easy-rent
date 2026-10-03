@@ -1,0 +1,22 @@
+# Splash natif Baillan (FEAT-024) — badge BrandMark centré sur papier
+# (light) / encre (dark), iso identité web. Masters : voir
+# tool/generate_brand_assets.dart. Régénérer : dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#F7F4ED"
+  image: assets/brand/splash_logo_1024.png
+  # Dark : le tile encre du badge se fond dans le fond, le B crème et le
+  # paraphe restent — dégradé voulu.
+  color_dark: "#1B1A17"
+  image_dark: assets/brand/splash_logo_1024.png
+
+  android: true
+  ios: true
+  # Le splash web (index.html) a sa propre mécanique — ne pas y toucher.
+  web: false
+
+  # Android 12+ : icône dans le cercle central système (canvas 1152/768).
+  android_12:
+    image: assets/brand/android12_icon_1152.png
+    color: "#F7F4ED"
+    image_dark: assets/brand/android12_icon_1152.png
+    color_dark: "#1B1A17"
