@@ -30,7 +30,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-09-30)
+## Changements (2026-08-03 → 2026-10-03)
+
+### Connexion v1 : Google + email, email seul sur iOS (2026-10-03)
+- Décision produit : la v1 ne propose que Google et email / mot de passe ; Apple viendra après la première version. `lib/core/config/auth_providers.dart` : Google proposé sur web et Android, **masqué sur iOS** (règle App Store 4.8 : pas de connexion tierce sans option équivalente type Apple) ; Apple masqué partout. Formulaires de connexion et d'inscription (dont le passage d'un essai anonyme à un compte complet) filtrés ; la ré-authentification des comptes existants est inchangée. Code Apple conservé et testé (forçage de test) pour la réactivation.
 
 ### FIX sécurité OWASP (2026-09-30)
 - Audit [`docs/security/owasp-audit-2026-09-30.md`](../security/owasp-audit-2026-09-30.md) (21 constats) : 6 constats traités sur `fix/owasp-security` : 01, 02, 05 corrigés ; 04, 06, 09 partiellement (voir le statut de l'audit) ; OWASP-21 (tests Storage) couvert au passage par OWASP-04 ; statut par constat en tête du rapport.
