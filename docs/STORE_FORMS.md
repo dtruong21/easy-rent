@@ -35,6 +35,11 @@ Dérouler **tous** les formulaires listés ; chacun est bloquant s'il est incomp
 - « Tout ou partie des fonctionnalités est limitée » → **fournir des identifiants**
 - Ajouter une instruction « All functionality available with these credentials »
 - Identifiants : ceux du compte démo (§3). Texte d'instructions (**en anglais**, exigé) :
+- ⚠️ Connexion en v1 (décision du 2026-10-03, PR #214,
+  `lib/core/config/auth_providers.dart`) : **email / mot de passe partout** ;
+  **Google sur web et Android uniquement** ; **Apple masqué partout** (retour
+  prévu après la v1). Ce texte vaut pour **Play (Android)** ; pour l'App Store,
+  voir le bloc dédié du §2.3. À réécrire quand Apple / Google reviennent sur iOS.
 
 ```
 Baillan is a rental-management app for French landlords (UI in French).
@@ -45,8 +50,10 @@ property, one tenant, an active lease, recorded rent payments and a
 generated rent receipt (PDF), so all features are reachable:
 Accueil (dashboard) / Biens (properties) / Locataires (tenants) /
 Baux (leases) → payments & receipts / Profil (settings, account deletion).
-No OTP/2FA and no email step to complete. Google & Apple sign-in are alternative login methods to the
-same feature set — the email/password account exposes 100% of features.
+No OTP/2FA and no email step to complete. In this version the sign-in
+methods are email/password (use the credentials provided) and, on Android and
+web, Google sign-in as an alternative to the same feature set; Sign in with
+Apple is not offered. The email/password account exposes 100% of features.
 The anonymous mode (« Continuer sans compte ») is a 14-day demo tier.
 ```
 
@@ -150,7 +157,28 @@ Privacy policy URL : `https://easy-rent-54cd4.web.app/privacy`.
 
 ### 2.3 App Review Information
 - Sign-in required : **Oui** → identifiants du compte démo (§3)
-- Notes (anglais) : réutiliser le bloc du §1.3 tel quel
+- Notes (anglais) : **ne pas réutiliser le bloc du §1.3 tel quel** — sur iOS la v1
+  n'offre que email / mot de passe (Google et Apple masqués, PR #214). Bloc dédié :
+
+```
+Baillan is a rental-management app for French landlords (UI in French).
+Log in with the provided email/password credentials (tap « J'ai déjà un
+compte » on the landing page). The account's email address is already
+verified (the app requires a verified email to log in). The demo account is
+pre-populated with one property, one tenant, an active lease, recorded rent
+payments and a generated rent receipt (PDF), so all features are reachable:
+Accueil (dashboard) / Biens (properties) / Locataires (tenants) /
+Baux (leases) → payments & receipts / Profil (settings, account deletion).
+No OTP/2FA and no email step to complete.
+On iOS this version signs users in with email/password only, using the app's
+own account system: no third-party sign-in (Google, Apple) is offered, so
+Sign in with Apple (guideline 4.8) does not apply.
+The anonymous mode (« Continuer sans compte ») is a 14-day demo tier.
+```
+
+- ⚠️ Conséquence produit : un compte créé avec Google sur le web ou Android **ne
+  peut pas se connecter sur l'app iOS v1** (pas de bouton Google) — il doit
+  définir un mot de passe (« Mot de passe oublié »). À savoir pour le support.
 - Contact : téléphone + email joignables pendant la review
 
 ### 2.4 Export compliance
