@@ -70,8 +70,11 @@ Reste :
    `flutter_native_splash.yaml`, `tool/generate_brand_assets.dart` (ancien design
    `assets/brand/*` inexistant ; les outils préfèrent le yaml autonome à `pubspec.yaml`
    et casseraient la config actuelle). Merger #211, puis supprimer la branche.
-   Les deux docs stores de #211 sont un instantané du 2026-07-07 : à mettre à jour
-   avant usage (Crashlytics à déclarer, vérification email du compte démo, URLs).
+   Les deux docs stores de #211 ont été mis à jour le 2026-10-04 (Crashlytics déclaré,
+   compte démo à email vérifié, chemins perso retirés, Flutter 3.44.6). **Restent** :
+   les URLs privacy / delete-account (`easy-rent-54cd4.web.app` → `app.baillan.com`
+   avec #162), la question « Achats numériques » (paywall atteignable depuis le mobile ?)
+   et la re-vérification des règles des stores.
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
 3. **Supprimer (doublons, 2026-10-03)** : `fix/summary-card-keyfigure-overflow` (PR #213 fermée,
