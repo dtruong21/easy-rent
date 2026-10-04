@@ -68,7 +68,8 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    relancer après un `git fetch --prune`.
 2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
    merger avant le DNS) `docs/security-stripe-resolvers` (PR #216 ouverte), `chore/cleanup-cards-feat-059`
-   (PR #217 ouverte) et `chore/followup-pr-200` (PR #218 ouverte) — à supprimer après leur merge.
+   (PR #217 ouverte), `chore/followup-pr-200` (PR #218 ouverte) et
+   `docs/store-forms-signin-v1` (PR #219 ouverte) — à supprimer après leur merge.
 3. **Côté stores** (suite de #211) : URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques »
    (paywall atteignable depuis le mobile ?), re-vérification des règles des stores.
