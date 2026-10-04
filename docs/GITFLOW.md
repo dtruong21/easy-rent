@@ -62,10 +62,13 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    (PR #211 mergée), `fix/summary-card-key-figure-overflow` (PR #210 mergée),
    `fix/summary-card-keyfigure-overflow` (PR #213 fermée, doublon de #210),
    `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif que #210).
+   Aussi : `docs/ios27-sdk-audit` (PR #212 mergée) et `feat/auth-providers-v1` (PR #214 mergée)
+   — leurs pointes égalent la tête de leur PR, rien n'a été ajouté après le merge.
    Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
    relancer après un `git fetch --prune`.
 2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
-   merger avant le DNS) et `docs/security-stripe-resolvers` (jusqu'au merge de la PR #216).
+   merger avant le DNS) `docs/security-stripe-resolvers` (PR #216 ouverte), `chore/cleanup-cards-feat-059`
+   (PR #217 ouverte) et `chore/followup-pr-200` (PR #218 ouverte) — à supprimer après leur merge.
 3. **Côté stores** (suite de #211) : URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques »
    (paywall atteignable depuis le mobile ?), re-vérification des règles des stores.
