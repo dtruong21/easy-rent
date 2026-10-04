@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
-import '../../../../core/ui/cards/card_action_button.dart';
+import '../../../../core/ui/cards/summary_card.dart';
 import '../../application/share_receipt_controller.dart';
 import '../../domain/receipt.dart';
 import '../../domain/receipt_action_error.dart';
@@ -79,8 +79,8 @@ class ShareReceiptButton extends ConsumerWidget {
       );
     }
 
-    // Style commun aux boutons de partage : même cible tactile 40 que les
-    // autres actions de la carte (voir [CardActionIconButton]) → rangée alignée.
+    // Style commun aux boutons de partage : même cible tactile que l'action
+    // rapide de la carte ([SummaryQuickActionButton]) → rangée alignée.
     final shareIconStyle = IconButton.styleFrom(
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       minimumSize: const Size(kCardActionButtonHeight, kCardActionButtonHeight),
