@@ -30,7 +30,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-03)
+## Changements (2026-08-03 → 2026-10-04)
+
+### FIX suivi PR #200 : domaine staging, routage (#201) (2026-10-04)
+- Docs : l'app staging est `app.staging.baillan.com` (`stage.baillan.com` = vitrine staging) dans RUNBOOK_PROD_DEPLOY, GITFLOW, HANDOFF, PROD_DEPLOY_CHECKLIST, BACKLOG, ADR 0003, backlog 057, `state/INDEX.md`, `state/routes/README.md`, `env.dart` et `deploy.yml` (commentaires). `INDEX.md` ne dit plus qu'un test staging écrit en prod (faux depuis l'ADR 0003).
+- Client : le web ignore `MOBILE_STAGING` (`shouldUseStagingDatabase`), avec une table de vérité exhaustive de 16 cas. L'auto-login Test Lab a un délai max de 10 s, pour qu'un appareil hors ligne démarre quand même.
+- Tests Functions : le faux `getFirestore` lève pour toute base autre que `"staging"` (`fakeGetFirestore`) et `lease_payment.test.ts` l'utilise aussi. Ajout de tests `dbForRequest` sans `auth` ni `rawRequest`. `db_router.ts` : renommage des restes de l'ancien nom `dev` en `staging`.
 
 ### Connexion v1 : Google + email, email seul sur iOS (2026-10-03)
 - Décision produit : la v1 ne propose que Google et email / mot de passe ; Apple viendra après la première version. `lib/core/config/auth_providers.dart` : Google proposé sur web et Android, **masqué sur iOS** (règle App Store 4.8 : pas de connexion tierce sans option équivalente type Apple) ; Apple masqué partout. Formulaires de connexion et d'inscription (dont le passage d'un essai anonyme à un compte complet) filtrés ; la ré-authentification des comptes existants est inchangée. Code Apple conservé et testé (forçage de test) pour la réactivation.

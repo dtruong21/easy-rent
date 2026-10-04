@@ -36,7 +36,8 @@ export const STAGING_DATABASE_ID = "staging";
 export const STAGING_ORIGIN = "https://app.staging.baillan.com";
 
 /**
- * Base Firestore pour un drapeau env.
+ * Base Firestore de l'environnement : `staging` si [isStaging], sinon la prod
+ * `(default)`.
  *
  * Le chemin `(default)` passe par `admin.firestore()` — et non `getFirestore()`
  * — car c'est le seam que tout le code et les tests (`vi.mock("firebase-admin")`)
@@ -44,8 +45,8 @@ export const STAGING_ORIGIN = "https://app.staging.baillan.com";
  * strictement identique. La base nommée `staging` n'a pas d'équivalent
  * namespacé, d'où `getFirestore(id)`.
  */
-export function firestoreForEnv(isDev: boolean): Firestore {
-  return isDev ? getFirestore(STAGING_DATABASE_ID) : admin.firestore();
+export function firestoreForEnv(isStaging: boolean): Firestore {
+  return isStaging ? getFirestore(STAGING_DATABASE_ID) : admin.firestore();
 }
 
 /**
@@ -97,7 +98,7 @@ export async function dbForLandlordUid(uid: string): Promise<Firestore> {
   if (!uid) return prod;
   const prodSnap = await prod.doc(`landlords/${uid}`).get();
   if (prodSnap.exists) return prod;
-  const dev = firestoreForEnv(true);
-  const devSnap = await dev.doc(`landlords/${uid}`).get();
-  return devSnap.exists ? dev : prod;
+  const staging = firestoreForEnv(true);
+  const stagingSnap = await staging.doc(`landlords/${uid}`).get();
+  return stagingSnap.exists ? staging : prod;
 }

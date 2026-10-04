@@ -18,7 +18,7 @@ develop       ──●─●─●─●──●─●─●─●──●─
 | Branche | Rôle | Cible Hosting | URL | `APP_ENV` |
 |---|---|---|---|---|
 | `main` | Prod stable | `prod` | https://baillan.com | `prod` |
-| `develop` | Intégration dev/staging | `stage` | https://stage.baillan.com | `dev` |
+| `develop` | Intégration dev/staging | `stage` | https://app.staging.baillan.com | `dev` |
 
 > Les deux cibles vivent dans le **même** projet Firebase et partagent donc
 > Firestore, Auth et Storage — la séparation est purement Hosting. Détail et

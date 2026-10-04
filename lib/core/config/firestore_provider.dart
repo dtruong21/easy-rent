@@ -16,6 +16,10 @@ const String kStagingDatabaseId = 'staging';
 /// Choix de la base (ADR 0003 + build Test Lab). L'émulateur est prioritaire ;
 /// sinon `staging` pour le web de staging (`APP_ENV=dev`) ou pour le build de
 /// test mobile (`MOBILE_STAGING`, ignoré en release) ; sinon `(default)`.
+///
+/// Le web ignore `MOBILE_STAGING` : sur le web, seul `APP_ENV` choisit la
+/// base, comme pour le build déployé — un flag mobile ne doit pas changer le
+/// comportement d'un build web.
 bool shouldUseStagingDatabase({
   required bool isWeb,
   required bool isDev,
@@ -23,7 +27,7 @@ bool shouldUseStagingDatabase({
   required bool useMobileStaging,
 }) {
   if (useEmulator) return false;
-  return (isWeb && isDev) || useMobileStaging;
+  return isWeb ? isDev : useMobileStaging;
 }
 
 /// Instance Firestore à utiliser dans TOUT le code applicatif (ADR 0003).
@@ -36,13 +40,14 @@ bool shouldUseStagingDatabase({
 /// (`dbForRequest`). On ne route vers la base `staging` que sur un signal
 /// POSITIF et non ambigu :
 /// - **Staging web déployé** (`app.staging.baillan.com`, `APP_ENV=dev`,
-///   non-émulateur) → base nommée [`staging`](kStagingDatabaseId), séparée de la prod. Le garde
+///   non-émulateur) → base nommée [`staging`](kStagingDatabaseId), séparée
+///   de la prod. Le garde
 ///   `kIsWeb` est critique : la commande de release mobile documentée
 ///   (`docs/MOBILE.md`) ne passe pas `APP_ENV`, donc `APP_ENV` retombe sur son
 ///   défaut `'dev'` — sans ce garde, une release mobile enverrait les vrais
 ///   utilisateurs vers la base `staging`.
 /// - **Build de test mobile** (`MOBILE_STAGING=true`, Firebase Test Lab) →
-///   `staging` aussi. Le flag est ignoré en release (`Env.useMobileStaging`
+///   `staging` aussi (ignoré sur le web). Le flag est ignoré en release (`Env.useMobileStaging`
 ///   vérifie `kReleaseMode`), donc un build publié sur les stores ne peut pas
 ///   y aboutir. Le mobile vise `staging` UNIQUEMENT dans ce build de test.
 /// - **Prod**, **émulateur local** (prioritaire sur tout le reste) et tout autre

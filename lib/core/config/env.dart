@@ -152,7 +152,7 @@ class Env {
   ///
   /// **Politique par environnement** (pilotée par `.github/workflows/deploy.yml`,
   /// sortie `subscriptions_enabled` de `determine-env`) :
-  /// - **staging** (`develop` → stage.baillan.com) : `true` — le parcours
+  /// - **staging** (`develop` → app.staging.baillan.com) : `true` — le parcours
   ///   d'abonnement reste ouvert pour poursuivre le développement.
   /// - **production** (`main` → baillan.com) : `false` — fermé pendant la beta
   ///   v1 freemium, ouverture prévue ~2026-08-25.
