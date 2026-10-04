@@ -30,7 +30,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-03)
+## Changements (2026-08-03 → 2026-10-04)
+
+### FIX UX mobile : défauts de la recette iOS (#197) (2026-10-04)
+- **Clavier.** Un tap dans le vide ferme le clavier, dans toute l'app (`DismissKeyboardOnTap` dans `MaterialApp.builder`) : les claviers numériques iOS n'ont pas de touche « OK ». Les 15 sélecteurs de date retirent le focus avant de s'ouvrir ; avant, la fermeture rendait le focus au dernier champ (« Charges ») et rouvrait le clavier. Les relevés de compteurs de l'EDL ouvrent un pavé numérique avec décimales.
+- **Préremplissage.** `/leases/new?tenantId=` et `?propertyId=` (ainsi que `extra.propertyId`) présélectionnent enfin le locataire ou le bien ; la route ignorait ces paramètres. Un nouveau paiement propose une période (`suggestedPaymentPeriod`) : le mois qui suit le dernier paiement, sinon le mois courant, bornée par les dates du bail.
+- **Affichage.** Les textes d'aide passent sur 2 lignes (thème). Biens, baux et locataires n'affichent plus le FAB quand l'état vide propose déjà l'ajout. Un `ScaffoldMessenger` propre aux branches du shell place les SnackBars au-dessus du FAB des pages. Les paiements d'un bail montrent « Quittance » avec un libellé, et Modifier / Archiver passent dans un menu ⋮.
+- **Langue.** Mois des quittances dans la langue de l'app (« August 2026 »). Clé l10n pour la tuile FAQ du profil et pour les liens « Privacy · Terms » de l'accueil. Aphorisme EN reformulé (« ledger »). L'aide du nom et de l'adresse du profil mentionne aussi les états des lieux.
+- **Partage iOS.** Le PDF est partagé seul, avec un titre : le texte joint créait un fichier texte parasite à l'enregistrement dans Fichiers. Android garde le texte en corps de message.
 
 ### Connexion v1 : Google + email, email seul sur iOS (2026-10-03)
 - Décision produit : la v1 ne propose que Google et email / mot de passe ; Apple viendra après la première version. `lib/core/config/auth_providers.dart` : Google proposé sur web et Android, **masqué sur iOS** (règle App Store 4.8 : pas de connexion tierce sans option équivalente type Apple) ; Apple masqué partout. Formulaires de connexion et d'inscription (dont le passage d'un essai anonyme à un compte complet) filtrés ; la ré-authentification des comptes existants est inchangée. Code Apple conservé et testé (forçage de test) pour la réactivation.

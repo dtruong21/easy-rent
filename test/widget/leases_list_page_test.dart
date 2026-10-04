@@ -201,12 +201,16 @@ void main() {
       expect(find.byKey(const Key('btn_add_lease_empty')), findsOneWidget);
     });
 
-    testWidgets('état vide — FAB "Créer un bail" présent', (tester) async {
-      await tester.pumpWidget(_buildPage(const _FakeRepo()));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'état vide — un seul bouton d\'ajout : le CTA, pas de FAB (#197)',
+      (tester) async {
+        await tester.pumpWidget(_buildPage(const _FakeRepo()));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('fab_add_lease')), findsOneWidget);
-    });
+        expect(find.byKey(const Key('btn_add_lease_empty')), findsOneWidget);
+        expect(find.byKey(const Key('fab_add_lease')), findsNothing);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Liste avec items
@@ -229,6 +233,8 @@ void main() {
 
       expect(find.text('Appartement Paris'), findsOneWidget);
       expect(find.text('Jean Dupont'), findsOneWidget);
+      // Liste non vide : le FAB reste l'unique bouton d'ajout.
+      expect(find.byKey(const Key('fab_add_lease')), findsOneWidget);
     });
 
     testWidgets('liste — état vide absent quand des baux existent', (

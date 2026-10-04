@@ -87,21 +87,26 @@ class GenerateReceiptButton extends ConsumerWidget {
       },
     );
 
-    return IconButton(
-      key: Key('btn_generate_receipt_$paymentId'),
-      icon: isSubmitting
-          ? const SizedBox(
-              height: 18,
-              width: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.receipt_long_outlined),
-      tooltip: context.l10n.receiptsGenerateButtonTooltip,
-      onPressed: isSubmitting
-          ? null
-          : () => ref
-                .read(generateReceiptControllerProvider(paymentId).notifier)
-                .submitFromPayment(paymentId: paymentId, leaseId: leaseId),
+    // Icône + libellé : une icône seule n'était pas découvrable au doigt
+    // (le tooltip n'apparaît qu'à l'appui long — recette iOS, #197).
+    return Tooltip(
+      message: context.l10n.receiptsGenerateButtonTooltip,
+      child: TextButton.icon(
+        key: Key('btn_generate_receipt_$paymentId'),
+        icon: isSubmitting
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.receipt_long_outlined),
+        label: Text(context.l10n.receiptsGenerateButtonLabel),
+        onPressed: isSubmitting
+            ? null
+            : () => ref
+                  .read(generateReceiptControllerProvider(paymentId).notifier)
+                  .submitFromPayment(paymentId: paymentId, leaseId: leaseId),
+      ),
     );
   }
 }

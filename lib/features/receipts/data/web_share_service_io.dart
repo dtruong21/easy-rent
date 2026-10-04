@@ -48,8 +48,16 @@ class WebShareServiceImpl implements WebShareService {
           ),
         ],
         fileNameOverrides: [filename],
+        title: title,
         subject: title,
-        text: text,
+        // iOS : un texte joint au PDF devient un 2ᵉ élément de partage
+        // (« Plain Text and 1 Document ») — « Enregistrer dans Fichiers »
+        // créait un fichier texte parasite à côté du PDF, et la feuille de
+        // partage perdait le titre et l'aperçu du PDF (recette iOS 27,
+        // #197). On ne partage donc que le PDF, avec son titre et son sujet
+        // d'email. Android garde le texte : il y part en corps de message
+        // (EXTRA_TEXT), sans fichier en plus.
+        text: Platform.isIOS ? null : text,
         // iPad : le share sheet est un popover qui exige une ancre, sinon
         // crash UIKit. Ancre neutre en attendant un vrai anchoring (iPad
         // hors cible V1) ; ignoré sur iPhone/Android.
@@ -108,6 +116,7 @@ class WebShareServiceImpl implements WebShareService {
       ShareParams(
         files: [XFile.fromData(Uint8List.fromList(bytes), mimeType: mimeType)],
         fileNameOverrides: [filename],
+        title: shareTitle,
         subject: shareTitle,
         sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
       ),

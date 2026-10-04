@@ -36,10 +36,23 @@ final _log = Logger('LeaseFormPage');
 /// Avant soumission : vérifie s'il existe un bail actif sur le même bien.
 /// Si oui → [ActiveLeaseWarningDialog] avec confirmation explicite.
 class LeaseFormPage extends ConsumerStatefulWidget {
-  const LeaseFormPage({super.key, this.initial});
+  const LeaseFormPage({
+    super.key,
+    this.initial,
+    this.initialPropertyId,
+    this.initialTenantId,
+  });
 
   /// Bail à éditer, ou [null] pour une création.
   final Lease? initial;
+
+  /// Création : bien présélectionné (« Créer un bail » depuis un bien —
+  /// `/leases/new?propertyId=…`). Ignoré en édition.
+  final String? initialPropertyId;
+
+  /// Création : locataire présélectionné (« Créer un bail » depuis un
+  /// locataire — `/leases/new?tenantId=…`). Ignoré en édition.
+  final String? initialTenantId;
 
   @override
   ConsumerState<LeaseFormPage> createState() => _LeaseFormPageState();
@@ -393,8 +406,10 @@ class _LeaseFormPageState extends ConsumerState<LeaseFormPage> {
               paymentDayController: _paymentDayCtrl,
               irlValueController: _irlValueCtrl,
               irlQuarterController: _irlQuarterCtrl,
-              initialPropertyId: widget.initial?.propertyId,
-              initialTenantId: widget.initial?.tenantId,
+              initialPropertyId:
+                  widget.initial?.propertyId ?? widget.initialPropertyId,
+              initialTenantId:
+                  widget.initial?.tenantId ?? widget.initialTenantId,
               onCreateTenant: isCreating ? _onCreateTenantInline : null,
               initialStartDate: widget.initial?.startDate,
               initialEndDate: widget.initial?.endDate,
