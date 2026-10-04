@@ -51,39 +51,28 @@ develop       ──●─●─●─●──●─●─●─●──●─
   `--merged origin/main` (sûrs à supprimer), puis `git push origin --delete <branche>`.
   Ne jamais supprimer `main`, `develop` ni une branche liée à une PR ouverte.
 
-### À faire à la prochaine session (audit du 2026-10-03)
+### À faire à la prochaine session (audit du 2026-10-03, mis à jour le 2026-10-04)
 
-Fait le 2026-10-03 : 33 branches mergées supprimées (27 entièrement mergées dans
-`develop`/`main`, 6 dont la PR était mergée) — confirmé par `git fetch --prune`.
-Reste :
+Fait : 33 branches mergées supprimées le 2026-10-03, puis
+`claude/amazing-ardinghelli-29501a`, `claude/nice-grothendieck-c66baf`,
+`feat/056-multi-tier-subscriptions` et `claude/magical-jackson-d0116a` (contenu déjà dans
+`develop` ou repris par la PR #211) — confirmé par `git fetch --prune`. Reste :
 
-1. **Supprimer (contenu déjà dans `develop`, comparé le 2026-10-03)** :
-   `claude/amazing-ardinghelli-29501a` (seul commit hors `main` = retrait de
-   `handleNewUser`, déjà fait), `claude/nice-grothendieck-c66baf` (1 commit
-   `docs(state)`, `develop` a un état plus récent), `feat/056-multi-tier-subscriptions`
-   (61 commits hors `main` ; billing FEAT-056, FEAT-055, FEAT-044f, couleur d'identité,
-   cash flow, ADR 0003, épinglage Flutter présents dans `develop`).
-2. **Supprimer** `claude/magical-jackson-d0116a` et `chore/restore-mobile-release-files` :
-   PR #211 **mergée le 2026-10-04** (`a6004dd`) — reprend `mobile.yml`, `STORE_FORMS.md`,
-   `RUNBOOK_STORE_RELEASE.md` (docs stores mises à jour : Crashlytics déclaré, compte démo à
-   email vérifié, chemins perso retirés, Flutter 3.44.6). **Volontairement non repris** :
-   `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`, `tool/generate_brand_assets.dart`
-   (ancien design `assets/brand/*` inexistant ; les outils préfèrent le yaml autonome à
-   `pubspec.yaml` et casseraient la config actuelle).
-   **Restent à faire côté stores** : URLs privacy / delete-account
+1. **Supprimer** (PR mergées ou fermées en doublon) : `chore/restore-mobile-release-files`
+   (PR #211 mergée), `fix/summary-card-key-figure-overflow` (PR #210 mergée),
+   `fix/summary-card-keyfigure-overflow` (PR #213 fermée, doublon de #210),
+   `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif que #210).
+   Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
+   relancer après un `git fetch --prune`.
+2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
+   merger avant le DNS) et `docs/security-stripe-resolvers` (jusqu'au merge de la PR #216).
+3. **Côté stores** (suite de #211) : URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques »
    (paywall atteignable depuis le mobile ?), re-vérification des règles des stores.
-   Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
-   comparer par contenu, pas par `git log`.
-3. **Supprimer** `fix/summary-card-key-figure-overflow` (PR #210 mergée).
-   **Supprimer (doublons, 2026-10-03)** : `fix/summary-card-keyfigure-overflow` (PR #213 fermée,
-   doublon de #210 mergée) et `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif
-   que #210). Seule différence non reprise : la note `docs/SECURITY.md` sur les deux résolveurs
-   Stripe et le garde-fou `check-stripe-isolation.sh` — reprise dans la PR #216
-   (`docs/security-stripe-resolvers`, à supprimer une fois mergée).
-4. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
-   à ne pas merger avant le DNS) (et `docs/security-stripe-resolvers` jusqu'au merge de la PR #216).
-5. Activer *Automatically delete head branches* (voir ci-dessus).
+4. Activer *Automatically delete head branches* (voir ci-dessus).
+
+> Les branches de l'ancien historique (`claude/*`, `feature/*`) n'ont aucun ancêtre commun
+> avec `develop` (historique réécrit) : comparer par contenu, pas par `git log`.
 
 ## 🔒 Branch protection (à configurer sur GitHub)
 
