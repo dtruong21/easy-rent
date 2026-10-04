@@ -6,8 +6,9 @@ import 'entity_card_density.dart';
 
 /// Carte d'entité réutilisable.
 ///
-/// Fournit une surface cohérente pour afficher des entités métier (propriétés,
-/// locataires, baux, paiements…). Supporte :
+/// Surface à slots libres (header/body/footer). Les listes biens, baux,
+/// locataires et quittances utilisent désormais `SummaryCard` (FEAT-059) ;
+/// [EntityCard] reste pour les cartes de scénarios du simulateur. Supporte :
 /// - Hover desktop (fond plus sombre) + InkWell ripple touch
 /// - Focus ring clavier (accessibilité)
 /// - Densité compact / standard
@@ -16,10 +17,10 @@ import 'entity_card_density.dart';
 /// Exemple :
 /// ```dart
 /// EntityCard(
-///   onTap: () => context.go('/leases/123'),
-///   semanticLabel: 'Bail 123 — Dupont',
-///   header: EntityCardHeader(title: Text('Dupont')),
-///   body: Text('01/2024 – 12/2024'),
+///   onTap: () => context.go('/simulator'),
+///   semanticLabel: 'Scénario — T2 Lyon',
+///   header: Text('T2 Lyon'),
+///   body: Text('Rendement net 4,2 %'),
 ///   footer: Row(children: [
 ///     FilledButton(onPressed: () {}, child: Text('Détails')),
 ///   ]),

@@ -7,6 +7,28 @@ import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+/// Lanceur d'URL factice : enregistre les URL et renvoie [result].
+class _FakeUrlLauncher extends UrlLauncherPlatform
+    with MockPlatformInterfaceMixin {
+  final launched = <String>[];
+  bool result = true;
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> canLaunch(String url) async => result;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    launched.add(url);
+    return result;
+  }
+}
 
 Tenant _makeTenant({
   String id = 't1',
@@ -61,6 +83,63 @@ Widget _app(TenantListItem item) => MaterialApp.router(
 );
 
 void main() {
+  late _FakeUrlLauncher launcher;
+  late UrlLauncherPlatform previousLauncher;
+
+  setUp(() {
+    previousLauncher = UrlLauncherPlatform.instance;
+    launcher = _FakeUrlLauncher();
+    UrlLauncherPlatform.instance = launcher;
+  });
+
+  tearDown(() => UrlLauncherPlatform.instance = previousLauncher);
+
+  group('lancement Appeler / Email', () {
+    testWidgets('Appeler compose un numéro tel: sans espaces', (t) async {
+      await t.pumpWidget(_app(_item(leaseId: 'L1', phone: ' 06 12 34 56 78 ')));
+      await t.pumpAndSettle();
+
+      await t.tap(find.byKey(const Key('card_call_t1')));
+      await t.pumpAndSettle();
+
+      expect(launcher.launched, ['tel:0612345678']);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('échec d\'ouverture de l\'appel → SnackBar d\'erreur', (
+      t,
+    ) async {
+      launcher.result = false;
+      await t.pumpWidget(_app(_item(leaseId: 'L1', phone: '0612345678')));
+      await t.pumpAndSettle();
+
+      await t.tap(find.byKey(const Key('card_call_t1')));
+      await t.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text(
+          lookupAppLocalizations(const Locale('fr')).tenantsLaunchFailed,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('échec d\'ouverture de l\'email → SnackBar d\'erreur', (
+      t,
+    ) async {
+      launcher.result = false;
+      await t.pumpWidget(_app(_item(leaseId: 'L1')));
+      await t.pumpAndSettle();
+
+      await t.tap(find.byKey(const Key('card_email_t1')));
+      await t.pumpAndSettle();
+
+      expect(launcher.launched, ['mailto:jean@test.com']);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+  });
+
   testWidgets(
     'avec bail + téléphone : chiffre clé loyer+charges, action rapide '
     'Appeler, pas de bouton email, menu contient Envoyer un email',

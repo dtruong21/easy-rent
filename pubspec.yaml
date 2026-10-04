@@ -101,6 +101,10 @@ dev_dependencies:
   json_serializable: ^6.9.0
   firebase_auth_mocks: ^0.14.2
   fake_cloud_firestore: ^3.1.0
+  # Faux lanceur d'URL pour tester les actions tel:/mailto: (déjà transitifs
+  # via url_launcher — déclarés ici pour pouvoir les importer en test).
+  url_launcher_platform_interface: ^2.3.2
+  plugin_platform_interface: ^2.1.8
 
   # Icônes d'app natives Baillan (iOS + Android) — génère mipmaps + AppIcon
   # + icône adaptative depuis un master unique. Régénérer avec :

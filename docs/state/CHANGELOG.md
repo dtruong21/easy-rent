@@ -37,6 +37,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - Client : le web ignore `MOBILE_STAGING` (`shouldUseStagingDatabase`), avec une table de vérité exhaustive de 16 cas. L'auto-login Test Lab a un délai max de 10 s, pour qu'un appareil hors ligne démarre quand même.
 - Tests Functions : le faux `getFirestore` lève pour toute base autre que `"staging"` (`fakeGetFirestore`) et `lease_payment.test.ts` l'utilise aussi. Ajout de tests `dbForRequest` sans `auth` ni `rawRequest`. `db_router.ts` : renommage des restes de l'ancien nom `dev` en `staging`.
 
+### FIX cartes : nettoyage après FEAT-059 (#198) (2026-10-04)
+- Code mort supprimé : `CardActionButton`, `CardActionIconButton`, `EntityCardHeader`. `kCardActionButtonHeight` vit désormais dans `summary_card.dart` et règle aussi la hauteur de `SummaryQuickActionButton`. `EntityCard` reste pour les cartes de scénarios du simulateur.
+- `CardGrid` : en grille (desktop), la hauteur de cellule `mainAxisExtent` grandit avec la taille de texte d'accessibilité. Une carte complète débordait de 22 px à l'échelle 2.0 ; un test « pire cas » couvre les échelles 1.0, 1.3 et 2.0.
+- `CardSkeleton` reprend la forme d'une `SummaryCard` : liseré, chiffre clé à droite, statut et info.
+- Tests ajoutés pour Appeler / Email de la carte locataire (`tel:` sans espaces, SnackBar en cas d'échec). Ajout en dev-dependencies de `url_launcher_platform_interface` et `plugin_platform_interface`, pour le faux lanceur d'URL.
+
 ### Connexion v1 : Google + email, email seul sur iOS (2026-10-03)
 - Décision produit : la v1 ne propose que Google et email / mot de passe ; Apple viendra après la première version. `lib/core/config/auth_providers.dart` : Google proposé sur web et Android, **masqué sur iOS** (règle App Store 4.8 : pas de connexion tierce sans option équivalente type Apple) ; Apple masqué partout. Formulaires de connexion et d'inscription (dont le passage d'un essai anonyme à un compte complet) filtrés ; la ré-authentification des comptes existants est inchangée. Code Apple conservé et testé (forçage de test) pour la réactivation.
 

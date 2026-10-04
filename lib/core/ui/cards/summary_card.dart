@@ -13,6 +13,11 @@ class SummaryKeyFigure {
   final String? caption;
 }
 
+/// Hauteur commune des actions d'une carte (bouton d'action rapide, bouton
+/// icône de partage d'une quittance…) : même cible tactile confortable, et des
+/// boutons voisins qui restent alignés sur une même rangée.
+const double kCardActionButtonHeight = 40;
+
 /// Entrée du menu ⋮ d'une [SummaryCard].
 class SummaryMenuItem {
   const SummaryMenuItem({
@@ -57,7 +62,7 @@ class SummaryQuickActionButton extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 40),
+        minimumSize: const Size(0, kCardActionButtonHeight),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         textStyle: Theme.of(
           context,
