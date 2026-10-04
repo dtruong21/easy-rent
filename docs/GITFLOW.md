@@ -63,13 +63,15 @@ Reste :
    `docs(state)`, `develop` a un état plus récent), `feat/056-multi-tier-subscriptions`
    (61 commits hors `main` ; billing FEAT-056, FEAT-055, FEAT-044f, couleur d'identité,
    cash flow, ADR 0003, épinglage Flutter présents dans `develop`).
-2. **Supprimer** `claude/magical-jackson-d0116a` : ses 6 fichiers propres
-   (`mobile.yml`, `STORE_FORMS.md`, `RUNBOOK_STORE_RELEASE.md`,
-   `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`,
-   `tool/generate_brand_assets.dart`) ont été repris le 2026-10-03 dans
-   `chore/restore-mobile-release-files` (pin Flutter aligné sur `ci.yml`).
-   PR #211 ouverte vers `develop` ; la merger, puis supprimer
-   `claude/magical-jackson-d0116a`.
+2. **Supprimer** `claude/magical-jackson-d0116a` : ses fichiers propres repris le
+   2026-10-03 dans `chore/restore-mobile-release-files` (PR #211 : `mobile.yml`,
+   `STORE_FORMS.md`, `RUNBOOK_STORE_RELEASE.md` ; pin Flutter aligné sur `ci.yml`).
+   **Volontairement non repris** : `flutter_launcher_icons.yaml`,
+   `flutter_native_splash.yaml`, `tool/generate_brand_assets.dart` (ancien design
+   `assets/brand/*` inexistant ; les outils préfèrent le yaml autonome à `pubspec.yaml`
+   et casseraient la config actuelle). Merger #211, puis supprimer la branche.
+   Les deux docs stores de #211 sont un instantané du 2026-07-07 : à mettre à jour
+   avant usage (Crashlytics à déclarer, vérification email du compte démo, URLs).
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
 3. **Supprimer (doublons, 2026-10-03)** : `fix/summary-card-keyfigure-overflow` (PR #213 fermée,
