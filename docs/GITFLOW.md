@@ -63,27 +63,26 @@ Reste :
    `docs(state)`, `develop` a un état plus récent), `feat/056-multi-tier-subscriptions`
    (61 commits hors `main` ; billing FEAT-056, FEAT-055, FEAT-044f, couleur d'identité,
    cash flow, ADR 0003, épinglage Flutter présents dans `develop`).
-2. **Supprimer** `claude/magical-jackson-d0116a` : ses fichiers propres repris le
-   2026-10-03 dans `chore/restore-mobile-release-files` (PR #211 : `mobile.yml`,
-   `STORE_FORMS.md`, `RUNBOOK_STORE_RELEASE.md` ; pin Flutter aligné sur `ci.yml`).
-   **Volontairement non repris** : `flutter_launcher_icons.yaml`,
-   `flutter_native_splash.yaml`, `tool/generate_brand_assets.dart` (ancien design
-   `assets/brand/*` inexistant ; les outils préfèrent le yaml autonome à `pubspec.yaml`
-   et casseraient la config actuelle). Merger #211, puis supprimer la branche.
-   Les deux docs stores de #211 ont été mis à jour le 2026-10-04 (Crashlytics déclaré,
-   compte démo à email vérifié, chemins perso retirés, Flutter 3.44.6). **Restent** :
-   les URLs privacy / delete-account (`easy-rent-54cd4.web.app` → `app.baillan.com`
-   avec #162), la question « Achats numériques » (paywall atteignable depuis le mobile ?)
-   et la re-vérification des règles des stores.
+2. **Supprimer** `claude/magical-jackson-d0116a` et `chore/restore-mobile-release-files` :
+   PR #211 **mergée le 2026-10-04** (`a6004dd`) — reprend `mobile.yml`, `STORE_FORMS.md`,
+   `RUNBOOK_STORE_RELEASE.md` (docs stores mises à jour : Crashlytics déclaré, compte démo à
+   email vérifié, chemins perso retirés, Flutter 3.44.6). **Volontairement non repris** :
+   `flutter_launcher_icons.yaml`, `flutter_native_splash.yaml`, `tool/generate_brand_assets.dart`
+   (ancien design `assets/brand/*` inexistant ; les outils préfèrent le yaml autonome à
+   `pubspec.yaml` et casseraient la config actuelle).
+   **Restent à faire côté stores** : URLs privacy / delete-account
+   (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques »
+   (paywall atteignable depuis le mobile ?), re-vérification des règles des stores.
    Note : `develop` et ces branches n'ont aucun ancêtre commun (historique réécrit) —
    comparer par contenu, pas par `git log`.
-3. **Supprimer (doublons, 2026-10-03)** : `fix/summary-card-keyfigure-overflow` (PR #213 fermée,
+3. **Supprimer** `fix/summary-card-key-figure-overflow` (PR #210 mergée).
+   **Supprimer (doublons, 2026-10-03)** : `fix/summary-card-keyfigure-overflow` (PR #213 fermée,
    doublon de #210 mergée) et `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif
    que #210). Seule différence non reprise : la note `docs/SECURITY.md` sur les deux résolveurs
    Stripe et le garde-fou `check-stripe-isolation.sh` — reprise dans la PR #216
    (`docs/security-stripe-resolvers`, à supprimer une fois mergée).
 4. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte,
-   à ne pas merger avant le DNS) et `chore/restore-mobile-release-files` (PR #211, jusqu'à son merge).
+   à ne pas merger avant le DNS) (et `docs/security-stripe-resolvers` jusqu'au merge de la PR #216).
 5. Activer *Automatically delete head branches* (voir ci-dessus).
 
 ## 🔒 Branch protection (à configurer sur GitHub)
