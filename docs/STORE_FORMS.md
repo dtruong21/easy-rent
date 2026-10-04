@@ -2,17 +2,20 @@
 
 > Compagnon opérationnel de [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md)
 > (§6, étape 4). Réponses **prêtes à copier** pour chaque formulaire, établies
-> le 2026-07-07 pour l'état V1 de Baillan : **gratuite, sans pub, sans IAP,
-> sans analytics/crashlytics** (vérifié dans pubspec), uploads de documents
-> PDF + images. ⚠️ À re-dérouler si l'app change (FEAT-044 IAP notamment —
-> les items concernés sont marqués 🔁 FEAT-044).
+> le 2026-07-07 puis mises à jour le 2026-10-04 : **sans pub, sans IAP, sans
+> analytics tiers**, uploads de documents PDF + images, et **Crashlytics sur
+> mobile uniquement, en opt-in** (`firebase_crashlytics` dans pubspec ;
+> déclaration : voir §1.8 et §2.1, source de vérité
+> [`STORE_COMPLIANCE.md`](STORE_COMPLIANCE.md) §5).
+> ⚠️ À re-dérouler si l'app change (FEAT-044 IAP notamment — les items
+> concernés sont marqués 🔁 FEAT-044).
 
 ## 0. Prérequis communs
 
 | Élément | Valeur |
 |---|---|
 | Privacy policy URL | `https://easy-rent-54cd4.web.app/privacy` |
-| URL de demande de suppression (FEAT-045, session en cours) | `https://easy-rent-54cd4.web.app/delete-account` |
+| URL de demande de suppression (FEAT-045, livrée) | `https://easy-rent-54cd4.web.app/delete-account` |
 | Compte démo review (à créer, cf. §3) | `review.stores@<domaine choisi>` + mot de passe dédié |
 | Catégorie d'app | Play : *House & Home* (ou *Finance* — recommandé : House & Home) ; Apple : *Utilities* ou *Finance* (primaire), *Productivity* (secondaire) |
 
@@ -36,12 +39,13 @@ Dérouler **tous** les formulaires listés ; chacun est bloquant s'il est incomp
 ```
 Baillan is a rental-management app for French landlords (UI in French).
 Log in with the provided email/password credentials (tap « J'ai déjà un
-compte » on the landing page). The demo account is pre-populated with one
+compte » on the landing page). The account's email address is already
+verified (the app requires a verified email to log in). The demo account is pre-populated with one
 property, one tenant, an active lease, recorded rent payments and a
 generated rent receipt (PDF), so all features are reachable:
 Accueil (dashboard) / Biens (properties) / Locataires (tenants) /
 Baux (leases) → payments & receipts / Profil (settings, account deletion).
-No OTP/2FA. Google & Apple sign-in are alternative login methods to the
+No OTP/2FA and no email step to complete. Google & Apple sign-in are alternative login methods to the
 same feature set — the email/password account exposes 100% of features.
 The anonymous mode (« Continuer sans compte ») is a 14-day demo tier.
 ```
@@ -101,9 +105,15 @@ données du profil)
 | Fichiers et documents | Fichiers et documents | Facultatif (PDF baux, quittances, justificatifs) |
 | Activité dans l'appli | Autre contenu généré par l'utilisateur | Facultatif (demandes de support) |
 | ID de l'appareil ou autres ID | ID d'appareil ou autres ID | Obligatoire (Firebase installation ID, UID Auth) |
+| Infos sur l'appli et performances (diagnostics) | Journaux de plantage / Diagnostics (Crashlytics) | **Facultatif** (opt-in : Profil → Confidentialité ; mobile uniquement, désactivé par défaut) — Collectée = Oui · Partagée = **Non** · chiffrée en transit · Finalité = **Fonctionnement de l'appli** uniquement (pas « Gestion du compte »), à confirmer à la saisie |
+
+⚠️ Le rapport de plantage (Crashlytics) est **déclaré** (ligne ci-dessus) :
+le libellé exact de la catégorie dans la console est à confirmer au moment
+du remplissage (`STORE_COMPLIANCE.md` §5 l'appelle « App activity →
+Diagnostics (crash logs) »).
 
 **Ne PAS déclarer** (vérifié absent du pubspec) : localisation, contacts,
-crash logs, diagnostics, historique web, apps installées, santé, calendrier.
+historique web, apps installées, santé, calendrier.
 ⚠️ Les données des **locataires** (tiers saisis par le bailleur) comptent
 comme données collectées — elles sont couvertes par les lignes ci-dessus.
 
@@ -125,9 +135,10 @@ Pour chaque type : **Linked to the user = Yes** · **Used for tracking = No**
 | User Content → Other User Content | Baux, quittances PDF, documents |
 | User Content → Customer Support | Formulaire « Nous contacter » |
 | Identifiers → User ID | UID Firebase Auth + installation ID |
+| Diagnostics → Crash Data (+ Other Diagnostic Data) | Rapport de plantage Crashlytics — mobile, opt-in. **Exception à la règle ci-dessus** : *Not Linked to You*, *Not used for tracking* |
 
-Rien dans : Location, Browsing/Search History, Diagnostics, Usage Data
-(pas d'Analytics/Crashlytics), Purchases 🔁 FEAT-044.
+Rien dans : Location, Browsing/Search History, Usage Data (pas d'Analytics),
+Purchases 🔁 FEAT-044. (Diagnostics : voir la ligne Crash Data ci-dessus.)
 Privacy policy URL : `https://easy-rent-54cd4.web.app/privacy`.
 
 ### 2.2 Questionnaire d'âge (système 2026)
@@ -158,14 +169,19 @@ représentatives. Recette (~10 min, via l'app web ou mobile) :
 
 1. Créer le compte email/password : `review.stores@<domaine>` + mot de passe
    dédié robuste (il sera lisible par les équipes de review des deux stores
-   — ne JAMAIS réutiliser un mot de passe existant).
+   — ne JAMAIS réutiliser un mot de passe existant). ⚠️ Le login **exige un
+   email vérifié** (FEAT-021, appliqué aussi par les règles Firestore et les
+   callables) : utiliser une boîte que vous contrôlez (alias) et **cliquer le
+   lien de vérification reçu** à l'inscription — sans cela, les reviewers
+   seraient bloqués dès l'écran de connexion.
 2. Se connecter et saisir : **1 bien** (adresse réaliste fictive), **1
    locataire** (nom/email fictifs), **1 bail actif** (loyer + charges),
    **2 paiements** enregistrés, **1 quittance générée** (PDF visible).
 3. Ajouter **1 document** uploadé (PDF quelconque) et **1 dépense**
    (facture fictive) pour couvrir FEAT-041.
 4. Vérifier la connexion depuis un appareil « neuf » (navigation privée) :
-   pas d'étape supplémentaire, pas de vérification email bloquante.
+   email déjà vérifié (étape 1), donc connexion directe — pas d'OTP/2FA ni
+   d'étape email à accomplir pour les reviewers.
 5. Consigner les identifiants dans le gestionnaire de mots de passe +
    les coller dans Play Console (App access) et App Store Connect
    (App Review Information).
