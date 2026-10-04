@@ -32,6 +32,9 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-03)
 
+### Connexion v1 : Google + email, email seul sur iOS (2026-10-03)
+- Décision produit : la v1 ne propose que Google et email / mot de passe ; Apple viendra après la première version. `lib/core/config/auth_providers.dart` : Google proposé sur web et Android, **masqué sur iOS** (règle App Store 4.8 : pas de connexion tierce sans option équivalente type Apple) ; Apple masqué partout. Formulaires de connexion et d'inscription (dont le passage d'un essai anonyme à un compte complet) filtrés ; la ré-authentification des comptes existants est inchangée. Code Apple conservé et testé (forçage de test) pour la réactivation.
+
 ### FIX cartes : un montant géant ne fait plus déborder `SummaryCard` (2026-10-03)
 - Vu à la première CI depuis le retour du quota Actions : `receipts_card_view_test` « pire cas desktop 1280 px » débordait de 3,1 px sur Linux (police de secours plus large pour « € » et l'espace fine). Le chiffre clé est plafonné à 45 % de la rangée et réduit à l'échelle au-delà (jamais tronqué) ; nouveau test reproductible (carte de 240 px, 1 234 567,89 €).
 
