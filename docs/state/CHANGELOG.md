@@ -30,7 +30,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-03)
+## Changements (2026-08-03 → 2026-10-04)
+
+### FIX cartes : nettoyage après FEAT-059 (#198) (2026-10-04)
+- Code mort supprimé : `CardActionButton`, `CardActionIconButton`, `EntityCardHeader`. `kCardActionButtonHeight` vit désormais dans `summary_card.dart` et règle aussi la hauteur de `SummaryQuickActionButton`. `EntityCard` reste pour les cartes de scénarios du simulateur.
+- `CardGrid` : en grille (desktop), la hauteur de cellule `mainAxisExtent` grandit avec la taille de texte d'accessibilité. Une carte complète débordait de 22 px à l'échelle 2.0 ; un test « pire cas » couvre les échelles 1.0, 1.3 et 2.0.
+- `CardSkeleton` reprend la forme d'une `SummaryCard` : liseré, chiffre clé à droite, statut et info.
+- Tests ajoutés pour Appeler / Email de la carte locataire (`tel:` sans espaces, SnackBar en cas d'échec). Ajout en dev-dependencies de `url_launcher_platform_interface` et `plugin_platform_interface`, pour le faux lanceur d'URL.
 
 ### Connexion v1 : Google + email, email seul sur iOS (2026-10-03)
 - Décision produit : la v1 ne propose que Google et email / mot de passe ; Apple viendra après la première version. `lib/core/config/auth_providers.dart` : Google proposé sur web et Android, **masqué sur iOS** (règle App Store 4.8 : pas de connexion tierce sans option équivalente type Apple) ; Apple masqué partout. Formulaires de connexion et d'inscription (dont le passage d'un essai anonyme à un compte complet) filtrés ; la ré-authentification des comptes existants est inchangée. Code Apple conservé et testé (forçage de test) pour la réactivation.
