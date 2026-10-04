@@ -1,3 +1,4 @@
+import 'package:easyrent/core/config/auth_providers.dart';
 import 'package:easyrent/features/auth/data/apple_auth_exception.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/presentation/signup_page.dart';
@@ -145,6 +146,11 @@ Widget _buildSignupPage({required _FakeAuthRepository repo}) {
 
 void main() {
   group('SignupForm — gate Apple sur consentement RGPD', () {
+    // Apple est masqué en v1 (auth_providers.dart) : ces scénarios couvrent
+    // le parcours en sommeil, prêt pour sa réactivation après la v1.
+    setUp(() => debugAppleSignInOfferedOverride = true);
+    tearDown(() => debugAppleSignInOfferedOverride = null);
+
     testWidgets('tap Apple sans consentement → erreur près de la checkbox, '
         'signUpWithApple PAS appelé, cocher la case efface l\'erreur', (
       tester,
