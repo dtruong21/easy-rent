@@ -370,7 +370,7 @@ describe("createCheckoutSession — handler (OWASP-01 : doc landlord requis)", (
   const UID = "landlord-a";
   const LIVE_KEY = "sk_live_fake";
   const TEST_KEY = "sk_test_fake";
-  const PROD_ORIGIN = "https://baillan.com";
+  const PROD_ORIGIN = "https://app.baillan.com";
 
   let prodDb: FakeFirestore;
   let stagingDb: FakeFirestore;
