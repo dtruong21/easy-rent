@@ -168,14 +168,16 @@ void main() {
       expect(find.byKey(const Key('btn_add_tenant_empty')), findsOneWidget);
     });
 
-    testWidgets('état vide — FAB "Ajouter un locataire" présent', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_buildPage(const _FakeRepo()));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'état vide — un seul bouton d\'ajout : le CTA, pas de FAB (#197)',
+      (tester) async {
+        await tester.pumpWidget(_buildPage(const _FakeRepo()));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('fab_add_tenant')), findsOneWidget);
-    });
+        expect(find.byKey(const Key('btn_add_tenant_empty')), findsOneWidget);
+        expect(find.byKey(const Key('fab_add_tenant')), findsNothing);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Liste avec items
@@ -193,6 +195,8 @@ void main() {
 
       expect(find.textContaining('Jean Dupont'), findsOneWidget);
       expect(find.textContaining('Sophie Martin'), findsOneWidget);
+      // Liste non vide : le FAB reste l'unique bouton d'ajout.
+      expect(find.byKey(const Key('fab_add_tenant')), findsOneWidget);
     });
 
     testWidgets('liste — affiche les emails des locataires', (tester) async {

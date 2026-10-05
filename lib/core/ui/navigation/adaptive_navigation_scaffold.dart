@@ -146,7 +146,7 @@ class _NarrowLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: _BranchMessenger(navigationShell: navigationShell),
       bottomNavigationBar: SafeArea(
         child: NavigationBar(
           key: const Key('adaptive_nav_bar'),
@@ -165,6 +165,24 @@ class _NarrowLayout extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Messager de SnackBars propre aux branches du shell.
+///
+/// Les pages de branche (listes Biens / Baux / Locataires…) sont des
+/// `Scaffold` IMBRIQUÉS dans celui du shell. Un `ScaffoldMessenger` n'affiche
+/// une SnackBar que dans ses Scaffolds racines : sans ce messager, c'était le
+/// Scaffold du shell, qui ignore le FAB de la page — la SnackBar le
+/// recouvrait (recette iOS, #197). Avec lui, la page devient racine : la
+/// SnackBar se place au-dessus de son FAB.
+class _BranchMessenger extends StatelessWidget {
+  const _BranchMessenger({required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaffoldMessenger(child: navigationShell);
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +236,7 @@ class _WideLayout extends ConsumerWidget {
               ],
             ),
             const VerticalDivider(width: 1, thickness: 1),
-            Expanded(child: navigationShell),
+            Expanded(child: _BranchMessenger(navigationShell: navigationShell)),
           ],
         ),
       ),

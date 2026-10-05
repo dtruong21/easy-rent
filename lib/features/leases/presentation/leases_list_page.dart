@@ -71,17 +71,24 @@ class _LeasesListPageState extends ConsumerState<LeasesListPage> {
         ? ViewMode.card
         : ref.watch(viewModeProvider('leases'));
 
+    // Aucun bail du tout : l'état vide porte déjà « Créer un bail » — pas de
+    // FAB en doublon (recette iOS, #197). Un filtre qui masque tout garde le
+    // FAB : son état vide propose « Tout afficher », pas la création.
+    final showFab = ref.watch(leasesListProvider).valueOrNull?.isEmpty != true;
+
     return Scaffold(
       appBar: AppAppBar(
         title: context.l10n.leasesListTitle,
         showBackButton: false,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('fab_add_lease'),
-        onPressed: () => context.push('/leases/new'),
-        icon: const Icon(Icons.add),
-        label: Text(context.l10n.leasesCreateButton),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton.extended(
+              key: const Key('fab_add_lease'),
+              onPressed: () => context.push('/leases/new'),
+              icon: const Icon(Icons.add),
+              label: Text(context.l10n.leasesCreateButton),
+            )
+          : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

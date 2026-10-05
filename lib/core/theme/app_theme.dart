@@ -378,6 +378,9 @@ class AppTheme {
       ),
 
       inputDecorationTheme: InputDecorationTheme(
+        // Textes d'aide sur 2 lignes : en largeur mobile, une seule ligne les
+        // tronquait (« … ») dans les formulaires bail et paiement (#197).
+        helperMaxLines: 2,
         filled: true,
         fillColor: colorScheme.surfaceContainerHigh,
         border: OutlineInputBorder(

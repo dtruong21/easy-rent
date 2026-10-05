@@ -31,6 +31,38 @@ Widget _brancheFactice(String label) => Scaffold(
   ),
 );
 
+/// Branche avec FAB (comme les listes Biens / Baux / Locataires) et un bouton
+/// qui affiche une SnackBar depuis la page — pour vérifier qu'elle ne
+/// recouvre pas le FAB (#197).
+Widget _brancheAvecFab(String label) => Scaffold(
+  floatingActionButton: FloatingActionButton.extended(
+    key: Key('fab_$label'),
+    onPressed: () {},
+    icon: const Icon(Icons.add),
+    label: Text('Ajouter $label'),
+  ),
+  body: Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          key: Key('field_$label'),
+          decoration: InputDecoration(labelText: label),
+        ),
+        Builder(
+          builder: (context) => TextButton(
+            key: Key('btn_snack_$label'),
+            onPressed: () => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Enregistré'))),
+            child: const Text('Afficher une SnackBar'),
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+
 /// Sous-page poussée à l'intérieur d'une branche (ex. `/baux/detail`) — sert
 /// à prouver le mécanisme générique de reset (`initialLocation: true`), par
 /// opposition à `_brancheFactice` qui ne quitte jamais la racine.
@@ -65,7 +97,7 @@ GoRouter _buildTestRouter() {
             routes: [
               GoRoute(
                 path: '/locataires',
-                builder: (context, state) => _brancheFactice('locataires'),
+                builder: (context, state) => _brancheAvecFab('locataires'),
               ),
             ],
           ),
@@ -481,5 +513,37 @@ void main() {
         expect(find.byKey(const Key('field_baux')), findsOneWidget);
       },
     );
+  });
+
+  // #197 (recette iOS) : les SnackBars recouvraient le FAB des listes. La page
+  // de branche est un Scaffold IMBRIQUÉ dans celui du shell ; sans messager
+  // propre aux branches, la SnackBar s'affichait dans le Scaffold du shell, qui
+  // ignore le FAB de la page.
+  group('SnackBar au-dessus du FAB de la page', () {
+    for (final width in [400.0, 1200.0]) {
+      testWidgets('largeur $width : la SnackBar ne recouvre pas le FAB', (
+        tester,
+      ) async {
+        await _setViewportWidth(tester, width);
+        final router = _buildTestRouter();
+        await _pumpApp(tester, router);
+        router.go('/locataires');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('btn_snack_locataires')));
+        await tester.pumpAndSettle();
+
+        final snack = tester.getRect(find.byType(SnackBar));
+        final fab = tester.getRect(find.byKey(const Key('fab_locataires')));
+        // SnackBar fixe : le Scaffold remonte le FAB au-dessus ; flottante :
+        // la SnackBar se place au-dessus du FAB. Dans les deux cas, aucun
+        // chevauchement.
+        expect(
+          snack.overlaps(fab),
+          isFalse,
+          reason: 'SnackBar $snack recouvre le FAB $fab',
+        );
+      });
+    }
   });
 }

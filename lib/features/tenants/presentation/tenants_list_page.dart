@@ -35,14 +35,20 @@ class TenantsListPage extends ConsumerWidget {
         ? ViewMode.card
         : ref.watch(viewModeProvider('tenants'));
 
+    // Liste vide : l'état vide porte déjà « Ajouter un locataire » — pas de
+    // FAB en doublon (recette iOS, #197).
+    final showFab = asyncTenants.valueOrNull?.isEmpty != true;
+
     return Scaffold(
       appBar: AppAppBar(title: l10n.tenantsListTitle, showBackButton: false),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('fab_add_tenant'),
-        onPressed: () => context.push('/tenants/new'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.tenantsAddButton),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton.extended(
+              key: const Key('fab_add_tenant'),
+              onPressed: () => context.push('/tenants/new'),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.tenantsAddButton),
+            )
+          : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

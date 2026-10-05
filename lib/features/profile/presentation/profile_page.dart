@@ -122,7 +122,7 @@ class ProfilePage extends ConsumerWidget {
               key: const Key('tile_faq'),
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.help_outline),
-              title: const Text('Questions fréquentes (FAQ)'),
+              title: Text(l10n.profileFaqTile),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/faq'),
             ),

@@ -230,6 +230,38 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
+    // #197 (recette iOS) : actions libellées, pas d'icônes muettes.
+    testWidgets('ligne de paiement : « Quittance » libellé, Modifier / '
+        'Archiver dans le menu ⋮', (tester) async {
+      final lease = _makeLease();
+      final payments = [
+        _makePayment(
+          id: 'pay-1',
+          periodStart: DateTime(2024, 1, 1),
+          periodEnd: DateTime(2024, 1, 31),
+        ),
+      ];
+      await tester.pumpWidget(_buildSection(lease: lease, payments: payments));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('btn_generate_receipt_pay-1')),
+          matching: find.text('Quittance'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('payment_menu_pay-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Archiver'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_edit_payment_pay-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('edit payment pay-1'), findsOneWidget);
+    });
+
+    // -----------------------------------------------------------------------
     testWidgets('tri period_start DESC — plus récent en premier', (
       tester,
     ) async {
