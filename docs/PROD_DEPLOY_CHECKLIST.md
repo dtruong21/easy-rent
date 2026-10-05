@@ -2,7 +2,7 @@
 
 > Cocher chaque item avant / pendant / après le déploiement.
 > Durée estimée : ~30 min (smoke test) + provisionnement initial la 1ère fois.
-> Dernière mise à jour : 2026-07-24. Backend **100 % Firebase** (Firestore, Auth, Storage, Cloud Functions, Hosting).
+> Dernière mise à jour : 2026-10-05 (release v1.1.0). Backend **100 % Firebase** (Firestore, Auth, Storage, Cloud Functions, Hosting).
 
 ---
 
@@ -23,7 +23,7 @@ GitHub → Settings → Environments → `production` :
 
 - [ ] **Authorized domains** contiennent `baillan.com`, `app.staging.baillan.com`,
   `easy-rent-54cd4.web.app`, `baillan-stage.web.app`, `localhost`
-- [ ] Providers activés : **Email/Password**, **Google**, **Apple**, **Anonymous**
+- [ ] Providers activés : **Email/Password**, **Google**, **Anonymous** (Apple peut rester activé : la v1 ne l'affiche pas — #214, email seul sur iOS)
 - [ ] (Optionnel) Templates d'email (vérification / reset password) personnalisés dans
   Authentication → Templates
 
@@ -41,6 +41,8 @@ GitHub → Settings → Environments → `production` :
 - [ ] Rules + indexes Firestore : **auto** par `deploy.yml` (`firestore:staging` sur `develop`, `firestore:(default)` sur `main`) — vérifier l'étape dans le run
 - [ ] `cd functions && npm ci && npm run build && firebase deploy --only functions` (si functions changées)
 - [ ] Rules Storage : **auto** par `deploy.yml` depuis `main` uniquement (cible `storage`, bucket partagé) — vérifier l'étape dans le run, puis **téléverser un document sur prod ET sur staging juste après le déploiement** (compte non anonyme à email vérifié ; un échec = règles Storage ou email non vérifié)
+- [ ] **1er run des cibles `firestore:(default)` et `storage` depuis `main`** (ajoutées après la v1.0.0) : le compte de service CI a `firebaserules.admin`, `datastore.indexAdmin`, `firebasehosting.admin`. En cas de `403` sur une étape, ajouter le rôle nommé dans l'erreur (action Daki, IAM) puis « Re-run failed jobs » — un re-run redéploie à l'identique, sans second tag
+- [ ] Index composites Firestore prod : attendre « Enabled » (console → Firestore → Indexes) avant le smoke test — les écrans qui en dépendent échouent tant qu'ils se construisent
 
 ---
 
@@ -63,19 +65,20 @@ Ouvrir **https://baillan.com** dans Chrome (fallback : `easy-rent-54cd4.web.app`
 - [ ] Cliquer « Politique de confidentialité » → page `/privacy` complète s'affiche sans login
 - [ ] **Signup** : créer un compte (email réel + password 8 chars + lettre + chiffre + RGPD coché) → redirect dashboard, session active
 - [ ] **Login** : logout + re-login email + password → connexion OK
-- [ ] **Google / Apple** : connexion via un provider social → OK
+- [ ] **Google** : connexion Google (web) → OK. Apple n'est pas proposé en v1
 - [ ] **Mauvais password** : password incorrect → message « Email ou mot de passe incorrect » + email conservé
 - [ ] **Reset password** : `/forgot-password` → email reçu → lien → `/reset-password` → nouveau password → redirect `/login` + snackbar → login avec le nouveau password OK
-- [ ] Dashboard affiche l'onboarding « Premiers pas » (3 étapes)
+- [ ] Dashboard affiche l'onboarding progressif (jusqu'à la 1re quittance, FEAT-058)
 - [ ] Étape 1 → `/properties/new` → créer un bien → retour dashboard OK
 - [ ] Étape 2 → `/tenants/new` → créer un locataire → retour dashboard OK
 - [ ] Étape 3 → `/leases/new` → créer un bail → retour dashboard OK
-- [ ] Dashboard → 4 KPI cards affichées (loyers, retards, renouvellements, docs)
+- [ ] Accueil → cockpit 3 zones affiché (À traiter / Mon patrimoine / Analyse)
 - [ ] Naviguer vers le bail → enregistrer un paiement → KPI mis à jour
 - [ ] Page quittances → générer une quittance PDF → preview s'ouvre OK
 - [ ] Cliquer « Partager » → feuille de partage native s'ouvre → Mail/Gmail/WhatsApp → PDF + sujet + corps pré-remplis
 - [ ] Uploader un document PDF de test → visible dans la liste
 - [ ] Dashboard → activité récente affiche le paiement + la quittance
+- [ ] `/pro` affiche « Bientôt disponible » (abonnement coupé en prod : `SUBSCRIPTIONS_ENABLED=false`)
 - [ ] Chrome desktop : PWA install prompt → « Installer » → app installée
 
 ---
