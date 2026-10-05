@@ -51,6 +51,7 @@ import {
   parseEntitlementStates,
 } from "../entitlements/plan";
 import {firestoreForEnv} from "../utils/db_router";
+import {readSandboxAllowlist} from "../utils/sandbox_allowlist";
 
 /** Secret partagé du header Authorization du webhook RevenueCat. */
 const webhookAuth = defineSecret("REVENUECAT_WEBHOOK_AUTH");
@@ -315,6 +316,33 @@ function environmentForLog(environment: unknown): string {
   return (JSON.stringify(environment ?? null) ?? "null").slice(0, 32);
 }
 
+/** Lecteur de la liste blanche sandbox (injectable pour les tests). */
+export type SandboxAllowlistReader = () => Promise<ReadonlySet<string>>;
+
+/** Lecteur de production : document `_ops/sandboxAllowlist` de la base prod. */
+const readProdSandboxAllowlist: SandboxAllowlistReader = () =>
+  readSandboxAllowlist(firestoreForEnv(false));
+
+/**
+ * `true` si [uid] est dans la liste blanche sandbox (FEAT-044e). Liste
+ * illisible → `false` : règle par défaut (staging), jamais de déblocage prod.
+ */
+async function isSandboxAllowlisted(
+  uid: string,
+  read: SandboxAllowlistReader,
+): Promise<boolean> {
+  try {
+    return (await read()).has(uid);
+  } catch (err) {
+    logger.error(
+      "revenueCatWebhook: liste blanche sandbox illisible → staging " +
+        `app_user_id=${uid}`,
+      err,
+    );
+    return false;
+  }
+}
+
 /**
  * Route un event vers la base de SON environnement, puis l'applique.
  *
@@ -325,7 +353,9 @@ function environmentForLog(environment: unknown): string {
  * et obtenir un palier payant en prod. La base est donc choisie par
  * `event.environment`, jamais par le contenu des bases :
  *
- *   - `"SANDBOX"`    → base `staging` UNIQUEMENT ;
+ *   - `"SANDBOX"`    → base `staging` UNIQUEMENT — sauf un uid de la liste
+ *     blanche sandbox (`_ops/sandboxAllowlist`, FEAT-044e : compte de démo
+ *     App Review, testeurs) → base `(default)` UNIQUEMENT ;
  *   - `"PRODUCTION"` → base `(default)` UNIQUEMENT ;
  *   - absent / autre → event ignoré (fail-closed) et journalisé.
  *
@@ -339,12 +369,23 @@ function environmentForLog(environment: unknown): string {
 export async function handleRevenueCatEvent(
   event: RcEvent,
   nowMs: number,
+  readAllowlist: SandboxAllowlistReader = readProdSandboxAllowlist,
 ): Promise<RcOutcome> {
   if (event.type === "TEST") return "ignored";
 
   let isStaging: boolean;
   if (event.environment === "SANDBOX") {
-    isStaging = true;
+    // Liste lue UNIQUEMENT pour un event SANDBOX : aucun coût sur les achats
+    // réels.
+    const uid = event.app_user_id ?? "";
+    const allowlisted = await isSandboxAllowlisted(uid, readAllowlist);
+    if (allowlisted) {
+      logger.info(
+        "revenueCatWebhook: SANDBOX d'un uid de la liste blanche → prod " +
+          `app_user_id=${uid}`,
+      );
+    }
+    isStaging = !allowlisted;
   } else if (event.environment === "PRODUCTION") {
     isStaging = false;
   } else {

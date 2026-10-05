@@ -694,3 +694,66 @@ describe("handleRevenueCatEvent — routage par environnement (OWASP-01)", () =>
     expect(prod?.planLevel).toBeUndefined();
   });
 });
+
+// FEAT-044e (#209) — App Review / testeurs Google achètent en SANDBOX sur
+// l'app de PROD. Un uid de la liste blanche reçoit ce droit en prod ; tous
+// les autres restent routés vers staging (OWASP-01 inchangé).
+describe("handleRevenueCatEvent — liste blanche sandbox (FEAT-044e)", () => {
+  let prodDb: FakeFirestore;
+  let stagingDb: FakeFirestore;
+
+  beforeEach(() => {
+    prodDb = new FakeFirestore();
+    stagingDb = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db = prodDb;
+    fakeStagingFirestoreHolder.db = stagingDb;
+    for (const db of [prodDb, stagingDb]) {
+      db.seed(`landlords/${UID}`, {
+        id: UID,
+        landlordId: UID,
+        isAnonymous: false,
+        subscriptionTier: "free",
+        deletedAt: null,
+      });
+    }
+  });
+
+  const listed = () => Promise.resolve(new Set([UID]) as ReadonlySet<string>);
+  const empty = () => Promise.resolve(new Set<string>() as ReadonlySet<string>);
+  const failing = () => Promise.reject(new Error("unavailable"));
+
+  it("SANDBOX + uid listé → droit appliqué en PROD, staging intact", async () => {
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+      listed,
+    );
+
+    expect(outcome).toBe("applied");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX + uid non listé → staging (comportement inchangé)", async () => {
+    await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, empty);
+
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX + liste illisible → staging (fail-closed), prod intacte", async () => {
+    await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, failing);
+
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("PRODUCTION → la liste n'est jamais lue", async () => {
+    const reader = vi.fn(listed);
+
+    await handleRevenueCatEvent(evt({environment: "PRODUCTION"}), NOW, reader);
+
+    expect(reader).not.toHaveBeenCalled();
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+  });
+});
