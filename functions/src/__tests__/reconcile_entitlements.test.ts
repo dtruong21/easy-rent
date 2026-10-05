@@ -432,3 +432,45 @@ describe("reconcile — palier prod masqué par un achat sandbox (#209)", () => 
     expect(fakeDb.peek("landlords/prod-pro")?.subscriptionTier).toBe("free");
   });
 });
+
+// FEAT-044e — un uid de la liste blanche sandbox (compte de démo App Review,
+// testeurs) : son achat sandbox vaut un vrai droit, pour le cron aussi.
+describe("reconcile — uid de la liste blanche sandbox (FEAT-044e)", () => {
+  const PRO_ID = rcEntitlementIdFor("pro") as string;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const sandboxBody = {
+    entitlements: {
+      [PRO_ID]: {expires_date: iso(IN_60D), product_identifier: "pro_sandbox"},
+    },
+    subscriptions: {pro_sandbox: {is_sandbox: true}},
+  };
+
+  it("sandboxAllowed → entitlement sandbox rapporté comme un vrai droit", () => {
+    expect(
+      entitlementStatesFromSubscriber(sandboxBody, {sandboxAllowed: true}),
+    ).toEqual({pro: {expiresMs: IN_60D}});
+  });
+
+  it("sans option → masqué (comportement #209 inchangé)", () => {
+    expect(entitlementStatesFromSubscriber(sandboxBody)).toEqual({
+      pro: {expiresMs: null, sandboxShadowed: true},
+    });
+  });
+
+  it("bout en bout : uid listé → échéance sandbox reprise (prolongée)", async () => {
+    seedActivePro("review-demo", IN_30D);
+
+    await reconcileExpiredEntitlements(
+      fakeDb,
+      () =>
+        Promise.resolve(
+          entitlementStatesFromSubscriber(sandboxBody, {sandboxAllowed: true}),
+        ),
+      NOW,
+    );
+
+    const doc = fakeDb.peek("landlords/review-demo");
+    expect(doc?.subscriptionTier).toBe("paid");
+    expect((doc?.proExpiresAt as {toMillis(): number}).toMillis()).toBe(IN_60D);
+  });
+});

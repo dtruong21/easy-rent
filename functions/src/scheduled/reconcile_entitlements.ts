@@ -54,6 +54,7 @@ import {
   tsToMillis,
 } from "../entitlements/plan";
 import {LEVELS} from "../entitlements/plan_matrix.generated";
+import {readSandboxAllowlistOrEmpty} from "../utils/sandbox_allowlist";
 
 /** Clé secrète v2 de l'API REST RevenueCat (serveur uniquement). */
 const revenueCatApiKey = defineSecret("REVENUECAT_API_KEY");
@@ -300,9 +301,12 @@ export interface RcSubscriber {
  * de `subscriptions` est traité comme prod : seul un `is_sandbox: true`
  * explicite écarte l'entitlement, pour ne pas rétrograder un client qui paie
  * sur une réponse d'API incomplète.
+ * Avec `sandboxAllowed` (uid de `_ops/sandboxAllowlist`, FEAT-044e : compte
+ * de démo App Review, testeurs), l'achat sandbox vaut un vrai droit.
  */
 export function entitlementStatesFromSubscriber(
   subscriber: RcSubscriber | undefined,
+  options: {sandboxAllowed?: boolean} = {},
 ): Partial<Record<LevelId, RcReportedState>> {
   const entitlements = subscriber?.entitlements ?? {};
   const subscriptions = subscriber?.subscriptions ?? {};
@@ -313,8 +317,13 @@ export function entitlementStatesFromSubscriber(
     const ent = entitlements[rcId];
     if (!ent || !ent.expires_date) continue;
     const productId = ent.product_identifier;
-    if (productId && subscriptions[productId]?.is_sandbox === true) {
+    if (
+      productId &&
+      subscriptions[productId]?.is_sandbox === true &&
+      options.sandboxAllowed !== true
+    ) {
       // Jamais accordé ni prolongé ; l'état prod du palier est inconnu (#209).
+      // Exception : uid de la liste blanche sandbox (FEAT-044e).
       states[level.id] = {expiresMs: null, sandboxShadowed: true};
       continue;
     }
@@ -329,7 +338,10 @@ export function entitlementStatesFromSubscriber(
  * tri (entitlements connus, achats sandbox écartés) vit dans
  * [entitlementStatesFromSubscriber], pure et testée.
  */
-function makeRevenueCatFetcher(apiKey: string): EntitlementStatesFetcher {
+function makeRevenueCatFetcher(
+  apiKey: string,
+  sandboxAllowlist: ReadonlySet<string>,
+): EntitlementStatesFetcher {
   return async (uid) => {
     const resp = await fetch(
       `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(uid)}`,
@@ -337,7 +349,9 @@ function makeRevenueCatFetcher(apiKey: string): EntitlementStatesFetcher {
     );
     if (!resp.ok) throw new Error(`RevenueCat API ${resp.status}`);
     const body = (await resp.json()) as {subscriber?: RcSubscriber};
-    return entitlementStatesFromSubscriber(body.subscriber);
+    return entitlementStatesFromSubscriber(body.subscriber, {
+      sandboxAllowed: sandboxAllowlist.has(uid),
+    });
   };
 }
 
@@ -350,7 +364,15 @@ export const reconcileEntitlements = onSchedule(
   },
   async () => {
     const db = admin.firestore();
-    const fetcher = makeRevenueCatFetcher(revenueCatApiKey.value());
+    // Liste lue une fois par passage ; illisible → aucun uid (fail-closed).
+    const sandboxAllowlist = await readSandboxAllowlistOrEmpty(
+      db,
+      "reconcileEntitlements",
+    );
+    const fetcher = makeRevenueCatFetcher(
+      revenueCatApiKey.value(),
+      sandboxAllowlist,
+    );
     const res = await reconcileExpiredEntitlements(db, fetcher, Date.now());
     logger.info(
       `reconcileEntitlements: checked=${res.checked} ` +
