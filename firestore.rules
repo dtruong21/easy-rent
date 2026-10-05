@@ -502,6 +502,17 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // _ops — configuration lue UNIQUEMENT par les Cloud Functions (Admin SDK)
+    // FEAT-044e : `_ops/sandboxAllowlist` (uids prod autorisés à recevoir un
+    // droit via un achat sandbox). Aucun accès client, explicitement — le
+    // fallback le refuse déjà, mais ouvrir ce chemin par erreur donnerait Pro
+    // gratuit en s'auto-ajoutant à la liste.
+    // ====================================================================
+    match /_ops/{docId} {
+      allow read, write: if false;
+    }
+
+    // ====================================================================
     // Fallback — tout le reste bloqué
     // ====================================================================
     match /{document=**} {
