@@ -3,6 +3,10 @@ library;
 
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/ui/cards/card_grid.dart';
+import 'package:easyrent/core/ui/cards/status_pill.dart';
+import 'package:easyrent/core/ui/cards/status_pill_tone.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
+import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -156,5 +160,67 @@ void main() {
       );
       expect(find.byType(CardGrid), findsOneWidget);
     });
+  });
+
+  // Pire cas FEAT-059 (#198) : une carte « chiffre clé » complète (sous-titre,
+  // statut, info, action rapide) dans une cellule calibrée à 124 px, avec un
+  // grand texte d'accessibilité. Sans mise à l'échelle de la cellule, le
+  // contenu dépasse la hauteur fixe et Flutter signale un débordement.
+  group('CardGrid — grande taille de texte (desktop)', () {
+    Widget fullCard(int i) => SummaryCard(
+      title: 'Appartement T3 Lyon $i',
+      subtitle: 'Marie Martin',
+      keyFigure: const SummaryKeyFigure(
+        value: '850,00 €',
+        caption: 'CC / mois',
+      ),
+      status: const StatusPill(
+        label: 'Loué',
+        tone: StatusPillTone.success,
+        icon: Icons.check,
+        size: StatusPillSize.sm,
+      ),
+      meta: 'Depuis 01/01/2024',
+      quickAction: SummaryQuickActionButton(
+        icon: Icons.call_outlined,
+        label: 'Appeler',
+        onPressed: () {},
+      ),
+      menuItems: [SummaryMenuItem(label: 'Modifier', onSelected: () {})],
+    );
+
+    for (final scale in [1.0, 1.3, 2.0]) {
+      testWidgets('échelle de texte $scale : aucune carte ne déborde', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1400, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: const Size(1400, 1000),
+                textScaler: TextScaler.linear(scale),
+              ),
+              child: Scaffold(
+                body: CardGrid(
+                  mainAxisExtent: 124,
+                  children: List.generate(4, fullCard),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(SummaryCard), findsWidgets);
+      });
+    }
   });
 }
