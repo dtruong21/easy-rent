@@ -111,7 +111,10 @@ class _ReceiptsSummaryEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final lastPeriodLabel = receiptPeriodMonthYear(receipts.first);
+    final lastPeriodLabel = receiptPeriodMonthYear(
+      receipts.first,
+      l10n.localeName,
+    );
 
     return ListTile(
       key: const Key('tile_receipts_summary'),

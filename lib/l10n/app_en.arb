@@ -2610,7 +2610,7 @@
   "@authLoginAphorismTitle": {
     "description": "Italic editorial aphorism displayed above the login form (brand copy, 'notarial register' concept)."
   },
-  "authLoginAphorismBody": "Sign your entry. Your credentials open the bailiwick's register — receipts, leases, due dates.",
+  "authLoginAphorismBody": "Sign your entry. Your credentials open the ledger — receipts, leases, due dates.",
   "@authLoginAphorismBody": {
     "description": "Body text of the editorial aphorism block above the login form, under authLoginAphorismTitle."
   },
@@ -3144,7 +3144,7 @@
   "@profileFormFullNameHint": {
     "description": "Hint/example text of the full-name field in the landlord profile form."
   },
-  "profileFormFullNameHelper": "Required to generate receipts",
+  "profileFormFullNameHelper": "Required for receipts and condition reports",
   "@profileFormFullNameHelper": {
     "description": "Helper text under the full-name field (masculine agreement in French, matches 'nom' — distinct from profileFormAddressHelper which agrees with the feminine 'adresse')."
   },
@@ -3164,9 +3164,13 @@
   "@profileFormAddressHint": {
     "description": "Hint/example text (two lines) of the postal address field in the landlord profile form."
   },
-  "profileFormAddressHelper": "Required to generate receipts",
+  "profileFormAddressHelper": "Required for receipts and condition reports",
   "@profileFormAddressHelper": {
     "description": "Helper text under the address field (feminine agreement in French, matches 'adresse' — distinct from profileFormFullNameHelper which agrees with the masculine 'nom')."
+  },
+  "profileFaqTile": "Frequently asked questions (FAQ)",
+  "@profileFaqTile": {
+    "description": "Title of the profile list tile that opens the FAQ page."
   },
   "profilePasswordTitle": "Change password",
   "@profilePasswordTitle": {
@@ -3445,6 +3449,10 @@
   "receiptsGenerateButtonTooltip": "Generate a receipt",
   "@receiptsGenerateButtonTooltip": {
     "description": "Tooltip of the icon button triggering receipt generation from a payment (GenerateReceiptButton)."
+  },
+  "receiptsGenerateButtonLabel": "Receipt",
+  "@receiptsGenerateButtonLabel": {
+    "description": "Short visible label of the generate-receipt button on each payment row of a lease (icon + label, the full action is in receiptsGenerateButtonTooltip). French: 'Quittance'."
   },
   "receiptsProfileIncompleteTitle": "Incomplete profile",
   "@receiptsProfileIncompleteTitle": {
@@ -5022,6 +5030,14 @@
   "landingCartoucheLabel": "COVER PAGE",
   "@landingCartoucheLabel": {
     "description": "Small-caps kicker label in the landing cover sheet's cartouche header (top-right, next to the date), naming the page as the register's cover/title page. Editorial branding concept mirroring authLoginCartoucheOpening's 'Opening' kicker on the login page, but kept as its own landing* key per module convention."
+  },
+  "landingLinkPrivacy": "Privacy",
+  "@landingLinkPrivacy": {
+    "description": "Discreet footer link on the landing sheet to the privacy policy page (FAQ · Privacy · Terms)."
+  },
+  "landingLinkTerms": "Terms",
+  "@landingLinkTerms": {
+    "description": "Discreet footer link on the landing sheet to the terms of use page (FAQ · Privacy · Terms). French: 'CGU'."
   },
   "landingTagline": "Keep the register.",
   "@landingTagline": {

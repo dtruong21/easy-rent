@@ -39,6 +39,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - **Suppression de compte.** L'avertissement annonce que les décomptes de charges et les états des lieux sont supprimés, et que leurs PDF ne pourront plus être générés.
 - **Docs.** Rollback du runbook §5, HANDOFF et BACKLOG : plus de `firestore:rules` / `firestore:indexes` sans base cible. Inventaire des Functions : 9 triggers et 3 crons (`purgeExpiredReceipts` manquait).
 
+### FIX UX mobile : défauts de la recette iOS (#197) (2026-10-04)
+- **Clavier.** Un tap dans le vide ferme le clavier, dans toute l'app (`DismissKeyboardOnTap` dans `MaterialApp.builder`) : les claviers numériques iOS n'ont pas de touche « OK ». Les 15 sélecteurs de date retirent le focus avant de s'ouvrir ; avant, la fermeture rendait le focus au dernier champ (« Charges ») et rouvrait le clavier. Les relevés de compteurs de l'EDL ouvrent un pavé numérique avec décimales.
+- **Préremplissage.** `/leases/new?tenantId=` et `?propertyId=` (ainsi que `extra.propertyId`) présélectionnent enfin le locataire ou le bien ; la route ignorait ces paramètres. Un nouveau paiement propose une période (`suggestedPaymentPeriod`) : le mois qui suit le dernier paiement, sinon le mois courant, bornée par les dates du bail.
+- **Affichage.** Les textes d'aide passent sur 2 lignes (thème). Biens, baux et locataires n'affichent plus le FAB quand l'état vide propose déjà l'ajout. Un `ScaffoldMessenger` propre aux branches du shell place les SnackBars au-dessus du FAB des pages. Les paiements d'un bail montrent « Quittance » avec un libellé, et Modifier / Archiver passent dans un menu ⋮.
+- **Langue.** Mois des quittances dans la langue de l'app (« August 2026 »). Clé l10n pour la tuile FAQ du profil et pour les liens « Privacy · Terms » de l'accueil. Aphorisme EN reformulé (« ledger »). L'aide du nom et de l'adresse du profil mentionne aussi les états des lieux.
+- **Partage iOS.** Le PDF est partagé seul, avec un titre : le texte joint créait un fichier texte parasite à l'enregistrement dans Fichiers. Android garde le texte en corps de message.
+
 ### FIX suivi PR #200 : domaine staging, routage (#201) (2026-10-04)
 - Docs : l'app staging est `app.staging.baillan.com` (`stage.baillan.com` = vitrine staging) dans RUNBOOK_PROD_DEPLOY, GITFLOW, HANDOFF, PROD_DEPLOY_CHECKLIST, BACKLOG, ADR 0003, backlog 057, `state/INDEX.md`, `state/routes/README.md`, `env.dart` et `deploy.yml` (commentaires). `INDEX.md` ne dit plus qu'un test staging écrit en prod (faux depuis l'ADR 0003).
 - Client : le web ignore `MOBILE_STAGING` (`shouldUseStagingDatabase`), avec une table de vérité exhaustive de 16 cas. L'auto-login Test Lab a un délai max de 10 s, pour qu'un appareil hors ligne démarre quand même.

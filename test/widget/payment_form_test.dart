@@ -419,11 +419,16 @@ class _FakeLeaseRepo implements LeaseRepository {
 // ---------------------------------------------------------------------------
 
 class _FakePaymentRepo implements PaymentRepository {
+  _FakePaymentRepo({this.existing = const []});
+
+  /// Paiements déjà enregistrés sur le bail (période proposée, #197).
+  final List<Payment> existing;
+
   Payment? createdPayment;
   Payment? updatedPayment;
 
   @override
-  Future<List<Payment>> listForLease(String leaseId) async => [];
+  Future<List<Payment>> listForLease(String leaseId) async => existing;
 
   @override
   Future<Payment> getById(String id) async =>
@@ -545,7 +550,10 @@ Widget _buildFormPage({
 /// `initial`. Le bail est donc chargé en asynchrone via `leaseDetailProvider`
 /// (→ `leaseRepositoryProvider`), reproduisant le contexte du pré-remplissage
 /// différé.
-Widget _buildCreatePage({required Lease lease}) {
+Widget _buildCreatePage({
+  required Lease lease,
+  List<Payment> existingPayments = const [],
+}) {
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -563,7 +571,9 @@ Widget _buildCreatePage({required Lease lease}) {
   return ProviderScope(
     overrides: [
       leaseRepositoryProvider.overrideWithValue(_FakeLeaseRepo(lease)),
-      paymentRepositoryProvider.overrideWithValue(_FakePaymentRepo()),
+      paymentRepositoryProvider.overrideWithValue(
+        _FakePaymentRepo(existing: existingPayments),
+      ),
       paymentFormControllerProvider.overrideWith(PaymentFormController.new),
     ],
     child: MaterialApp.router(
@@ -891,6 +901,37 @@ void _createPrefillTests() {
 }
 
 void _runPageTests() {
+  group('PaymentFormPage — période proposée en création (#197)', () {
+    testWidgets('paiements existants : le mois qui suit le dernier', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildCreatePage(
+          lease: _makeTestLease(),
+          existingPayments: [_makeTestPayment()], // mars 2024
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('01/04/2024'), findsOneWidget);
+      expect(find.text('30/04/2024'), findsOneWidget);
+    });
+
+    testWidgets('aucun paiement : le mois courant', (tester) async {
+      await tester.pumpWidget(_buildCreatePage(lease: _makeTestLease()));
+      await tester.pumpAndSettle();
+
+      final now = DateTime.now();
+      final first = DateTime(now.year, now.month);
+      final last = DateTime(now.year, now.month + 1, 0);
+      String fmt(DateTime d) =>
+          '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/${d.year}';
+      expect(find.text(fmt(first)), findsOneWidget);
+      expect(find.text(fmt(last)), findsOneWidget);
+    });
+  });
+
   _gap003Tests();
   _gap004Tests();
   _createPrefillTests();

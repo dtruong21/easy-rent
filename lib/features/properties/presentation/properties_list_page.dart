@@ -35,14 +35,20 @@ class PropertiesListPage extends ConsumerWidget {
         ? ViewMode.card
         : ref.watch(viewModeProvider('properties'));
 
+    // Liste vide : l'état vide porte déjà « Ajouter un bien » — pas de FAB
+    // en doublon (recette iOS, #197).
+    final showFab = asyncProperties.valueOrNull?.isEmpty != true;
+
     return Scaffold(
       appBar: AppAppBar(title: l10n.propertiesListTitle, showBackButton: false),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('fab_add_property'),
-        onPressed: () => context.push('/properties/new'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.propertiesAddButton),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton.extended(
+              key: const Key('fab_add_property'),
+              onPressed: () => context.push('/properties/new'),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.propertiesAddButton),
+            )
+          : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
