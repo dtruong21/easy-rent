@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-05)
 
+### FIX sécurité : angles morts du scanner de secrets (#131) (2026-10-05)
+- `scripts/check-secrets.sh` détecte aussi Stripe `sk_test_`, `rk_test_`, `sk_org_` et `whsec_`, ainsi que la clé secrète RevenueCat (`sk_` en début de mot). Préfixes vérifiés dans les docs Stripe et RevenueCat.
+- `docs/SECURITY.md` n'est plus exclu du scan : il ne déclenchait aucun motif.
+- `REVENUECAT_WEBHOOK_AUTH` est documenté comme non détectable (valeur libre).
+- Nouveau test `scripts/test-check-secrets.sh` en CI : 9 détections, 5 quasi-homonymes ignorés. Les fausses clés sont assemblées à l'exécution.
+
 ### FIX sécurité : robustesse facturation, suivi OWASP (#209) (2026-10-05)
 - **Paiement et gestion d'abonnement.** `createCheckoutSession` et `manageSubscription` refusent un compte anonyme pur (`anonymous_account_not_allowed`, vérifié par l'Admin SDK : un token encore « anonymous » d'un compte déjà lié passe). Les deux refusent aussi la clé Stripe de test quand la requête vise la base prod, hors émulateur (`assertStripeEnvMatchesDb` : une origine `localhost` forgée obtenait une session de test pour un compte prod).
 - **Cron `reconcileEntitlements`.** Un palier dont l'entitlement RevenueCat pointe vers un achat sandbox est rapporté `sandboxShadowed`. Le cron garde alors l'état enregistré jusqu'à son échéance, au lieu de rétrograder chaque nuit un compte prod payant. Le sandbox n'accorde ni ne prolonge toujours rien.

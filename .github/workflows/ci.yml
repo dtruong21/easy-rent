@@ -62,6 +62,9 @@ jobs:
       - name: Detect secrets in repo
         run: bash scripts/check-secrets.sh --all
 
+      - name: Test secret scanner patterns (#131)
+        run: bash scripts/test-check-secrets.sh
+
       - name: Check Firestore isolation (ADR 0003)
         run: bash scripts/check-db-isolation.sh
 
