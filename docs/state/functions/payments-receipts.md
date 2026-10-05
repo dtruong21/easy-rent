@@ -1,8 +1,8 @@
 # Functions — Payments & Receipts
 
-> Source d'état — payments-receipts. Maintenu par state-keeper.
+> Source d'état — payments-receipts. Maintenu par state-keeper. Dernière sync : 2026-10-05.
 
-Paiements (FEAT-006/029) + quittances (FEAT-007). Fichiers : `functions/src/callable/lease_payment.ts` (payments), `functions/src/callable/receipts.ts`, `functions/src/triggers/recompute_receipt_stale.ts`.
+Paiements (FEAT-006/029) + quittances (FEAT-007). Fichiers : `functions/src/callable/lease_payment.ts` (payments), `functions/src/callable/receipts.ts`, `functions/src/triggers/recompute_receipt_stale.ts`, `functions/src/scheduled/purge_expired_receipts.ts`.
 
 ## Callables — Payments
 

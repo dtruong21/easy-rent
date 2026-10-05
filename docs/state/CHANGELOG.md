@@ -46,6 +46,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - **Langue.** Mois des quittances dans la langue de l'app (« August 2026 »). Clé l10n pour la tuile FAQ du profil et pour les liens « Privacy · Terms » de l'accueil. Aphorisme EN reformulé (« ledger »). L'aide du nom et de l'adresse du profil mentionne aussi les états des lieux.
 - **Partage iOS.** Le PDF est partagé seul, avec un titre : le texte joint créait un fichier texte parasite à l'enregistrement dans Fichiers. Android garde le texte en corps de message.
 
+### State-keeper refresh : functions (2026-10-05)
+- **INDEX.md** : ligne Backend corrigée — 25 callables (elle disait 18), 9 triggers (8 `setUpdatedAt` dont `setUpdatedAtExpenses` dans `callable/expenses.ts` + `recomputeReceiptStale`), 1 HTTP, 3 scheduled ; date et commit ref mis à jour. Décompte recompté sur le code (`onCall`, `onSchedule`, `onRequest`, exports de triggers).
+- **Shards `functions/`** : en-tête « Dernière sync : 2026-10-05 » sur les shards dont le contenu a été revérifié contre le code.
+- `functions/README.md` : le tableau Scheduled listait déjà `purgeExpiredReceipts` après #221 (aucune édition en plus).
+
 ### FIX suivi PR #200 : domaine staging, routage (#201) (2026-10-04)
 - Docs : l'app staging est `app.staging.baillan.com` (`stage.baillan.com` = vitrine staging) dans RUNBOOK_PROD_DEPLOY, GITFLOW, HANDOFF, PROD_DEPLOY_CHECKLIST, BACKLOG, ADR 0003, backlog 057, `state/INDEX.md`, `state/routes/README.md`, `env.dart` et `deploy.yml` (commentaires). `INDEX.md` ne dit plus qu'un test staging écrit en prod (faux depuis l'ADR 0003).
 - Client : le web ignore `MOBILE_STAGING` (`shouldUseStagingDatabase`), avec une table de vérité exhaustive de 16 cas. L'auto-login Test Lab a un délai max de 10 s, pour qu'un appareil hors ligne démarre quand même.

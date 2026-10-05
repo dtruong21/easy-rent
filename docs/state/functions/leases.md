@@ -1,6 +1,6 @@
 # Functions — Leases
 
-> Source d'état — leases. Maintenu par state-keeper.
+> Source d'état — leases. Maintenu par state-keeper. Dernière sync : 2026-10-05.
 
 Baux, `chargeMode` (FEAT-042), régularisation charges (FEAT-041c), snapshot figé de régularisation (FEAT-033). Fichiers : `functions/src/callable/lease_payment.ts` (callables baux) · `functions/src/callable/charge_statements.ts` (callables charge_statements, FEAT-033) · `functions/src/utils/property_address.ts` (composition adresse, fonction pure). FEAT : 005, 028, 033, 036, 041c, 042.
 
