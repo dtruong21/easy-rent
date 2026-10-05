@@ -59,9 +59,12 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 > plus accorder un palier sur un compte prod, et `createCheckoutSession` refuse
 > (`landlord_not_found`) un compte sans doc dans la base routée. Contrepartie : un
 > achat sandbox (App Review, TestFlight) fait avec un compte **prod** ne débloque
-> rien tant qu'une allowlist serveur d'uid prod n'existe pas (à prévoir avec la
-> feature achat intégré). Le cron `reconcileEntitlements` ignore lui aussi les
-> entitlements issus d'achats sandbox. Côté RevenueCat, vérifier dans les
+> rien, sauf **exception FEAT-044e** : si l'uid figure dans la liste blanche
+> `_ops/sandboxAllowlist` (champ `uids`, base prod, éditée dans la console, refusée
+> à tout client), son event `SANDBOX` est appliqué à `(default)` et le cron traite
+> son achat sandbox comme un vrai droit ; liste illisible → comportement par défaut
+> (staging, `logger.error`). Pour tout autre uid, le cron `reconcileEntitlements`
+> ignore les entitlements issus d'achats sandbox. Côté RevenueCat, vérifier dans les
 > réglages du webhook si une option de filtrage par environnement existe
 > (« Production only ») — action manuelle, non vérifiée par l'audit.
 >
