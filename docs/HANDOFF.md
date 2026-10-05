@@ -44,7 +44,7 @@ flutter test
   ```
   ⏳ Les index composites Firestore se construisent en asynchrone (console → Firestore → Indexes : attendre « Enabled »).
 - **PROD** : merger `develop` → `main` (déclenche `Deploy` sur le site `prod`, canal `live`) **+** deploy backend manuel. Décision explicite requise.
-  - Prod : `https://baillan.com` · Staging : `https://stage.baillan.com` (deux **sites** du même projet, données communes).
+  - Prod : `https://baillan.com` · Staging : `https://app.staging.baillan.com` (deux **sites** du même projet ; données isolées depuis l'ADR 0003 : base Firestore `staging`). La vitrine staging est `https://stage.baillan.com`.
 - Détails : `docs/ENVIRONMENTS.md`, `docs/GITFLOW.md`.
 
 ## 7. En attente / prochaines étapes

@@ -8,7 +8,7 @@
 
 ## Contexte
 
-Aujourd'hui, prod (`baillan.com`) et staging (`stage.baillan.com`) sont **deux
+Aujourd'hui, prod (`baillan.com`) et staging (`app.staging.baillan.com`) sont **deux
 sites Hosting** dans le **même projet Firebase** et **partagent tout le reste** :
 Firestore `(default)`, Auth, Storage `easy-rent-54cd4.firebasestorage.app`,
 14 Cloud Functions (`europe-west1`), `firestore.rules`, `firestore.indexes.json`,
@@ -70,8 +70,10 @@ documentés et compensés par des conventions.
    Refactor les **21** accès `FirebaseFirestore.instance` (find/replace + injection
    dans les 12 repos concernés). Trivial mécaniquement.
 4. **Backend** : helper `dbForRequest(req): Firestore` qui lit
-   `req.rawRequest.headers.origin`, route vers `getFirestore(app, 'dev')` si
-   `stage.baillan.com`, sinon `(default)`. À utiliser dans les 9 callables et
+   `req.rawRequest.headers.origin`, route vers la base `staging` si l'origine
+   est exactement `https://app.staging.baillan.com` (`STAGING_ORIGIN`), sinon
+   `(default)`. *(Mis à jour le 2026-10-04 : la base s'appelle `staging`, plus
+   `dev`, et `stage.baillan.com` sert la vitrine, pas l'app.)* À utiliser dans les 9 callables et
    le webhook `revenuecat_webhook.ts` (via metadata `env` — voir Réserve).
    Les 2 `onSchedule` restent sur `(default)` (pas de notion d'env pour un cron).
 5. **Rules/indexes** : `firebase deploy --only firestore` déploie automatiquement
@@ -136,7 +138,7 @@ le bloc `firestore.dev` de `firebase.json`, `firebase firestore:databases:delete
 - **Play Console / App Store Connect** : si un build debug pointe le projet
   dev, référencer un second bundle ID (`com.baillan.app.dev`) ou accepter que
   le SHA-1 debug soit lié aux 2 projets (peut fonctionner mais fragile).
-- Hébergement `stage.baillan.com` : à déplacer sur le site par défaut du
+- Hébergement `app.staging.baillan.com` : à déplacer sur le site par défaut du
   nouveau projet (config DNS + certificat SSL propagés).
 
 **Impact récurrent** : double deploy CF systématique, double rotation secrets,
@@ -370,6 +372,15 @@ sable mobile — l'émulateur ne couvre pas le Test Lab.
 **Coût.** **+1 lecture Firestore par appel callable mobile** (2 pour le compte de
 test staging : prod puis staging). **Toutes les Functions sont à redéployer**
 (déploiement manuel, hors CI).
+
+**Piste si le trafic mobile grossit** (relevée en revue, issue #201) : poser par
+l'Admin SDK un custom claim (ex. `env: "staging"`) sur le compte de test et
+router sur `request.auth.token` — déterministe, sans lecture Firestore, et sans
+dépendre de la discipline « compte de test jamais en prod ».
+
+**Côté client** (2026-10-04) : sur le web, `MOBILE_STAGING` est ignoré — seule
+`APP_ENV` choisit la base (`shouldUseStagingDatabase`, table de vérité
+exhaustive dans `test/unit/firestore_provider_routing_test.dart`).
 
 **Discipline.** Le compte de test doit être **staging-only** : créé sur
 `app.staging.baillan.com`, doc `landlords/{uid}` présent en `staging` **avant** le

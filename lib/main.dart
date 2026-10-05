@@ -84,16 +84,19 @@ Future<void> main() async {
   // automatique du compte de test staging-only, Robo ne sachant pas remplir
   // le formulaire de connexion Flutter. Un échec n'empêche pas le démarrage.
   // Ignoré sous émulateur : le compte de test n'existe qu'en staging, pas dans
-  // l'Auth local.
+  // l'Auth local. Délai max de 10 s : hors ligne, l'app démarre quand même
+  // (la connexion peut encore aboutir ensuite, le routeur suit l'état Auth).
   final testCredentials = Env.testAutoLoginCredentials;
   if (testCredentials != null &&
       !Env.useFirebaseEmulator &&
       FirebaseAuth.instance.currentUser == null) {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: testCredentials.email,
-        password: testCredentials.password,
-      );
+      await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: testCredentials.email,
+            password: testCredentials.password,
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (e, st) {
       Logger('main').warning('Auto-login Test Lab échoué', e, st);
     }

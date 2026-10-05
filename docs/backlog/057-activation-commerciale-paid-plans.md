@@ -34,13 +34,13 @@ FEAT-056).
 ## Acceptance criteria (Gherkin)
 
 - **Given** l'issue #138 est ouverte, **When** `createCheckoutSession` est
-  appelée depuis `stage.baillan.com`, **Then** elle utilise obligatoirement
+  appelée depuis `app.staging.baillan.com`, **Then** elle utilise obligatoirement
   une clé Stripe de test (jamais `sk_live`), et ce comportement est prouvé
   par un test automatisé (pas seulement une relecture de code) avant de
   considérer #138 close.
 - **Given** #138 est fermée et vérifiée, **When** on bascule la clé Stripe
   serveur de `sk_test_` vers `sk_live_` en production, **Then** un appel
-  `createCheckoutSession` depuis `stage.baillan.com` continue de renvoyer une
+  `createCheckoutSession` depuis `app.staging.baillan.com` continue de renvoyer une
   session en clé test (isolation confirmée en conditions réelles, pas
   seulement en test unitaire).
 - **Given** la clé live est en place et vérifiée isolée, **When** le

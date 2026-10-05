@@ -27,7 +27,7 @@ jobs:
       env_name: ${{ steps.set.outputs.env_name }}
       app_env: ${{ steps.set.outputs.app_env }}
       # Cible Hosting multi-site (.firebaserc) : `prod` = site easy-rent-54cd4
-      # (baillan.com), `stage` = site baillan-stage (stage.baillan.com).
+      # (baillan.com), `stage` = site baillan-stage (app.staging.baillan.com).
       hosting_target: ${{ steps.set.outputs.hosting_target }}
       public_url: ${{ steps.set.outputs.public_url }}
       # Abonnement Pro (checkout Stripe) : OUVERT en staging pour continuer le
@@ -307,7 +307,7 @@ jobs:
           # Multi-site : les DEUX environnements déploient sur le canal `live`
           # de LEUR site (cible .firebaserc), plus de preview channel. Un
           # preview channel ne peut pas porter de domaine personnalisé — c'est
-          # ce qui imposait le site dédié `baillan-stage` pour stage.baillan.com.
+          # ce qui imposait le site dédié `baillan-stage` pour app.staging.baillan.com.
           #
           # $DEPLOY_TARGETS embarque AUSSI la base Firestore de l'environnement
           # (`firestore:staging` ou `firestore:(default)`) : avant, rules et

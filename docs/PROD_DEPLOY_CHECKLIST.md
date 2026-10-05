@@ -21,7 +21,7 @@ GitHub → Settings → Environments → `production` :
 
 ## B. Firebase Auth (Console Firebase → Authentication)
 
-- [ ] **Authorized domains** contiennent `baillan.com`, `stage.baillan.com`,
+- [ ] **Authorized domains** contiennent `baillan.com`, `app.staging.baillan.com`,
   `easy-rent-54cd4.web.app`, `baillan-stage.web.app`, `localhost`
 - [ ] Providers activés : **Email/Password**, **Google**, **Apple**, **Anonymous**
 - [ ] (Optionnel) Templates d'email (vérification / reset password) personnalisés dans
@@ -46,7 +46,7 @@ GitHub → Settings → Environments → `production` :
 
 ## D. Build + Deploy
 
-- [ ] Merge feature branch → `develop` → staging déployé (`stage.baillan.com`)
+- [ ] Merge feature branch → `develop` → staging déployé (`app.staging.baillan.com`)
 - [ ] Tests manuels en staging passent
 - [ ] Merge `develop` → `main` → workflow `deploy.yml` prod déclenché
 - [ ] Build GitHub Actions : pas d'erreur dans les logs

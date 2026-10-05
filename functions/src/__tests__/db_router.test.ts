@@ -132,4 +132,26 @@ describe("dbForRequest — web par Origin, mobile par compte", () => {
     staging.seed("landlords/u2", {id: "u2"});
     expect(await dbForRequest(req("u2", ""))).toBe(staging);
   });
+
+  it("rawRequest absent → traité comme mobile (routage par compte)", async () => {
+    staging.seed("landlords/u2", {id: "u2"});
+    const request = {auth: {uid: "u2"}} as unknown as CallableRequest;
+    expect(await dbForRequest(request)).toBe(staging);
+  });
+
+  it("auth absente, sans Origin → prod (uid vide, fail-safe)", async () => {
+    const request = {rawRequest: {headers: {}}} as unknown as CallableRequest;
+    expect(await dbForRequest(request)).toBe(prod);
+  });
+
+  it("auth et rawRequest absents → prod", async () => {
+    expect(await dbForRequest({} as unknown as CallableRequest)).toBe(prod);
+  });
+
+  it("auth absente, Origin staging → staging (routage web inchangé)", async () => {
+    const request = {
+      rawRequest: {headers: {origin: STAGING_ORIGIN}},
+    } as unknown as CallableRequest;
+    expect(await dbForRequest(request)).toBe(staging);
+  });
 });
