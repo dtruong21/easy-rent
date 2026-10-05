@@ -62,6 +62,7 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    `chore/followup-pr-200` (#218), `docs/store-forms-signin-v1` (#219),
    `docs/ios27-sdk-audit` (#212), `feat/auth-providers-v1` (#214),
    `docs/state-refresh-functions` (#222, mergée le 2026-10-05),
+   `fix/billing-robustness-209` (#221) et `fix/ux-mobile-recette-ios` (#220), mergées le 2026-10-05 (pointes = tête de PR),
    `docs/security-stripe-resolvers` (#216, mergée le 2026-10-05).
    Déjà supprimées : `chore/restore-mobile-release-files` (#211),
    `fix/summary-card-key-figure-overflow` (#210), `fix/summary-card-keyfigure-overflow`
