@@ -919,7 +919,10 @@ describe("parité export ↔ effacement du compte", () => {
     );
     // Singletons clés par uid (purgés explicitement par deleteAccount, étape c).
     const singletons = ["landlords", "paid_plan_interest"];
-    const known = new Set([...exported, ...singletons]);
+    // Configuration serveur globale (FEAT-044e `_ops/sandboxAllowlist`) : aucune
+    // donnée de bailleur, refusée à tout client — rien à exporter ni à purger.
+    const globalConfig = ["_ops"];
+    const known = new Set([...exported, ...singletons, ...globalConfig]);
 
     expect(topLevel.length).toBeGreaterThan(10); // le scan a bien lu les Rules
     const unknown = topLevel.filter((name) => !known.has(name));
