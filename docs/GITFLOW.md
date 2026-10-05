@@ -64,13 +64,14 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif que #210).
    Aussi : `docs/ios27-sdk-audit` (PR #212 mergée) et `feat/auth-providers-v1` (PR #214 mergée)
    — leurs pointes égalent la tête de leur PR, rien n'a été ajouté après le merge.
+   Et `docs/store-forms-signin-v1` (PR #219 mergée le 2026-10-05).
    Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
    relancer après un `git fetch --prune`.
 2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
    merger avant le DNS) `docs/security-stripe-resolvers` (PR #216 ouverte), `chore/cleanup-cards-feat-059`
-   (PR #217 ouverte), `chore/followup-pr-200` (PR #218 ouverte) et
-   `docs/store-forms-signin-v1` (PR #219 ouverte) — à supprimer après leur merge.
-3. **Côté stores** (suite de #211) : URLs privacy / delete-account
+   (PR #217 ouverte) et `chore/followup-pr-200` (PR #218 ouverte) — à supprimer après leur merge.
+3. **Côté stores** (suites de #211 et #219) : note « remplacé par #214 » à ajouter dans
+   `STORE_COMPLIANCE.md` lignes 34–35 (test iOS 27 daté, antérieur à #214) ; URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques »
    (paywall atteignable depuis le mobile ?), re-vérification des règles des stores.
 4. Activer *Automatically delete head branches* (voir ci-dessus).
