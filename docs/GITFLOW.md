@@ -75,9 +75,10 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    `STORE_COMPLIANCE.md` lignes 34–35 (test iOS 27 daté, antérieur à #214) ; URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques » — **vérifiée le 2026-10-05** : le paywall n'est PAS atteignable
    depuis les apps iOS/Android (`isStoreApp` masque Stripe, prix et boutons ; `/pro` n'y affiche que
-   « offres payantes pas encore proposées » ; tests dédiés) ; **restent** : 4 messages d'erreur « Passez à
+   « offres payantes pas encore proposées » ; tests dédiés) ; **en cours (PR #224)** : 4 messages d'erreur « Passez à
    l'offre Pro / à {palier} » visibles aussi sur mobile (limites biens / locataires / baux, taille de document,
-   `app_fr.arb`) — texte seul, sans lien, à masquer sur `isStoreApp` — et la règle Apple 3.1.3(b)
+   `app_fr.arb`) — texte seul, sans lien, variantes sans appel sur `isStoreApp` dans la PR #224 ; la modale du simulateur
+   (`simulatorLimitReachedContent*`) garde volontairement son texte, à trancher — et la règle Apple 3.1.3(b)
    (accès multiplateforme à ce qui est acheté sur le web) à vérifier dans les règles en vigueur, re-vérification des règles des stores.
 4. Activer *Automatically delete head branches* (voir ci-dessus).
 
