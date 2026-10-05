@@ -5192,6 +5192,10 @@
   "@deleteAccountWarningItemSimulations": {
     "description": "Bullet item in the delete-account warning list: investment simulations."
   },
+  "deleteAccountWarningItemStatements": "your charge statements and condition reports — their PDFs can no longer be generated",
+  "@deleteAccountWarningItemStatements": {
+    "description": "Bullet item in the delete-account warning list: charge regularization statements and condition reports (états des lieux) are deleted, so their PDFs cannot be regenerated afterwards (issue #209). Unlike receipts, they are not kept under legal retention."
+  },
   "deleteAccountWarningItemAccount": "your landlord profile and your sign-in account",
   "@deleteAccountWarningItemAccount": {
     "description": "Bullet item in the delete-account warning list: landlord profile and sign-in account."

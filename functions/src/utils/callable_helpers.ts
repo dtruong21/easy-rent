@@ -119,6 +119,48 @@ async function assertAnonymousClaimIsTrusted(uid: string): Promise<void> {
   throw new HttpsError("failed-precondition", EMAIL_NOT_VERIFIED);
 }
 
+/** Code d'erreur : un compte anonyme (essai sans compte) ne peut pas payer. */
+export const ANONYMOUS_ACCOUNT_NOT_ALLOWED = "anonymous_account_not_allowed";
+
+/**
+ * Refuse un compte ANONYME pur (essai sans compte) sur une callable de
+ * facturation (#209). Un anonyme pouvait ouvrir un paiement Stripe ; son achat
+ * ne se rattachait à aucun compte durable — purgé à l'expiration de l'essai,
+ * il perdait ce qu'il avait payé. L'app ne lui montre pas `/pro` ; ceci est la
+ * garde serveur.
+ *
+ * Autoritatif comme [requireVerifiedUid] : le claim `sign_in_provider` reste
+ * `"anonymous"` sur un token émis avant un passage à un compte complet par
+ * liaison, d'où la confirmation par l'Admin SDK (`providerData` vide = anonyme
+ * pur). Un token d'un autre fournisseur ne peut pas porter un compte anonyme :
+ * aucune lecture dans ce cas. À appeler APRÈS [requireVerifiedUid].
+ */
+export async function assertNotAnonymousAccount(
+  request: CallableRequest<unknown>,
+  uid: string,
+): Promise<void> {
+  if (request.auth?.token?.firebase?.sign_in_provider !== "anonymous") return;
+  let providerCount: number;
+  try {
+    providerCount = (await admin.auth().getUser(uid)).providerData.length;
+  } catch (err) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err ?
+        (err as {code: unknown}).code :
+        undefined;
+    // Fail-closed, sans donnée personnelle dans le log.
+    logger.error(
+      `assertNotAnonymousAccount: account lookup failed (${
+        typeof code === "string" ? code : "unknown"
+      })`,
+    );
+    throw new HttpsError("internal", "account lookup failed — retry");
+  }
+  if (providerCount === 0) {
+    throw new HttpsError("failed-precondition", ANONYMOUS_ACCOUNT_NOT_ALLOWED);
+  }
+}
+
 /** Fraîcheur maximale de l'authentification pour un compte non-anonyme. */
 export const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
 

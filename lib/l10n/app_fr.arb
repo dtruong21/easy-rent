@@ -1193,6 +1193,7 @@
   "deleteAccountWarningItemTenants": "vos locataires, baux et paiements",
   "deleteAccountWarningItemDocuments": "vos documents (y compris ceux sous verrou légal : baux signés, attestations d'assurance)",
   "deleteAccountWarningItemSimulations": "vos simulations d'investissement",
+  "deleteAccountWarningItemStatements": "vos décomptes de charges et vos états des lieux : leurs PDF ne pourront plus être générés",
   "deleteAccountWarningItemAccount": "votre profil bailleur et votre compte de connexion",
   "deleteAccountWarningDownloadReminder": "Pensez à télécharger au préalable les documents que vous souhaitez conserver : aucune récupération ne sera possible.",
   "deleteAccountStoreSubscriptionWarning": "La suppression du compte ne résilie pas un abonnement souscrit via l'App Store ou Google Play. Résiliez-le dans les réglages de votre store pour arrêter la facturation.",

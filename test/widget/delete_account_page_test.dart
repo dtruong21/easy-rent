@@ -174,6 +174,18 @@ void main() {
         expect(find.textContaining('5 ans'), findsOneWidget);
       },
     );
+
+    testWidgets('#209 : décomptes de charges et états des lieux annoncés comme '
+        'supprimés (PDF plus générables)', (tester) async {
+      final authRepo = _FakeAuthRepository(_userWithProvider('password'));
+      await tester.pumpWidget(_buildPage(authRepo: authRepo));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('vos décomptes de charges et vos états des lieux'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('avertissement abonnement (toutes plateformes)', () {

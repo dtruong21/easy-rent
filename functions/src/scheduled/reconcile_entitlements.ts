@@ -67,9 +67,24 @@ const BATCH_SIZE = 200;
  * État des entitlements d'un abonné vu par RevenueCat, re-clé vers NOS ids de
  * palier. Un palier absent de la map = non accordé par RevenueCat.
  */
+/**
+ * État d'un palier rapporté par RevenueCat.
+ *
+ * `sandboxShadowed` : l'entitlement de ce palier pointe vers un achat SANDBOX
+ * (#209). RevenueCat ne rapporte qu'UN produit par entitlement — celui dont
+ * l'échéance est la plus lointaine : un achat de test plus long masque alors un
+ * vrai abonnement prod. L'état prod du palier est donc INCONNU ici : le cron
+ * garde l'état enregistré (tenu à jour par les events PRODUCTION du webhook)
+ * au lieu de rétrograder le compte chaque nuit.
+ */
+export interface RcReportedState {
+  expiresMs: number | null;
+  sandboxShadowed?: true;
+}
+
 export type EntitlementStatesFetcher = (
   uid: string,
-) => Promise<Partial<Record<LevelId, {expiresMs: number | null}>>>;
+) => Promise<Partial<Record<LevelId, RcReportedState>>>;
 
 /** Issue de la réconciliation d'un compte (pour log/tests). */
 export type ReconcileOutcome =
@@ -108,7 +123,7 @@ function toFirestoreStates(
  */
 export function reconcileStates(
   current: EntitlementStates,
-  rc: Partial<Record<LevelId, {expiresMs: number | null}>>,
+  rc: Partial<Record<LevelId, RcReportedState>>,
   nowMs: number,
 ): EntitlementStates {
   const next: EntitlementStates = {};
@@ -116,6 +131,20 @@ export function reconcileStates(
     const cur = current[level.id];
     const reported = rc[level.id];
     if (cur === undefined && reported === undefined) continue;
+    if (reported?.sandboxShadowed) {
+      // État prod masqué par un achat sandbox (#209) : on garde l'état
+      // enregistré, en ne le laissant actif que jusqu'à SON échéance — un
+      // achat sandbox n'accorde ni ne prolonge jamais rien (OWASP-01).
+      if (cur === undefined) continue;
+      const stillActive =
+        cur.active && cur.expiresAtMs !== null && cur.expiresAtMs > nowMs;
+      next[level.id] = {
+        ...cur,
+        active: stillActive,
+        willRenew: stillActive && cur.willRenew,
+      };
+      continue;
+    }
     const active =
       reported !== undefined &&
       reported.expiresMs !== null &&
@@ -262,27 +291,33 @@ export interface RcSubscriber {
  * FEAT-056, le produit ne vend aucun accès à vie.
  *
  * OWASP-01 — un entitlement adossé à un achat SANDBOX (`is_sandbox === true`
- * sur son produit) est IGNORÉ. L'API mélange achats prod et sandbox pour un même
- * App User ID ; or ce cron opère sur `(default)` (prod) et peut, sur un compte
- * déjà payant, PROLONGER une échéance ou MONTER de palier d'après ce qu'elle
- * rapporte. Sans ce filtre, un achat Stripe test (staging) ferait donc grimper
- * un compte prod. Un produit absent de `subscriptions` est traité comme prod :
- * seul un `is_sandbox: true` explicite écarte l'entitlement, pour ne pas
- * rétrograder un client qui paie sur une réponse d'API incomplète.
+ * sur son produit) n'accorde ni ne prolonge RIEN : il est rapporté
+ * `sandboxShadowed` et le cron garde l'état enregistré (#209). L'API mélange
+ * achats prod et sandbox pour un même App User ID ; or ce cron opère sur
+ * `(default)` (prod) et peut, sur un compte déjà payant, PROLONGER une échéance
+ * ou MONTER de palier d'après ce qu'elle rapporte. Sans ce filtre, un achat
+ * Stripe test (staging) ferait donc grimper un compte prod. Un produit absent
+ * de `subscriptions` est traité comme prod : seul un `is_sandbox: true`
+ * explicite écarte l'entitlement, pour ne pas rétrograder un client qui paie
+ * sur une réponse d'API incomplète.
  */
 export function entitlementStatesFromSubscriber(
   subscriber: RcSubscriber | undefined,
-): Partial<Record<LevelId, {expiresMs: number | null}>> {
+): Partial<Record<LevelId, RcReportedState>> {
   const entitlements = subscriber?.entitlements ?? {};
   const subscriptions = subscriber?.subscriptions ?? {};
-  const states: Partial<Record<LevelId, {expiresMs: number | null}>> = {};
+  const states: Partial<Record<LevelId, RcReportedState>> = {};
   for (const level of LEVELS) {
     const rcId = rcEntitlementIdFor(level.id);
     if (rcId === null) continue; // palier sans entitlement RC créé
     const ent = entitlements[rcId];
     if (!ent || !ent.expires_date) continue;
     const productId = ent.product_identifier;
-    if (productId && subscriptions[productId]?.is_sandbox === true) continue;
+    if (productId && subscriptions[productId]?.is_sandbox === true) {
+      // Jamais accordé ni prolongé ; l'état prod du palier est inconnu (#209).
+      states[level.id] = {expiresMs: null, sandboxShadowed: true};
+      continue;
+    }
     const ms = Date.parse(ent.expires_date);
     states[level.id] = {expiresMs: Number.isNaN(ms) ? null : ms};
   }

@@ -30,7 +30,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-04)
+## Changements (2026-08-03 → 2026-10-05)
+
+### FIX sécurité : robustesse facturation, suivi OWASP (#209) (2026-10-05)
+- **Paiement et gestion d'abonnement.** `createCheckoutSession` et `manageSubscription` refusent un compte anonyme pur (`anonymous_account_not_allowed`, vérifié par l'Admin SDK : un token encore « anonymous » d'un compte déjà lié passe). Les deux refusent aussi la clé Stripe de test quand la requête vise la base prod, hors émulateur (`assertStripeEnvMatchesDb` : une origine `localhost` forgée obtenait une session de test pour un compte prod).
+- **Cron `reconcileEntitlements`.** Un palier dont l'entitlement RevenueCat pointe vers un achat sandbox est rapporté `sandboxShadowed`. Le cron garde alors l'état enregistré jusqu'à son échéance, au lieu de rétrograder chaque nuit un compte prod payant. Le sandbox n'accorde ni ne prolonge toujours rien.
+- **Cron `cleanupExpiredAnon`.** Un compte lié dont le passage à un compte complet n'a pas abouti voit son `anonExpiresAt` remis à `null` : il sort de la requête et ne prend plus de place dans le lot. Une alerte `logger.error` est émise pour la reprise manuelle.
+- **Suppression de compte.** L'avertissement annonce que les décomptes de charges et les états des lieux sont supprimés, et que leurs PDF ne pourront plus être générés.
+- **Docs.** Rollback du runbook §5, HANDOFF et BACKLOG : plus de `firestore:rules` / `firestore:indexes` sans base cible. Inventaire des Functions : 9 triggers et 3 crons (`purgeExpiredReceipts` manquait).
 
 ### FIX UX mobile : défauts de la recette iOS (#197) (2026-10-04)
 - **Clavier.** Un tap dans le vide ferme le clavier, dans toute l'app (`DismissKeyboardOnTap` dans `MaterialApp.builder`) : les claviers numériques iOS n'ont pas de touche « OK ». Les 15 sélecteurs de date retirent le focus avant de s'ouvrir ; avant, la fermeture rendait le focus au dernier champ (« Charges ») et rouvrait le clavier. Les relevés de compteurs de l'EDL ouvrent un pavé numérique avec décimales.

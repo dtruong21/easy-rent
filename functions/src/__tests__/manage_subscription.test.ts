@@ -19,6 +19,7 @@ import {
 import {STAGING_ORIGIN} from "../utils/db_router";
 
 import {
+  FakeAuthAdmin,
   FakeFirestore,
   fakeAdminFirestoreHolder,
   fakeStagingFirestoreHolder,
@@ -371,6 +372,38 @@ describe("manageSubscription — handler (Origin web vs app native)", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("#209 : origine locale + compte prod, hors émulateur → refus origin_not_allowed, aucun appel Stripe", async () => {
+    fakeDb.seed(`landlords/${UID}`, {id: UID});
+    vi.stubEnv("FUNCTIONS_EMULATOR", "");
+
+    const err = await manageSubscription
+      .run(makeRequest({action: "cancel"}, "http://localhost:5000"))
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).message).toBe("origin_not_allowed");
+    expect(stripeMock.keys).toEqual([]);
+  });
+
+  it("#209 : compte anonyme pur → refus anonymous_account_not_allowed, aucun appel Stripe", async () => {
+    fakeAdminFirestoreHolder.authAdmin = new FakeAuthAdmin(); // aucun provider lié
+    const request = {
+      data: {action: "cancel"},
+      auth: {
+        uid: UID,
+        token: {firebase: {sign_in_provider: "anonymous"}} as never,
+        rawToken: "",
+      },
+      rawRequest: {headers: {}} as never,
+    } as CallableRequest;
+
+    const err = await manageSubscription
+      .run(request)
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).message).toBe("anonymous_account_not_allowed");
+    expect(stripeMock.keys).toEqual([]);
   });
 
   it("cancel sans Origin + compte prod → clé LIVE, cancel_at_period_end: true", async () => {

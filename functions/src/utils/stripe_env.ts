@@ -85,6 +85,37 @@ export function stripeEnvForOrigin(origin: unknown): StripeEnv {
 }
 
 /**
+ * Refuse l'environnement Stripe `test` quand la requête vise la base de prod
+ * `(default)`, hors émulateur (#209).
+ *
+ * `test` est servi au staging ET aux origines locales (`http://localhost:…`,
+ * émulateur). Mais une origine locale n'est pas routée vers `staging` par
+ * `dbForRequest` : forgée contre les Functions déployées, elle obtenait une
+ * session Stripe de TEST pour un compte de la base prod — un paiement fictif
+ * qu'un vrai client pourrait croire valide. Aucun droit n'en découle (l'achat
+ * SANDBOX est routé vers `staging` par le webhook, OWASP-01), mais la session
+ * elle-même est trompeuse : refus.
+ *
+ * @param origin      En-tête `Origin` de la requête.
+ * @param isStagingDb `true` si la base routée pour la requête est `staging`.
+ * @param isEmulator  `true` sous l'émulateur Functions ([isFunctionsEmulator]).
+ */
+export function assertStripeEnvMatchesDb(
+  origin: unknown,
+  isStagingDb: boolean,
+  isEmulator: boolean,
+): void {
+  if (stripeEnvForOrigin(origin) === "test" && !isStagingDb && !isEmulator) {
+    throw new HttpsError("failed-precondition", "origin_not_allowed");
+  }
+}
+
+/** `true` sous l'émulateur Functions (variable posée par l'émulateur). */
+export function isFunctionsEmulator(): boolean {
+  return process.env.FUNCTIONS_EMULATOR === "true";
+}
+
+/**
  * Clé Stripe à utiliser pour un appel callable, ou refus.
  *
  * Avec [resolveStripeKeyForDb] (arrêt d'une facturation existante), seule porte

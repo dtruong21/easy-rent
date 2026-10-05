@@ -35,7 +35,7 @@
  */
 
 import * as admin from "firebase-admin";
-import {Timestamp} from "firebase-admin/firestore";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
@@ -130,9 +130,21 @@ async function purgeLandlord(
   try {
     const user = await admin.auth().getUser(uid);
     if (user.providerData.length > 0) {
-      logger.warn(
-        `cleanupExpiredAnon: skipping uid=${uid} — account is linked ` +
-          "(non-empty providerData), no longer anonymous",
+      // #209 : sans correction, ce doc restait « anonyme expiré », revenait
+      // dans la requête chaque nuit et occupait une place du lot (jusqu'à
+      // bloquer la purge des vrais anonymes). On retire son échéance d'essai —
+      // un compte lié n'expire plus — ce qui le sort de la requête. Le reste du
+      // passage à un compte complet (palier, consentement RGPD horodaté) ne
+      // peut PAS être fait ici sans le consentement de l'utilisateur : alerte
+      // pour un suivi manuel.
+      await db.doc(`landlords/${uid}`).update({
+        anonExpiresAt: null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      logger.error(
+        `cleanupExpiredAnon: uid=${uid} is linked (non-empty providerData) ` +
+          "but its upgrade was never finalized — trial expiry cleared, " +
+          "finalizeAnonymousUpgrade to rerun",
       );
       return "skipped";
     }

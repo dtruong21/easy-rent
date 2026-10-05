@@ -14,6 +14,7 @@ import {
 import {STAGING_ORIGIN} from "../utils/db_router";
 
 import {
+  FakeAuthAdmin,
   FakeFirestore,
   fakeAdminFirestoreHolder,
   fakeStagingFirestoreHolder,
@@ -483,5 +484,99 @@ describe("createCheckoutSession — handler (OWASP-01 : doc landlord requis)", (
 
     expect((err as HttpsError).message).toBe("already_subscribed_use_change_plan");
     expect(stripeMock.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("createCheckoutSession — handler (#209 : anonyme, origine locale)", () => {
+  const UID = "landlord-a";
+  const LIVE_KEY = "sk_live_fake";
+  const TEST_KEY = "sk_test_fake";
+  const LOCAL_ORIGIN = "http://localhost:5000";
+  // Origine prod stable avant ET après la bascule de domaine (#162).
+  const APP_PROD_ORIGIN = "https://app.baillan.com";
+
+  let prodDb: FakeFirestore;
+  let fakeAuth: FakeAuthAdmin;
+
+  function makeRequest(
+    origin: string,
+    provider: "password" | "anonymous" = "password",
+  ): CallableRequest {
+    return {
+      data: {level: "pro", period: "monthly"},
+      auth: {
+        uid: UID,
+        token: {
+          email: provider === "anonymous" ? undefined : "a@example.test",
+          email_verified: provider !== "anonymous",
+          firebase: {sign_in_provider: provider},
+        } as never,
+        rawToken: "",
+      },
+      rawRequest: {headers: {origin}} as never,
+    } as CallableRequest;
+  }
+
+  beforeEach(() => {
+    prodDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = prodDb;
+    fakeStagingFirestoreHolder.db = new FakeFirestore("staging");
+    fakeAuth = new FakeAuthAdmin();
+    fakeAdminFirestoreHolder.authAdmin = fakeAuth;
+    vi.stubEnv("STRIPE_SECRET_KEY", LIVE_KEY);
+    vi.stubEnv("STRIPE_SECRET_KEY_TEST", TEST_KEY);
+    vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY", "price_pro_monthly");
+    vi.stubEnv("FUNCTIONS_EMULATOR", "");
+    stripeMock.keys.length = 0;
+    stripeMock.create.mockReset().mockResolvedValue({
+      url: "https://checkout.stripe.test/s",
+      id: "cs_test_1",
+    });
+    prodDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("origine locale contre la base prod, hors émulateur → refus origin_not_allowed, AUCUN appel Stripe", async () => {
+    const err = await createCheckoutSession
+      .run(makeRequest(LOCAL_ORIGIN))
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).code).toBe("failed-precondition");
+    expect((err as HttpsError).message).toBe("origin_not_allowed");
+    expect(stripeMock.keys).toEqual([]);
+    expect(stripeMock.create).not.toHaveBeenCalled();
+  });
+
+  it("origine locale sous émulateur → session avec la clé TEST", async () => {
+    vi.stubEnv("FUNCTIONS_EMULATOR", "true");
+
+    await createCheckoutSession.run(makeRequest(LOCAL_ORIGIN));
+
+    expect(stripeMock.keys).toEqual([TEST_KEY]);
+    expect(stripeMock.create).toHaveBeenCalledOnce();
+  });
+
+  it("compte anonyme pur → refus anonymous_account_not_allowed, AUCUN appel Stripe", async () => {
+    // Aucun provider lié : essai sans compte.
+    const err = await createCheckoutSession
+      .run(makeRequest(APP_PROD_ORIGIN, "anonymous"))
+      .catch((e: HttpsError) => e);
+
+    expect((err as HttpsError).code).toBe("failed-precondition");
+    expect((err as HttpsError).message).toBe("anonymous_account_not_allowed");
+    expect(stripeMock.create).not.toHaveBeenCalled();
+  });
+
+  it("token encore « anonymous » mais compte déjà lié et vérifié → paiement autorisé", async () => {
+    fakeAuth.providerDataByUid.set(UID, [{providerId: "password"}]);
+    fakeAuth.emailVerifiedByUid.set(UID, true);
+
+    await createCheckoutSession.run(makeRequest(APP_PROD_ORIGIN, "anonymous"));
+
+    expect(stripeMock.keys).toEqual([LIVE_KEY]);
+    expect(stripeMock.create).toHaveBeenCalledOnce();
   });
 });
