@@ -48,7 +48,7 @@
 
 ## Deep linking & navigation externe
 
-- Web URLs = chemins directs `https://baillan.com/<path>` (landing, /login, /dashboard, /properties/:id, /leases/:id?action=regularize, /simulator…). **Domaine canonique depuis PR #121** (`Env.publicAppUrl`, `web/index.html`, sitemap, robots) — l'ancienne mention `easyrent.app` était fausse. Staging = `stage.baillan.com` (site Hosting distinct, cible `stage`, PR #124).
+- Web URLs = chemins directs `https://baillan.com/<path>` (landing, /login, /dashboard, /properties/:id, /leases/:id?action=regularize, /simulator…). **Domaine canonique depuis PR #121** (`Env.publicAppUrl`, `web/index.html`, sitemap, robots) — l'ancienne mention `easyrent.app` était fausse. Staging = `app.staging.baillan.com` (site Hosting distinct, cible `stage`, PR #124) ; `stage.baillan.com` sert la vitrine staging.
 - ⚠️ Les identifiants du **projet** Firebase (`projectId`/`authDomain`/`storageBucket` = `easy-rent-54cd4*`) ne sont PAS le domaine public et ne doivent pas être renommés.
 - Email : `/reset-password?token=…` (extraction via `state.uri.queryParameters`).
 - Firebase Dynamic Links : à implémenter (passthrough → URLs standard).

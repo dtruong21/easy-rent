@@ -74,7 +74,7 @@ FEAT-001 (auth)
 - 🔧 **Déploiement rules/indexes/functions à automatiser** : `deploy.yml` ne déploie que le Hosting ; les Firestore Rules, indexes et Cloud Functions se déploient encore **manuellement** (`firebase deploy --only firestore:rules,firestore:indexes` / `--only functions`). À terme : étendre `deploy.yml`. Post FEAT-019, plus aucune migration SQL.
 
 ### Gates AVANT mise en PROD (issus de l'audit sécu FEAT-001)
-- ✅ ~~Redirect Allow-List~~ → remplacé par les **Authorized domains** Firebase Auth (Console → Authentication → Settings) : `baillan.com`, `stage.baillan.com`, domaines `.web.app`, `localhost`.
+- ✅ ~~Redirect Allow-List~~ → remplacé par les **Authorized domains** Firebase Auth (Console → Authentication → Settings) : `baillan.com`, `app.staging.baillan.com`, domaines `.web.app`, `localhost`.
 - 🔧 **Compléter `/privacy`** : identité du responsable de traitement, DPO, base légale définitive de la persistance de session (placeholder actuellement).
 
 ### Items résolus par FEAT-002

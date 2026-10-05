@@ -32,7 +32,7 @@ via Firestore Rules + App Check), donc pas un secret. Seul `--dart-define=APP_EN
 
 Console Firebase → Authentication → Settings → **Authorized domains**. Doivent figurer :
 
-- `baillan.com` (prod) et `stage.baillan.com` (staging)
+- `baillan.com` (prod) et `app.staging.baillan.com` (app staging)
 - `easy-rent-54cd4.web.app` et `baillan-stage.web.app` (domaines Firebase par défaut)
 - `localhost` (dev)
 
@@ -46,7 +46,7 @@ dans Authentication → Templates. **Pas de magic link.**
 
 | Cible | Comment | Déclencheur |
 |---|---|---|
-| **Hosting** (app web) | `deploy.yml` → `firebase deploy --only hosting:<target>` | **Auto** : push `main` → prod (`baillan.com`), push `develop` → staging (`stage.baillan.com`). **Manuel** : Actions → Deploy → Run workflow (`target` = prod/dev). |
+| **Hosting** (app web) | `deploy.yml` → `firebase deploy --only hosting:<target>` | **Auto** : push `main` → prod (`baillan.com`), push `develop` → staging (`app.staging.baillan.com`). **Manuel** : Actions → Deploy → Run workflow (`target` = prod/dev). |
 | **Firestore rules + indexes** | `deploy.yml` → cible `firestore:staging` (`develop`) ou `firestore:(default)` (`main`) | **Auto** : même run que le Hosting (cf. [`ENVIRONMENTS.md`](ENVIRONMENTS.md)). Rien à faire à la main, sauf rollback (§5). |
 | **Cloud Functions** | **Manuel** : `cd functions && npm ci && npm run build && firebase deploy --only functions` | Avant le deploy app si des functions changent. |
 | **Storage rules** | `deploy.yml` → cible `storage` | **Auto, depuis `main` uniquement** (bucket partagé prod/staging : jamais déployé depuis `develop`). Vérifier après le deploy prod qu'un téléversement de document fonctionne (cf. checklist §C). |
@@ -59,7 +59,7 @@ dans Authentication → Templates. **Pas de magic link.**
 
 ## 3. Procédure de déploiement prod
 
-1. **Staging d'abord** : merger vers `develop` → `deploy.yml` publie `stage.baillan.com`.
+1. **Staging d'abord** : merger vers `develop` → `deploy.yml` publie l'app staging `app.staging.baillan.com` (et la vitrine staging `stage.baillan.com`).
    Tester (voir [`PROD_DEPLOY_CHECKLIST.md`](PROD_DEPLOY_CHECKLIST.md)).
 2. **Backend si besoin** : si la release change des Cloud Functions, les déployer
    manuellement (cf. §2). Rules/indexes (Firestore) et rules Storage partent avec

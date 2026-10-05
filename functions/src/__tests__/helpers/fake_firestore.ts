@@ -500,6 +500,25 @@ export const fakeStagingFirestoreHolder: {db: FakeFirestore} = {
 };
 
 /**
+ * Remplaçant de `getFirestore` (module `firebase-admin/firestore`) pour les
+ * tests : SEULE la base nommée `"staging"` est servie (FakeFirestore dédiée).
+ * Toute autre valeur lève — une coquille dans `STAGING_DATABASE_ID`, ou un
+ * `getFirestore()` sans identifiant glissé dans le code, fait échouer le test
+ * au lieu de passer en silence. La base `(default)` passe par
+ * `admin.firestore()`, mockée à part.
+ */
+export function fakeGetFirestore(...args: unknown[]): FakeFirestore {
+  const databaseId = args.find((a) => typeof a === "string");
+  if (args.length !== 1 || databaseId !== "staging") {
+    const received = JSON.stringify(args);
+    throw new Error(
+      `fakeGetFirestore: seule la base "staging" est servie (reçu : ${received})`,
+    );
+  }
+  return fakeStagingFirestoreHolder.db;
+}
+
+/**
  * `admin.firestore.Timestamp` fake — `fromMillis`/`fromDate` retournent des
  * `Date` (suffisant pour asserter les champs écrits dans le store).
  */

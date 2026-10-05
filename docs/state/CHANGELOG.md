@@ -39,6 +39,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - **Langue.** Mois des quittances dans la langue de l'app (« August 2026 »). Clé l10n pour la tuile FAQ du profil et pour les liens « Privacy · Terms » de l'accueil. Aphorisme EN reformulé (« ledger »). L'aide du nom et de l'adresse du profil mentionne aussi les états des lieux.
 - **Partage iOS.** Le PDF est partagé seul, avec un titre : le texte joint créait un fichier texte parasite à l'enregistrement dans Fichiers. Android garde le texte en corps de message.
 
+### FIX suivi PR #200 : domaine staging, routage (#201) (2026-10-04)
+- Docs : l'app staging est `app.staging.baillan.com` (`stage.baillan.com` = vitrine staging) dans RUNBOOK_PROD_DEPLOY, GITFLOW, HANDOFF, PROD_DEPLOY_CHECKLIST, BACKLOG, ADR 0003, backlog 057, `state/INDEX.md`, `state/routes/README.md`, `env.dart` et `deploy.yml` (commentaires). `INDEX.md` ne dit plus qu'un test staging écrit en prod (faux depuis l'ADR 0003).
+- Client : le web ignore `MOBILE_STAGING` (`shouldUseStagingDatabase`), avec une table de vérité exhaustive de 16 cas. L'auto-login Test Lab a un délai max de 10 s, pour qu'un appareil hors ligne démarre quand même.
+- Tests Functions : le faux `getFirestore` lève pour toute base autre que `"staging"` (`fakeGetFirestore`) et `lease_payment.test.ts` l'utilise aussi. Ajout de tests `dbForRequest` sans `auth` ni `rawRequest`. `db_router.ts` : renommage des restes de l'ancien nom `dev` en `staging`.
+
 ### FIX cartes : nettoyage après FEAT-059 (#198) (2026-10-04)
 - Code mort supprimé : `CardActionButton`, `CardActionIconButton`, `EntityCardHeader`. `kCardActionButtonHeight` vit désormais dans `summary_card.dart` et règle aussi la hauteur de `SummaryQuickActionButton`. `EntityCard` reste pour les cartes de scénarios du simulateur.
 - `CardGrid` : en grille (desktop), la hauteur de cellule `mainAxisExtent` grandit avec la taille de texte d'accessibilité. Une carte complète débordait de 22 px à l'échelle 2.0 ; un test « pire cas » couvre les échelles 1.0, 1.3 et 2.0.

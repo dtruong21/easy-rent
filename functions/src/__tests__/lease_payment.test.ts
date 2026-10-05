@@ -138,14 +138,20 @@ vi.mock("firebase-admin", () => {
 });
 
 // Ce fichier a son propre store ad hoc (sentinel `{__increment}`), distinct
-// de la FakeFirestore : il surcharge le mock global de `setupFiles`.
-vi.mock("firebase-admin/firestore", async (importOriginal) => ({
-  ...(await importOriginal<typeof FirestoreModule>()),
-  FieldValue: {
-    serverTimestamp: () => "__server-timestamp__",
-    increment: (n: number) => ({__increment: n}),
-  },
-}));
+// de la FakeFirestore : il surcharge le mock global de `setupFiles` pour
+// `FieldValue`, mais garde le MÊME `getFirestore` que le mock global — sinon
+// le vrai `getFirestore` serait appelé sur le chemin mobile (compte staging).
+vi.mock("firebase-admin/firestore", async (importOriginal) => {
+  const {fakeGetFirestore} = await import("./helpers/fake_firestore");
+  return {
+    ...(await importOriginal<typeof FirestoreModule>()),
+    FieldValue: {
+      serverTimestamp: () => "__server-timestamp__",
+      increment: (n: number) => ({__increment: n}),
+    },
+    getFirestore: fakeGetFirestore,
+  };
+});
 
 // Import après le mock (hoisted par vitest de toute façon, mais explicite).
 import {
