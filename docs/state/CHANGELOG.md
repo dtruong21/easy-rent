@@ -30,7 +30,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-04)
+## Changements (2026-08-03 → 2026-10-05)
+
+### State-keeper refresh : functions (2026-10-05)
+- **Tableau Scheduled de `functions/README.md` incomplet** : `purgeExpiredReceipts` (quotidien 03:00 Europe/Paris ; purge hard-delete RGPD des quittances dont `retentionUntil <= now`, champ posé par `deleteAccount` pour 5 ans de rétention légale) était documentée dans `payments-receipts.md` mais absente du tableau maître — ajoutée (2 → 3 scheduled).
+- **Sync dates added** : tous les shards domain `account`, `leases`, `expenses-documents`, `simulator`, `payments-receipts` + properties updated to 2026-10-05.
+- **INDEX.md & functions/README.md** : Backend count corrected — 25 callables (was 18), 9 triggers (was 8 ; `setUpdatedAtExpenses` in callable/expenses.ts is a deployed trigger), 3 scheduled (was 2) ; functions/README.md note updated for clarity.
 
 ### FIX suivi PR #200 : domaine staging, routage (#201) (2026-10-04)
 - Docs : l'app staging est `app.staging.baillan.com` (`stage.baillan.com` = vitrine staging) dans RUNBOOK_PROD_DEPLOY, GITFLOW, HANDOFF, PROD_DEPLOY_CHECKLIST, BACKLOG, ADR 0003, backlog 057, `state/INDEX.md`, `state/routes/README.md`, `env.dart` et `deploy.yml` (commentaires). `INDEX.md` ne dit plus qu'un test staging écrit en prod (faux depuis l'ADR 0003).

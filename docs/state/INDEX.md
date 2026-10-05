@@ -7,8 +7,8 @@
 
 ## Métadonnées
 
-- **Dernière mise à jour** : 2026-09-05 (state-keeper rafraîchissement dashboard + properties + functions)
-- **Commit ref** : `169f9aa` (branche `develop`)
+- **Dernière mise à jour** : 2026-10-05 (state-keeper rafraîchissement functions: ajout purgeExpiredReceipts, sync dates)
+- **Commit ref** : `de4144e` (branche `develop`)
 - **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 vitrine v1 construite, bascule domaine en attente) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
 
 ### Périmètre réellement re-vérifié
@@ -26,7 +26,7 @@
 | Domaines `properties`, `leases`, `expenses-documents`, `simulator` — quotas FEAT-056 | ✅ **vérifié 2026-08-02** — grille `config/entitlements.json` appliquée callables ; `investment_scenarios/create` CF-exclusive |
 | `config/entitlements.json` (source canonique quotas) | ✅ **lu 2026-08-02** — 3 paliers, quotas par palier, statuts `purchasable`/`priceIndicative`, features matrix |
 | Domaine `leases` (schéma/functions) — `propertyAddress` composée | ✅ **re-vérifié 2026-08-12** — `createLease` compose rue+CP+ville via `composePropertyAddress()`, immuable après création (loi 6/7/1989). Repository Dart : `listActiveLeasesForProperty()` nouveau, statut retard dérivé requiert invalidation providers. Script backfill existe. |
-| `functions/` décompte précis | ✅ **re-compté 2026-09-30** — 25 callables (grep `export const … onCall`), 8 triggers, 1 HTTP, 2 scheduled. (Tests/rules : décompte du 2026-08-12 — 430 / 80 — non re-mesuré.) |
+| `functions/` décompte précis | ✅ **re-compté 2026-10-05** — 25 callables (grep `export const … onCall`), 9 triggers (8 `setUpdatedAt` + `recomputeReceiptStale`), 1 HTTP, 3 scheduled (`cleanupExpiredAnon`, `purgeExpiredReceipts`, `reconcileEntitlements`). (Tests/rules : décompte du 2026-08-12 — 430 / 80 — non re-mesuré.) |
 | `THEME.md`, `DESIGN_TOKENS.md` | ✅ **revus 2026-09-06** (FEAT-050) — source canonique `config/theme_tokens.json` + génération app/vitrine |
 | `DEPENDENCIES.md` | ⚠️ **non revu** — ignore notamment `stripe@^22.3.2` |
 
@@ -78,7 +78,7 @@ Panoramas transverses : [`schema/README`](schema/README.md) (11 collections + pa
 - **Frontend** : Flutter 3.x + Dart 3.11+ (web + Android + iOS `com.daki.baillan`), CanvasKit, EB Garamond serif.
 - **State/Nav** : Riverpod 2.6 (StreamProvider) · GoRouter 14.6 (garde 3-états via sessionStateProvider).
 - **Auth** : Firebase Auth natif (email/password + Google + Apple + anonyme).
-- **Backend** : Firestore (12 collections, camelCase, soft-delete + **38 index composites**, règles 3 couches) + Cloud Functions Node 22 (**18 callables + 9 triggers + 1 HTTP + 3 scheduled**).
+- **Backend** : Firestore (12 collections, camelCase, soft-delete + **38 index composites**, règles 3 couches) + Cloud Functions Node 22 (**25 callables + 9 triggers + 1 HTTP + 3 scheduled**).
 - **Paiement** : Stripe Checkout (web) + RevenueCat comme plan de gestion (entitlement `pro`) → webhook serveur-autoritaire. **Back-end seul : aucune UI, aucun `purchases_flutter`.**
 - **Storage** : Firebase Storage (signed URLs 5 min ; documents ≤ 10 MiB, quota free 10). **PDF** : `pdf` + `share_plus` (quittance loi 6/07/1989). **Hosting** : Firebase **multi-site**, 4 cibles (`prod` → baillan.com, `stage` → app.staging.baillan.com pour l'app Flutter ; `marketing` → baillan-marketing, `marketing-stage` → baillan-marketing-stage = stage.baillan.com pour la vitrine Astro FEAT-050) — déploiements scopés `--only` obligatoires. ⚠️ **app : prod/stage partagent Auth, Storage et Functions du même projet ; Firestore est isolé (base `staging`, ADR 0003)**. **CI** : GitHub Actions (format + analyze + tests Flutter, + jobs `functions` lint/build/test, `firestore-rules`, `site` build Astro).
 

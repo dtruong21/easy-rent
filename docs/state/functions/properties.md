@@ -1,6 +1,6 @@
 # Functions — Properties & Tenants
 
-> Source d'état — properties. Maintenu par state-keeper. Dernière sync : 2026-09-05.
+> Source d'état — properties. Maintenu par state-keeper. Dernière sync : 2026-10-05.
 
 Patrimoine (properties + tenants). **Création CF-exclusive** via callables (FEAT-044). Update/soft-delete via Firestore Rules + `softDeleteEntity`. Couleur d'identité (`colorKey`) assignée côté client au chargement (repli hash déterministe, FEAT-044d). Fichier callables : `functions/src/callable/property_tenant.ts`. Fichier triggers : `functions/src/triggers/set_updated_at.ts`.
 

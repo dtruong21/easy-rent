@@ -1,6 +1,6 @@
 # Functions — Account
 
-> Source d'état — account. Maintenu par state-keeper.
+> Source d'état — account. Maintenu par state-keeper. Dernière sync : 2026-10-05.
 
 Auth/provisioning, cycle de vie compte, soft-delete universel, crons, **facturation multi-paliers Pro/Max/Ultra** (FEAT-056), support, helpers génériques. Fichiers : `functions/src/callable/{finalize_anonymous_upgrade,delete_account,export_account_data,soft_delete,create_checkout_session,manage_subscription,scenarios}.ts`, `functions/src/http/revenuecat_webhook.ts`, `functions/src/scheduled/{cleanup_expired_anon,reconcile_entitlements}.ts`, `functions/src/entitlements/{plan,plan_matrix.generated,stripe_prices}.ts`, `functions/src/utils/callable_helpers.ts`, `functions/src/triggers/set_updated_at.ts`.
 

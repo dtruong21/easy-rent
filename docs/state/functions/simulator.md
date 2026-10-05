@@ -1,6 +1,6 @@
 # Functions — Simulator
 
-> Source d'état — simulator. Maintenu par state-keeper.
+> Source d'état — simulator. Maintenu par state-keeper. Dernière sync : 2026-10-05.
 
 Scénarios d'investissement (`investment_scenarios`). Création gâtée par quota (FEAT-056), lecture/update via Firestore Rules. Fichiers : `functions/src/callable/scenarios.ts`, `functions/src/triggers/set_updated_at.ts`.
 

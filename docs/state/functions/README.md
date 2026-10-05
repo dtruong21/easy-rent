@@ -65,14 +65,15 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 | `recomputeReceiptStale` | payments | payments-receipts |
 | `recomputeChargeRegularization` (📋 PLANNED V1.1) | expenses | leases |
 
-## Scheduled (2) → shard
+## Scheduled (3) → shard
 
 | Scheduled | Cadence | Shard |
 |---|---|---|
 | `cleanupExpiredAnon` (BAILLAN-M1 ; purge aussi Storage `documents/{uid}/`, OWASP-04 ; **ignore** les comptes dont `getUser().providerData` est non vide ; `timeoutSeconds: 300`) | `0 3 * * *` **Europe/Paris** | account |
+| `purgeExpiredReceipts` (FEAT-045, purge RGPD rétention légale 5 ans sur receipts — `retentionUntil` posé par `deleteAccount`) | `0 3 * * *` **Europe/Paris** | payments-receipts |
 | `reconcileEntitlements` (FEAT-044, PR #114) | `30 3 * * *` Europe/Paris | account |
 
-> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-08-12) : **25 callables (recompté 2026-09-30 : grep `export const … onCall` dans `functions/src/callable/`) + 8 triggers déployés (`setUpdatedAt` on 7 collections + `recomputeReceiptStale`) + 1 HTTP + 2 scheduled**. `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables, pas de champ `updatedAt`).
+> ⚠️ Décompte re-vérifié dans `functions/src/index.ts` (2026-08-12, recompté 2026-10-05) : **25 callables (grep `export const … onCall` dans `functions/src/callable/`) + 9 triggers déployés (`setUpdatedAt` on 8 collections : landlords, properties, tenants, leases, payments, documents, expenses, investment_scenarios + `recomputeReceiptStale`) + 1 HTTP + 3 scheduled** (`cleanupExpiredAnon`, `purgeExpiredReceipts`, `reconcileEntitlements`). `recomputeChargeRegularization` est **PLANNED V1.1 (non déployé)** — listé mais hors décompte. `setUpdatedAtReceipts` n'existe pas (receipts immuables, pas de champ `updatedAt`).
 >
 > Passe 2026-08-12 : table des callables corrigée (19, non 17) — manquaient `createCheckoutSession` + `manageSubscription` (FEAT-056, PR #154). Tests Vitest : 430 cas ; tests rules : 80 cas (l'ancien état disait 209 / 16, largement en retard).
 >

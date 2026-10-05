@@ -1,6 +1,6 @@
 # Functions — Expenses & Documents
 
-> Source d'état — expenses-documents. Maintenu par state-keeper.
+> Source d'état — expenses-documents. Maintenu par state-keeper. Dernière sync : 2026-10-05.
 
 Dépenses (FEAT-041a) + documents (FEAT-008, v2 FEAT-041b). Fichiers : `functions/src/callable/{expenses,documents,soft_delete}.ts`.
 
