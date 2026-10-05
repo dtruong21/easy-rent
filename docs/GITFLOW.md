@@ -58,16 +58,14 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
 `feat/056-multi-tier-subscriptions` et `claude/magical-jackson-d0116a` (contenu déjà dans
 `develop` ou repris par la PR #211) — confirmé par `git fetch --prune`. Reste :
 
-1. **Supprimer** (PR mergées ou fermées en doublon) : `chore/restore-mobile-release-files`
-   (PR #211 mergée), `fix/summary-card-key-figure-overflow` (PR #210 mergée),
-   `fix/summary-card-keyfigure-overflow` (PR #213 fermée, doublon de #210),
-   `fix/stripe-guard-accept-resolvers` (PR #215 fermée, même correctif que #210).
-   Aussi : `docs/ios27-sdk-audit` (PR #212 mergée) et `feat/auth-providers-v1` (PR #214 mergée)
-   — leurs pointes égalent la tête de leur PR, rien n'a été ajouté après le merge.
-   Et `docs/store-forms-signin-v1` (PR #219 mergée le 2026-10-05), `chore/cleanup-cards-feat-059`
-   (PR #217 mergée) et `chore/followup-pr-200` (PR #218 mergée) — pointes = tête de PR.
+1. **Supprimer** (PR mergées — pointe = tête de PR) : `chore/cleanup-cards-feat-059` (#217),
+   `chore/followup-pr-200` (#218), `docs/store-forms-signin-v1` (#219),
+   `docs/ios27-sdk-audit` (#212), `feat/auth-providers-v1` (#214).
+   Déjà supprimées : `chore/restore-mobile-release-files` (#211),
+   `fix/summary-card-key-figure-overflow` (#210), `fix/summary-card-keyfigure-overflow`
+   (#213 fermée), `fix/stripe-guard-accept-resolvers` (#215 fermée).
    Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
-   relancer après un `git fetch --prune`.
+   relancer après un `git fetch --prune`, avec uniquement les refs restantes.
 2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
    merger avant le DNS) `docs/security-stripe-resolvers` (PR #216 ouverte, à supprimer après son merge).
 3. **Côté stores** (suites de #211 et #219) : note « remplacé par #214 » à ajouter dans
