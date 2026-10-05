@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../domain/property_submit_error.dart';
 
@@ -15,7 +16,10 @@ extension PropertySubmitErrorL10n on PropertySubmitError {
       PropertySubmitError.notFound => l10n.propertiesErrorNotFound,
       PropertySubmitError.hasActiveLeases =>
         l10n.propertiesErrorHasActiveLeases,
-      PropertySubmitError.limitReached => l10n.propertiesErrorLimitReached,
+      PropertySubmitError.limitReached =>
+        isStoreApp
+            ? l10n.propertiesErrorLimitReachedStore
+            : l10n.propertiesErrorLimitReached,
       PropertySubmitError.permissionDenied =>
         l10n.propertiesErrorPermissionDenied,
       PropertySubmitError.serviceUnavailable =>

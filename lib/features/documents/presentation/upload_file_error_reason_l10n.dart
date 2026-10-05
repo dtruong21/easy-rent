@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/utils/byte_format.dart';
 import '../../paid_plan/presentation/widgets/plan_level_label.dart';
@@ -32,7 +33,9 @@ extension UploadFileErrorReasonL10n on UploadFileErrorReason {
     if (this == UploadFileErrorReason.fileTooLarge) {
       final limit = serverLimitBytes ?? maxFileSizeBytes ?? kMaxFileSizeBytes;
       final sizeLabel = ByteFormat.format(limit);
-      if (serverUpgradeToLevelId != null) {
+      // Apps iOS/Android : pas d'upsell « Passez à … » (aucun achat hors achat
+      // intégré), seulement la taille maximale.
+      if (serverUpgradeToLevelId != null && !isStoreApp) {
         return l10n.documentsUploadErrorFileTooLargeWithUpgrade(
           sizeLabel,
           planLevelLabelForId(context, serverUpgradeToLevelId),
