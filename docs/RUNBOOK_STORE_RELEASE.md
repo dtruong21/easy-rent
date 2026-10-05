@@ -60,13 +60,18 @@ Sur le Mac de release (Xcode à jour — 26.6 utilisé en juillet) :
 2. Ouvrir `ios/Runner.xcworkspace` → target Runner → *Signing &
    Capabilities* : Team = la nouvelle team, « Automatically manage
    signing » (bundle ID `com.daki.baillan` déjà posé).
-3. **+ Capability « Sign in with Apple »** → **committer** le
-   `Runner.entitlements` généré (bloquant pour l'auth Apple sur device).
+3. Capability « Sign in with Apple » : **pas nécessaire en v1** — Apple est masqué
+   partout et l'app iOS n'offre que email / mot de passe (décision du 2026-10-03,
+   PR #214, `lib/core/config/auth_providers.dart`). À ajouter (**+ Capability**, puis
+   **committer** le `Runner.entitlements` généré) seulement quand Apple revient,
+   en même temps que Google sur iOS (règle 4.8 : une connexion tierce impose
+   l'option Apple).
 4. App Store Connect → créer l'app sur le bundle ID `com.daki.baillan`.
 5. Build (Flutter **3.44.6**, version épinglée en CI — `flutter --version` doit
    concorder) : `flutter build ipa`
    → upload via Xcode Organizer ou Transporter.
-6. Firebase : **rien à faire** côté iOS (pas de SHA ; provider Apple actif).
+6. Firebase : **rien à faire** côté iOS (pas de SHA). Le provider Apple de Firebase
+   Auth n'est pas utilisé en v1.
 
 ## 4. Compte démo + formulaires consoles (~1 h)
 
@@ -109,8 +114,10 @@ flutter build appbundle --release          # → build/app/outputs/bundle/releas
 Après §3.5 : dans App Store Connect, surveiller les emails
 **ITMS-91053 / ITMS-91061** (privacy manifests — le nôtre est en place,
 les pods Firebase récents aussi). Tester sur device via TestFlight,
-notamment : login Google + Apple, génération + partage de quittance
-(share sheet), suppression de compte (FEAT-045).
+notamment : login **email / mot de passe** (seule méthode sur iOS en v1 ; vérifier
+qu'aucun bouton Google ni Apple n'apparaît à la connexion, à l'inscription ni au
+passage d'un essai anonyme à un compte complet), génération + partage de
+quittance (share sheet), suppression de compte (FEAT-045).
 
 ## 7. Déjà fait — ne pas refaire
 
