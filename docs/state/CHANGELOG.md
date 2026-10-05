@@ -32,10 +32,24 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-05)
 
+### FIX sécurité : robustesse facturation, suivi OWASP (#209) (2026-10-05)
+- **Paiement et gestion d'abonnement.** `createCheckoutSession` et `manageSubscription` refusent un compte anonyme pur (`anonymous_account_not_allowed`, vérifié par l'Admin SDK : un token encore « anonymous » d'un compte déjà lié passe). Les deux refusent aussi la clé Stripe de test quand la requête vise la base prod, hors émulateur (`assertStripeEnvMatchesDb` : une origine `localhost` forgée obtenait une session de test pour un compte prod).
+- **Cron `reconcileEntitlements`.** Un palier dont l'entitlement RevenueCat pointe vers un achat sandbox est rapporté `sandboxShadowed`. Le cron garde alors l'état enregistré jusqu'à son échéance, au lieu de rétrograder chaque nuit un compte prod payant. Le sandbox n'accorde ni ne prolonge toujours rien.
+- **Cron `cleanupExpiredAnon`.** Un compte lié dont le passage à un compte complet n'a pas abouti voit son `anonExpiresAt` remis à `null` : il sort de la requête et ne prend plus de place dans le lot. Une alerte `logger.error` est émise pour la reprise manuelle.
+- **Suppression de compte.** L'avertissement annonce que les décomptes de charges et les états des lieux sont supprimés, et que leurs PDF ne pourront plus être générés.
+- **Docs.** Rollback du runbook §5, HANDOFF et BACKLOG : plus de `firestore:rules` / `firestore:indexes` sans base cible. Inventaire des Functions : 9 triggers et 3 crons (`purgeExpiredReceipts` manquait).
+
+### FIX UX mobile : défauts de la recette iOS (#197) (2026-10-04)
+- **Clavier.** Un tap dans le vide ferme le clavier, dans toute l'app (`DismissKeyboardOnTap` dans `MaterialApp.builder`) : les claviers numériques iOS n'ont pas de touche « OK ». Les 15 sélecteurs de date retirent le focus avant de s'ouvrir ; avant, la fermeture rendait le focus au dernier champ (« Charges ») et rouvrait le clavier. Les relevés de compteurs de l'EDL ouvrent un pavé numérique avec décimales.
+- **Préremplissage.** `/leases/new?tenantId=` et `?propertyId=` (ainsi que `extra.propertyId`) présélectionnent enfin le locataire ou le bien ; la route ignorait ces paramètres. Un nouveau paiement propose une période (`suggestedPaymentPeriod`) : le mois qui suit le dernier paiement, sinon le mois courant, bornée par les dates du bail.
+- **Affichage.** Les textes d'aide passent sur 2 lignes (thème). Biens, baux et locataires n'affichent plus le FAB quand l'état vide propose déjà l'ajout. Un `ScaffoldMessenger` propre aux branches du shell place les SnackBars au-dessus du FAB des pages. Les paiements d'un bail montrent « Quittance » avec un libellé, et Modifier / Archiver passent dans un menu ⋮.
+- **Langue.** Mois des quittances dans la langue de l'app (« August 2026 »). Clé l10n pour la tuile FAQ du profil et pour les liens « Privacy · Terms » de l'accueil. Aphorisme EN reformulé (« ledger »). L'aide du nom et de l'adresse du profil mentionne aussi les états des lieux.
+- **Partage iOS.** Le PDF est partagé seul, avec un titre : le texte joint créait un fichier texte parasite à l'enregistrement dans Fichiers. Android garde le texte en corps de message.
+
 ### State-keeper refresh : functions (2026-10-05)
-- **Tableau Scheduled de `functions/README.md` incomplet** : `purgeExpiredReceipts` (quotidien 03:00 Europe/Paris ; purge hard-delete RGPD des quittances dont `retentionUntil <= now`, champ posé par `deleteAccount` pour 5 ans de rétention légale) était documentée dans `payments-receipts.md` mais absente du tableau maître — ajoutée (2 → 3 scheduled).
-- **Sync dates added** : tous les shards domain `account`, `leases`, `expenses-documents`, `simulator`, `payments-receipts` + properties updated to 2026-10-05.
-- **INDEX.md & functions/README.md** : Backend count corrected — 25 callables (was 18), 9 triggers (was 8 ; `setUpdatedAtExpenses` in callable/expenses.ts is a deployed trigger), 3 scheduled (was 2) ; functions/README.md note updated for clarity.
+- **INDEX.md** : ligne Backend corrigée — 25 callables (elle disait 18), 9 triggers (8 `setUpdatedAt` dont `setUpdatedAtExpenses` dans `callable/expenses.ts` + `recomputeReceiptStale`), 1 HTTP, 3 scheduled ; date et commit ref mis à jour. Décompte recompté sur le code (`onCall`, `onSchedule`, `onRequest`, exports de triggers).
+- **Shards `functions/`** : en-tête « Dernière sync : 2026-10-05 » sur les shards dont le contenu a été revérifié contre le code.
+- `functions/README.md` : le tableau Scheduled listait déjà `purgeExpiredReceipts` après #221 (aucune édition en plus).
 
 ### FIX suivi PR #200 : domaine staging, routage (#201) (2026-10-04)
 - Docs : l'app staging est `app.staging.baillan.com` (`stage.baillan.com` = vitrine staging) dans RUNBOOK_PROD_DEPLOY, GITFLOW, HANDOFF, PROD_DEPLOY_CHECKLIST, BACKLOG, ADR 0003, backlog 057, `state/INDEX.md`, `state/routes/README.md`, `env.dart` et `deploy.yml` (commentaires). `INDEX.md` ne dit plus qu'un test staging écrit en prod (faux depuis l'ADR 0003).

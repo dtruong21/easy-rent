@@ -10,11 +10,13 @@ import '../../../core/utils/money_format.dart';
 import '../../../core/utils/payment_form_validators.dart';
 import '../../leases/application/lease_detail_provider.dart';
 import '../../leases/domain/lease.dart';
+import '../application/lease_payments_provider.dart';
 import '../application/payment_detail_provider.dart';
 import '../application/payment_form_controller.dart';
 import '../domain/payment.dart';
 import '../domain/payment_form_state.dart';
 import '../domain/payment_submit_error.dart';
+import '../domain/suggested_payment_period.dart';
 import 'payment_submit_error_l10n.dart';
 import 'widgets/payment_form.dart';
 
@@ -216,8 +218,13 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
 
     // Charger le bail pour le pré-remplissage et les totaux.
     final asyncLease = ref.watch(leaseDetailProvider(widget.leaseId));
+    // Création : les paiements existants donnent la période proposée par
+    // défaut (#197). Une erreur de chargement retombe sur « aucun paiement ».
+    final asyncPayments = isCreating
+        ? ref.watch(leasePaymentsProvider(widget.leaseId))
+        : null;
 
-    if (asyncLease.isLoading) {
+    if (asyncLease.isLoading || (asyncPayments?.isLoading ?? false)) {
       return Scaffold(
         appBar: AppAppBar(
           title: isCreating
@@ -248,6 +255,13 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
     // au constructeur, il arrive ici via leaseDetailProvider → on sème les
     // montants du bail (loyer + charges) dès sa résolution.
     if (isCreating) _seedAmountsFromLease(lease);
+    final suggestedPeriod = isCreating
+        ? suggestedPaymentPeriod(
+            lease: lease,
+            payments: asyncPayments?.valueOrNull ?? const [],
+            now: DateTime.now(),
+          )
+        : null;
 
     return Scaffold(
       appBar: AppAppBar(
@@ -268,8 +282,10 @@ class _PaymentFormPageState extends ConsumerState<PaymentFormPage> {
               chargesController: _chargesCtrl,
               leaseTotalCents: lease.totalAmountCents,
               leaseRentCents: lease.rentAmountCents,
-              initialPeriodStart: widget.initial?.periodStart,
-              initialPeriodEnd: widget.initial?.periodEnd,
+              initialPeriodStart:
+                  widget.initial?.periodStart ?? suggestedPeriod?.start,
+              initialPeriodEnd:
+                  widget.initial?.periodEnd ?? suggestedPeriod?.end,
               initialPaidAt: widget.initial?.paidAt,
               initialPaymentMethod: widget.initial?.paymentMethod,
               initialNotes: widget.initial?.notes,

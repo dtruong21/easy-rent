@@ -114,6 +114,9 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
   }
 
   Future<void> _pickDate() async {
+    // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+    // saisi et rouvre le clavier (recette iOS, #197).
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _date,
@@ -532,6 +535,9 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
               child: TextFormField(
                 key: const Key('edl_water_field'),
                 controller: _waterCtrl,
+                // Index de compteur : pavé numérique (décimales possibles,
+                // ex. m³) plutôt que le clavier alphabétique (#197).
+                keyboardType: _meterKeyboard,
                 decoration: InputDecoration(labelText: l10n.edlMeterWater),
               ),
             ),
@@ -540,6 +546,9 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
               child: TextFormField(
                 key: const Key('edl_electricity_field'),
                 controller: _electricityCtrl,
+                // Index de compteur : pavé numérique (décimales possibles,
+                // ex. m³) plutôt que le clavier alphabétique (#197).
+                keyboardType: _meterKeyboard,
                 decoration: InputDecoration(
                   labelText: l10n.edlMeterElectricity,
                 ),
@@ -550,6 +559,9 @@ class _EtatDesLieuxFormPageState extends ConsumerState<EtatDesLieuxFormPage> {
               child: TextFormField(
                 key: const Key('edl_gas_field'),
                 controller: _gasCtrl,
+                // Index de compteur : pavé numérique (décimales possibles,
+                // ex. m³) plutôt que le clavier alphabétique (#197).
+                keyboardType: _meterKeyboard,
                 decoration: InputDecoration(labelText: l10n.edlMeterGas),
               ),
             ),
@@ -651,3 +663,6 @@ class _RoomEdit {
     }
   }
 }
+
+/// Clavier des relevés de compteurs : chiffres avec séparateur décimal.
+const _meterKeyboard = TextInputType.numberWithOptions(decimal: true);

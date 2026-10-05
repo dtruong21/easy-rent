@@ -154,7 +154,26 @@ describe("cleanupExpiredAnon", () => {
     expect(fakeDb.peek("landlords/anon-y")).toBeDefined();
   });
 
-  it("compte lié depuis (providerData non vide) : ignoré, rien n'est touché", async () => {
+  it("#209 : compte lié → échéance d'essai retirée, plus jamais re-sélectionné", async () => {
+    seedAnon("anon-upgraded", PAST);
+    fakeAuth.providerDataByUid.set("anon-upgraded", [{providerId: "password"}]);
+
+    await run();
+
+    const doc = fakeDb.peek("landlords/anon-upgraded");
+    expect(doc?.anonExpiresAt).toBeNull();
+    // `isAnonymous` reste tel quel : le passage complet (palier, consentement
+    // RGPD) n'appartient pas au cron.
+    expect(doc?.isAnonymous).toBe(true);
+
+    // Run suivant : le compte ne revient plus dans la requête.
+    const spy = vi.spyOn(fakeAuth, "getUser");
+    const res = await run();
+    expect(res).toEqual({purged: 0, failed: 0});
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("compte lié depuis (providerData non vide) : ignoré, rien n'est supprimé", async () => {
     // Cas réel : `finalizeAnonymousUpgrade` a lié l'email/Google puis a échoué
     // avant de passer `isAnonymous` à false — le doc dit encore « anonyme
     // expiré » alors que l'utilisateur est devenu un vrai compte.

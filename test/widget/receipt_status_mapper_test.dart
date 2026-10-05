@@ -16,6 +16,7 @@ import 'package:easyrent/features/receipts/presentation/widgets/receipt_status_m
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,11 +194,17 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('receiptPeriodMonthYear', () {
-    test('capitalise le premier caractère du mois', () {
+    setUpAll(initializeDateFormatting);
+
+    test('français : capitalise le premier caractère du mois', () {
       final r = _makeReceipt();
-      final label = receiptPeriodMonthYear(r);
       // Mois de mars 2026.
-      expect(label, 'Mars 2026');
+      expect(receiptPeriodMonthYear(r, 'fr'), 'Mars 2026');
+    });
+
+    test('anglais : mois en anglais (recette iOS 27, #197)', () {
+      final r = _makeReceipt();
+      expect(receiptPeriodMonthYear(r, 'en'), 'March 2026');
     });
   });
 }

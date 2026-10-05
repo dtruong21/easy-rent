@@ -53,7 +53,7 @@ class ReceiptCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final pillData = receiptStatusPill(context, receipt);
-    final periodLabel = receiptPeriodMonthYear(receipt);
+    final periodLabel = receiptPeriodMonthYear(receipt, l10n.localeName);
     final secondary = receiptSecondaryLine(context, receipt);
     final isVoiding =
         ref.watch(voidReceiptControllerProvider(receipt.id))

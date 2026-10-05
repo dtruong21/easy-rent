@@ -146,9 +146,17 @@ class LandingSheet extends StatelessWidget {
       children: [
         link('FAQ', '/faq', const Key('landing_link_faq')),
         _linkSeparator(),
-        link('Confidentialité', '/privacy', const Key('landing_link_privacy')),
+        link(
+          context.l10n.landingLinkPrivacy,
+          '/privacy',
+          const Key('landing_link_privacy'),
+        ),
         _linkSeparator(),
-        link('CGU', '/terms', const Key('landing_link_terms')),
+        link(
+          context.l10n.landingLinkTerms,
+          '/terms',
+          const Key('landing_link_terms'),
+        ),
       ],
     );
   }

@@ -8,7 +8,7 @@
 ## Métadonnées
 
 - **Dernière mise à jour** : 2026-10-05 (state-keeper rafraîchissement functions: ajout purgeExpiredReceipts, sync dates)
-- **Commit ref** : `de4144e` (branche `develop`)
+- **Commit ref** : `bba54fc` (branche `develop`)
 - **Phase** : MVP ✅ + Post-MVP M1 ✅ + Mobile/Stores ✅ (FEAT-024/043/045/048) + Freemium ✅ (FEAT-044) + **Paiement Pro : back-end ✅ / client ❌** (FEAT-044c/d) + **Multi-paliers Pro/Max/Ultra : back-end ✅ déployé staging / client 🚧** (FEAT-056, PR #154 non mergé main) + Growth/SEO ✅ (FEAT-049 ; FEAT-050 vitrine v1 construite, bascule domaine en attente) + **Isolation prod/staging ✅ (ADR 0003)** + **Comparaison scénarios ✅ (FEAT-055)**
 
 ### Périmètre réellement re-vérifié

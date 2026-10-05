@@ -19,6 +19,7 @@ import 'core/observability/crash_reporting_storage.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'core/ui/keyboard/dismiss_keyboard_on_tap.dart';
 import 'features/auth/application/anon_expiry_renewer.dart';
 import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
 import 'firebase_options.dart';
@@ -162,18 +163,22 @@ class _BaillanAppState extends ConsumerState<BaillanApp> {
       localeResolutionCallback: resolveLocale,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
-      // Rubans debug : « EMULATOR » (données locales) ou « STAGING » (build de
-      // test Test Lab). No-op en build normal / release.
-      builder: Env.useFirebaseEmulator || Env.useMobileStaging
-          ? (context, child) => Banner(
-              message: Env.useFirebaseEmulator ? 'EMULATOR' : 'STAGING',
-              location: BannerLocation.topStart,
-              color: Env.useFirebaseEmulator
-                  ? Colors.deepOrange
-                  : Colors.purple,
-              child: child ?? const SizedBox.shrink(),
-            )
-          : null,
+      builder: (context, child) {
+        // Tap dans le vide → clavier fermé (claviers numériques iOS sans
+        // touche « OK », #197).
+        final app = DismissKeyboardOnTap(
+          child: child ?? const SizedBox.shrink(),
+        );
+        // Rubans debug : « EMULATOR » (données locales) ou « STAGING » (build
+        // de test Test Lab). Aucun ruban en build normal / release.
+        if (!Env.useFirebaseEmulator && !Env.useMobileStaging) return app;
+        return Banner(
+          message: Env.useFirebaseEmulator ? 'EMULATOR' : 'STAGING',
+          location: BannerLocation.topStart,
+          color: Env.useFirebaseEmulator ? Colors.deepOrange : Colors.purple,
+          child: app,
+        );
+      },
     );
   }
 }

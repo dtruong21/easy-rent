@@ -485,7 +485,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'new',
                     pageBuilder: (context, state) => appPage(
                       key: state.pageKey,
-                      child: const LeaseFormPage(),
+                      // Présélection depuis une fiche / carte : bien ou
+                      // locataire en query (`?propertyId=` / `?tenantId=`),
+                      // ou bien dans `extra` (carte de rentabilité). Ignorés
+                      // jusqu'ici — recette iOS, #197.
+                      child: LeaseFormPage(
+                        initialPropertyId:
+                            state.uri.queryParameters['propertyId'] ??
+                            _extraString(state.extra, 'propertyId'),
+                        initialTenantId: state.uri.queryParameters['tenantId'],
+                      ),
                       transition: AppTransition.standard,
                     ),
                   ),
@@ -633,4 +642,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 /// du provider).
 class _RouterRefreshNotifier extends ChangeNotifier {
   void refresh() => notifyListeners();
+}
+
+/// Valeur texte [key] d'un `extra` de route de type `Map`, sinon `null`.
+String? _extraString(Object? extra, String key) {
+  if (extra is Map) {
+    final value = extra[key];
+    if (value is String && value.isNotEmpty) return value;
+  }
+  return null;
 }
