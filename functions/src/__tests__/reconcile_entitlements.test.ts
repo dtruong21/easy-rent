@@ -307,14 +307,14 @@ describe("entitlementStatesFromSubscriber — achats sandbox ignorés (OWASP-01)
     expect(states).toEqual({pro: {expiresMs: IN_30D}});
   });
 
-  it("entitlement adossé à un achat SANDBOX → ignoré (jamais accordé/prolongé)", () => {
+  it("entitlement adossé à un achat SANDBOX → masqué, sans échéance (jamais accordé/prolongé)", () => {
     const states = entitlementStatesFromSubscriber({
       entitlements: {
         [PRO_ID]: {expires_date: iso(IN_60D), product_identifier: "pro_monthly"},
       },
       subscriptions: {pro_monthly: {is_sandbox: true}},
     });
-    expect(states).toEqual({});
+    expect(states).toEqual({pro: {expiresMs: null, sandboxShadowed: true}});
   });
 
   it("prod + sandbox sur deux paliers → seul le palier prod est retenu", () => {
@@ -331,7 +331,10 @@ describe("entitlementStatesFromSubscriber — achats sandbox ignorés (OWASP-01)
         ultra_monthly: {is_sandbox: true},
       },
     });
-    expect(states).toEqual({pro: {expiresMs: IN_30D}});
+    expect(states).toEqual({
+      pro: {expiresMs: IN_30D},
+      ultra: {expiresMs: null, sandboxShadowed: true},
+    });
   });
 
   it("produit absent de `subscriptions` → traité comme prod (aucune rétrogradation à l'aveugle)", () => {
@@ -382,5 +385,50 @@ describe("entitlementStatesFromSubscriber — achats sandbox ignorés (OWASP-01)
     const doc = fakeDb.peek("landlords/prod-pro");
     expect(doc?.subscriptionTier).toBe("paid");
     expect(doc?.planLevel).not.toBe("ultra");
+  });
+});
+
+// #209 — RevenueCat ne rapporte qu'UN produit par entitlement (l'échéance la
+// plus lointaine) : un achat sandbox plus long masque un vrai abonnement prod.
+// Avant : le palier disparaissait de la réponse et le compte payant était
+// rétrogradé chaque nuit. Désormais : l'état enregistré est gardé.
+describe("reconcile — palier prod masqué par un achat sandbox (#209)", () => {
+  const PRO_ID = rcEntitlementIdFor("pro") as string;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const shadowedBody = {
+    entitlements: {
+      [PRO_ID]: {expires_date: iso(IN_60D), product_identifier: "pro_sandbox"},
+    },
+    subscriptions: {pro_sandbox: {is_sandbox: true}},
+  };
+
+  it("compte prod payant encore dans sa période → reste payant, échéance inchangée", async () => {
+    seedActivePro("prod-pro", IN_30D);
+
+    const res = await reconcileExpiredEntitlements(
+      fakeDb,
+      () => Promise.resolve(entitlementStatesFromSubscriber(shadowedBody)),
+      NOW,
+    );
+
+    expect(res.downgradedFree).toBe(0);
+    const doc = fakeDb.peek("landlords/prod-pro");
+    expect(doc?.subscriptionTier).toBe("paid");
+    expect(doc?.proEntitlementActive).toBe(true);
+    // Jamais prolongé jusqu'à l'échéance sandbox (IN_60D).
+    expect((doc?.proExpiresAt as {toMillis(): number}).toMillis()).toBe(IN_30D);
+  });
+
+  it("échéance prod enregistrée dépassée → rétrogradé (le sandbox ne prolonge rien)", async () => {
+    seedActivePro("prod-pro", AGO_1D);
+
+    const res = await reconcileExpiredEntitlements(
+      fakeDb,
+      () => Promise.resolve(entitlementStatesFromSubscriber(shadowedBody)),
+      NOW,
+    );
+
+    expect(res.downgradedFree).toBe(1);
+    expect(fakeDb.peek("landlords/prod-pro")?.subscriptionTier).toBe("free");
   });
 });

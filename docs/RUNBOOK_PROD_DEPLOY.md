@@ -97,7 +97,7 @@ Alternative : Actions → Deploy → Run workflow avec `target=prod` sur un tag/
 
 Pas de rollback automatique — redéployer la version antérieure depuis un commit/tag :
 
-- **Rules/indexes** : `git checkout <tag> -- firestore.rules firestore.indexes.json && firebase deploy --only firestore:rules,firestore:indexes`
+- **Rules/indexes** : `git checkout <tag> -- firestore.rules firestore.indexes.json && firebase deploy --only 'firestore:(default)'` pour la prod (`firestore:staging` pour le staging). ⚠️ Jamais `firestore:rules` / `firestore:indexes` sans base : `firebase.json` déclare les deux bases, la commande pousserait aussi sur l'autre.
 - **Functions** : rebuild depuis le commit antérieur puis `firebase deploy --only functions`.
 
 **Données** : soft-delete (`deletedAt`) uniquement, jamais de hard-delete. `receipts` est

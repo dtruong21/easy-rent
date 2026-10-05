@@ -45,9 +45,16 @@ import {
   type BillingPeriod,
   type PriceTable,
 } from "../entitlements/stripe_prices";
-import {asBag, requireVerifiedUid, requireString} from "../utils/callable_helpers";
+import {
+  asBag,
+  assertNotAnonymousAccount,
+  requireVerifiedUid,
+  requireString,
+} from "../utils/callable_helpers";
 import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
 import {
+  assertStripeEnvMatchesDb,
+  isFunctionsEmulator,
   resolveStripeKeyForDb,
   resolveStripeKeyOrThrow,
 } from "../utils/stripe_env";
@@ -257,6 +264,8 @@ export const manageSubscription = onCall(
   {secrets: [stripeSecret, stripeTestSecret]},
   async (request): Promise<ManageSubscriptionResult | ChangePlanResult> => {
     const uid = await requireVerifiedUid(request);
+    // #209 : un essai anonyme n'a pas d'abonnement à gérer.
+    await assertNotAnonymousAccount(request, uid);
     const data = asBag(request.data);
     const action = parseAction(data.action);
     assertSafeUid(uid);
@@ -276,6 +285,16 @@ export const manageSubscription = onCall(
     // sélectionne la branche plus bas, pour qu'aucune combinaison partielle
     // (palier résolu sans action, ou l'inverse) ne soit représentable.
     const change = action === "change_plan" ? resolveChange(data) : null;
+
+    // Web : une origine locale (clé test) contre la base prod est refusée hors
+    // émulateur (#209) — même garde que `createCheckoutSession`.
+    if (!fromNativeApp) {
+      assertStripeEnvMatchesDb(
+        origin,
+        (await dbForRequest(request)).databaseId === STAGING_DATABASE_ID,
+        isFunctionsEmulator(),
+      );
+    }
 
     // Issue #138 : web → clé résolue par l'Origin de l'appel. Sans ce
     // garde-fou, un `cancel`/`change_plan` lancé depuis staging opérait sur les

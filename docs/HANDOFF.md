@@ -38,9 +38,10 @@ flutter test
 
 ## 6. Déploiement (⚠️ UN SEUL projet Firebase = easy-rent-54cd4)
 - **Staging (frontend)** : AUTOMATIQUE au push/merge sur `develop` → site hosting `baillan-stage`, canal `live` (workflow `Deploy`).
-- **Backend** (functions + rules + indexes) : **MANUEL** (le pipeline ne déploie que le hosting). Comme dev/prod partagent le projet, ceci touche aussi la prod :
+- **Rules + indexes** : automatiques par la CI, base ciblée (`develop` → `firestore:staging`, `main` → `firestore:(default)`). Jamais `firestore:rules` / `firestore:indexes` sans base : la commande pousserait sur les deux.
+- **Functions** : **MANUEL**, et partagées prod + staging — un déploiement touche aussi la prod :
   ```bash
-  firebase deploy --only functions,firestore:rules,firestore:indexes --project easy-rent-54cd4
+  firebase deploy --only functions --project easy-rent-54cd4
   ```
   ⏳ Les index composites Firestore se construisent en asynchrone (console → Firestore → Indexes : attendre « Enabled »).
 - **PROD** : merger `develop` → `main` (déclenche `Deploy` sur le site `prod`, canal `live`) **+** deploy backend manuel. Décision explicite requise.

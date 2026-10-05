@@ -32,9 +32,18 @@ import {
   type BillingPeriod,
   type PriceTable,
 } from "../entitlements/stripe_prices";
-import {asBag, requireVerifiedUid} from "../utils/callable_helpers";
-import {dbForRequest} from "../utils/db_router";
-import {resolveStripeKeyOrThrow, stripeEnvForOrigin} from "../utils/stripe_env";
+import {
+  asBag,
+  assertNotAnonymousAccount,
+  requireVerifiedUid,
+} from "../utils/callable_helpers";
+import {STAGING_DATABASE_ID, dbForRequest} from "../utils/db_router";
+import {
+  assertStripeEnvMatchesDb,
+  isFunctionsEmulator,
+  resolveStripeKeyOrThrow,
+  stripeEnvForOrigin,
+} from "../utils/stripe_env";
 
 /** Clé secrète Stripe LIVE (serveur uniquement) — servie aux origines prod. */
 const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
@@ -227,6 +236,8 @@ export const createCheckoutSession = onCall(
   {secrets: [stripeSecret, stripeTestSecret]},
   async (request) => {
     const uid = await requireVerifiedUid(request);
+    // #209 : un essai anonyme ne paie pas (achat perdu à la purge de l'essai).
+    await assertNotAnonymousAccount(request, uid);
     const {level, period} = parseCheckoutRequest(asBag(request.data));
 
     // Garde anti-double-abonnement : lecture du doc landlord AVANT tout appel
@@ -241,8 +252,15 @@ export const createCheckoutSession = onCall(
 
     // Issue #138 : la clé Stripe et les URLs de retour se résolvent par
     // l'Origin de l'appel, jamais par une constante de déploiement. Un appel
-    // depuis staging obtient la clé test ; une origine inconnue est refusée.
+    // depuis staging obtient la clé test ; une origine inconnue est refusée ;
+    // une origine locale (clé test) contre la base prod aussi, hors émulateur
+    // (#209).
     const origin = request.rawRequest?.headers?.origin;
+    assertStripeEnvMatchesDb(
+      origin,
+      db.databaseId === STAGING_DATABASE_ID,
+      isFunctionsEmulator(),
+    );
     const stripeKey = resolveStripeKeyOrThrow(
       origin,
       stripeSecret.value(),
