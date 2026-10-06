@@ -18,7 +18,9 @@
  *   - **Routage prod/staging (OWASP-01)** : la base est choisie par
  *     `event.environment` (`SANDBOX` → `staging`, `PRODUCTION` → `(default)`,
  *     autre → ignoré), jamais par « la base qui porte le doc » : un achat en
- *     mode test ne peut ainsi jamais accorder un palier sur un compte prod.
+ *     mode test ne peut ainsi jamais accorder un palier sur un compte prod —
+ *     sauf achat sandbox App Store / Google Play d'un uid de la liste blanche
+ *     `_ops/sandboxAllowlist` (FEAT-044e, cf. [handleRevenueCatEvent]).
  *   - **Auth** : header `Authorization` comparé (temps constant) au secret
  *     partagé configuré côté dashboard RevenueCat ET dans Secret Manager
  *     (`firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH`). Non signé → 401.
@@ -51,7 +53,7 @@ import {
   parseEntitlementStates,
 } from "../entitlements/plan";
 import {firestoreForEnv} from "../utils/db_router";
-import {readSandboxAllowlist} from "../utils/sandbox_allowlist";
+import {isMobileStore, readSandboxAllowlist} from "../utils/sandbox_allowlist";
 
 /** Secret partagé du header Authorization du webhook RevenueCat. */
 const webhookAuth = defineSecret("REVENUECAT_WEBHOOK_AUTH");
@@ -324,26 +326,6 @@ const readProdSandboxAllowlist: SandboxAllowlistReader = () =>
   readSandboxAllowlist(firestoreForEnv(false));
 
 /**
- * `true` si [uid] est dans la liste blanche sandbox (FEAT-044e). Liste
- * illisible → `false` : règle par défaut (staging), jamais de déblocage prod.
- */
-async function isSandboxAllowlisted(
-  uid: string,
-  read: SandboxAllowlistReader,
-): Promise<boolean> {
-  try {
-    return (await read()).has(uid);
-  } catch (err) {
-    logger.error(
-      "revenueCatWebhook: liste blanche sandbox illisible → staging " +
-        `app_user_id=${uid}`,
-      err,
-    );
-    return false;
-  }
-}
-
-/**
  * Route un event vers la base de SON environnement, puis l'applique.
  *
  * OWASP-01 — un seul projet Firebase héberge prod (`(default)`) et staging
@@ -353,9 +335,12 @@ async function isSandboxAllowlisted(
  * et obtenir un palier payant en prod. La base est donc choisie par
  * `event.environment`, jamais par le contenu des bases :
  *
- *   - `"SANDBOX"`    → base `staging` UNIQUEMENT — sauf un uid de la liste
- *     blanche sandbox (`_ops/sandboxAllowlist`, FEAT-044e : compte de démo
- *     App Review, testeurs) → base `(default)` UNIQUEMENT ;
+ *   - `"SANDBOX"`    → base `staging` UNIQUEMENT — sauf achat App Store /
+ *     Google Play d'un uid de la liste blanche sandbox
+ *     (`_ops/sandboxAllowlist`, FEAT-044e : compte de démo App Review,
+ *     testeurs) → base `(default)` UNIQUEMENT. Un achat Stripe test (web
+ *     staging) reste en staging, uid listé ou non. Liste illisible → l'erreur
+ *     remonte (500, RevenueCat retente) : rien n'est appliqué nulle part ;
  *   - `"PRODUCTION"` → base `(default)` UNIQUEMENT ;
  *   - absent / autre → event ignoré (fail-closed) et journalisé.
  *
@@ -375,10 +360,13 @@ export async function handleRevenueCatEvent(
 
   let isStaging: boolean;
   if (event.environment === "SANDBOX") {
-    // Liste lue UNIQUEMENT pour un event SANDBOX : aucun coût sur les achats
-    // réels.
+    // Liste lue UNIQUEMENT pour un achat sandbox d'un store mobile : aucun
+    // coût sur les achats réels ni sur les achats Stripe test.
     const uid = event.app_user_id ?? "";
-    const allowlisted = await isSandboxAllowlisted(uid, readAllowlist);
+    const allowlisted =
+      uid !== "" &&
+      isMobileStore(event.store) &&
+      (await readAllowlist()).has(uid);
     if (allowlisted) {
       logger.info(
         "revenueCatWebhook: SANDBOX d'un uid de la liste blanche → prod " +
@@ -442,8 +430,8 @@ export const revenueCatWebhook = onRequest(
 
     try {
       // ADR 0003 / OWASP-01 : le webhook n'a pas d'Origin (server-to-server).
-      // La base est choisie par `event.environment` (SANDBOX → staging,
-      // PRODUCTION → (default)), sans repli sur l'autre base.
+      // La base est choisie par `event.environment` (SANDBOX → staging, sauf
+      // liste blanche FEAT-044e ; PRODUCTION → (default)), sans repli.
       const outcome = await handleRevenueCatEvent(event, Date.now());
       logger.info(
         `revenueCatWebhook: ${event.type} app_user_id=${event.app_user_id} ` +

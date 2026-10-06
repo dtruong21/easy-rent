@@ -436,22 +436,36 @@ describe("reconcile — palier prod masqué par un achat sandbox (#209)", () => 
 });
 
 // FEAT-044e — un uid de la liste blanche sandbox (compte de démo App Review,
-// testeurs) : son achat sandbox vaut un vrai droit, pour le cron aussi.
+// testeurs) : son achat sandbox App Store / Google Play vaut un vrai droit,
+// pour le cron aussi. Un achat Stripe test reste masqué.
 describe("reconcile — uid de la liste blanche sandbox (FEAT-044e)", () => {
   const PRO_ID = rcEntitlementIdFor("pro") as string;
   const iso = (ms: number) => new Date(ms).toISOString();
-  const sandboxBody = {
+  const bodyFrom = (store?: string) => ({
     entitlements: {
       [PRO_ID]: {expires_date: iso(IN_60D), product_identifier: "pro_sandbox"},
     },
-    subscriptions: {pro_sandbox: {is_sandbox: true}},
-  };
-
-  it("sandboxAllowed → entitlement sandbox rapporté comme un vrai droit", () => {
-    expect(
-      entitlementStatesFromSubscriber(sandboxBody, {sandboxAllowed: true}),
-    ).toEqual({pro: {expiresMs: IN_60D}});
+    subscriptions: {pro_sandbox: {is_sandbox: true, store}},
   });
+  const sandboxBody = bodyFrom("app_store");
+
+  it.each(["app_store", "play_store"])(
+    "sandboxAllowed + achat %s → rapporté comme un vrai droit",
+    (store) => {
+      expect(
+        entitlementStatesFromSubscriber(bodyFrom(store), {sandboxAllowed: true}),
+      ).toEqual({pro: {expiresMs: IN_60D}});
+    },
+  );
+
+  it.each(["stripe", "rc_billing", "promotional", undefined])(
+    "sandboxAllowed + achat %s → masqué (seuls les stores mobiles comptent)",
+    (store) => {
+      expect(
+        entitlementStatesFromSubscriber(bodyFrom(store), {sandboxAllowed: true}),
+      ).toEqual({pro: {expiresMs: null, sandboxShadowed: true}});
+    },
+  );
 
   it("sans option → masqué (comportement #209 inchangé)", () => {
     expect(entitlementStatesFromSubscriber(sandboxBody)).toEqual({
@@ -484,12 +498,12 @@ describe("cron — passage complet avec la liste blanche sandbox (FEAT-044e)", (
   const PRO_ID = rcEntitlementIdFor("pro") as string;
   const iso = (ms: number) => new Date(ms).toISOString();
   /** Réponse RevenueCat : Pro adossé à un achat SANDBOX échéant à [expMs]. */
-  const sandboxSubscriber = (expMs: number) => ({
+  const sandboxSubscriber = (expMs: number, store = "app_store") => ({
     subscriber: {
       entitlements: {
         [PRO_ID]: {expires_date: iso(expMs), product_identifier: "pro_sandbox"},
       },
-      subscriptions: {pro_sandbox: {is_sandbox: true}},
+      subscriptions: {pro_sandbox: {is_sandbox: true, store}},
     },
   });
   const tsMs = (uid: string) =>
@@ -539,6 +553,16 @@ describe("cron — passage complet avec la liste blanche sandbox (FEAT-044e)", (
     expect(res.downgradedFree).toBe(1);
     expect(fakeDb.peek("landlords/review-demo")?.subscriptionTier).toBe("free");
     expect(fakeDb.peek("landlords/prod-pro")?.subscriptionTier).toBe("paid");
+  });
+
+  it("uid listé, achat Stripe test → masqué, échéance inchangée", async () => {
+    fakeDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: ["review-demo"]});
+    seedActivePro("review-demo", IN_30D);
+    stubRevenueCat(sandboxSubscriber(IN_60D, "stripe"));
+
+    await runReconcileEntitlements(fakeDb, "sk_test", NOW);
+
+    expect(tsMs("review-demo")).toBe(IN_30D);
   });
 
   it("pas de document liste → comportement #209 (masqué)", async () => {

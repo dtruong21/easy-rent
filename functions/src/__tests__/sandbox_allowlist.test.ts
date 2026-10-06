@@ -1,8 +1,10 @@
 import type {Firestore} from "firebase-admin/firestore";
-import {describe, expect, it} from "vitest";
+import {logger} from "firebase-functions/v2";
+import {afterEach, describe, expect, it, vi} from "vitest";
 
 import {
   SANDBOX_ALLOWLIST_DOC,
+  isMobileStore,
   parseSandboxAllowlist,
   readSandboxAllowlist,
   readSandboxAllowlistOrEmpty,
@@ -60,8 +62,48 @@ describe("readSandboxAllowlist", () => {
 });
 
 describe("readSandboxAllowlistOrEmpty", () => {
-  it("lecture en échec → ensemble vide, sans lever (fail-closed)", async () => {
-    const set = await readSandboxAllowlistOrEmpty(failingDb, "test");
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("lecture en échec → ensemble vide, sans lever (fail-closed) + alerte", async () => {
+    const error = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+
+    const set = await readSandboxAllowlistOrEmpty(failingDb, "monCron");
+
     expect(set.size).toBe(0);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0][0])).toContain("monCron");
+  });
+});
+
+describe("isMobileStore", () => {
+  it("App Store / Google Play, dans les deux casses RevenueCat → true", () => {
+    for (const store of [
+      "APP_STORE",
+      "MAC_APP_STORE",
+      "PLAY_STORE",
+      "app_store",
+      "mac_app_store",
+      "play_store",
+    ]) {
+      expect(isMobileStore(store), store).toBe(true);
+    }
+  });
+
+  it("web (Stripe, RC Billing), promo, absent, inconnu → false", () => {
+    for (const store of [
+      "STRIPE",
+      "stripe",
+      "RC_BILLING",
+      "PROMOTIONAL",
+      "AMAZON",
+      "",
+      null,
+      undefined,
+      42,
+    ]) {
+      expect(isMobileStore(store), String(store)).toBe(false);
+    }
   });
 });

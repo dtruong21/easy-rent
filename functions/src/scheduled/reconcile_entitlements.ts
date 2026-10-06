@@ -24,7 +24,8 @@
  * OWASP-01 : les entitlements issus d'achats SANDBOX sont écartés du fetcher
  * ([entitlementStatesFromSubscriber]) — ce cron opère sur `(default)` et peut
  * prolonger / monter de palier un compte déjà payant : il ne doit jamais le
- * faire d'après un achat de test.
+ * faire d'après un achat de test. Seule exception : achat sandbox App Store /
+ * Google Play d'un uid de `_ops/sandboxAllowlist` (FEAT-044e).
  *
  * On requête `proEntitlementActive == true` (ensemble borné = base d'abonnés)
  * → **aucun index composite requis**. Le coeur (`reconcileExpiredEntitlements`)
@@ -54,7 +55,10 @@ import {
   tsToMillis,
 } from "../entitlements/plan";
 import {LEVELS} from "../entitlements/plan_matrix.generated";
-import {readSandboxAllowlistOrEmpty} from "../utils/sandbox_allowlist";
+import {
+  isMobileStore,
+  readSandboxAllowlistOrEmpty,
+} from "../utils/sandbox_allowlist";
 
 /** Clé secrète v2 de l'API REST RevenueCat (serveur uniquement). */
 const revenueCatApiKey = defineSecret("REVENUECAT_API_KEY");
@@ -279,8 +283,11 @@ export interface RcSubscriber {
     string,
     {expires_date?: string | null; product_identifier?: string | null}
   >;
-  /** Clé = identifiant de produit ; `is_sandbox` = achat en mode test. */
-  subscriptions?: Record<string, {is_sandbox?: boolean}>;
+  /**
+   * Clé = identifiant de produit ; `is_sandbox` = achat en mode test ;
+   * `store` = `app_store` / `play_store` / `stripe`…
+   */
+  subscriptions?: Record<string, {is_sandbox?: boolean; store?: string}>;
 }
 
 /**
@@ -302,7 +309,8 @@ export interface RcSubscriber {
  * explicite écarte l'entitlement, pour ne pas rétrograder un client qui paie
  * sur une réponse d'API incomplète.
  * Avec `sandboxAllowed` (uid de `_ops/sandboxAllowlist`, FEAT-044e : compte
- * de démo App Review, testeurs), l'achat sandbox vaut un vrai droit.
+ * de démo App Review, testeurs), un achat sandbox **App Store / Google Play**
+ * vaut un vrai droit ; un achat Stripe test reste masqué.
  */
 export function entitlementStatesFromSubscriber(
   subscriber: RcSubscriber | undefined,
@@ -316,14 +324,14 @@ export function entitlementStatesFromSubscriber(
     if (rcId === null) continue; // palier sans entitlement RC créé
     const ent = entitlements[rcId];
     if (!ent || !ent.expires_date) continue;
-    const productId = ent.product_identifier;
-    if (
-      productId &&
-      subscriptions[productId]?.is_sandbox === true &&
-      options.sandboxAllowed !== true
-    ) {
+    const sub = ent.product_identifier ?
+      subscriptions[ent.product_identifier] :
+      undefined;
+    const allowedSandbox =
+      options.sandboxAllowed === true && isMobileStore(sub?.store);
+    if (sub?.is_sandbox === true && !allowedSandbox) {
       // Jamais accordé ni prolongé ; l'état prod du palier est inconnu (#209).
-      // Exception : uid de la liste blanche sandbox (FEAT-044e).
+      // Exception : achat store mobile d'un uid de la liste blanche (FEAT-044e).
       states[level.id] = {expiresMs: null, sandboxShadowed: true};
       continue;
     }
@@ -335,8 +343,8 @@ export function entitlementStatesFromSubscriber(
 
 /**
  * Fetcher de production : API REST RevenueCat v1 (subscriber). La logique de
- * tri (entitlements connus, achats sandbox écartés) vit dans
- * [entitlementStatesFromSubscriber], pure et testée.
+ * tri (entitlements connus, achats sandbox écartés sauf liste blanche) vit
+ * dans [entitlementStatesFromSubscriber], pure et testée.
  */
 function makeRevenueCatFetcher(
   apiKey: string,

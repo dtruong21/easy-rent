@@ -6,8 +6,11 @@
  * PRODUCTION. Sans exception, le webhook route ces achats vers `staging`
  * (OWASP-01) : le compte de démo de la review n'obtient jamais Pro et l'app
  * est refusée. Ce document prod liste les rares comptes pour lesquels un achat
- * sandbox vaut un vrai droit. Il est édité à la main (console Firebase) et lu
- * uniquement par les Functions — aucun accès client (règle `_ops`).
+ * sandbox **d'un store mobile** (App Store, Google Play) vaut un vrai droit.
+ * Un achat Stripe test (web staging) n'est jamais concerné : mobile = stores
+ * via RevenueCat, web = Stripe via RevenueCat. Il est édité à la main (console
+ * Firebase) et lu uniquement par les Functions — aucun accès client (règle
+ * `_ops`).
  *
  * Fail-closed : une liste illisible vaut « aucun uid » — jamais de déblocage
  * prod par défaut.
@@ -38,7 +41,24 @@ export async function readSandboxAllowlist(
   db: Firestore,
 ): Promise<ReadonlySet<string>> {
   const snap = await db.doc(SANDBOX_ALLOWLIST_DOC).get();
-  return parseSandboxAllowlist(snap.exists ? snap.data() : undefined);
+  return parseSandboxAllowlist(snap.data());
+}
+
+/** Stores RevenueCat des achats intégrés mobiles (en minuscules). */
+const MOBILE_STORES: ReadonlySet<string> = new Set([
+  "app_store",
+  "mac_app_store",
+  "play_store",
+]);
+
+/**
+ * PURE — `true` si [store] est un store mobile (App Store, Google Play) : seuls
+ * achats sandbox couverts par la liste. Accepte les deux casses de RevenueCat
+ * (`APP_STORE` dans les events du webhook, `app_store` dans l'API v1). Stripe,
+ * RC Billing, promo, absent ou inconnu → `false` (fail-closed).
+ */
+export function isMobileStore(store: unknown): boolean {
+  return typeof store === "string" && MOBILE_STORES.has(store.toLowerCase());
 }
 
 /**

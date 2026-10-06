@@ -697,8 +697,9 @@ describe("handleRevenueCatEvent — routage par environnement (OWASP-01)", () =>
 });
 
 // FEAT-044e (#209) — App Review / testeurs Google achètent en SANDBOX sur
-// l'app de PROD. Un uid de la liste blanche reçoit ce droit en prod ; tous
-// les autres restent routés vers staging (OWASP-01 inchangé).
+// l'app de PROD. Un achat App Store / Google Play d'un uid de la liste blanche
+// reçoit ce droit en prod ; tout le reste (autres uids, achats Stripe test du
+// web staging) reste routé vers staging (OWASP-01 inchangé).
 describe("handleRevenueCatEvent — liste blanche sandbox (FEAT-044e)", () => {
   let prodDb: FakeFirestore;
   let stagingDb: FakeFirestore;
@@ -742,11 +743,59 @@ describe("handleRevenueCatEvent — liste blanche sandbox (FEAT-044e)", () => {
     expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
   });
 
-  it("SANDBOX + liste illisible → staging (fail-closed), prod intacte", async () => {
-    await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, failing);
+  it("SANDBOX + liste illisible → erreur (500, RevenueCat retente), aucune base modifiée", async () => {
+    // Appliquer en staging puis répondre 200 perdrait l'achat d'App Review :
+    // RevenueCat ne le renverrait jamais. L'erreur remonte, rien n'est écrit.
+    await expect(
+      handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, failing),
+    ).rejects.toThrow("unavailable");
 
-    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
     expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX Google Play + uid listé → PROD", async () => {
+    await handleRevenueCatEvent(
+      evt({environment: "SANDBOX", store: "PLAY_STORE"}),
+      NOW,
+      listed,
+    );
+
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it.each(["STRIPE", "RC_BILLING", "PROMOTIONAL", undefined])(
+    "SANDBOX store %s + uid listé → staging, liste jamais lue",
+    async (store) => {
+      // Web = Stripe via RevenueCat : un achat carte test sur le staging ne
+      // donne jamais Pro en prod, même à un compte de la liste.
+      const reader = vi.fn(listed);
+
+      await handleRevenueCatEvent(
+        evt({environment: "SANDBOX", store}),
+        NOW,
+        reader,
+      );
+
+      expect(reader).not.toHaveBeenCalled();
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    },
+  );
+
+  it("SANDBOX + uid listé sans doc prod → no_landlord, staging intact", async () => {
+    prodDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = prodDb;
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+      listed,
+    );
+
+    expect(outcome).toBe("no_landlord");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
   });
 
   it("PRODUCTION → la liste n'est jamais lue", async () => {
@@ -830,14 +879,17 @@ describe("handleRevenueCatEvent — liste blanche sandbox (FEAT-044e)", () => {
       expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
     });
 
-    it("event SANDBOX sans app_user_id → jamais en prod", async () => {
+    it("event SANDBOX sans app_user_id → jamais en prod, liste non lue", async () => {
       prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+      const reader = vi.fn(listed);
 
       await handleRevenueCatEvent(
         evt({environment: "SANDBOX", app_user_id: undefined}),
         NOW,
+        reader,
       );
 
+      expect(reader).not.toHaveBeenCalled();
       expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
     });
   });

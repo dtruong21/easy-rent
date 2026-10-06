@@ -1210,4 +1210,16 @@ describe("_ops — configuration serveur, aucun accès client (FEAT-044e)", () =
   it("un compte ne peut pas créer d'autre document _ops", async () => {
     await assertFails(asOwnerA().doc("_ops/autre").set({x: 1}));
   });
+  it("un autre compte ne lit ni ne liste _ops", async () => {
+    await assertFails(asOtherB().doc("_ops/sandboxAllowlist").get());
+    await assertFails(asOtherB().collection("_ops").get());
+  });
+  it("un compte ne peut pas supprimer la liste", async () => {
+    await assertFails(asOwnerA().doc("_ops/sandboxAllowlist").delete());
+  });
+  it("un non-authentifié ne lit ni n'écrit _ops", async () => {
+    const db = env.unauthenticatedContext().firestore();
+    await assertFails(db.doc("_ops/sandboxAllowlist").get());
+    await assertFails(db.doc("_ops/sandboxAllowlist").set({uids: ["x"]}));
+  });
 });
