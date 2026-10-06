@@ -4,7 +4,7 @@
 
 **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-21 (FEAT-044 paiement : champs `pro*` sur `landlords` ; quota documents free). **Pivot** : FEAT-019 (2026-06-30) — migration du backend vers Firestore camelCase (plus de backend SQL ; les sections de garde s'appellent désormais « Règles Firestore »).
 
-## 11 collections → shard
+## 14 collections → shard
 
 | Collection | Type | Access | Shard |
 |---|---|---|---|
@@ -14,11 +14,14 @@
 | `properties` | multi | CRUD account (isFullyAuthed) | [properties](properties.md) |
 | `tenants` | multi | CRUD account (isFullyAuthed) | [properties](properties.md) |
 | `leases` | multi | CF exclusive | [leases](leases.md) |
+| `charge_statements` | multi | CF exclusive (FEAT-033) | [leases](leases.md) |
+| `etat_des_lieux` | multi | CF exclusive, immuable (FEAT-037) | [leases](leases.md) |
 | `payments` | multi | CF exclusive | [payments-receipts](payments-receipts.md) |
 | `receipts` | multi | rules read-only | [payments-receipts](payments-receipts.md) |
 | `documents` | multi | CF exclusive | [expenses-documents](expenses-documents.md) |
 | `expenses` | multi | CF exclusive (FEAT-041) | [expenses-documents](expenses-documents.md) |
 | `investment_scenarios` | multi | CRUD signed (anon OK) | [simulator](simulator.md) |
+| `_ops` | config serveur globale | aucun accès client (Functions seules) | [account](account.md) |
 
 ## Patterns transverses
 
