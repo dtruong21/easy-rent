@@ -580,3 +580,67 @@ describe("createCheckoutSession — handler (#209 : anonyme, origine locale)", (
     expect(stripeMock.create).toHaveBeenCalledOnce();
   });
 });
+
+describe("createCheckoutSession — prix du mode Stripe de la clé (reliquat #138)", () => {
+  const UID = "landlord-a";
+
+  function makeRequest(origin: string): CallableRequest {
+    return {
+      data: {level: "pro", period: "monthly"},
+      auth: {
+        uid: UID,
+        token: {
+          email: "a@example.test",
+          email_verified: true,
+          firebase: {sign_in_provider: "password"},
+        } as never,
+        rawToken: "",
+      },
+      rawRequest: {headers: {origin}} as never,
+    } as CallableRequest;
+  }
+
+  beforeEach(() => {
+    fakeAdminFirestoreHolder.db = new FakeFirestore();
+    fakeStagingFirestoreHolder.db = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db.seed(`landlords/${UID}`, {id: UID});
+    fakeStagingFirestoreHolder.db.seed(`landlords/${UID}`, {id: UID});
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_fake");
+    vi.stubEnv("STRIPE_SECRET_KEY_TEST", "sk_test_fake");
+    vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY", "price_live_pro_m");
+    vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY_TEST", "price_test_pro_m");
+    stripeMock.keys.length = 0;
+    stripeMock.create.mockReset().mockResolvedValue({
+      url: "https://checkout.stripe.test/s",
+      id: "cs_1",
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function pricedWith(): string {
+    const params = stripeMock.create.mock.calls[0][0] as {
+      line_items: Array<{price: string}>;
+    };
+    return params.line_items[0].price;
+  }
+
+  it("prod → prix LIVE", async () => {
+    await createCheckoutSession.run(makeRequest("https://app.baillan.com"));
+    expect(pricedWith()).toBe("price_live_pro_m");
+  });
+
+  it("staging → prix …_TEST", async () => {
+    await createCheckoutSession.run(makeRequest(STAGING_ORIGIN));
+    expect(pricedWith()).toBe("price_test_pro_m");
+  });
+
+  it("staging sans prix …_TEST → repli sur le prix canonique (transitoire)", async () => {
+    vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY_TEST", "");
+    await createCheckoutSession.run(makeRequest(STAGING_ORIGIN));
+    expect(pricedWith()).toBe("price_live_pro_m");
+  });
+});
+
