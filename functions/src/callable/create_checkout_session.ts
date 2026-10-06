@@ -268,7 +268,11 @@ export const createCheckoutSession = onCall(
     );
 
     const config: CheckoutConfig = {
-      prices: readPriceTable(),
+      // Les prix vivent dans le mode Stripe de la clé : prix test pour le
+      // staging / l'émulateur, prix live pour la prod (reliquat de #138).
+      prices: readPriceTable(
+        stripeEnvForOrigin(origin) === "live" ? "live" : "test",
+      ),
       // Renvoyer l'utilisateur sur l'hôte d'où il vient : le défaut
       // `WEB_APP_BASE_URL` (prod) expédiait un acheteur parti de staging vers
       // baillan.com après paiement. `origin` est déjà validé ci-dessus.
