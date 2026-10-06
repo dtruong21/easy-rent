@@ -113,3 +113,18 @@ Formulaire « Nous contacter ». Traitement Admin SDK / console (pas de back-off
 - `get/list` : false (jamais relu V1)
 - `create` : isFullyAuthed() && landlordId==uid + bornes subject/message
 - `update/delete` : false
+
+## `_ops/{docId}` — configuration serveur globale (FEAT-044e)
+
+Aucune donnée de bailleur : hors export RGPD et hors purge `deleteAccount` (exemption dans le test de parité de `delete_account.test.ts`). Lu **uniquement** par les Functions (Admin SDK), **dans la base prod `(default)`** — un doc `_ops` en staging n'a aucun effet.
+
+### `_ops/sandboxAllowlist`
+
+| Champ | Type | Notes |
+|---|---|---|
+| `uids` | string[] | uids prod dont un achat RevenueCat **sandbox** vaut un vrai droit (compte de démo App Review, testeurs). Entrées non-chaînes ou vides ignorées, espaces retirés |
+
+Édité à la main dans la console Firebase (aucune expiration : retirer l'uid après la review). Lu par le webhook `revenueCatWebhook` (events `SANDBOX` seulement) et par le cron `reconcileEntitlements` (une fois par passage) — cf. [functions/account](../functions/account.md). Absent ou illisible → aucun uid (fail-closed).
+
+**Règles Firestore** :
+- `match /_ops/{docId}` : `allow read, write: if false` — explicite en plus du fallback. Un compte capable d'écrire ce doc s'y ajouterait et obtiendrait Pro gratuit. Testé (`firestore_rules.test.ts`, describe `_ops`).
