@@ -10,6 +10,7 @@ import {
   storeOf,
   type RcEvent,
 } from "../http/revenuecat_webhook";
+import {SANDBOX_ALLOWLIST_DOC} from "../utils/sandbox_allowlist";
 
 import {
   FakeFirestore,
@@ -755,5 +756,89 @@ describe("handleRevenueCatEvent — liste blanche sandbox (FEAT-044e)", () => {
 
     expect(reader).not.toHaveBeenCalled();
     expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+  });
+
+  it("SANDBOX + liste non vide SANS cet uid → staging, prod intacte", async () => {
+    const others = () =>
+      Promise.resolve(new Set(["someone-else"]) as ReadonlySet<string>);
+
+    await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, others);
+
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX + uid listé + EXPIRATION → droit RETIRÉ en prod", async () => {
+    prodDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      isAnonymous: false,
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      proLastEventAtMs: AGO_1D,
+      deletedAt: null,
+    });
+
+    const outcome = await handleRevenueCatEvent(
+      evt({
+        type: "EXPIRATION",
+        environment: "SANDBOX",
+        expiration_at_ms: AGO_1D,
+      }),
+      NOW,
+      listed,
+    );
+
+    expect(outcome).toBe("applied");
+    const prod = prodDb.peek(`landlords/${UID}`);
+    expect(prod?.subscriptionTier).toBe("free");
+    expect(prod?.proEntitlementActive).toBe(false);
+  });
+
+  // Lecteur RÉEL (aucun lecteur injecté) : prouve que la liste est lue dans
+  // la base PROD, au bon chemin, et comparée au bon uid.
+  describe("lecteur par défaut (_ops/sandboxAllowlist)", () => {
+    it("liste en PROD contenant l'uid → droit appliqué en PROD", async () => {
+      prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+
+      const outcome = await handleRevenueCatEvent(
+        evt({environment: "SANDBOX"}),
+        NOW,
+      );
+
+      expect(outcome).toBe("applied");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
+
+    it("liste présente seulement en STAGING → ignorée (staging)", async () => {
+      // Un compte staging ne doit jamais pouvoir s'ouvrir la prod.
+      stagingDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+
+      await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW);
+
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
+
+    it("liste PROD sans cet uid → staging", async () => {
+      prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: ["someone-else"]});
+
+      await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW);
+
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
+
+    it("event SANDBOX sans app_user_id → jamais en prod", async () => {
+      prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+
+      await handleRevenueCatEvent(
+        evt({environment: "SANDBOX", app_user_id: undefined}),
+        NOW,
+      );
+
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
   });
 });

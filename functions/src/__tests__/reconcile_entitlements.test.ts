@@ -11,15 +11,17 @@
  */
 
 import {Timestamp} from "firebase-admin/firestore";
-import {beforeEach, describe, expect, it, vi} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import {rcEntitlementIdFor} from "../entitlements/plan";
 import {
   entitlementStatesFromSubscriber,
   reconcileExpiredEntitlements,
   reconcileLandlord,
+  runReconcileEntitlements,
   type EntitlementStatesFetcher,
 } from "../scheduled/reconcile_entitlements";
+import {SANDBOX_ALLOWLIST_DOC} from "../utils/sandbox_allowlist";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
 
@@ -472,5 +474,108 @@ describe("reconcile — uid de la liste blanche sandbox (FEAT-044e)", () => {
     const doc = fakeDb.peek("landlords/review-demo");
     expect(doc?.subscriptionTier).toBe("paid");
     expect((doc?.proExpiresAt as {toMillis(): number}).toMillis()).toBe(IN_60D);
+  });
+});
+
+// FEAT-044e — câblage RÉEL du passage du cron (`runReconcileEntitlements`) :
+// lecture de `_ops/sandboxAllowlist` dans la base du cron, fetcher RevenueCat,
+// décision par uid. Seul `fetch` (API RevenueCat) est simulé.
+describe("cron — passage complet avec la liste blanche sandbox (FEAT-044e)", () => {
+  const PRO_ID = rcEntitlementIdFor("pro") as string;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  /** Réponse RevenueCat : Pro adossé à un achat SANDBOX échéant à [expMs]. */
+  const sandboxSubscriber = (expMs: number) => ({
+    subscriber: {
+      entitlements: {
+        [PRO_ID]: {expires_date: iso(expMs), product_identifier: "pro_sandbox"},
+      },
+      subscriptions: {pro_sandbox: {is_sandbox: true}},
+    },
+  });
+  const tsMs = (uid: string) =>
+    (fakeDb.peek(`landlords/${uid}`)?.proExpiresAt as {toMillis(): number})
+      .toMillis();
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  /** Chaque uid reçoit la même réponse RevenueCat. */
+  function stubRevenueCat(body: unknown) {
+    fetchMock = vi.fn(() =>
+      Promise.resolve({ok: true, json: () => Promise.resolve(body)}),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("même réponse sandbox : uid listé prolongé, uid non listé masqué", async () => {
+    fakeDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: ["review-demo"]});
+    seedActivePro("review-demo", IN_30D);
+    seedActivePro("prod-pro", IN_30D);
+    stubRevenueCat(sandboxSubscriber(IN_60D));
+
+    const res = await runReconcileEntitlements(fakeDb, "sk_test", NOW);
+
+    expect(res.failed).toBe(0);
+    expect(tsMs("review-demo")).toBe(IN_60D);
+    expect(tsMs("prod-pro")).toBe(IN_30D);
+    // La clé API part bien dans l'en-tête, uid encodé dans l'URL.
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.revenuecat.com/v1/subscribers/review-demo",
+      {headers: {Authorization: "Bearer sk_test"}},
+    );
+  });
+
+  it("achat sandbox expiré : uid listé RETIRÉ, uid non listé inchangé", async () => {
+    fakeDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: ["review-demo"]});
+    seedActivePro("review-demo", IN_30D);
+    seedActivePro("prod-pro", IN_30D);
+    stubRevenueCat(sandboxSubscriber(AGO_1D));
+
+    const res = await runReconcileEntitlements(fakeDb, "sk_test", NOW);
+
+    expect(res.downgradedFree).toBe(1);
+    expect(fakeDb.peek("landlords/review-demo")?.subscriptionTier).toBe("free");
+    expect(fakeDb.peek("landlords/prod-pro")?.subscriptionTier).toBe("paid");
+  });
+
+  it("pas de document liste → comportement #209 (masqué)", async () => {
+    seedActivePro("review-demo", IN_30D);
+    stubRevenueCat(sandboxSubscriber(IN_60D));
+
+    await runReconcileEntitlements(fakeDb, "sk_test", NOW);
+
+    expect(tsMs("review-demo")).toBe(IN_30D);
+  });
+
+  it("liste illisible → passage complet sans liste, aucun échec", async () => {
+    seedActivePro("review-demo", IN_30D);
+    stubRevenueCat(sandboxSubscriber(IN_60D));
+    // Seule la lecture de la liste échoue ; le reste de la base fonctionne.
+    const flakyDb = new Proxy(fakeDb, {
+      get(target, prop) {
+        if (prop === "doc") {
+          return (path: string) =>
+            path === SANDBOX_ALLOWLIST_DOC ?
+              {get: () => Promise.reject(new Error("unavailable"))} :
+              target.doc(path);
+        }
+        const value = Reflect.get(target, prop, target) as unknown;
+        return typeof value === "function" ?
+          (value as (...a: unknown[]) => unknown).bind(target) :
+          value;
+      },
+    });
+
+    const res = await runReconcileEntitlements(
+      flakyDb as unknown as typeof fakeDb,
+      "sk_test",
+      NOW,
+    );
+
+    expect(res).toMatchObject({checked: 1, failed: 0});
+    expect(tsMs("review-demo")).toBe(IN_30D);
   });
 });

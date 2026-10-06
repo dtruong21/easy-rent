@@ -17,6 +17,14 @@ const failingDb = asDb({
   doc: () => ({get: () => Promise.reject(new Error("unavailable"))}),
 });
 
+describe("SANDBOX_ALLOWLIST_DOC", () => {
+  it("chemin épinglé : édité à la main dans la console, couvert par la règle _ops", () => {
+    // Le renommer couperait la liste en silence (document jamais trouvé →
+    // aucun uid) et sortirait le doc de la règle `match /_ops/{docId}`.
+    expect(SANDBOX_ALLOWLIST_DOC).toBe("_ops/sandboxAllowlist");
+  });
+});
+
 describe("parseSandboxAllowlist", () => {
   it("doc absent ou vide → aucun uid", () => {
     expect([...parseSandboxAllowlist(undefined)]).toEqual([]);

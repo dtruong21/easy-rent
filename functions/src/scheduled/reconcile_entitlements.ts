@@ -355,6 +355,24 @@ function makeRevenueCatFetcher(
   };
 }
 
+/**
+ * Un passage complet du cron : liste blanche sandbox (lue une fois ;
+ * illisible → aucun uid, fail-closed), fetcher RevenueCat, réconciliation.
+ * Exporté pour tester le câblage réel (seul `fetch` est simulé).
+ */
+export async function runReconcileEntitlements(
+  db: admin.firestore.Firestore,
+  apiKey: string,
+  nowMs: number,
+): Promise<Awaited<ReturnType<typeof reconcileExpiredEntitlements>>> {
+  const sandboxAllowlist = await readSandboxAllowlistOrEmpty(
+    db,
+    "reconcileEntitlements",
+  );
+  const fetcher = makeRevenueCatFetcher(apiKey, sandboxAllowlist);
+  return reconcileExpiredEntitlements(db, fetcher, nowMs);
+}
+
 export const reconcileEntitlements = onSchedule(
   {
     schedule: "30 3 * * *",
@@ -363,17 +381,11 @@ export const reconcileEntitlements = onSchedule(
     secrets: [revenueCatApiKey],
   },
   async () => {
-    const db = admin.firestore();
-    // Liste lue une fois par passage ; illisible → aucun uid (fail-closed).
-    const sandboxAllowlist = await readSandboxAllowlistOrEmpty(
-      db,
-      "reconcileEntitlements",
-    );
-    const fetcher = makeRevenueCatFetcher(
+    const res = await runReconcileEntitlements(
+      admin.firestore(),
       revenueCatApiKey.value(),
-      sandboxAllowlist,
+      Date.now(),
     );
-    const res = await reconcileExpiredEntitlements(db, fetcher, Date.now());
     logger.info(
       `reconcileEntitlements: checked=${res.checked} ` +
         `downgradedFree=${res.downgradedFree} levelChanged=${res.levelChanged} ` +
