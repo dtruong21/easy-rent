@@ -20,7 +20,7 @@ La vraie sécurité repose sur (**backend 100 % Firebase depuis FEAT-019** — a
 |---|---|---|---|
 | Firebase config (web) | `apiKey` (`AIza…`), `projectId`, etc. | `firebase_options.dart`, bundle JS | Aucun **tant que les règles Firestore tiennent** — voir ⚠️ ci-dessous |
 | Config client | `APP_ENV` | `dart-defines.json`, bundle JS | Aucun |
-| Prix Stripe | `STRIPE_PRICE_*` (`defineString`) | Config Functions | Aucun — identifiants de tarif, pas des secrets |
+| Prix Stripe | `STRIPE_PRICE_*` (prix live) et `STRIPE_PRICE_*_TEST` (prix test, staging et émulateur) en `defineString` | Config Functions (`functions/.env`, gitignoré) | Aucun — identifiants de tarif, pas des secrets. La table suit le mode de la clé (`readPriceTable(env)`) ; un `…_TEST` vide retombe sur le prix canonique (transitoire, tant qu'aucune clé live n'existe) |
 
 > ⚠️ **App Check n'est PAS activé** (aucun package `firebase_app_check`, aucune activation dans le code — seul un pod interop transitif apparaît dans `ios/Podfile.lock`). La seule protection derrière la config Firebase publique est donc **les règles Firestore**, sans attestation d'app. Rien d'anormal pour ce stade, mais ne pas documenter App Check comme une protection acquise : il ne l'est pas.
 
