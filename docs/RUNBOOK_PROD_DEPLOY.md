@@ -55,6 +55,26 @@ dans Authentication → Templates. **Pas de magic link.**
 > `main`, les **rules Storage**. Les **Cloud Functions** ne sont **pas** automatisées
 > (déploiement manuel délibéré) — ne pas les oublier quand une feature en dépend.
 
+> ⚠️ **Prérequis `functions/.env`** (gitignoré, à tenir sur chaque PC qui
+> déploie) : il doit déclarer les **12** paramètres de prix Stripe — les 6
+> `STRIPE_PRICE_{PRO,MAX,ULTRA}_{MONTHLY,ANNUAL}` et les 6
+> `STRIPE_PRICE_{PRO,MAX,ULTRA}_{MONTHLY,ANNUAL}_TEST`. La CLI demande tout
+> paramètre absent du fichier, même avec un `default` dans le code : en
+> `--non-interactive`, le déploiement échoue sur « In non-interactive mode but
+> have no value for the following environment variables ». Tant qu'aucun prix
+> live n'existe, les `…_TEST` restent **vides** (repli sur le prix canonique) :
+>
+> ```
+> STRIPE_PRICE_PRO_MONTHLY_TEST=
+> STRIPE_PRICE_PRO_ANNUAL_TEST=
+> STRIPE_PRICE_MAX_MONTHLY_TEST=
+> STRIPE_PRICE_MAX_ANNUAL_TEST=
+> STRIPE_PRICE_ULTRA_MONTHLY_TEST=
+> STRIPE_PRICE_ULTRA_ANNUAL_TEST=
+> ```
+>
+> Ne jamais committer `functions/.env`.
+
 ---
 
 ## 3. Procédure de déploiement prod

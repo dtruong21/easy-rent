@@ -17,9 +17,17 @@
  * publics visibles dans l'URL de Checkout) : ils restent en `defineString`,
  * hors Secret Manager, comme avant FEAT-056.
  *
- * `default: ""` sur les six : un palier non encore configuré (Max/Ultra au
- * lancement) ne doit pas bloquer un déploiement par une invite interactive —
- * il doit échouer **à l'appel**, proprement, sur `price_not_configured`.
+ * `default: ""` sur les douze (six canoniques + six `…_TEST`) : un palier non
+ * encore configuré (Max/Ultra au lancement) échoue **à l'appel**, proprement,
+ * sur `price_not_configured`, et un `…_TEST` vide retombe sur le prix
+ * canonique (cf. [selectPriceTable]).
+ *
+ * Ce défaut n'évite **pas** l'invite au déploiement : la CLI Firebase demande
+ * tout paramètre absent de `functions/.env`, défaut ou non (prérempli en
+ * interactif ; `--non-interactive` échoue sur « have no value for the
+ * following environment variables »). `functions/.env` doit donc déclarer les
+ * douze `STRIPE_PRICE_*` et `STRIPE_PRICE_*_TEST` ; une ligne vide
+ * (`STRIPE_PRICE_PRO_MONTHLY_TEST=`) suffit pour les `…_TEST`.
  */
 
 import {defineString} from "firebase-functions/params";
