@@ -66,6 +66,8 @@ beforeAll(async () => {
         name: "seed",
       });
     }
+    // FEAT-044e — liste blanche sandbox, lue uniquement par les Functions.
+    await db.doc("_ops/sandboxAllowlist").set({uids: [LANDLORD_A]});
     // FEAT-056 (PR-2b) : scénario complet (avec createdAt) — support du test
     // de non-régression « l'update client reste autorisé après le passage de
     // `create` à `if false` ». Le doc `doc-a` seedé ci-dessus n'a pas de
@@ -1193,5 +1195,31 @@ describe("OWASP-02 — email vérifié exigé par les rules", () => {
         asAnonymous(ANON).doc(`properties/prop-${ANON}`).update({name: "x"}),
       );
     });
+  });
+});
+
+describe("_ops — configuration serveur, aucun accès client (FEAT-044e)", () => {
+  it("un compte (même listé) ne lit pas la liste blanche sandbox", async () => {
+    await assertFails(asOwnerA().doc("_ops/sandboxAllowlist").get());
+  });
+  it("un compte ne peut pas s'ajouter à la liste", async () => {
+    await assertFails(
+      asOwnerA().doc("_ops/sandboxAllowlist").set({uids: [LANDLORD_A]}),
+    );
+  });
+  it("un compte ne peut pas créer d'autre document _ops", async () => {
+    await assertFails(asOwnerA().doc("_ops/autre").set({x: 1}));
+  });
+  it("un autre compte ne lit ni ne liste _ops", async () => {
+    await assertFails(asOtherB().doc("_ops/sandboxAllowlist").get());
+    await assertFails(asOtherB().collection("_ops").get());
+  });
+  it("un compte ne peut pas supprimer la liste", async () => {
+    await assertFails(asOwnerA().doc("_ops/sandboxAllowlist").delete());
+  });
+  it("un non-authentifié ne lit ni n'écrit _ops", async () => {
+    const db = env.unauthenticatedContext().firestore();
+    await assertFails(db.doc("_ops/sandboxAllowlist").get());
+    await assertFails(db.doc("_ops/sandboxAllowlist").set({uids: ["x"]}));
   });
 });

@@ -907,7 +907,7 @@ describe("parité export ↔ effacement du compte", () => {
     expect([...RETAINED_COLLECTIONS]).toEqual(["receipts"]);
   });
 
-  it("toute collection de premier niveau des Security Rules est exportée ou est un singleton purgé", () => {
+  it("toute collection de premier niveau des Security Rules est exportée, singleton purgé ou config serveur fermée", () => {
     // Filet en amont de la parité : une collection ajoutée aux Rules mais
     // oubliée dans l'export échapperait au test précédent.
     const rules = fs.readFileSync(
@@ -919,13 +919,29 @@ describe("parité export ↔ effacement du compte", () => {
     );
     // Singletons clés par uid (purgés explicitement par deleteAccount, étape c).
     const singletons = ["landlords", "paid_plan_interest"];
-    const known = new Set([...exported, ...singletons]);
+    // Configuration serveur globale (FEAT-044e `_ops/sandboxAllowlist`) : ne
+    // porte que les uids (pseudonymes) des comptes de test de l'éditeur (démo
+    // App Review, testeurs), retirés à la main — aucune donnée d'un bailleur
+    // client, rien à exporter ni à purger. Exemption valable tant que le bloc
+    // reste fermé à tout client (vérifié ci-dessous).
+    const globalConfig = ["_ops"];
+    for (const name of globalConfig) {
+      expect(
+        rules,
+        `${name} doit rester refusé à tout client pour être exempté`,
+      ).toMatch(
+        new RegExp(
+          `match /${name}/\\{\\w+\\} \\{\\s*allow read, write: if false;\\s*\\}`,
+        ),
+      );
+    }
+    const known = new Set([...exported, ...singletons, ...globalConfig]);
 
     expect(topLevel.length).toBeGreaterThan(10); // le scan a bien lu les Rules
     const unknown = topLevel.filter((name) => !known.has(name));
     expect(
       unknown,
-      `collections des Rules ni exportées ni singletons : ${unknown.join(", ")}`,
+      `collections des Rules ni exportées, ni singletons, ni config : ${unknown.join(", ")}`,
     ).toEqual([]);
   });
 });

@@ -52,7 +52,7 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-044b | Gating Pro — quota documents (10 free, serveur) + régularisation charges (client) | ✅ done | expenses-documents, leases | PR #120 |
 | FEAT-044c | Paiement — webhook RevenueCat + réconciliation quotidienne (back-end) | ✅ done | account | PR #114 |
 | FEAT-044d | Paiement — Stripe Checkout Session web (back-end, ADR 0002 approche A) | ✅ done | account | PR #117 |
-| FEAT-044e | Paiement — **intégration client** — web ✅ (paywall `/pro/*` + Stripe Checkout, 75fcbd3) / IAP mobile 📋 (pas de `purchases_flutter`) | 🚧 wip | account | 75fcbd3, docs/plans/FEAT-044-payment-revenuecat-plan.md |
+| FEAT-044e | Paiement — **intégration client** — web ✅ (paywall `/pro/*` + Stripe Checkout, 75fcbd3) / IAP mobile : lot 1 serveur (liste blanche sandbox `_ops/sandboxAllowlist`) 🚧 branche `feat/044e-iap-server` ; lots 2-3 app 📋 (pas de `purchases_flutter`) | 🚧 wip | account | 75fcbd3, docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-design.md |
 | FEAT-045 | Suppression compte in-app + /delete-account (loi 6/7/1989) | ✅ done | account | PR #69 |
 | FEAT-046 | Purge différée des quittances archivées (cron `retentionUntil`, RGPD art. 5.1.e) | ✅ done | account | feat/046-receipt-purge-cron |
 | FEAT-047 | Export des données RGPD (art. 15/20) — callable `exportAccountData` + tuile Profil | ✅ done | account | PR #180 (2026-09-12) |

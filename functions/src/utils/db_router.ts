@@ -8,10 +8,11 @@
  *   l'en-tête **Origin** ; mobile (Origin absent ou vide) → routage par la base
  *   qui porte le doc landlord ([dbForLandlordUid], prod d'abord).
  * - **Webhook RevenueCat** (server-to-server, sans Origin) → routage par
- *   l'`environment` de l'event (`SANDBOX` → `staging`, `PRODUCTION` →
- *   `(default)`), via [firestoreForEnv] — jamais par la base qui porte le doc :
- *   ce routage-là laissait un achat de test accorder un palier sur un compte
- *   prod (OWASP-01, cf. `handleRevenueCatEvent`).
+ *   l'`environment` de l'event (`SANDBOX` → `staging` sauf liste blanche
+ *   FEAT-044e, `PRODUCTION` → `(default)`), via [firestoreForEnv] — jamais par
+ *   la base qui porte le doc : ce routage-là laissait un achat de test
+ *   accorder un palier sur un compte prod (OWASP-01, cf.
+ *   `handleRevenueCatEvent`).
  *
  * ⚠️ Ne JAMAIS appeler `admin.firestore()` / `getFirestore()` sans passer par
  * ce module dans le code qui écrit des données par requête utilisateur — sinon
