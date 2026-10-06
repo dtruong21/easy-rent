@@ -56,6 +56,9 @@ secrets.json
 dart-defines.json
 dart-defines.local.json
 dart-defines.*.local.json
+
+# Config Firebase locale (ports d'émulateurs alternatifs, propre à la machine)
+firebase.*.local.json
 dart-defines.prod.json
 dart-defines.dev.json
 dart-defines.emulator.json

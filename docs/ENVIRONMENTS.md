@@ -61,9 +61,11 @@ reste l'environnement le plus isolé (Firestore + Auth + Functions locaux).
 > achat sandbox (App Review, TestFlight) fait avec un compte **prod** ne débloque
 > rien, sauf **exception FEAT-044e** : si l'uid figure dans la liste blanche
 > `_ops/sandboxAllowlist` (champ `uids`, base prod, éditée dans la console, refusée
-> à tout client), son event `SANDBOX` est appliqué à `(default)` et le cron traite
-> son achat sandbox comme un vrai droit ; liste illisible → comportement par défaut
-> (staging, `logger.error`). Pour tout autre uid, le cron `reconcileEntitlements`
+> à tout client), son achat sandbox **App Store / Google Play** est appliqué à
+> `(default)` et le cron le traite comme un vrai droit. Un achat Stripe test (web
+> staging) reste en staging, uid listé ou non. Liste illisible : le webhook répond
+> 500 sans rien écrire (RevenueCat retente) ; le cron passe sans liste
+> (`logger.error`). Pour tout autre uid, le cron `reconcileEntitlements`
 > n'accorde ni ne prolonge rien d'après un achat sandbox (état enregistré conservé
 > jusqu'à son échéance, #209). Côté RevenueCat, vérifier dans les
 > réglages du webhook si une option de filtrage par environnement existe

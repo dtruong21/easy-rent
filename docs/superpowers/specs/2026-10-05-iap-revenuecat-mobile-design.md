@@ -20,7 +20,7 @@ droits (Firestore, écrite par le webhook RevenueCat).
 | Produits v1 | **Pro mensuel + Pro annuel** uniquement (Max / Ultra : plus tard) |
 | Prix stores | **Identiques au web** : 7,99 € / mois, 79 € / an |
 | Essai gratuit | **Aucun** en v1 (cohérent avec le web ; l'offre gratuite existe) |
-| Liste blanche sandbox | **Document Firestore prod** `_ops/sandboxAllowlist`, édité dans la console |
+| Liste blanche sandbox | **Document Firestore prod** `_ops/sandboxAllowlist`, édité dans la console ; **achats App Store / Google Play uniquement** (amendement 2026-10-06) |
 | Approche | **A** — le serveur reste la seule vérité ; l'achat est derrière un interrupteur `IAP_ENABLED`. Les approches « l'app débloque d'après `CustomerInfo` » et « Web Billing RevenueCat » sont **rejetées** |
 
 ## Contrainte de calendrier
@@ -103,24 +103,36 @@ neutre, aucun prix, aucun achat).
 
 Règle actuelle inchangée par défaut (SANDBOX → `staging`, PRODUCTION →
 `(default)`, autre → ignoré). Exception :
-- event **SANDBOX** dont `app_user_id` est dans `uids` → appliqué à la base
-  **prod** `(default)` uniquement ;
-- la liste n'est lue que pour les events SANDBOX (aucune lecture en plus pour
-  les achats réels) ;
-- lecture en échec → règle par défaut (staging), fail-closed, `logger.error`.
+- event **SANDBOX** d'un achat **App Store / Google Play** dont `app_user_id`
+  est dans `uids` → appliqué à la base **prod** `(default)` uniquement ;
+- un achat Stripe test (web staging) n'est jamais concerné, uid listé ou non ;
+- la liste n'est lue que pour ces events (aucune lecture en plus pour les
+  achats réels) ;
+- lecture en échec → l'erreur remonte : 500, RevenueCat retente, rien n'est
+  écrit (fail-closed).
+
+> **Amendement 2026-10-06 (Daki)** : « au plus simple » — mobile = stores via
+> RevenueCat, web = Stripe via RevenueCat. La liste ne couvre donc que les
+> stores : sans cette restriction, un compte listé qui paie en carte test
+> Stripe sur le staging obtenait en prod un Pro qui n'expire jamais. Lecture
+> en échec : la règle initiale (staging + 200) perdait l'achat d'App Review,
+> RevenueCat ne le renvoyant jamais ; un 500 le fait retenter.
 
 ### Cron `reconcileEntitlements`
 
 - Lit la liste **une fois par passage**.
-- uid listé : un entitlement adossé à un achat sandbox est traité comme un vrai
-  droit (accorde, prolonge, retire), au lieu d'être `sandboxShadowed`.
+- uid listé : un entitlement adossé à un achat sandbox **App Store / Google
+  Play** (`store` de l'API v1) est traité comme un vrai droit (prolonge,
+  corrige le palier, retire ; le cron n'accorde jamais `free → paid`), au lieu
+  d'être `sandboxShadowed`. Achat Stripe test : masqué comme pour tout uid.
 - uid non listé : comportement actuel (#209 : masqué, n'accorde ni ne prolonge).
 - Lecture en échec : passage sans liste (comportement actuel), `logger.error`.
 
 ### Expiration
 
 Pas d'expiration dans la liste : l'abonnement sandbox Apple expire de lui-même
-en quelques heures. Daki retire le compte quand la review est finie.
+en quelques heures. Daki retire le compte quand la review est finie, et avant
+de supprimer le compte de démo (`deleteAccount` ne touche pas à la liste).
 
 ## 3. Conformité et cas particuliers
 
@@ -160,9 +172,10 @@ en quelques heures. Daki retire le compte quand la review est finie.
 - App (faux service) : achat réussi / annulé / en attente / erreur ; délai
   d'activation dépassé ; restauration ; compte déjà Pro ; interrupteur coupé
   (textes masqués, aucun achat) ; `logIn` seulement pour un compte complet.
-- Serveur : webhook SANDBOX listé → prod, non listé → staging, lecture en échec
-  → staging ; cron listé / non listé / lecture en échec ; règle `_ops` refusée
-  à tout client.
+- Serveur : webhook SANDBOX store listé → prod, non listé → staging, Stripe
+  test listé → staging, lecture en échec → 500 sans écriture ; cron listé /
+  non listé / Stripe test / lecture en échec ; règle `_ops` refusée à tout
+  client.
 
 ### Actions de Daki (après la micro-entreprise — checklist sur #207)
 

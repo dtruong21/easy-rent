@@ -122,9 +122,9 @@ Aucune donnée de bailleur : hors export RGPD et hors purge `deleteAccount` (exe
 
 | Champ | Type | Notes |
 |---|---|---|
-| `uids` | string[] | uids prod dont un achat RevenueCat **sandbox** vaut un vrai droit (compte de démo App Review, testeurs). Entrées non-chaînes ou vides ignorées, espaces retirés |
+| `uids` | string[] | uids prod dont un achat RevenueCat **sandbox App Store / Google Play** vaut un vrai droit (compte de démo App Review, testeurs). Jamais un achat Stripe test. Entrées non-chaînes ou vides ignorées, espaces retirés |
 
-Édité à la main dans la console Firebase (aucune expiration : retirer l'uid après la review). Lu par le webhook `revenueCatWebhook` (events `SANDBOX` seulement) et par le cron `reconcileEntitlements` (une fois par passage) — cf. [functions/account](../functions/account.md). Absent ou illisible → aucun uid (fail-closed).
+Édité à la main dans la console Firebase (aucune expiration : retirer l'uid après la review, et avant de supprimer le compte de démo — `deleteAccount` ne touche pas à la liste). Lu par le webhook `revenueCatWebhook` (events `SANDBOX` seulement) et par le cron `reconcileEntitlements` (une fois par passage) — cf. [functions/account](../functions/account.md). Absent ou illisible → aucun uid (fail-closed).
 
 **Règles Firestore** :
 - `match /_ops/{docId}` : `allow read, write: if false` — explicite en plus du fallback. Un compte capable d'écrire ce doc s'y ajouterait et obtiendrait Pro gratuit. Testé (`firestore_rules.test.ts`, describe `_ops`).
