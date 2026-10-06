@@ -488,6 +488,24 @@ describe("manageSubscription — handler (Origin web vs app native)", () => {
     expect(stripeMock.keys).toEqual([TEST_KEY]);
   });
 
+  // Reliquat de #138 : le price cible suit le mode Stripe de la clé.
+  for (const [origin, expected] of [
+    ["https://app.baillan.com", "price_live_pro_a"],
+    [STAGING_ORIGIN, "price_test_pro_a"],
+  ] as const) {
+    it(`change_plan depuis ${origin} → price cible ${expected}`, async () => {
+      vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY", "price_pro_monthly");
+      vi.stubEnv("STRIPE_PRICE_PRO_ANNUAL", "price_live_pro_a");
+      vi.stubEnv("STRIPE_PRICE_PRO_ANNUAL_TEST", "price_test_pro_a");
+
+      await manageSubscription.run(
+        makeRequest({action: "change_plan", level: "pro", period: "annual"}, origin),
+      );
+
+      expect(JSON.stringify(stripeMock.update.mock.calls)).toContain(expected);
+    });
+  }
+
   it("web : Origin inattendu → origin_not_allowed, même pour cancel", async () => {
     await expect(
       manageSubscription.run(

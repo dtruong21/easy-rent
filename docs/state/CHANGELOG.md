@@ -38,6 +38,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - `REVENUECAT_WEBHOOK_AUTH` est documenté comme non détectable (valeur libre).
 - Nouveau test `scripts/test-check-secrets.sh` en CI : 9 détections, 5 quasi-homonymes ignorés. Les fausses clés sont assemblées à l'exécution.
 
+### FIX facturation : prix Stripe séparés test / live (reliquat #138) (2026-10-05)
+- `readPriceTable(env)` : en mode `live`, les paramètres canoniques `STRIPE_PRICE_*` ; en mode `test` (staging, émulateur), les `STRIPE_PRICE_*_TEST`, avec un repli offre par offre sur le paramètre canonique tant qu'ils sont vides. Le repli est transitoire : aucune clé live n'existe, donc les paramètres canoniques portent aujourd'hui des prix de test.
+- `createCheckoutSession` et `manageSubscription/change_plan` choisissent le jeu de prix par l'Origin, comme la clé. Au passage en live, poser les prix live et les prix de test (checklist #207) ; un oubli échoue fermé, car Stripe refuse un price inconnu du mode, et rien n'est débité.
+
 ### FIX sécurité : robustesse facturation, suivi OWASP (#209) (2026-10-05)
 - **Paiement et gestion d'abonnement.** `createCheckoutSession` et `manageSubscription` refusent un compte anonyme pur (`anonymous_account_not_allowed`, vérifié par l'Admin SDK : un token encore « anonymous » d'un compte déjà lié passe). Les deux refusent aussi la clé Stripe de test quand la requête vise la base prod, hors émulateur (`assertStripeEnvMatchesDb` : une origine `localhost` forgée obtenait une session de test pour un compte prod).
 - **Cron `reconcileEntitlements`.** Un palier dont l'entitlement RevenueCat pointe vers un achat sandbox est rapporté `sandboxShadowed`. Le cron garde alors l'état enregistré jusqu'à son échéance, au lieu de rétrograder chaque nuit un compte prod payant. Le sandbox n'accorde ni ne prolonge toujours rien.

@@ -53,33 +53,94 @@ export function priceKey(level: LevelId, period: BillingPeriod): PriceKey {
 }
 
 /**
- * Paramètres Firebase des six offres, déclarés au chargement du module (c'est
- * ce que la CLI inspecte au déploiement).
+ * Environnement Stripe d'un jeu de prix : un price ID n'existe que dans le
+ * mode Stripe où il a été créé (un price test est inconnu de la clé live, et
+ * inversement — cf. `stripe_env.ts`).
  */
-const PRICE_PARAMS: Readonly<
-  Record<PriceKey, ReturnType<typeof defineString>>
-> = (() => {
+export type PriceEnv = "live" | "test";
+
+/**
+ * Suffixe des paramètres de prix du mode TEST (reliquat de #138, suivi sur
+ * #207). Le nom de base reste celui de la table canonique ; le suffixe ne
+ * fabrique aucun nom à partir du palier, il qualifie un nom déjà validé.
+ */
+export const TEST_PRICE_PARAM_SUFFIX = "_TEST";
+
+type ParamTable = Readonly<Record<PriceKey, ReturnType<typeof defineString>>>;
+
+/**
+ * Paramètres Firebase des six offres, déclarés au chargement du module (c'est
+ * ce que la CLI inspecte au déploiement), avec [suffix] ajouté aux noms.
+ */
+function declarePriceParams(suffix: string): ParamTable {
   const params = {} as Record<PriceKey, ReturnType<typeof defineString>>;
   for (const level of LEVELS) {
     params[priceKey(level.id, "monthly")] = defineString(
-      level.stripePriceParamMonthly,
+      `${level.stripePriceParamMonthly}${suffix}`,
       {default: ""},
     );
     params[priceKey(level.id, "annual")] = defineString(
-      level.stripePriceParamAnnual,
+      `${level.stripePriceParamAnnual}${suffix}`,
       {default: ""},
     );
   }
   return params;
-})();
+}
 
-/** Lit les six paramètres à l'exécution (jamais au chargement du module). */
-export function readPriceTable(): PriceTable {
+/** Prix du mode LIVE (prod) : noms canoniques, ex. `STRIPE_PRICE_PRO_MONTHLY`. */
+const LIVE_PRICE_PARAMS = declarePriceParams("");
+
+/** Prix du mode TEST (staging, émulateur) : ex. `STRIPE_PRICE_PRO_MONTHLY_TEST`. */
+const TEST_PRICE_PARAMS = declarePriceParams(TEST_PRICE_PARAM_SUFFIX);
+
+function readParams(params: ParamTable): PriceTable {
   const table: Partial<Record<PriceKey, string>> = {};
-  for (const [key, param] of Object.entries(PRICE_PARAMS)) {
+  for (const [key, param] of Object.entries(params)) {
     table[key as PriceKey] = param.value();
   }
   return table;
+}
+
+/**
+ * PURE — table de prix d'un environnement Stripe.
+ *
+ * - `live` : les paramètres canoniques, seuls.
+ * - `test` : les paramètres `…_TEST`, offre par offre ; une offre sans prix de
+ *   test retombe sur le paramètre canonique. Ce repli est TRANSITOIRE : tant
+ *   qu'aucune clé Stripe live n'existe, les paramètres canoniques portent des
+ *   prix de TEST, et le staging doit continuer de fonctionner sans
+ *   reconfiguration. Le jour où les paramètres canoniques reçoivent les prix
+ *   LIVE, les `…_TEST` doivent recevoir les prix de test (checklist de #207) ;
+ *   un oubli échoue fermé — la clé de test ne connaît pas un price live, Stripe
+ *   refuse la session, aucun débit.
+ */
+export function selectPriceTable(
+  env: PriceEnv,
+  live: PriceTable,
+  test: PriceTable,
+): PriceTable {
+  if (env === "live") return live;
+  const table: Partial<Record<PriceKey, string>> = {};
+  for (const level of LEVELS) {
+    for (const period of BILLING_PERIODS) {
+      const key = priceKey(level.id, period);
+      const testPrice = test[key]?.trim() ?? "";
+      table[key] = testPrice.length > 0 ? testPrice : live[key];
+    }
+  }
+  return table;
+}
+
+/**
+ * Lit la table de prix de [env] à l'exécution (jamais au chargement du
+ * module) — cf. [selectPriceTable].
+ */
+export function readPriceTable(env: PriceEnv): PriceTable {
+  return selectPriceTable(
+    env,
+    readParams(LIVE_PRICE_PARAMS),
+    env === "test" ? readParams(TEST_PRICE_PARAMS) : {},
+  );
 }
 
 /**

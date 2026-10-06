@@ -43,6 +43,7 @@ import {
   readPriceTable,
   resolvePriceIdOrThrow,
   type BillingPeriod,
+  type PriceEnv,
   type PriceTable,
 } from "../entitlements/stripe_prices";
 import {
@@ -57,6 +58,7 @@ import {
   isFunctionsEmulator,
   resolveStripeKeyForDb,
   resolveStripeKeyOrThrow,
+  stripeEnvForOrigin,
 } from "../utils/stripe_env";
 
 import {
@@ -244,13 +246,17 @@ export function assertSafeUid(uid: string): void {
  * (`level_not_purchasable`) ou sans prix configuré (`price_not_configured`)
  * échoue AVANT le moindre appel Stripe.
  */
-function resolveChange(data: Record<string, unknown>): {
+function resolveChange(
+  data: Record<string, unknown>,
+  env: PriceEnv,
+): {
   prices: PriceTable;
   level: LevelId;
   period: BillingPeriod;
   targetPriceId: string;
 } {
-  const prices = readPriceTable();
+  // Prix du mode Stripe de la clé utilisée (reliquat de #138).
+  const prices = readPriceTable(env);
   const {level, period} = parsePlanSelection(data);
   return {
     prices,
@@ -284,7 +290,16 @@ export const manageSubscription = onCall(
     // `null` pour cancel/reactivate — c'est ce champ, et non `action`, qui
     // sélectionne la branche plus bas, pour qu'aucune combinaison partielle
     // (palier résolu sans action, ou l'inverse) ne soit représentable.
-    const change = action === "change_plan" ? resolveChange(data) : null;
+    // `change_plan` est web uniquement (refusé plus haut sans Origin) : le mode
+    // Stripe suit l'Origin ; une origine inconnue sera refusée à la résolution
+    // de la clé, avant tout appel Stripe.
+    const change =
+      action === "change_plan" ?
+        resolveChange(
+          data,
+          stripeEnvForOrigin(origin) === "live" ? "live" : "test",
+        ) :
+        null;
 
     // Web : une origine locale (clé test) contre la base prod est refusée hors
     // émulateur (#209) — même garde que `createCheckoutSession`.

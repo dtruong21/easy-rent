@@ -63,6 +63,8 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    `docs/ios27-sdk-audit` (#212), `feat/auth-providers-v1` (#214),
    `docs/state-refresh-functions` (#222, mergée le 2026-10-05),
    `fix/billing-robustness-209` (#221) et `fix/ux-mobile-recette-ios` (#220), mergées le 2026-10-05 (pointes = tête de PR),
+   `fix/store-app-no-upgrade-wording` (#224, mergée le 2026-10-05),
+   `docs/prod-checklist-v1-1` (#223, mergée le 2026-10-05 ; pointe = tête de PR),
    `docs/security-stripe-resolvers` (#216, mergée le 2026-10-05).
    Déjà supprimées : `chore/restore-mobile-release-files` (#211),
    `fix/summary-card-key-figure-overflow` (#210), `fix/summary-card-keyfigure-overflow`
@@ -70,15 +72,15 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis
    Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
    relancer après un `git fetch --prune`, avec uniquement les refs restantes.
 2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
-   merger avant le DNS).
+   merger avant le DNS) et `docs/prod-checklist-v1-1-risks` (PR #226 ouverte : checklist prod, risques règles / Functions de la v1.1.0 ; à supprimer après son merge).
 3. **Côté stores** (suites de #211 et #219) : note « remplacé par #214 » à ajouter dans
    `STORE_COMPLIANCE.md` lignes 34–35 (test iOS 27 daté, antérieur à #214) ; URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques » — **vérifiée le 2026-10-05** : le paywall n'est PAS atteignable
    depuis les apps iOS/Android (`isStoreApp` masque Stripe, prix et boutons ; `/pro` n'y affiche que
-   « offres payantes pas encore proposées » ; tests dédiés) ; **en cours (PR #224)** : 4 messages d'erreur « Passez à
+   « offres payantes pas encore proposées » ; tests dédiés) ; **fait (PR #224, mergée le 2026-10-05)** : 4 messages d'erreur « Passez à
    l'offre Pro / à {palier} » visibles aussi sur mobile (limites biens / locataires / baux, taille de document,
-   `app_fr.arb`) — texte seul, sans lien, variantes sans appel sur `isStoreApp` dans la PR #224 ; la modale du simulateur
-   (`simulatorLimitReachedContent*`) garde volontairement son texte, à trancher — et la règle Apple 3.1.3(b)
+   `app_fr.arb`) — texte seul, sans lien, variantes sans appel sur `isStoreApp` ; la modale du simulateur
+   (`simulatorLimitReachedContent*`) garde volontairement son texte (décision conservée le 2026-10-05, à rouvrir si la review Apple le demande) — et la règle Apple 3.1.3(b)
    (accès multiplateforme à ce qui est acheté sur le web) à vérifier dans les règles en vigueur, re-vérification des règles des stores.
 4. Activer *Automatically delete head branches* (voir ci-dessus).
 
