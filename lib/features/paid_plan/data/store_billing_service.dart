@@ -10,7 +10,10 @@ abstract interface class StoreBillingService {
   /// Une fois, au démarrage. Sans effet si l'achat intégré est coupé.
   Future<void> configure();
 
-  /// Rattache les achats au compte [uid] (compte complet uniquement).
+  /// Rattache les achats au compte [uid] (compte complet uniquement). Lève si
+  /// RevenueCat n'a pas pu rattacher le compte (réseau…), pour que l'appelant
+  /// réessaie ; sans effet (ne lève pas) si le service n'est pas configuré.
+  /// Toutes les autres méthodes gardent leur contrat « résultat neutre ».
   Future<void> logIn(String uid);
 
   /// Détache le compte courant (déconnexion, passage anonyme).

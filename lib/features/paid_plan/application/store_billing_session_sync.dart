@@ -16,7 +16,8 @@ final _log = Logger('StoreBillingSessionSync');
 /// Jamais de `logIn` pour un anonyme : son achat serait rattaché à un uid que
 /// la purge des anonymes supprime. Configure le service au premier état reçu.
 /// Les appels sont sérialisés : un `logOut` ne double jamais un `logIn` en
-/// cours.
+/// cours. Un `logIn` qui lève laisse l'uid non mémorisé : le prochain état
+/// identique réessaie.
 class StoreBillingSessionSync {
   StoreBillingSessionSync(this._service);
 

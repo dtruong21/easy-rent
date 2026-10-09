@@ -72,6 +72,10 @@ class RevenueCatStoreBillingService implements StoreBillingService {
       await Purchases.logIn(uid);
     } catch (e, st) {
       _log.warning('logIn RevenueCat échoué', e, st);
+      // Seule méthode qui relance : l'appelant doit savoir que le compte n'est
+      // pas rattaché (réseau…) pour réessayer, sinon l'achat du lot 3 partirait
+      // sur l'id anonyme RevenueCat.
+      rethrow;
     }
   }
 
