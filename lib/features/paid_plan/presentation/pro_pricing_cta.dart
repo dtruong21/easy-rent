@@ -73,10 +73,13 @@ Widget? buildComingSoonBadge(
 /// §8.1) : offre déjà détenue > gate global > gate par palier > store mobile
 /// > changement de palier (déjà payant) > checkout (pas encore payant).
 ///
-/// [onCheckout]/[onChangePlan] sont invoqués uniquement quand le palier
-/// cible est `purchasable` **et** le gate global est ouvert — jamais de
-/// chemin de paiement construit pour un palier non achetable (critère
-/// testable, `test/widget/pro_pricing_page_test.dart`).
+/// [onCheckout]/[onChangePlan]/[onSwitchPeriod] sont invoqués uniquement
+/// quand le palier cible est `purchasable` **et** le gate global est ouvert —
+/// jamais de chemin de paiement construit pour un palier non achetable
+/// (critère testable, `test/widget/pro_pricing_page_test.dart`). [annual] =
+/// position de l'interrupteur mensuel/annuel de la page.
+/// [subscriptionsEnabled] = gate global, injectable pour les tests (figé à
+/// `false` dans `flutter test`).
 Widget buildPaidLevelCta(
   BuildContext context, {
   required PlanEntitlement plan,
@@ -86,9 +89,12 @@ Widget buildPaidLevelCta(
   required bool planChangeLoading,
   required bool notifyLoading,
   required bool notified,
+  required bool annual,
   required VoidCallback onCheckout,
   required void Function(bool isUpgrade) onChangePlan,
+  required VoidCallback onSwitchPeriod,
   required VoidCallback onNotifyMe,
+  bool subscriptionsEnabled = Env.subscriptionsEnabled,
 }) {
   final l10n = context.l10n;
   final levelId = spec.id;
@@ -96,17 +102,41 @@ Widget buildPaidLevelCta(
 
   // 1. Déjà sur ce palier : PRIME sur tout gate — un abonné doit toujours
   //    voir son offre active, jamais un « bientôt disponible » sur le
-  //    palier qu'il a déjà payé.
+  //    palier qu'il a déjà payé. Abonné web, vente ouverte : il peut aussi
+  //    passer ce palier en mensuel ↔ annuel, selon l'interrupteur. Sa
+  //    périodicité actuelle n'est pas connue ici : déjà sur celle visée, le
+  //    serveur répond `noop`.
   if (plan.tier == SubscriptionTier.paid && plan.level == level) {
-    return FilledButton.tonal(
+    final current = FilledButton.tonal(
       key: Key('btn_plan_current_$levelId'),
       onPressed: null,
       child: Text(l10n.proCurrentPlanLabel),
     );
+    final canSwitchPeriod =
+        subscriptionsEnabled &&
+        spec.purchasable &&
+        !mobileStores.contains(proStore);
+    if (!canSwitchPeriod) return current;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        current,
+        const SizedBox(height: 8),
+        OutlinedButton(
+          key: Key('btn_plan_switch_period_$levelId'),
+          onPressed: planChangeLoading ? null : onSwitchPeriod,
+          child: Text(
+            annual
+                ? l10n.proSwitchToAnnualButton
+                : l10n.proSwitchToMonthlyButton,
+          ),
+        ),
+      ],
+    );
   }
   // 2. Gate global : Env.subscriptionsEnabled == false ferme les 3 offres
   //    payantes, Pro inclus (prime sur `purchasable`, plan §8.1).
-  if (!Env.subscriptionsEnabled) {
+  if (!subscriptionsEnabled) {
     return buildComingSoonCta(
       context,
       levelId: levelId,

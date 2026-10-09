@@ -5704,6 +5704,38 @@
   "@planChangeSuccess": {
     "description": "FEAT-056 — Snackbar shown after a successful (or idempotent noop) change_plan call. Optimistic confirmation — the displayed level lags until the RevenueCat webhook (PRODUCT_CHANGE) updates Firestore, same caveat as subscriptionCancelSuccess."
   },
+  "proSwitchToAnnualButton": "Switch to annual billing",
+  "@proSwitchToAnnualButton": {
+    "description": "FEAT-056 — Button on the card of the level the web subscriber already holds, when the period toggle is on Annual: switches the same level to annual billing (manageSubscription change_plan, same level, period=annual)."
+  },
+  "proSwitchToMonthlyButton": "Switch to monthly billing",
+  "@proSwitchToMonthlyButton": {
+    "description": "FEAT-056 — Button on the card of the level the web subscriber already holds, when the period toggle is on Monthly: switches the same level to monthly billing (manageSubscription change_plan, same level, period=monthly)."
+  },
+  "planSwitchToAnnualBody": "Your {level} subscription switches to annual billing ({price} per year) right away. The unused days of your current month are deducted from this first payment.",
+  "@planSwitchToAnnualBody": {
+    "description": "FEAT-056 — Body of the confirmation dialog for a monthly → annual switch on the same level — shown BEFORE confirmation: Stripe invoices the annual price immediately, minus a prorated credit for the unused days of the month. {level} is the level label, {price} the annual price label (e.g. 79 €).",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "planSwitchToMonthlyBody": "Your {level} subscription switches to monthly billing ({price} per month) right away. The unused days of your current year become a credit deducted from your next invoices — no refund is issued.",
+  "@planSwitchToMonthlyBody": {
+    "description": "FEAT-056 — Body of the confirmation dialog for an annual → monthly switch on the same level — shown BEFORE confirmation: immediate, the unused part of the year becomes a credit on future invoices, never a refund. {level} is the level label, {price} the monthly price label (e.g. 7,99 €).",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "subscriptionSectionTitle": "{level} subscription",
   "@subscriptionSectionTitle": {
     "description": "FEAT-056 — SectionHeader title of the subscription management block on /profile (self-hides for non-paid tiers). {level} is the landlord's real current paid level display label (planLevelPro/Max/Ultra) — replaces the old hardcoded 'Baillan Pro subscription'.",

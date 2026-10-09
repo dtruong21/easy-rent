@@ -234,6 +234,11 @@ void main() {
           expect(find.text('Votre offre actuelle'), findsOneWidget);
           expect(find.byKey(const Key('btn_plan_subscribe_pro')), findsNothing);
           expect(find.byKey(const Key('btn_plan_notify_pro')), findsNothing);
+          // Vente fermée : pas de passage mensuel ↔ annuel non plus.
+          expect(
+            find.byKey(const Key('btn_plan_switch_period_pro')),
+            findsNothing,
+          );
         },
       );
 

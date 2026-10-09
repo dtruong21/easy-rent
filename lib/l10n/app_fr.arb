@@ -1314,6 +1314,10 @@
   "planChangeDowngradeBody": "Le changement vers {level} prend effet immédiatement. La différence est calculée au prorata et reportée en crédit sur vos prochaines factures — aucun remboursement n'est effectué.",
   "planChangeConfirm": "Confirmer le changement",
   "planChangeSuccess": "Votre offre est en cours de mise à jour…",
+  "proSwitchToAnnualButton": "Passer à la facturation annuelle",
+  "proSwitchToMonthlyButton": "Passer à la facturation mensuelle",
+  "planSwitchToAnnualBody": "Votre abonnement {level} passe à la facturation annuelle ({price} par an) dès maintenant. Les jours restants de votre mois en cours sont déduits de ce premier paiement.",
+  "planSwitchToMonthlyBody": "Votre abonnement {level} passe à la facturation mensuelle ({price} par mois) dès maintenant. Les jours restants de votre année en cours deviennent un crédit déduit de vos prochaines factures — aucun remboursement n'est effectué.",
 
   "subscriptionSectionTitle": "Abonnement {level}",
   "subscriptionChangePlanButton": "Changer d'offre",

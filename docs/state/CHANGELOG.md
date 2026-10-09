@@ -32,6 +32,9 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-05)
 
+### FEAT-056 : passage mensuel ↔ annuel en libre-service (2026-10-09)
+- Page `/pro` : un abonné web voit, sur la carte de son palier, « Passer à la facturation annuelle » (ou mensuelle, selon l'interrupteur). Même `manageSubscription('change_plan')` qu'un changement de palier, avec un texte de confirmation dédié (prix, prorata : jours restants du mois déduits ; vers le mensuel, crédit sur les prochaines factures, jamais de remboursement). Aucun changement serveur. Masqué pour un abonné App Store / Google Play (géré dans le store), quand la vente est fermée et sur un palier non achetable.
+
 ### FEAT-044e lot 1 : liste blanche sandbox (2026-10-06)
 - Document prod `_ops/sandboxAllowlist` (`uids`), édité dans la console, refusé à tout client (règle explicite + tests). Le webhook RevenueCat applique en prod un achat sandbox **App Store / Google Play** d'un uid listé (compte de démo App Review, testeurs) ; tout le reste, dont les achats Stripe test du web staging, reste routé vers `staging` (OWASP-01). Le cron de réconciliation traite ces achats comme un vrai droit. Liste illisible : webhook → 500 sans écriture (RevenueCat retente) ; cron → passage sans liste + `logger.error`. Prérequis de la soumission des apps avec achat intégré (#207).
 

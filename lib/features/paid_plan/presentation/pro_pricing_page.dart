@@ -183,6 +183,7 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
             planChangeLoading: _planChangeLoading,
             notifyLoading: _notifying[spec.id] ?? false,
             notified: _notified.contains(spec.id),
+            annual: _annual,
             onCheckout: () => _onCheckout(context, spec.id, period),
             onChangePlan: (isUpgrade) => _onChangePlan(
               context,
@@ -190,6 +191,7 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
               period,
               isUpgrade,
             ),
+            onSwitchPeriod: () => _onSwitchPeriod(context, spec, period),
             onNotifyMe: () => _onNotifyMe(spec.id),
           ),
         ),
@@ -230,16 +232,39 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
     };
   }
 
+  /// Même palier, autre périodicité (mensuel ↔ annuel) : un `change_plan`
+  /// comme un autre, seul le texte de confirmation change.
+  Future<void> _onSwitchPeriod(
+    BuildContext context,
+    PlanLevelSpec spec,
+    String period,
+  ) {
+    final level = PlanLevel.values.firstWhere((l) => l.id == spec.id);
+    final label = level.label(context);
+    final l10n = context.l10n;
+    return _onChangePlan(
+      context,
+      level,
+      period,
+      false,
+      dialogBody: period == 'annual'
+          ? l10n.planSwitchToAnnualBody(label, spec.priceLabelAnnual)
+          : l10n.planSwitchToMonthlyBody(label, spec.priceLabelMonthly),
+    );
+  }
+
   Future<void> _onChangePlan(
     BuildContext context,
     PlanLevel level,
     String period,
-    bool isUpgrade,
-  ) async {
+    bool isUpgrade, {
+    String? dialogBody,
+  }) async {
     final confirmed = await showPlanChangeDialog(
       context,
       targetLevelLabel: level.label(context),
       isUpgrade: isUpgrade,
+      body: dialogBody,
     );
     if (confirmed != true || !context.mounted) return;
 
