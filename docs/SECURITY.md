@@ -109,14 +109,14 @@ Inventaire vérifié dans [`functions/src/`](../functions/src) (`defineSecret`) 
 ## 🛡 Garde-fous techniques activés
 
 - **`.gitignore`** : `dart-defines*.json` (sauf `*.example.json`), `.env*`, `*.pem`, `*.key`, `secrets.json`
-- **Pre-commit hook** : [`scripts/check-secrets.sh`](../scripts/check-secrets.sh) bloque tout commit contenant un pattern de secret connu — couvre Stripe `sk_live_`/`rk_live_`, Resend `re_`, GitHub PAT, clés privées PEM, AWS, Google API keys
+- **Pre-commit hook + CI** : [`scripts/check-secrets.sh`](../scripts/check-secrets.sh) bloque tout commit contenant un pattern de secret connu, et la CI rescanne tout le dépôt (`--all`) — couvre Stripe `sk_live_`/`rk_live_`/`sk_test_`/`rk_test_`/`sk_org_` et les secrets de webhook `whsec_`, la clé secrète RevenueCat (`sk_` en début de mot), Resend `re_`, GitHub PAT, clés privées PEM, AWS, Google API keys. Préfixes vérifiés dans les docs Stripe et RevenueCat (#131). Chaque motif est testé par [`scripts/test-check-secrets.sh`](../scripts/test-check-secrets.sh) (CI) : il détecte une fausse clé réaliste, et les quasi-homonymes (`task_…`, `sk_test_fake`) ne déclenchent rien
 - **Règles Firestore** : deny-by-default sur toutes les collections, `isFullyAuthed()` / `isOwner()` (enforced par `security-auditor`) — tests dans [`functions/rules-tests/`](../functions/rules-tests)
 - **Auth côté Functions** : les callables vérifient le contexte d'auth Firebase avant toute action privilégiée ; le webhook RevenueCat s'authentifie par en-tête partagé (`REVENUECAT_WEBHOOK_AUTH`)
 
-**Angles morts connus du hook** (à traiter si le risque monte) :
-- Aucun pattern **RevenueCat** — `REVENUECAT_API_KEY` / `REVENUECAT_WEBHOOK_AUTH` ne seraient pas détectés s'ils étaient collés en clair
-- Aucun pattern `sk_test_` (Stripe test) ni `whsec_` (signature webhook Stripe, non utilisée aujourd'hui)
-- `docs/SECURITY.md` est **exclu du scan** (il cite les patterns) : ne jamais y coller une vraie valeur, le filet ne rattrapera pas
+**Angles morts connus du hook** (révisés le 2026-10-05, #131) :
+- **`REVENUECAT_WEBHOOK_AUTH` n'est pas détectable** : c'est une valeur libre choisie dans le dashboard RevenueCat, sans format. Seule la discipline la protège (Secret Manager, jamais en clair).
+- **Longueur de la clé secrète RevenueCat non documentée** : le motif exige au moins 20 caractères après `sk_`, comme pour Stripe. Une clé plus courte passerait.
+- **Fichiers exclus** (justifiés) : le scanner et l'installeur du hook (ils contiennent les motifs), les `*.example.*` et les configs Firebase clientes (clés `AIza…` publiques par design). `docs/SECURITY.md` n'est **plus exclu** : il ne cite les motifs que sous forme abrégée (`sk_live_…`) et n'en déclenche aucun.
 
 ## 🔎 Audit OWASP du 2026-09-30 — correctifs et points d'attention
 

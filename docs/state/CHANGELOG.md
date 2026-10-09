@@ -35,6 +35,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 ### FEAT-044e lot 1 : liste blanche sandbox (2026-10-06)
 - Document prod `_ops/sandboxAllowlist` (`uids`), édité dans la console, refusé à tout client (règle explicite + tests). Le webhook RevenueCat applique en prod un achat sandbox **App Store / Google Play** d'un uid listé (compte de démo App Review, testeurs) ; tout le reste, dont les achats Stripe test du web staging, reste routé vers `staging` (OWASP-01). Le cron de réconciliation traite ces achats comme un vrai droit. Liste illisible : webhook → 500 sans écriture (RevenueCat retente) ; cron → passage sans liste + `logger.error`. Prérequis de la soumission des apps avec achat intégré (#207).
 
+### FIX sécurité : angles morts du scanner de secrets (#131) (2026-10-05)
+- `scripts/check-secrets.sh` détecte aussi Stripe `sk_test_`, `rk_test_`, `sk_org_` et `whsec_`, ainsi que la clé secrète RevenueCat (`sk_` en début de mot). Préfixes vérifiés dans les docs Stripe et RevenueCat.
+- `docs/SECURITY.md` n'est plus exclu du scan : il ne déclenchait aucun motif.
+- `REVENUECAT_WEBHOOK_AUTH` est documenté comme non détectable (valeur libre).
+- Nouveau test `scripts/test-check-secrets.sh` en CI : 9 détections, 5 quasi-homonymes ignorés. Les fausses clés sont assemblées à l'exécution.
+
 ### FIX facturation : prix Stripe séparés test / live (reliquat #138) (2026-10-05)
 - `readPriceTable(env)` : en mode `live`, les paramètres canoniques `STRIPE_PRICE_*` ; en mode `test` (staging, émulateur), les `STRIPE_PRICE_*_TEST`, avec un repli offre par offre sur le paramètre canonique tant qu'ils sont vides. Le repli est transitoire : aucune clé live n'existe, donc les paramètres canoniques portent aujourd'hui des prix de test.
 - `createCheckoutSession` et `manageSubscription/change_plan` choisissent le jeu de prix par l'Origin, comme la clé. Au passage en live, poser les prix live et les prix de test (checklist #207) ; un oubli échoue fermé, car Stripe refuse un price inconnu du mode, et rien n'est débité.
