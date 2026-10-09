@@ -340,6 +340,11 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
   > ce flag. Seul le build **debug** de test avec `MOBILE_STAGING` vise `staging`
   > (cf. [Test Lab (Robo)](#test-lab-robo)).
 
+  > ℹ️ **iOS : ajouter `--dart-define=APP_STORE_ID=<Apple ID numérique>` au build
+  > de release** (`flutter build ipa --release …`, ou la clé `APP_STORE_ID` de
+  > `dart-defines.prod.json`). Sans lui, « Noter l'app » est masqué sur iOS ; la
+  > demande d'avis native fonctionne sans. Android n'en a pas besoin (FEAT-060).
+
   Le build number (= nb de commits) est strictement croissant → un nouveau
   build à uploader sur le store aura toujours un numéro supérieur au précédent
   (fini le rejet « versionCode already used »).

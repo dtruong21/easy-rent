@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-05)
 
+### FEAT-060 : avis in-app et notation sur les stores (2026-10-09)
+- Avis = `support_requests` avec `kind: 'feedback'` (note `rating` entière 1-5, `platform` web/ios/android, commentaire 0-2000 facultatif, comptes complets seulement). Règles + tests de règles ; les demandes de support gardent leur comportement. Aucune Cloud Function touchée.
+- Écran « Donner mon avis » (`/profile/feedback`) et deux tuiles Profil : « Donner mon avis » (toujours) et « Noter l'app » (apps store seulement).
+- Sollicitation dans l'Accueil (après la checklist de démarrage) : compte ≥ 15 j, ≥ 1 bien, pas sollicité depuis 120 j sur l'appareil. Apps : fenêtre native (`in_app_review`), jamais précédée d'une question. Web : carte « Votre avis compte » (« Donner mon avis » ou fermer ; les deux la masquent 120 j).
+- « Noter l'app » : Android toujours ; iOS seulement si `APP_STORE_ID` est défini au build (`--dart-define`, cf. `docs/MOBILE.md`).
+
 ### FIX navigation : bouton retour sur `/pro` (2026-10-09)
 - `/pro` est hors du shell et on y arrivait par `context.go('/pro')` : la pile était remplacée, il n'y avait rien à dépiler et l'AppBar n'affichait pas de retour. Même cas en arrivant par l'URL ou après un rechargement. La page utilise `AppAppBar(fallbackRoute: '/profile')` (retour vers la page précédente si elle existe, sinon vers le profil), et les 5 points d'entrée font `context.push('/pro')` pour revenir à leur page d'origine (profil, section abonnement, simulateur, comparaison, modale de limite). `/pro/cancel` garde `go('/pro')`.
 

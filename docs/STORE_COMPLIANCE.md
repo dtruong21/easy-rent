@@ -77,6 +77,7 @@ nouveau système (exigé depuis le 31/01/2026), déjà listé dans les formulair
   suppression prévient : un abonnement **store** n'est **pas** résilié par la
   suppression (à résilier dans les réglages du store) ; un abonnement **web**
   (`proStore = web`) l'est.
+- **Notation (FEAT-060)** : demande via l'API native (`in_app_review`, Apple 5.6.1 / Google In-App Review), jamais précédée d'une question ; au plus une sollicitation tous les 120 jours ; aucun tri des avis (le formulaire in-app ne renvoie jamais vers le store).
 
 ### Décision du 2026-09-30
 

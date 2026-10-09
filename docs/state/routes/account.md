@@ -21,10 +21,11 @@
 
 | Chemin | Page | Type | Notes |
 |---|---|---|---|
-| `/profile` | ProfilePage | read | hub réglages (ordre 2026-07-07 : Compte détails/mot de passe/**suppression** · Apparence · Aide **FAQ**/contact/légal · À propos · Session). **Apps iOS/Android** (`isStoreApp`, 2026-09-30) : bannière « Passer à Pro » masquée ; `SubscriptionSection` garde statut + « Résilier » (callable `manageSubscription` `cancel`, accepté sans Origin) mais masque « Réactiver » et « Changer d'offre » |
+| `/profile` | ProfilePage | read | hub réglages (ordre 2026-07-07 : Compte détails/mot de passe/**suppression** · Apparence · Aide **FAQ**/contact/« Donner mon avis » (FEAT-060, toujours)/« Noter l'app » (FEAT-060, apps store ; iOS seulement si `APP_STORE_ID`)/légal · À propos · Session). **Apps iOS/Android** (`isStoreApp`, 2026-09-30) : bannière « Passer à Pro » masquée ; `SubscriptionSection` garde statut + « Résilier » (callable `manageSubscription` `cancel`, accepté sans Origin) mais masque « Réactiver » et « Changer d'offre » |
 | `/profile/details` | ProfileDetailsPage | write | email/fullName (FEAT-025, immutables) |
 | `/profile/password` | ChangePasswordPage | write | `reauthenticateWithPassword` + `updatePassword` ; gated `hasPasswordProvider` |
 | `/profile/support` | SupportPage | write | formulaire contact (FEAT-025, collection `support_requests`) |
+| `/profile/feedback` | FeedbackPage | write | « Donner mon avis » (FEAT-060) : note 1-5 obligatoire + commentaire facultatif (≤ 2000) → `support_requests` (`kind: feedback`) |
 | `/profile/delete-account` | DeleteAccountPage | write | **FEAT-045** — re-auth par provider + révocation Apple + callable `deleteAccount` ; rétention quittances annoncée. **Avis abonnement** (`DeleteAccountSubscriptionNotice`, toutes plateformes, palier payant) : `proStore` ∈ `mobileStores` (app_store/play_store) → « la suppression ne résilie pas, résiliez dans le store » ; `proStore == 'web'` → « résilié immédiatement, sans remboursement » ; `promo`/`null`/autre → rien |
 
 ## Pro/Abonnements (shell branche 3, fullyAuth, FEAT-044e/FEAT-056 intégration client web)
