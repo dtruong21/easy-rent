@@ -203,6 +203,32 @@ gcloud firebase test android run --type robo \
 quotidien gratuit en minutes d'appareil, puis facturation à l'usage — vérifier
 la page Tarifs Firebase avant des campagnes répétées.
 
+## Achat intégré (FEAT-044e)
+
+Interrupteur `IAP_ENABLED` (défaut `false`) + clés SDK RevenueCat publiques
+`REVENUECAT_APPLE_API_KEY` (`appl_…`) et `REVENUECAT_GOOGLE_API_KEY`
+(`goog_…`), par dart-define, jamais committées. Coupé (ou clé absente) :
+aucun appel au SDK, aucun achat, aucune incitation — comportement d'avant
+FEAT-044e. Spec : `docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-design.md`.
+
+- Code : `lib/core/config/store_billing.dart` (`isInAppPurchaseEnabled`,
+  `canOfferUpgrade`), `lib/features/paid_plan/data/` (`StoreBillingService`,
+  seule `RevenueCatStoreBillingService` importe `purchases_flutter`),
+  `lib/features/paid_plan/application/store_billing_session_sync.dart`
+  (`logIn` pour un compte complet seulement, `logOut` en le quittant).
+- Un `logIn` RevenueCat en échec est relancé au prochain changement de session ;
+  l'écran d'achat du lot 3 doit revérifier le rattachement avant tout achat.
+- **Ne pas activer avant le lot 3** (écran d'achat `/pro` en mode store) ni
+  avant les produits App Store / Play et l'offre RevenueCat (checklist #207).
+- Build d'essai, une fois prêt :
+
+  ```bash
+  flutter build ipa --release \
+    --dart-define=APP_ENV=prod \
+    --dart-define=IAP_ENABLED=true \
+    --dart-define=REVENUECAT_APPLE_API_KEY=appl_xxx
+  ```
+
 ## TL;DR
 
 Le codebase est **déjà largement portable** : les seuls points web-only sont

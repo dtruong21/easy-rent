@@ -32,6 +32,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-05)
 
+### FEAT-044e lot 2 : achat intégré, fondations de l'app (2026-10-09)
+- Interrupteur `IAP_ENABLED` coupé par défaut, clés RevenueCat par dart-define (`REVENUECAT_APPLE_API_KEY`, `REVENUECAT_GOOGLE_API_KEY`) : aucun effet visible, aucun appel au SDK tant qu'il est coupé. Clé absente alors que l'interrupteur est actif : achat coupé + log `severe`, jamais de crash.
+- `purchases_flutter` 10.15.2 derrière l'interface `StoreBillingService` (seule `RevenueCatStoreBillingService` importe le SDK) ; `purchase()` et `logOut()` ne lèvent plus d'exception.
+- Synchro de session : `logIn(uid)` RevenueCat pour un compte complet seulement, `logOut` en le quittant ; un `logIn` en échec est relancé au prochain changement de session.
+- Prédicat `canOfferUpgrade` (`!isStoreApp || isInAppPurchaseEnabled`) sur les 7 points d'incitation (limites, document trop lourd, scénarios) : comportement strictement identique tant que l'interrupteur est coupé.
+
 ### FIX navigation : bouton retour sur `/pro` (2026-10-09)
 - `/pro` est hors du shell et on y arrivait par `context.go('/pro')` : la pile était remplacée, il n'y avait rien à dépiler et l'AppBar n'affichait pas de retour. Même cas en arrivant par l'URL ou après un rechargement. La page utilise `AppAppBar(fallbackRoute: '/profile')` (retour vers la page précédente si elle existe, sinon vers le profil), et les 5 points d'entrée font `context.push('/pro')` pour revenir à leur page d'origine (profil, section abonnement, simulateur, comparaison, modale de limite). `/pro/cancel` garde `go('/pro')`.
 
