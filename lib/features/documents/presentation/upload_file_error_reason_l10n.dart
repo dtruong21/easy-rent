@@ -33,9 +33,9 @@ extension UploadFileErrorReasonL10n on UploadFileErrorReason {
     if (this == UploadFileErrorReason.fileTooLarge) {
       final limit = serverLimitBytes ?? maxFileSizeBytes ?? kMaxFileSizeBytes;
       final sizeLabel = ByteFormat.format(limit);
-      // Apps iOS/Android : pas d'upsell « Passez à … » (aucun achat hors achat
-      // intégré), seulement la taille maximale.
-      if (serverUpgradeToLevelId != null && !isStoreApp) {
+      // Pas d'upsell « Passez à … » dans une app store sans achat intégré
+      // ([canOfferUpgrade]), seulement la taille maximale.
+      if (serverUpgradeToLevelId != null && canOfferUpgrade) {
         return l10n.documentsUploadErrorFileTooLargeWithUpgrade(
           sizeLabel,
           planLevelLabelForId(context, serverUpgradeToLevelId),

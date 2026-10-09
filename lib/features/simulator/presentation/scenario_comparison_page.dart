@@ -73,9 +73,9 @@ class _ProGatedComparisonBody extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),
-              // Apps iOS/Android : aucun CTA vers /pro (aucun achat hors
-              // achat intégré) — le message seul explique la limitation.
-              if (!isStoreApp) ...[
+              // App store sans achat intégré ([canOfferUpgrade] faux) : aucun
+              // CTA vers /pro — le message seul explique la limitation.
+              if (canOfferUpgrade) ...[
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: () => context.push('/pro'),

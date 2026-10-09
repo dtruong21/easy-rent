@@ -389,5 +389,29 @@ void main() {
         expect(find.byType(FilledButton), findsNothing);
       },
     );
+
+    testWidgets('achat intégré actif → CTA vers /pro présent', (tester) async {
+      debugInAppPurchaseEnabledOverride = true;
+      addTearDown(() => debugInAppPurchaseEnabledOverride = null);
+
+      await tester.pumpWidget(
+        _buildRouter(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.free,
+          initialLocation: '/simulator/compare?ids=A,B',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('scenario_comparison_pro_gated')),
+        findsOneWidget,
+      );
+      expect(find.text('Passer à Pro'), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+    });
   });
 }
