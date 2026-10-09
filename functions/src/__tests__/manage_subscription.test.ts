@@ -13,6 +13,7 @@ import {
 } from "../callable/manage_subscription";
 import {
   levelForPriceId,
+  planForPriceId,
   resolvePriceIdOrThrow,
   type PriceTable,
 } from "../entitlements/stripe_prices";
@@ -126,6 +127,10 @@ describe("parseAction (validation d'entrée)", () => {
 
   it("'change_plan' passe (FEAT-056)", () => {
     expect(parseAction("change_plan")).toBe("change_plan");
+  });
+
+  it("'current_plan' passe (lecture de la périodicité)", () => {
+    expect(parseAction("current_plan")).toBe("current_plan");
   });
 
   it("action inconnue → invalid-argument", () => {
@@ -296,6 +301,28 @@ describe("levelForPriceId", () => {
 
   it("une entrée vide ne matche pas une chaîne vide", () => {
     expect(levelForPriceId({pro_monthly: ""}, "")).toBeNull();
+  });
+});
+
+describe("planForPriceId", () => {
+  it("retrouve palier ET périodicité d'un price connu", () => {
+    expect(planForPriceId(prices, "price_pro_monthly")).toEqual({
+      level: "pro",
+      period: "monthly",
+    });
+    expect(planForPriceId(prices, "price_pro_annual")).toEqual({
+      level: "pro",
+      period: "annual",
+    });
+    expect(planForPriceId(prices, "price_ultra_annual")).toEqual({
+      level: "ultra",
+      period: "annual",
+    });
+  });
+
+  it("price inconnu ou entrée vide → null (jamais deviné)", () => {
+    expect(planForPriceId(prices, "price_legacy_2024")).toBeNull();
+    expect(planForPriceId({pro_annual: ""}, "")).toBeNull();
   });
 });
 
@@ -505,6 +532,87 @@ describe("manageSubscription — handler (Origin web vs app native)", () => {
       expect(JSON.stringify(stripeMock.update.mock.calls)).toContain(expected);
     });
   }
+
+  describe("current_plan (lecture seule)", () => {
+    const PROD = "https://app.baillan.com";
+
+    beforeEach(() => {
+      vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY", "price_pro_monthly");
+      vi.stubEnv("STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual");
+    });
+
+    function subOn(priceId: string) {
+      return {
+        ...renewingSub,
+        items: {data: [{id: "si_1", price: {id: priceId}}]},
+      };
+    }
+
+    for (const [priceId, period] of [
+      ["price_pro_monthly", "monthly"],
+      ["price_pro_annual", "annual"],
+    ] as const) {
+      it(`abonné ${period} → {pro, ${period}}, aucune écriture`, async () => {
+        stripeMock.search.mockResolvedValue({data: [subOn(priceId)]});
+
+        const result = await manageSubscription.run(
+          makeRequest({action: "current_plan"}, PROD),
+        );
+
+        expect(result).toEqual({status: "current", level: "pro", period});
+        expect(stripeMock.update).not.toHaveBeenCalled();
+      });
+    }
+
+    it("price historique inconnu → level / period null (aucun passage proposé)", async () => {
+      stripeMock.search.mockResolvedValue({data: [subOn("price_legacy_2024")]});
+
+      const result = await manageSubscription.run(
+        makeRequest({action: "current_plan"}, PROD),
+      );
+
+      expect(result).toEqual({status: "current", level: null, period: null});
+    });
+
+    it("mode Stripe de l'Origin : staging lit la table _TEST", async () => {
+      vi.stubEnv("STRIPE_PRICE_PRO_ANNUAL_TEST", "price_test_pro_a");
+      stripeMock.search.mockResolvedValue({
+        data: [subOn("price_test_pro_a")],
+      });
+
+      const staging = await manageSubscription.run(
+        makeRequest({action: "current_plan"}, STAGING_ORIGIN),
+      );
+      const prod = await manageSubscription.run(
+        makeRequest({action: "current_plan"}, PROD),
+      );
+
+      expect(staging).toEqual({status: "current", level: "pro", period: "annual"});
+      expect(prod).toEqual({status: "current", level: null, period: null});
+    });
+
+    it("app native (sans Origin) → origin_not_allowed avant tout appel Stripe", async () => {
+      await expect(
+        manageSubscription.run(makeRequest({action: "current_plan"}, "")),
+      ).rejects.toMatchObject({
+        code: "failed-precondition",
+        message: "origin_not_allowed",
+      });
+      expect(stripeMock.keys).toHaveLength(0);
+      expect(stripeMock.search).not.toHaveBeenCalled();
+    });
+
+    it("aucun abonnement web → no_active_web_subscription", async () => {
+      stripeMock.search.mockResolvedValue({data: []});
+
+      await expect(
+        manageSubscription.run(makeRequest({action: "current_plan"}, PROD)),
+      ).rejects.toMatchObject({
+        code: "failed-precondition",
+        message: "no_active_web_subscription",
+      });
+    });
+  });
 
   it("web : Origin inattendu → origin_not_allowed, même pour cancel", async () => {
     await expect(

@@ -10,7 +10,9 @@ import '../../auth/data/landlord_tier_repository.dart';
 import '../../auth/domain/plan_entitlement.dart';
 import '../../auth/domain/plan_level.dart';
 import '../../auth/domain/plan_matrix.g.dart';
+import '../../auth/domain/subscription_tier.dart';
 import '../application/checkout_controller.dart';
+import '../application/current_billing_period_provider.dart';
 import '../application/paid_plan_interest_controller.dart';
 import '../application/plan_change_controller.dart';
 import '../data/checkout_repository.dart';
@@ -80,6 +82,15 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
     final plan = ref.watch(planEntitlementProvider);
     final snapshot = ref.watch(landlordTierProvider).valueOrNull;
     final period = _annual ? 'annual' : 'monthly';
+    // Périodicité facturée : lue (Stripe) uniquement pour un abonné web payant
+    // et la vente ouverte. Inconnue / en cours / en erreur → `null`, donc pas
+    // de bouton de passage mensuel ↔ annuel.
+    final currentPeriod =
+        Env.subscriptionsEnabled &&
+            plan.tier == SubscriptionTier.paid &&
+            !mobileStores.contains(snapshot?.proStore)
+        ? ref.watch(currentBillingPeriodProvider).valueOrNull
+        : null;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.proPricingTitle)),
@@ -87,7 +98,13 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= Breakpoints.tablet;
-            final cards = _buildCards(context, plan, snapshot, period);
+            final cards = _buildCards(
+              context,
+              plan,
+              snapshot,
+              period,
+              currentPeriod,
+            );
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -151,6 +168,7 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
     PlanEntitlement plan,
     LandlordTierSnapshot? snapshot,
     String period,
+    String? currentPeriod,
   ) {
     final l10n = context.l10n;
     final freeCard = PlanCard(
@@ -184,6 +202,7 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
             notifyLoading: _notifying[spec.id] ?? false,
             notified: _notified.contains(spec.id),
             annual: _annual,
+            currentPeriod: currentPeriod,
             onCheckout: () => _onCheckout(context, spec.id, period),
             onChangePlan: (isUpgrade) => _onChangePlan(
               context,
@@ -277,6 +296,9 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
 
     final l10n = context.l10n;
     if (ok) {
+      // Stripe applique le prix tout de suite : relire la périodicité masque
+      // le bouton de passage sans attendre le webhook.
+      ref.invalidate(currentBillingPeriodProvider);
       _showSnackBar(
         context,
         l10n.planChangeSuccess,

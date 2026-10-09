@@ -30,6 +30,10 @@ class _FakeSubscriptionRepository implements SubscriptionRepository {
     lastPeriod = period;
     if (changePlanException != null) throw changePlanException!;
   }
+
+  @override
+  Future<String?> currentBillingPeriod() async =>
+      throw UnimplementedError('not exercised by these tests');
 }
 
 ProviderContainer _makeContainer(SubscriptionRepository repo) {

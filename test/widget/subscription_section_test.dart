@@ -49,6 +49,10 @@ class _FakeSubscriptionRepository implements SubscriptionRepository {
   }) async {
     throw UnimplementedError('not exercised by these tests');
   }
+
+  @override
+  Future<String?> currentBillingPeriod() async =>
+      throw UnimplementedError('not exercised by these tests');
 }
 
 // ---------------------------------------------------------------------------

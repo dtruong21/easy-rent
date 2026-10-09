@@ -40,6 +40,17 @@ abstract interface class SubscriptionRepository {
   /// celui en cours (aucun appel Stripe, aucun event RC parasite) — ne lève
   /// rien dans ce cas.
   Future<void> changePlan({required String level, required String period});
+
+  /// Périodicité (`'monthly'` | `'annual'`) sur laquelle l'abonné web est
+  /// facturé aujourd'hui — `action: 'current_plan'`, lecture seule (aucune
+  /// écriture Stripe ni Firestore).
+  ///
+  /// `null` si le serveur ne la connaît pas (prix historique, promo) : l'UI ne
+  /// propose alors aucun passage mensuel ↔ annuel. Lève comme les autres
+  /// actions, notamment [NoActiveWebSubscriptionException]. Un serveur qui ne
+  /// connaît pas encore l'action répond `invalid-argument` →
+  /// [SubscriptionException] : l'appelant masque le bouton (échec fermé).
+  Future<String?> currentBillingPeriod();
 }
 
 class FirebaseSubscriptionRepository implements SubscriptionRepository {
@@ -57,17 +68,29 @@ class FirebaseSubscriptionRepository implements SubscriptionRepository {
   Future<void> changePlan({required String level, required String period}) =>
       _call('change_plan', level: level, period: period);
 
-  Future<void> _call(String action, {String? level, String? period}) async {
+  @override
+  Future<String?> currentBillingPeriod() async {
+    final data = await _call('current_plan');
+    final period = data['period'];
+    return period == 'monthly' || period == 'annual' ? period as String : null;
+  }
+
+  Future<Map<String, dynamic>> _call(
+    String action, {
+    String? level,
+    String? period,
+  }) async {
     final callable = _functions.httpsCallable(
       'manageSubscription',
       options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
     );
     try {
-      await callable.call<Map<String, dynamic>>({
+      final result = await callable.call<Map<String, dynamic>>({
         'action': action,
         'level': ?level,
         'period': ?period,
       });
+      return result.data;
     } on FirebaseFunctionsException catch (e) {
       throw _mapError(e);
     }

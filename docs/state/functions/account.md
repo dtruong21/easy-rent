@@ -53,13 +53,14 @@ Signature `{plan: 'monthly'|'annual', level?: 'pro'|'max'|'ultra'}` → `{url, s
 - **Logique pure testée** : `buildCheckoutSessionParams` (5 cas).
 
 ### `manageSubscription` (FEAT-044f art. L215-1-1 « 3 clics », FEAT-056 changement palier)
-Signature `{action: 'cancel'|'reactivate'|'change_plan', level?: 'pro'|'max'|'ultra', plan?: 'monthly'|'annual'}` → `{status, cancelAtPeriodEnd}` ou `{status, level, period, effectiveAt}`. Gère le cycle de vie d'un abonnement **Stripe** (Mobile IAP renvoie vers le store). Fichier `callable/manage_subscription.ts`.
+Signature `{action: 'cancel'|'reactivate'|'change_plan'|'current_plan', level?: 'pro'|'max'|'ultra', plan?: 'monthly'|'annual'}` → `{status, cancelAtPeriodEnd}` ou `{status, level, period, effectiveAt}`. Gère le cycle de vie d'un abonnement **Stripe** (Mobile IAP renvoie vers le store). Fichier `callable/manage_subscription.ts`.
 - **Clé Stripe / origine** (2026-09-30) : **Origin présent (web)** → `resolveStripeKeyOrThrow` par l'Origin (issue #138, inchangé, toutes actions ; origine inconnue → `origin_not_allowed`). **Sans Origin (apps iOS/Android)** → seul `cancel` est accepté, clé par la base du compte (`dbForRequest` → `resolveStripeKeyForDb` : `staging` → TEST, sinon LIVE) — un abonné web peut résilier depuis l'app ; `reactivate` et `change_plan` sont refusés (`failed-precondition` `origin_not_allowed`) **avant** toute résolution d'offre ou tout appel Stripe (achat hors achat intégré interdit).
 - **Mêmes garde-fous que `createCheckoutSession` (#209)** : refuse un compte anonyme pur (`anonymous_account_not_allowed`) et la clé de test contre la base prod hors émulateur (`assertStripeEnvMatchesDb`).
 - **Actions** :
   - `cancel` : programme la résiliation à fin de période (`cancel_at_period_end=true`), conforme art. L215-1-1.
   - `reactivate` : annule une résiliation programmée (`cancel_at_period_end=false`).
   - `change_plan` : passe au palier/périodicité visé. Effet **immédiat, proratisé dans les deux sens** (montée : surplus facturé ; descente : avoir reporté sur factures suivantes).
+  - `current_plan` (2026-10-09) : **lecture seule**, web uniquement (sans Origin → `origin_not_allowed`). Renvoie `{status:'current', level, period}` : palier et périodicité du price facturé (`planForPriceId`, table du mode Stripe de l'Origin). `null`/`null` si le price est inconnu (historique, promo). Aucune écriture Stripe ni Firestore. L'UI `/pro` s'en sert pour ne proposer que le passage vers l'AUTRE périodicité.
 - **N'ÉCRIT PAS Firestore** : le tier et `planLevel` restent écrits UNIQUEMENT par le webhook RevenueCat (Admin SDK, bypass rules) ; le downgrade vers freemium suivra automatiquement après expiration (cron `reconcileEntitlements`). Source autoritaire unique garantie.
 - **Sécurité IDOR** : le client ne fournit JAMAIS d'ID Stripe ; la fonction dérive l'UID puis résout l'abonnement par metadata `rc_app_user_id` (posée au checkout). Aucun palier, aucun item, aucun price ID ne peut être transmis directement.
 - **Paliers non vendables** : `max`/`ultra` retournent `level_not_purchasable` si jamais visés (verrouillage serveur).

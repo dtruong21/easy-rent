@@ -33,7 +33,7 @@ Logique standard `setUpdatedAt*` (fabrique `makeSetUpdatedAt`, `functions/src/tr
 | `finalizeAnonymousUpgrade` | BAILLAN-M1/FEAT-019 | account |
 | `deleteAccount` | FEAT-045 | account |
 | `createCheckoutSession` | FEAT-056 (checkout Stripe 3 paliers) | account |
-| `manageSubscription` | FEAT-056 (cancel/reactivate/change_plan actions) | account |
+| `manageSubscription` | FEAT-056 (cancel/reactivate/change_plan/current_plan actions) | account |
 | `createScenario` | FEAT-056 (création scénario gâtée par quota) | simulator |
 | `exportAccountData` | FEAT-047 (export RGPD art. 15/20) | account |
 | `updateDocumentCategory` | FIX 2026-09-15 | expenses-documents |

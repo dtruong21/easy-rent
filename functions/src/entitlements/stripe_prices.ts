@@ -182,26 +182,35 @@ export function resolvePriceIdOrThrow(
 }
 
 /**
- * PURE — palier auquel appartient un price ID Stripe, `null` s'il est inconnu
+ * PURE — palier ET périodicité d'un price ID Stripe, `null` s'il est inconnu
  * (prix legacy, promo, offre retirée de la table).
  *
- * Sert uniquement à qualifier un changement de palier (montée / descente) pour
- * le journal : `null` ne doit JAMAIS bloquer un changement, sinon un abonné sur
- * un prix historique se retrouverait coincé sur son palier.
+ * Sert à qualifier un changement de palier (montée / descente) pour le journal
+ * et à dire à l'UI sur quelle périodicité se trouve l'abonné : `null` ne doit
+ * JAMAIS bloquer un changement, sinon un abonné sur un prix historique se
+ * retrouverait coincé sur son palier.
  */
-export function levelForPriceId(
+export function planForPriceId(
   prices: PriceTable,
   priceId: string,
-): LevelId | null {
+): {level: LevelId; period: BillingPeriod} | null {
   for (const level of LEVELS) {
     for (const period of BILLING_PERIODS) {
       const candidate = prices[priceKey(level.id, period)];
       if (typeof candidate === "string" &&
         candidate.length > 0 &&
         candidate === priceId) {
-        return level.id;
+        return {level: level.id, period};
       }
     }
   }
   return null;
+}
+
+/** PURE — palier d'un price ID Stripe, `null` s'il est inconnu. */
+export function levelForPriceId(
+  prices: PriceTable,
+  priceId: string,
+): LevelId | null {
+  return planForPriceId(prices, priceId)?.level ?? null;
 }
