@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/config/env.dart';
 import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
@@ -60,7 +61,10 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
     final l10n = context.l10n;
     if (isStoreApp) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.proPricingTitle)),
+        appBar: AppAppBar(
+          title: l10n.proPricingTitle,
+          fallbackRoute: '/profile',
+        ),
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -82,7 +86,7 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
     final period = _annual ? 'annual' : 'monthly';
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.proPricingTitle)),
+      appBar: AppAppBar(title: l10n.proPricingTitle, fallbackRoute: '/profile'),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

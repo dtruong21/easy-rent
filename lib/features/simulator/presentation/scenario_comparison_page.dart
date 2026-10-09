@@ -78,7 +78,7 @@ class _ProGatedComparisonBody extends StatelessWidget {
               if (!isStoreApp) ...[
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: () => context.go('/pro'),
+                  onPressed: () => context.push('/pro'),
                   child: Text(l10n.proUpgradeButton),
                 ),
               ],
