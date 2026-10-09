@@ -7,6 +7,14 @@
 > **non contre-vérifiés** (limite de budget) — re-valider chaque valeur datée
 > au moment du remplissage des consoles.
 
+## Notation des apps (FEAT-060) — 2026-10-09
+
+Demande de note via l'API native (`in_app_review`, Apple 5.6.1 / Google In-App
+Review), jamais précédée d'une question ; au plus une sollicitation tous les
+120 jours **par appareil** ; aucun tri des avis (le formulaire in-app ne
+renvoie jamais vers le store). Déclarations de données et politique de
+confidentialité (v1.4) mises à jour en conséquence (§5, `STORE_FORMS.md`).
+
 ## SDK iOS 27 — vérification du 2026-10-03
 
 Apple accepte les apps construites avec Xcode 27 / SDK iOS 27 depuis le
@@ -77,7 +85,6 @@ nouveau système (exigé depuis le 31/01/2026), déjà listé dans les formulair
   suppression prévient : un abonnement **store** n'est **pas** résilié par la
   suppression (à résilier dans les réglages du store) ; un abonnement **web**
   (`proStore = web`) l'est.
-- **Notation (FEAT-060)** : demande via l'API native (`in_app_review`, Apple 5.6.1 / Google In-App Review), jamais précédée d'une question ; au plus une sollicitation tous les 120 jours ; aucun tri des avis (le formulaire in-app ne renvoie jamais vers le store).
 
 ### Décision du 2026-09-30
 
@@ -216,6 +223,7 @@ Aucun partage à des tiers, aucun tracking publicitaire, chiffrement en transit
 | Loyers, paiements, dépôts | Financial info → **Other financial info** | Financial Info → Other Financial Info | **Pas** « Payment info » : aucun paiement traité en V1 |
 | Baux, quittances PDF, documents uploadés | Files and docs (+ Photos si photos de biens) | User Content → Other User Content | Rétention légale quittances 5 ans à mentionner |
 | Demandes de support | App activity → Other user-generated content | User Content → Customer Support | — |
+| Avis in-app (note, commentaire, plateforme — FEAT-060) | App activity → Other user-generated content | User Content → Other User Content | Mêmes cases que le support (collectée, non partagée, liée au compte, sans tracking) · PdC v1.4 |
 | UID Firebase Auth, Firebase installation IDs | Device or other IDs | Identifiers → User ID | Cf. [Privacy disclosures Firebase](https://firebase.google.com/docs/ios/app-store-data-collection) |
 | Crash / diagnostics (Crashlytics, **mobile only, opt-in**) | App activity → **Diagnostics** (crash logs) : collected, **not shared**, chiffré en transit, **optionnel** (opt-in) | Diagnostics → **Crash Data** (+ Other Diagnostic Data) : « Not Linked to You », « Not used for tracking » | Crashlytics iOS/Android uniquement, désactivé par défaut, activé sur opt-in (Profil → Confidentialité). Web non concerné. Cf. PdC v1.3 §2/§4/§7 |
 | Tracking / partage tiers | Shared = none | Tracking = **No** (pas d'ATT) | Pas de pub, pas de data broker — les crash data ne sont PAS liées à l'identité ni au tracking |
