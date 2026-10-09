@@ -23,6 +23,7 @@ import 'package:easyrent/features/profile/presentation/change_password_page.dart
 import 'package:easyrent/features/profile/presentation/profile_details_page.dart';
 import 'package:easyrent/features/profile/presentation/profile_page.dart';
 import 'package:easyrent/features/support/data/support_repository.dart';
+import 'package:easyrent/features/support/presentation/feedback_page.dart';
 import 'package:easyrent/features/support/presentation/support_page.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
@@ -263,6 +264,10 @@ Widget _buildPage({
       GoRoute(
         path: '/profile/support',
         builder: (context, state) => const SupportPage(),
+      ),
+      GoRoute(
+        path: '/profile/feedback',
+        builder: (context, state) => const FeedbackPage(),
       ),
       GoRoute(
         path: '/terms',
@@ -557,6 +562,25 @@ void main() {
       expect(find.byType(SupportPage), findsOneWidget);
       expect(find.text('Nous contacter'), findsOneWidget);
       expect(find.byKey(const Key('field_support_subject')), findsOneWidget);
+    });
+
+    testWidgets('groupe Aide — tuile Donner mon avis présente et navigable', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      final tile = find.byKey(const Key('tile_feedback'));
+      expect(tile, findsOneWidget);
+      expect(find.text('Donner mon avis'), findsOneWidget);
+
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FeedbackPage), findsOneWidget);
+      expect(find.byKey(const Key('btn_feedback_submit')), findsOneWidget);
     });
 
     testWidgets('groupe Aide — tuiles légales présentes', (tester) async {

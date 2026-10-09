@@ -35,6 +35,7 @@ import '../../features/profile/presentation/profile_details_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/receipts/presentation/lease_receipts_page.dart';
 import '../../features/support/presentation/faq_page.dart';
+import '../../features/support/presentation/feedback_page.dart';
 import '../../features/support/presentation/support_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
 import '../../features/simulator/presentation/scenario_comparison_page.dart';
@@ -614,6 +615,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => appPage(
                       key: state.pageKey,
                       child: const SupportPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'feedback',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const FeedbackPage(),
                       transition: AppTransition.standard,
                     ),
                   ),

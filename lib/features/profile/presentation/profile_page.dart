@@ -28,6 +28,7 @@ import 'widgets/section_header.dart';
 ///   stores : point d'entrée facile à trouver, dans le groupe « Compte »)
 /// - `/faq` : questions fréquentes (page publique)
 /// - `/profile/support` : formulaire « Nous contacter »
+/// - `/profile/feedback` : « Donner mon avis » (FEAT-060)
 ///
 /// Ordre des groupes (décision 2026-07-07) : Compte (identité, mot de
 /// passe, suppression) → Apparence → Aide (FAQ, contact, légal) →
@@ -133,6 +134,14 @@ class ProfilePage extends ConsumerWidget {
               title: Text(l10n.profileHubContactUsTile),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/profile/support'),
+            ),
+            ListTile(
+              key: const Key('tile_feedback'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.rate_review_outlined),
+              title: Text(l10n.profileHubFeedbackTile),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/profile/feedback'),
             ),
             const ProfileLegalTiles(),
             const SizedBox(height: 24),
