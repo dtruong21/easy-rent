@@ -6080,5 +6080,13 @@
   "edlListErrorTitle": "Unable to load condition reports.",
   "@edlListErrorTitle": { "description": "EDL list page: error view title when listForLease fails, with a retry button." },
   "edlPdfButton": "PDF",
-  "@edlPdfButton": { "description": "EDL list page: per-row button label that renders and opens the condition report PDF." }
+  "@edlPdfButton": { "description": "EDL list page: per-row button label that renders and opens the condition report PDF." },
+  "reviewInviteTitle": "Your opinion matters",
+  "@reviewInviteTitle": { "description": "FEAT-060 — Title of the review invitation card shown on the dashboard (web only)." },
+  "reviewInviteBody": "You've been using Baillan for a few weeks. Tell us what you think — it takes 30 seconds.",
+  "@reviewInviteBody": { "description": "FEAT-060 — Body of the review invitation card on the dashboard. 'Baillan' is the brand name — keep untranslated." },
+  "reviewInviteButton": "Give feedback",
+  "@reviewInviteButton": { "description": "FEAT-060 — Button of the review invitation card; opens the in-app feedback form." },
+  "reviewInviteCloseTooltip": "Close",
+  "@reviewInviteCloseTooltip": { "description": "FEAT-060 — Tooltip of the close icon on the review invitation card." }
 }
