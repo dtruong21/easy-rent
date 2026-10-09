@@ -19,6 +19,19 @@ PurchaseOutcome purchaseOutcomeForError(PurchasesErrorCode code) =>
       _ => PurchaseFailed(code.name),
     };
 
+/// PURE — code d'erreur du SDK pour [e], ou `null` si illisible. Le SDK fait
+/// `num.parse(e.code)` puis indexe l'enum : un code non numérique lève
+/// `FormatException`, un code négatif `RangeError` — jamais à laisser
+/// remonter depuis un gestionnaire d'erreur.
+@visibleForTesting
+PurchasesErrorCode? errorCodeOrNull(PlatformException e) {
+  try {
+    return PurchasesErrorHelper.getErrorCode(e);
+  } catch (_) {
+    return null;
+  }
+}
+
 /// PURE — restauration : au moins un entitlement actif → droit retrouvé
 /// (le palier lui-même vient du serveur).
 @visibleForTesting
@@ -67,12 +80,14 @@ class RevenueCatStoreBillingService implements StoreBillingService {
     if (!_configured) return;
     try {
       await Purchases.logOut();
-    } on PlatformException catch (e, st) {
+    } catch (e, st) {
       // Utilisateur déjà anonyme côté RevenueCat : rien à faire.
-      if (PurchasesErrorHelper.getErrorCode(e) !=
-          PurchasesErrorCode.logOutWithAnonymousUserError) {
-        _log.warning('logOut RevenueCat échoué', e, st);
+      if (e is PlatformException &&
+          errorCodeOrNull(e) ==
+              PurchasesErrorCode.logOutWithAnonymousUserError) {
+        return;
       }
+      _log.warning('logOut RevenueCat échoué', e, st);
     }
   }
 
@@ -110,8 +125,12 @@ class RevenueCatStoreBillingService implements StoreBillingService {
       if (pkg == null) return const PurchaseFailed('package_unavailable');
       await Purchases.purchase(PurchaseParams.package(pkg));
       return const PurchaseSucceeded();
-    } on PlatformException catch (e) {
-      return purchaseOutcomeForError(PurchasesErrorHelper.getErrorCode(e));
+    } catch (e, st) {
+      // Jamais d'exception vers l'appelant : le bouton d'achat resterait figé.
+      final code = e is PlatformException ? errorCodeOrNull(e) : null;
+      if (code != null) return purchaseOutcomeForError(code);
+      _log.warning('achat RevenueCat échoué', e, st);
+      return const PurchaseFailed('unknown');
     }
   }
 

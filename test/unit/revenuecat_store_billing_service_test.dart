@@ -6,6 +6,7 @@ library;
 import 'package:easyrent/features/paid_plan/data/revenuecat_store_billing_service.dart';
 import 'package:easyrent/features/paid_plan/data/store_billing_service.dart';
 import 'package:easyrent/features/paid_plan/domain/store_billing_models.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -37,6 +38,28 @@ void main() {
           isA<PurchaseFailed>().having((f) => f.code, 'code', code.name),
         );
       }
+    });
+  });
+
+  group('errorCodeOrNull', () {
+    test('code numérique valide → le PurchasesErrorCode correspondant', () {
+      final code = PurchasesErrorCode.purchaseCancelledError;
+      expect(errorCodeOrNull(PlatformException(code: '${code.index}')), code);
+    });
+
+    test('code hors plage → unknownError (comportement du SDK)', () {
+      expect(
+        errorCodeOrNull(PlatformException(code: '9999')),
+        PurchasesErrorCode.unknownError,
+      );
+    });
+
+    test('code non numérique → null, sans exception', () {
+      expect(errorCodeOrNull(PlatformException(code: 'abc')), isNull);
+    });
+
+    test('code négatif → null, sans exception', () {
+      expect(errorCodeOrNull(PlatformException(code: '-1')), isNull);
     });
   });
 
