@@ -305,7 +305,7 @@ class _CompareScenariosToggle extends StatelessWidget {
         children: [
           InkWell(
             key: const Key('compare_toggle_pro_only'),
-            onTap: () => context.go('/pro'),
+            onTap: () => context.push('/pro'),
             borderRadius: BorderRadius.circular(6),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

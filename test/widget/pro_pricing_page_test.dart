@@ -24,6 +24,7 @@ import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _FakePaidPlanInterestRepo implements PaidPlanInterestRepository {
   List<String>? capturedFeatures;
@@ -73,6 +74,50 @@ void _setWindowSize(WidgetTester tester, Size size) {
 }
 
 void main() {
+  // Arrivée directe sur /pro (URL, rechargement, `go`) : pile vide, rien à
+  // dépiler — le bouton retour doit quand même exister (repli /profile).
+  testWidgets('arrivée directe par URL → le retour mène au profil', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/pro',
+      routes: [
+        GoRoute(
+          path: '/profile',
+          builder: (_, _) => const Text('profil', key: Key('stub_profile')),
+        ),
+        GoRoute(path: '/pro', builder: (_, _) => const ProPricingPage()),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          landlordTierProvider.overrideWith(
+            (ref) => Stream.value(
+              const LandlordTierSnapshot(tier: SubscriptionTier.free),
+            ),
+          ),
+          paidPlanInterestRepositoryProvider.overrideWithValue(
+            _FakePaidPlanInterestRepo(),
+          ),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          locale: const Locale('fr'),
+          supportedLocales: supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('app_bar_back')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('stub_profile')), findsOneWidget);
+  });
+
   group('ProPricingPage — 4 cartes toujours rendues', () {
     testWidgets('Gratuit, Pro, Max, Ultra présentes', (tester) async {
       _setWindowSize(tester, const Size(1280, 2200));
@@ -339,6 +384,8 @@ void main() {
           find.byKey(const Key('txt_pro_store_app_unavailable')),
           findsOneWidget,
         );
+        // Arrivée directe : retour de repli vers le profil.
+        expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
         expect(
           find.text(
             "Les offres payantes ne sont pas encore proposées dans l'application.",

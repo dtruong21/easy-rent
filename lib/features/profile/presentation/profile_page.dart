@@ -252,7 +252,7 @@ class _ProUpsellCard extends ConsumerWidget {
       color: theme.colorScheme.primaryContainer,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.go('/pro'),
+        onTap: () => context.push('/pro'),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(

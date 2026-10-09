@@ -98,7 +98,7 @@ class _ScenarioLimitReachedDialog extends StatelessWidget {
             key: const Key('scenario_limit_upgrade_cta'),
             onPressed: () {
               Navigator.of(context).pop();
-              context.go('/pro');
+              context.push('/pro');
             },
             child: Text(
               isPaid && nextLevel != null

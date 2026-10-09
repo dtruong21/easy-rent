@@ -32,6 +32,9 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-05)
 
+### FIX navigation : bouton retour sur `/pro` (2026-10-09)
+- `/pro` est hors du shell et on y arrivait par `context.go('/pro')` : la pile était remplacée, il n'y avait rien à dépiler et l'AppBar n'affichait pas de retour. Même cas en arrivant par l'URL ou après un rechargement. La page utilise `AppAppBar(fallbackRoute: '/profile')` (retour vers la page précédente si elle existe, sinon vers le profil), et les 5 points d'entrée font `context.push('/pro')` pour revenir à leur page d'origine (profil, section abonnement, simulateur, comparaison, modale de limite). `/pro/cancel` garde `go('/pro')`.
+
 ### FEAT-056 : passage mensuel ↔ annuel en libre-service (2026-10-09)
 - Page `/pro` : un abonné web voit, sur la carte de son palier, « Passer à la facturation annuelle » (ou mensuelle, selon l'interrupteur). Même `manageSubscription('change_plan')` qu'un changement de palier, avec un texte de confirmation dédié (prix, prorata : jours restants du mois déduits ; vers le mensuel, crédit sur les prochaines factures, jamais de remboursement). Aucun changement serveur. Masqué pour un abonné App Store / Google Play (géré dans le store), quand la vente est fermée et sur un palier non achetable.
 

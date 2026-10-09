@@ -83,7 +83,7 @@ class SubscriptionSection extends ConsumerWidget {
           const SizedBox(height: 8),
           TextButton(
             key: const Key('btn_subscription_change_plan'),
-            onPressed: () => context.go('/pro'),
+            onPressed: () => context.push('/pro'),
             child: Text(l10n.subscriptionChangePlanButton),
           ),
         ],
