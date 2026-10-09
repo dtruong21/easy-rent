@@ -112,7 +112,7 @@ Formulaire « Nous contacter » **et** avis in-app (`kind: 'feedback'`, FEAT-060
 | `rating` | int | **FEAT-060**, avis uniquement : entier 1-5 |
 | `platform` | string | **FEAT-060**, avis uniquement : `web` \| `ios` \| `android` |
 
-Un avis a `subject` = `Avis — {note}/5` (texte fixe, non traduit).
+Un avis a `subject` = `Avis — {note}/5` (texte fixe, non traduit) : **convention client**, non imposée par les règles (qui ne bornent que `subject` à 1-120 caractères).
 
 **Règles Firestore** :
 - `get/list` : false (jamais relu V1)
