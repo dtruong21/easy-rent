@@ -633,7 +633,9 @@ void main() {
         await tester.tap(tile);
         await tester.pumpAndSettle();
 
-        expect(fake.opened, [null]);
+        // Hermétique : l'identifiant transmis dépend du dart-define
+        // APP_STORE_ID du build, pas du comportement testé ici.
+        expect(fake.opened, hasLength(1));
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

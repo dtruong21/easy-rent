@@ -474,10 +474,12 @@ service cloud.firestore {
     }
 
     // ====================================================================
-    // support_requests/{id}   — CREATE-ONLY (FEAT-025)
+    // support_requests/{id}   — CREATE-ONLY (FEAT-025, avis FEAT-060)
     //
-    // Formulaire « Nous contacter ». Le client écrit une demande à son
-    // propre nom ; il ne relit JAMAIS (pas de back-office in-app en V1).
+    // Formulaire « Nous contacter » et avis in-app « Donner mon avis »
+    // (kind == 'feedback', FEAT-060). Le client écrit une demande ou un
+    // avis à son propre nom ; il ne relit JAMAIS (pas de back-office in-app
+    // en V1).
     // Traitement (notification email, triage) via Admin SDK / console.
     // ====================================================================
     match /support_requests/{id} {

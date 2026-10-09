@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
 
 import '../../../core/config/env.dart';
 import '../../../core/config/store_billing.dart';
@@ -18,6 +19,8 @@ import '../../account/presentation/widgets/export_data_tile.dart';
 import '../application/landlord_profile_provider.dart';
 import 'widgets/profile_settings_sections.dart';
 import 'widgets/section_header.dart';
+
+final _log = Logger('ProfilePage');
 
 /// Page `/profile` — hub de réglages, mobile-first.
 ///
@@ -155,13 +158,23 @@ class ProfilePage extends ConsumerWidget {
                 leading: const Icon(Icons.star_rate_outlined),
                 title: Text(l10n.profileHubRateAppTile),
                 trailing: const Icon(Icons.open_in_new),
-                onTap: () => ref
-                    .read(storeReviewServiceProvider)
-                    .openStoreListing(
-                      appStoreId: Env.appStoreId.isEmpty
-                          ? null
-                          : Env.appStoreId,
-                    ),
+                onTap: () async {
+                  try {
+                    await ref
+                        .read(storeReviewServiceProvider)
+                        .openStoreListing(
+                          appStoreId: Env.appStoreId.isEmpty
+                              ? null
+                              : Env.appStoreId,
+                        );
+                  } catch (e, st) {
+                    _log.warning(
+                      'Ouverture de la fiche store impossible',
+                      e,
+                      st,
+                    );
+                  }
+                },
               ),
             const ProfileLegalTiles(),
             const SizedBox(height: 24),

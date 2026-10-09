@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/domain/session_state.dart';
@@ -6,6 +7,8 @@ import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/properties_list_provider.dart';
 import '../data/review_solicitation_storage.dart';
 import '../domain/review_eligibility.dart';
+
+final _log = Logger('ReviewEligibility');
 
 /// Horloge injectable (tests).
 final reviewClockProvider = Provider<DateTime Function()>((_) => DateTime.now);
@@ -29,7 +32,8 @@ final reviewEligibilityProvider = FutureProvider.autoDispose<bool>((ref) async {
       lastSolicitedAt: last,
       now: ref.watch(reviewClockProvider)(),
     );
-  } catch (_) {
+  } catch (e, st) {
+    _log.warning('Éligibilité avis indéterminée, pas de sollicitation', e, st);
     return false;
   }
 });
