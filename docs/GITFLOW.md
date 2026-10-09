@@ -58,13 +58,14 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis `claude/amazing-ardi
 `claude/magical-jackson-d0116a` (contenu déjà dans `develop` ou repris par la PR #211), puis
 toutes les branches des PR mergées #210 à #224 — confirmé par `git fetch --prune` le 2026-10-06. Reste :
 
-1. **Supprimer** (PR mergées le 2026-10-06 — pointe = tête de PR) : `fix/stripe-prices-per-env` (#227)
-   et `feat/044e-iap-server` (#229).
+1. **Supprimer** (PR mergées le 2026-10-06 — pointes = têtes de PR) : `fix/stripe-prices-per-env` (#227),
+   `feat/044e-iap-server` (#229), `fix/check-secrets-blind-spots` (#225),
+   `docs/prod-checklist-v1-1-risks` (#226), `docs/roadmap-refresh` (#228) et
+   `docs/stripe-price-params-env` (#230).
    Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
    relancer après un `git fetch --prune`, avec uniquement les refs restantes.
-2. **Garder** (PR ouvertes) : `main`, `develop`, `chore/050e-bascule-domaine` (#162, à ne pas
-   merger avant le DNS), `docs/prod-checklist-v1-1-risks` (#226, checklist prod), `docs/roadmap-refresh`
-   (#228), `fix/check-secrets-blind-spots` (#225) et `docs/stripe-price-params-env` (#230) ; à supprimer après leur merge.
+2. **Garder** : `main`, `develop` et `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
+   merger avant le DNS).
 3. **Côté stores** (suites de #211 et #219) : note « remplacé par #214 » à ajouter dans
    `STORE_COMPLIANCE.md` lignes 34–35 (test iOS 27 daté, antérieur à #214) ; URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques » — **vérifiée le 2026-10-05** : le paywall n'est PAS atteignable
