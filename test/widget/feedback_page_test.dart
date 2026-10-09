@@ -144,4 +144,24 @@ void main() {
     );
     expect(btn.onPressed, isNotNull);
   });
+
+  testWidgets('l\'étoile choisie est exposée comme sélectionnée', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, repo);
+
+    await tester.tap(find.byKey(const Key('btn_feedback_star_4')));
+    await tester.pump();
+
+    expect(
+      tester.getSemantics(find.byKey(const Key('btn_feedback_star_4'))),
+      isSemantics(isSelected: true),
+    );
+    expect(
+      tester.getSemantics(find.byKey(const Key('btn_feedback_star_3'))),
+      isSemantics(isSelected: false),
+    );
+    handle.dispose();
+  });
 }

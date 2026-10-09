@@ -108,6 +108,9 @@ class _FeedbackFormState extends ConsumerState<FeedbackForm> {
                       : Icons.star_border,
                 ),
                 color: theme.colorScheme.primary,
+                // Expose l'étoile choisie aux lecteurs d'écran (la note est
+                // le seul champ obligatoire) ; `color` garde le rendu inchangé.
+                isSelected: _rating == i,
                 onPressed: isSubmitting
                     ? null
                     : () => setState(() => _rating = i),
