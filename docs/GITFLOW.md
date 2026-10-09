@@ -57,14 +57,15 @@ Fait : 33 branches mergées supprimées le 2026-10-03, puis `claude/amazing-ardi
 `claude/nice-grothendieck-c66baf`, `feat/056-multi-tier-subscriptions` et
 `claude/magical-jackson-d0116a` (contenu déjà dans `develop` ou repris par la PR #211), puis
 toutes les branches des PR mergées #210 à #230 — confirmé par `git ls-remote --heads origin` le 2026-10-09.
-Rien d'autre à supprimer. Reste :
+Rien d'autre à supprimer (`feat/056-billing-period-switch`, #231, supprimée — confirmé le 2026-10-09). Reste :
 
-1. **Supprimer** (PR mergée le 2026-10-09 — pointe = tête de PR) : `feat/056-billing-period-switch` (#231).
-   Un `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus :
-   relancer après un `git fetch --prune`, avec uniquement les refs restantes.
+1. **Supprimer** : rien pour l'instant. Après chaque merge, supprimer la branche (le
+   `git push --delete` groupé est rejeté en bloc si une des refs n'existe plus : relancer après un
+   `git fetch --prune`, avec uniquement les refs restantes).
 2. **Garder** : `main`, `develop`, `chore/050e-bascule-domaine` (PR #162 ouverte, à ne pas
-   merger avant le DNS) et `feat/pro-switch-period-current-plan` (PR #233 ouverte : suite de #231,
-   bouton mensuel ↔ annuel seulement vers l'autre périodicité ; à supprimer après son merge).
+   merger avant le DNS), `feat/pro-switch-period-current-plan` (PR #233 ouverte : suite de #231,
+   bouton mensuel ↔ annuel seulement vers l'autre périodicité) et `fix/pro-page-back-button`
+   (PR #232 ouverte : bouton retour sur `/pro`) ; à supprimer après leur merge.
 3. **Côté stores** (suites de #211 et #219) : note « remplacé par #214 » à ajouter dans
    `STORE_COMPLIANCE.md` lignes 34–35 (test iOS 27 daté, antérieur à #214) ; URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques » — **vérifiée le 2026-10-05** : le paywall n'est PAS atteignable
