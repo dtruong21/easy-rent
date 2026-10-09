@@ -30,11 +30,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-05)
+## Changements (2026-08-03 → 2026-10-09)
 
 ### FEAT-044e lot 2 : achat intégré, fondations de l'app (2026-10-09)
-- Interrupteur `IAP_ENABLED` coupé par défaut, clés RevenueCat par dart-define (`REVENUECAT_APPLE_API_KEY`, `REVENUECAT_GOOGLE_API_KEY`) : aucun effet visible, aucun appel au SDK tant qu'il est coupé. Clé absente alors que l'interrupteur est actif : achat coupé + log `severe`, jamais de crash.
-- `purchases_flutter` 10.15.2 derrière l'interface `StoreBillingService` (seule `RevenueCatStoreBillingService` importe le SDK) ; `purchase()` et `logOut()` ne lèvent plus d'exception.
+- Interrupteur `IAP_ENABLED` coupé par défaut, clés RevenueCat par dart-define (`REVENUECAT_APPLE_API_KEY`, `REVENUECAT_GOOGLE_API_KEY`) : aucun effet visible, aucun appel au SDK tant qu'il est coupé. Clé absente alors que l'interrupteur est actif : achat coupé + log `severe` (émis par `storeBillingSessionSyncProvider`), jamais de crash.
+- `purchases_flutter` 10.15.2 derrière l'interface `StoreBillingService` (seule `RevenueCatStoreBillingService` importe le SDK) ; `purchase()` et `logOut()` ne lèvent plus d'exception. Web : plugin local vide `packages/purchases_flutter_web_noop` (`implements: purchases_flutter`) à la place de l'implémentation web intégrée, qui chargeait le SDK web RevenueCat (~1 Mo) à chaque visite.
 - Synchro de session : `logIn(uid)` RevenueCat pour un compte complet seulement, `logOut` en le quittant ; un `logIn` en échec est relancé au prochain changement de session.
 - Prédicat `canOfferUpgrade` (`!isStoreApp || isInAppPurchaseEnabled`) sur les 7 points d'incitation (limites, document trop lourd, scénarios) : comportement strictement identique tant que l'interrupteur est coupé.
 

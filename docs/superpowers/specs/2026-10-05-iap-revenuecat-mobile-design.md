@@ -194,3 +194,27 @@ de supprimer le compte de démo (`deleteAccount` ne touche pas à la liste).
 
 Max / Ultra dans les stores, essai gratuit, codes promo, Sign in with Apple,
 paywall RevenueCat, Web Billing RevenueCat.
+
+## Points hérités du lot 2 (à traiter au lot 3)
+
+Relevés à la revue finale du lot 2 (2026-10-09), volontairement non traités :
+
+- **Rattachement avant achat** : avant `purchase()`, garantir que l'utilisateur
+  RevenueCat est le compte Firebase — `ensureLoggedIn(uid)` (ou un `purchase`
+  qui prend l'uid) appelant `Purchases.logIn(uid)` juste avant l'achat, et
+  `PurchaseFailed('not_logged_in')` en cas d'échec. Option : configuration
+  paresseuse `PurchasesConfiguration(key)..appUserID = uid` au premier compte
+  complet (aucun appel réseau, aucun utilisateur anonyme chez RevenueCat).
+- **État de la synchro** : `storeBillingSessionSyncProvider` rend `void` ;
+  exposer son état, ou faire passer « garantir le rattachement » par sa file.
+- **Source d'écoute** : écouter `authStateChangesProvider` (état et uid issus
+  du même `User`) plutôt que `sessionStateProvider` + `currentUser`.
+- **Textes de la modale de limite du simulateur**
+  (`simulatorLimitReachedContentFree` / `Paid`) : encore incitatifs dans les
+  apps store (seul le bouton est masqué) — à trancher au lot 3 / #207.
+- **Tests** : couvrir le choix mensuel / annuel de `fetchProOffer` et
+  `purchase`.
+- **#207, avant d'activer l'interrupteur** : déclarer RevenueCat comme
+  sous-traitant (politique de confidentialité, section Data safety de Google
+  Play, étiquettes de confidentialité Apple) ; vérifier un build Android
+  release (R8).
