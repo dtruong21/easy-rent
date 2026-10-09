@@ -171,6 +171,15 @@ class _FakeSupportRepository implements SupportRepository {
     required String appVersion,
     required String appEnv,
   }) async {}
+
+  @override
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------

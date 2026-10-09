@@ -5154,6 +5154,10 @@
   "@supportFormSendFailedError": {
     "description": "Contact form submission error (SupportSubmitError.sendFailed): generic Firestore/network failure while submitting the support request."
   },
+  "feedbackRatingRequiredError": "Please choose a rating.",
+  "@feedbackRatingRequiredError": {
+    "description": "FEAT-060 — Feedback form validation error: no star rating selected."
+  },
 
   "pwaInstallBannerTitle": "Install Baillan.",
   "@pwaInstallBannerTitle": {

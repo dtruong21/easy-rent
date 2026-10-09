@@ -1182,6 +1182,7 @@
   "supportFormMessageRequiredError": "Message requis",
   "supportFormMessageTooLongError": "Le message doit faire {limit} caractères max.",
   "supportFormSendFailedError": "Envoi impossible. Réessayez dans quelques instants.",
+  "feedbackRatingRequiredError": "Choisissez une note.",
 
   "pwaInstallBannerTitle": "Installez Baillan.",
   "pwaInstallBannerNativeSubtitle": "Accédez à votre gestion locative en un clic, même hors-ligne.",
