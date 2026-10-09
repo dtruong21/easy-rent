@@ -40,6 +40,7 @@ import Stripe from "stripe";
 import {rankOf, type LevelId} from "../entitlements/plan_matrix.generated";
 import {
   levelForPriceId,
+  planForPriceId,
   readPriceTable,
   resolvePriceIdOrThrow,
   type BillingPeriod,
@@ -88,7 +89,11 @@ export const CANCELABLE_STATUSES: ReadonlySet<string> = new Set<string>([
   "unpaid",
 ]);
 
-export type SubscriptionAction = "cancel" | "reactivate" | "change_plan";
+export type SubscriptionAction =
+  | "cancel"
+  | "reactivate"
+  | "change_plan"
+  | "current_plan";
 
 export interface ManageSubscriptionResult {
   status: "updated" | "noop";
@@ -104,6 +109,17 @@ export interface ChangePlanResult {
    * est un changement **immédiat et proratisé dans les deux sens**.
    */
   effectiveAt: number;
+}
+
+/**
+ * Réponse de `current_plan` (lecture seule) : palier et périodicité facturés
+ * aujourd'hui. `null` = price inconnu de la table du mode (prix historique,
+ * promo) — l'UI ne propose alors aucun passage mensuel ↔ annuel.
+ */
+export interface CurrentPlanResult {
+  status: "current";
+  level: LevelId | null;
+  period: BillingPeriod | null;
 }
 
 /** Une ligne de facturation d'un abonnement (forme minimale, testable). */
@@ -213,10 +229,15 @@ export function planLevelChange(args: {
 /** Valide l'action reçue du client. */
 export function parseAction(value: unknown): SubscriptionAction {
   const raw = requireString(value, "action");
-  if (raw !== "cancel" && raw !== "reactivate" && raw !== "change_plan") {
+  if (
+    raw !== "cancel" &&
+    raw !== "reactivate" &&
+    raw !== "change_plan" &&
+    raw !== "current_plan"
+  ) {
     throw new HttpsError(
       "invalid-argument",
-      "action must be 'cancel', 'reactivate' or 'change_plan'",
+      "action must be 'cancel', 'reactivate', 'change_plan' or 'current_plan'",
     );
   }
   return raw;
@@ -268,7 +289,11 @@ function resolveChange(
 
 export const manageSubscription = onCall(
   {secrets: [stripeSecret, stripeTestSecret]},
-  async (request): Promise<ManageSubscriptionResult | ChangePlanResult> => {
+  async (
+    request,
+  ): Promise<
+    ManageSubscriptionResult | ChangePlanResult | CurrentPlanResult
+  > => {
     const uid = await requireVerifiedUid(request);
     // #209 : un essai anonyme n'a pas d'abonnement à gérer.
     await assertNotAnonymousAccount(request, uid);
@@ -348,6 +373,23 @@ export const manageSubscription = onCall(
       // Abonné via un store mobile (IAP) ou sans abonnement web : l'UI renvoie
       // vers le store, le changement de palier y est obligatoire.
       throw new HttpsError("failed-precondition", "no_active_web_subscription");
+    }
+
+    // Lecture seule : sur quel palier / quelle périodicité l'abonné est facturé.
+    // L'UI s'en sert pour ne proposer que le passage qui change quelque chose.
+    // Aucune écriture Stripe ni Firestore. Web uniquement (garde d'Origine
+    // plus haut) ; mode Stripe = celui de la clé, comme `change_plan`.
+    if (action === "current_plan") {
+      const item = pickSubscriptionItem(target.items);
+      const plan = planForPriceId(
+        readPriceTable(stripeEnvForOrigin(origin) === "live" ? "live" : "test"),
+        item.price.id,
+      );
+      return {
+        status: "current",
+        level: plan?.level ?? null,
+        period: plan?.period ?? null,
+      };
     }
 
     if (change !== null) {

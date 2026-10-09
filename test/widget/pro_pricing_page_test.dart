@@ -17,6 +17,7 @@ import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/breakpoints.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
+import 'package:easyrent/features/paid_plan/application/current_billing_period_provider.dart';
 import 'package:easyrent/features/paid_plan/data/paid_plan_interest_repository.dart';
 import 'package:easyrent/features/paid_plan/presentation/pro_pricing_page.dart';
 import 'package:easyrent/features/paid_plan/presentation/widgets/plan_comparison_table.dart';
@@ -44,8 +45,10 @@ Widget _buildPage({
   required SubscriptionTier tier,
   String? planLevel,
   PaidPlanInterestRepository? paidPlanRepo,
+  List<Override> extraOverrides = const [],
 }) => ProviderScope(
   overrides: [
+    ...extraOverrides,
     landlordTierProvider.overrideWith(
       (ref) =>
           Stream.value(LandlordTierSnapshot(tier: tier, planLevel: planLevel)),
@@ -286,6 +289,27 @@ void main() {
           );
         },
       );
+
+      testWidgets('vente fermée → la périodicité facturée n\'est jamais lue '
+          '(aucun appel Stripe pour une visite de /pro)', (tester) async {
+        _setWindowSize(tester, const Size(1280, 2200));
+        var reads = 0;
+        await tester.pumpWidget(
+          _buildPage(
+            tier: SubscriptionTier.paid,
+            planLevel: 'pro',
+            extraOverrides: [
+              currentBillingPeriodProvider.overrideWith((ref) async {
+                reads++;
+                return 'monthly';
+              }),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(reads, 0);
+      });
 
       testWidgets(
         'tier paid Max — carte Max affiche l\'offre actuelle même si Max est '

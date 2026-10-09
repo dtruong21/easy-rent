@@ -77,7 +77,10 @@ Widget? buildComingSoonBadge(
 /// quand le palier cible est `purchasable` **et** le gate global est ouvert —
 /// jamais de chemin de paiement construit pour un palier non achetable
 /// (critère testable, `test/widget/pro_pricing_page_test.dart`). [annual] =
-/// position de l'interrupteur mensuel/annuel de la page.
+/// position de l'interrupteur mensuel/annuel de la page. [currentPeriod] =
+/// périodicité facturée à l'abonné (`'monthly'`/`'annual'`), `null` tant
+/// qu'elle est inconnue : le passage mensuel ↔ annuel n'est proposé que vers
+/// l'AUTRE périodicité.
 /// [subscriptionsEnabled] = gate global, injectable pour les tests (figé à
 /// `false` dans `flutter test`).
 Widget buildPaidLevelCta(
@@ -90,6 +93,7 @@ Widget buildPaidLevelCta(
   required bool notifyLoading,
   required bool notified,
   required bool annual,
+  required String? currentPeriod,
   required VoidCallback onCheckout,
   required void Function(bool isUpgrade) onChangePlan,
   required VoidCallback onSwitchPeriod,
@@ -103,9 +107,8 @@ Widget buildPaidLevelCta(
   // 1. Déjà sur ce palier : PRIME sur tout gate — un abonné doit toujours
   //    voir son offre active, jamais un « bientôt disponible » sur le
   //    palier qu'il a déjà payé. Abonné web, vente ouverte : il peut aussi
-  //    passer ce palier en mensuel ↔ annuel, selon l'interrupteur. Sa
-  //    périodicité actuelle n'est pas connue ici : déjà sur celle visée, le
-  //    serveur répond `noop`.
+  //    passer ce palier à l'autre périodicité, celle de l'interrupteur —
+  //    jamais vers celle qu'il a déjà, ni tant que la sienne est inconnue.
   if (plan.tier == SubscriptionTier.paid && plan.level == level) {
     final current = FilledButton.tonal(
       key: Key('btn_plan_current_$levelId'),
@@ -115,7 +118,9 @@ Widget buildPaidLevelCta(
     final canSwitchPeriod =
         subscriptionsEnabled &&
         spec.purchasable &&
-        !mobileStores.contains(proStore);
+        !mobileStores.contains(proStore) &&
+        currentPeriod != null &&
+        currentPeriod != (annual ? 'annual' : 'monthly');
     if (!canSwitchPeriod) return current;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

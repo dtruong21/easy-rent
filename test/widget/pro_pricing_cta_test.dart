@@ -28,6 +28,7 @@ Future<int> _pump(
   required String levelId,
   String? proStore = 'web',
   bool annual = true,
+  String? currentPeriod = 'monthly',
   bool subscriptionsEnabled = true,
   bool planChangeLoading = false,
 }) async {
@@ -49,6 +50,7 @@ Future<int> _pump(
             notifyLoading: false,
             notified: false,
             annual: annual,
+            currentPeriod: currentPeriod,
             onCheckout: () {},
             onChangePlan: (_) {},
             onSwitchPeriod: () => switches++,
@@ -80,11 +82,46 @@ void main() {
       expect(switches, 1);
     });
 
-    testWidgets('interrupteur mensuel → « Passer à la facturation '
-        'mensuelle »', (tester) async {
-      await _pump(tester, plan: _paid('pro'), levelId: 'pro', annual: false);
+    testWidgets('abonné annuel, interrupteur mensuel → « Passer à la '
+        'facturation mensuelle »', (tester) async {
+      await _pump(
+        tester,
+        plan: _paid('pro'),
+        levelId: 'pro',
+        annual: false,
+        currentPeriod: 'annual',
+      );
 
       expect(find.text('Passer à la facturation mensuelle'), findsOneWidget);
+    });
+
+    for (final period in ['monthly', 'annual']) {
+      testWidgets('déjà facturé en $period, interrupteur sur $period → pas '
+          'de bouton (le passage ne changerait rien)', (tester) async {
+        await _pump(
+          tester,
+          plan: _paid('pro'),
+          levelId: 'pro',
+          annual: period == 'annual',
+          currentPeriod: period,
+        );
+
+        expect(find.byKey(const Key('btn_plan_current_pro')), findsOneWidget);
+        expect(find.byKey(_switchPro), findsNothing);
+      });
+    }
+
+    testWidgets('périodicité inconnue (chargement, erreur, prix historique) → '
+        'pas de bouton', (tester) async {
+      await _pump(
+        tester,
+        plan: _paid('pro'),
+        levelId: 'pro',
+        currentPeriod: null,
+      );
+
+      expect(find.byKey(const Key('btn_plan_current_pro')), findsOneWidget);
+      expect(find.byKey(_switchPro), findsNothing);
     });
 
     testWidgets('changement en cours → bouton désactivé', (tester) async {
