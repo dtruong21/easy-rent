@@ -34,8 +34,8 @@ String? revenueCatApiKeyFor(
 }
 
 /// FEAT-044e — achat intégré actif : app store + `IAP_ENABLED` + clé
-/// RevenueCat de la plateforme. Clé absente : achat coupé (journalisé par le
-/// service au démarrage), jamais de crash.
+/// RevenueCat de la plateforme. Clé absente : achat coupé (log `severe` au
+/// démarrage par `storeBillingSessionSyncProvider`), jamais de crash.
 bool get isInAppPurchaseEnabled =>
     debugInAppPurchaseEnabledOverride ??
     (isStoreApp &&

@@ -132,9 +132,13 @@ class RevenueCatStoreBillingService implements StoreBillingService {
     } catch (e, st) {
       // Jamais d'exception vers l'appelant : le bouton d'achat resterait figé.
       final code = e is PlatformException ? errorCodeOrNull(e) : null;
-      if (code != null) return purchaseOutcomeForError(code);
-      _log.warning('achat RevenueCat échoué', e, st);
-      return const PurchaseFailed('unknown');
+      final outcome = code == null
+          ? const PurchaseFailed('unknown')
+          : purchaseOutcomeForError(code);
+      if (outcome is PurchaseFailed) {
+        _log.warning('achat RevenueCat échoué', e, st);
+      }
+      return outcome;
     }
   }
 

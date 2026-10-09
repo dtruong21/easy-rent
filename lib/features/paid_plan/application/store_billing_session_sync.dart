@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/env.dart';
 import '../../../core/config/store_billing.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/auth_repository.dart';
@@ -52,10 +54,19 @@ class StoreBillingSessionSync {
 }
 
 /// Branche [StoreBillingSessionSync] sur [sessionStateProvider]. Inerte
-/// (aucun appel au SDK) tant que l'achat intégré est coupé. Gardé vivant par
-/// `BaillanApp`.
+/// (aucun appel au SDK) tant que l'achat intégré est coupé ; `IAP_ENABLED`
+/// sans clé RevenueCat de la plateforme est journalisé ici (`severe`, une
+/// fois). Gardé vivant par `BaillanApp`.
 final storeBillingSessionSyncProvider = Provider<void>((ref) {
-  if (!isInAppPurchaseEnabled) return;
+  if (!isInAppPurchaseEnabled) {
+    if (isStoreApp && Env.iapEnabled) {
+      _log.severe(
+        'IAP_ENABLED sans clé RevenueCat pour $defaultTargetPlatform : '
+        'achat intégré coupé',
+      );
+    }
+    return;
+  }
   final sync = StoreBillingSessionSync(ref.watch(storeBillingServiceProvider));
   ref.listen<SessionState>(sessionStateProvider, (_, state) {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
