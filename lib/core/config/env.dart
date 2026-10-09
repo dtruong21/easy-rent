@@ -168,4 +168,9 @@ class Env {
     'SUBSCRIPTIONS_ENABLED',
     defaultValue: false,
   );
+
+  /// FEAT-060 — identifiant numérique de l'app dans l'App Store (App Store
+  /// Connect → Informations sur l'app → Apple ID). Requis pour « Noter
+  /// l'app » sur iOS ; vide → bouton masqué sur iOS.
+  static const String appStoreId = String.fromEnvironment('APP_STORE_ID');
 }

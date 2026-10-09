@@ -3057,6 +3057,10 @@
   "@profileHubFeedbackTile": {
     "description": "FEAT-060 — List tile label in the /profile Help group navigating to /profile/feedback (in-app rating and comment form)."
   },
+  "profileHubRateAppTile": "Rate the app",
+  "@profileHubRateAppTile": {
+    "description": "FEAT-060 — List tile label in the /profile Help group that opens the app's App Store / Google Play listing so the user can rate it. Only shown in the iOS/Android store apps."
+  },
   "profileHubTermsTile": "Terms of use",
   "@profileHubTermsTile": {
     "description": "List tile label navigating to /terms. Chrome UI only — the legal document body itself (terms_page.dart content) stays French, out of this extraction's scope."

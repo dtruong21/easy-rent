@@ -81,6 +81,7 @@ dependencies:
   # Remonte l'annulation du share sheet (dismissed) — requis pour l'invariant
   # « sent_at après partage réussi ».
   share_plus: ^12.0.2
+  in_app_review: ^2.0.12
 
 dev_dependencies:
   flutter_test:

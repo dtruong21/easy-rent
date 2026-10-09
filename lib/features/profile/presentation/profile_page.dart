@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,7 @@ import '../../../core/config/env.dart';
 import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../app_review/data/store_review_service.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/data/landlord_tier_repository.dart';
@@ -143,6 +145,24 @@ class ProfilePage extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/profile/feedback'),
             ),
+            if (canRateInStore(
+              storeApp: isStoreApp,
+              platform: defaultTargetPlatform,
+            ))
+              ListTile(
+                key: const Key('tile_rate_app'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.star_rate_outlined),
+                title: Text(l10n.profileHubRateAppTile),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: () => ref
+                    .read(storeReviewServiceProvider)
+                    .openStoreListing(
+                      appStoreId: Env.appStoreId.isEmpty
+                          ? null
+                          : Env.appStoreId,
+                    ),
+              ),
             const ProfileLegalTiles(),
             const SizedBox(height: 24),
 
