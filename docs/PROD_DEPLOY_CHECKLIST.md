@@ -39,6 +39,7 @@ GitHub → Settings → Environments → `production` :
 
 - [ ] Rules testées en émulateur : `cd functions && npm run test:rules` (cross-user OK)
 - [ ] Rules + indexes Firestore : **auto** par `deploy.yml` (`firestore:staging` sur `develop`, `firestore:(default)` sur `main`) — vérifier l'étape dans le run
+- [ ] `functions/.env` déclare les 12 `STRIPE_PRICE_*` et `STRIPE_PRICE_*_TEST` (les `…_TEST` peuvent être vides), sinon `--non-interactive` échoue — cf. [`RUNBOOK_PROD_DEPLOY.md`](RUNBOOK_PROD_DEPLOY.md) §2
 - [ ] `cd functions && npm ci && npm run build && firebase deploy --only functions` (si functions changées)
 - [ ] Rules Storage : **auto** par `deploy.yml` depuis `main` uniquement (cible `storage`, bucket partagé) — vérifier l'étape dans le run, puis **téléverser un document sur prod ET sur staging juste après le déploiement** (compte non anonyme à email vérifié ; un échec = règles Storage ou email non vérifié)
 - [ ] **1er run des cibles `firestore:(default)` et `storage` depuis `main`** (ajoutées après la v1.0.0) : le compte de service CI a `firebaserules.admin`, `datastore.indexAdmin`, `firebasehosting.admin`. En cas de `403` sur une étape, ajouter le rôle nommé dans l'erreur (action Daki, IAM) puis « Re-run failed jobs » — un re-run redéploie à l'identique, sans second tag
