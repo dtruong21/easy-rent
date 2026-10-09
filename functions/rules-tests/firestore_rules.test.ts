@@ -29,6 +29,8 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import type {RulesTestEnvironment} from "@firebase/rules-unit-testing";
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
 import {afterAll, beforeAll, describe, it} from "vitest";
 
 const LANDLORD_A = "landlord-a";
@@ -1221,5 +1223,89 @@ describe("_ops — configuration serveur, aucun accès client (FEAT-044e)", () =
     const db = env.unauthenticatedContext().firestore();
     await assertFails(db.doc("_ops/sandboxAllowlist").get());
     await assertFails(db.doc("_ops/sandboxAllowlist").set({uids: ["x"]}));
+  });
+});
+
+describe("support_requests — support (FEAT-025) et avis (FEAT-060)", () => {
+  const now = () => firebase.firestore.FieldValue.serverTimestamp();
+  const support = (over: Record<string, unknown> = {}) => ({
+    landlordId: LANDLORD_A,
+    email: "a@example.com",
+    subject: "Problème",
+    message: "La quittance ne se génère pas.",
+    appVersion: "1.0.0+1",
+    appEnv: "staging",
+    status: "new",
+    createdAt: now(),
+    ...over,
+  });
+  const feedback = (over: Record<string, unknown> = {}) => ({
+    ...support({subject: "Avis — 4/5", message: "Très pratique."}),
+    kind: "feedback",
+    rating: 4,
+    platform: "web",
+    ...over,
+  });
+  const create = (db: firebase.firestore.Firestore, data: object) =>
+    db.collection("support_requests").add(data);
+  const asAnonymous = () =>
+    env
+      .authenticatedContext("anon-060", {
+        firebase: {sign_in_provider: "anonymous"},
+      })
+      .firestore();
+
+  it("demande de support valide → acceptée (inchangé)", async () => {
+    await assertSucceeds(create(asOwnerA(), support()));
+  });
+  it("demande de support au message vide → refusée (inchangé)", async () => {
+    await assertFails(create(asOwnerA(), support({message: ""})));
+  });
+  it("avis valide → accepté", async () => {
+    await assertSucceeds(create(asOwnerA(), feedback()));
+  });
+  it("avis sans commentaire → accepté", async () => {
+    await assertSucceeds(create(asOwnerA(), feedback({message: ""})));
+  });
+  it("avis de 1 et de 5 étoiles → acceptés (bornes)", async () => {
+    await assertSucceeds(create(asOwnerA(), feedback({rating: 1})));
+    await assertSucceeds(create(asOwnerA(), feedback({rating: 5})));
+  });
+  for (const rating of [0, 6, 3.5, "4"]) {
+    it(`avis noté ${JSON.stringify(rating)} → refusé`, async () => {
+      await assertFails(create(asOwnerA(), feedback({rating})));
+    });
+  }
+  it("avis sans note → refusé", async () => {
+    const data: Record<string, unknown> = feedback();
+    delete data.rating;
+    await assertFails(create(asOwnerA(), data));
+  });
+  it("kind inconnu → refusé", async () => {
+    await assertFails(create(asOwnerA(), feedback({kind: "bug"})));
+  });
+  it("plateforme inconnue ou absente → refusée", async () => {
+    await assertFails(create(asOwnerA(), feedback({platform: "windows"})));
+    const data: Record<string, unknown> = feedback();
+    delete data.platform;
+    await assertFails(create(asOwnerA(), data));
+  });
+  it("commentaire > 2000 caractères → refusé", async () => {
+    await assertFails(
+      create(asOwnerA(), feedback({message: "x".repeat(2001)})),
+    );
+  });
+  it("avis au nom d'un autre compte → refusé", async () => {
+    await assertFails(create(asOtherB(), feedback()));
+  });
+  it("compte anonyme → refusé", async () => {
+    await assertFails(
+      create(asAnonymous(), feedback({landlordId: "anon-060"})),
+    );
+  });
+  it("lecture d'un avis → refusée", async () => {
+    await assertFails(
+      asOwnerA().collection("support_requests").doc("x").get(),
+    );
   });
 });

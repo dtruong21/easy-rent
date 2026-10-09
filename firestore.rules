@@ -483,6 +483,21 @@ service cloud.firestore {
     match /support_requests/{id} {
       allow get, list: if false;   // l'utilisateur ne relit pas ses demandes en V1
 
+      // Demande de support (FEAT-025) : pas de `kind`, message non vide.
+      function isSupportRequest(d) {
+        return !('kind' in d) && d.message.size() > 0;
+      }
+
+      // Avis (FEAT-060) : note entière 1-5, plateforme connue, commentaire
+      // facultatif. Aucun renvoi vers les stores selon la note.
+      function isFeedback(d) {
+        return d.kind == 'feedback'
+          && d.rating is int
+          && d.rating >= 1
+          && d.rating <= 5
+          && d.platform in ['web', 'ios', 'android'];
+      }
+
       allow create: if isFullyAuthed()
         && request.resource.data.landlordId == request.auth.uid
         && request.resource.data.email is string
@@ -491,12 +506,13 @@ service cloud.firestore {
         && request.resource.data.subject.size() > 0
         && request.resource.data.subject.size() <= 120
         && request.resource.data.message is string
-        && request.resource.data.message.size() > 0
         && request.resource.data.message.size() <= 2000
         && request.resource.data.appVersion is string
         && request.resource.data.appEnv is string
         && request.resource.data.status == 'new'
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && (isSupportRequest(request.resource.data)
+            || isFeedback(request.resource.data));
 
       allow update, delete: if false;
     }
