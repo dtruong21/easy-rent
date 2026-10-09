@@ -1012,6 +1012,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "10.15.2"
+  purchases_flutter_web_noop:
+    dependency: "direct main"
+    description:
+      path: "packages/purchases_flutter_web_noop"
+      relative: true
+    source: path
+    version: "1.0.0"
   qr:
     dependency: transitive
     description:
