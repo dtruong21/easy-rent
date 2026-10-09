@@ -51,7 +51,7 @@ develop       ──●─●─●─●──●─●─●─●──●─
   `--merged origin/main` (sûrs à supprimer), puis `git push origin --delete <branche>`.
   Ne jamais supprimer `main`, `develop` ni une branche liée à une PR ouverte.
 
-### À faire à la prochaine session (audit du 2026-10-03, mis à jour le 2026-10-06)
+### À faire à la prochaine session (audit du 2026-10-03, mis à jour le 2026-10-09)
 
 Fait : 33 branches mergées supprimées le 2026-10-03, puis `claude/amazing-ardinghelli-29501a`,
 `claude/nice-grothendieck-c66baf`, `feat/056-multi-tier-subscriptions` et
@@ -64,7 +64,7 @@ toutes les branches des PR mergées #210 à #224 — confirmé par `git fetch --
    relancer après un `git fetch --prune`, avec uniquement les refs restantes.
 2. **Garder** (PR ouvertes) : `main`, `develop`, `chore/050e-bascule-domaine` (#162, à ne pas
    merger avant le DNS), `docs/prod-checklist-v1-1-risks` (#226, checklist prod), `docs/roadmap-refresh`
-   (#228) et `fix/check-secrets-blind-spots` (#225) ; à supprimer après leur merge.
+   (#228), `fix/check-secrets-blind-spots` (#225) et `docs/stripe-price-params-env` (#230) ; à supprimer après leur merge.
 3. **Côté stores** (suites de #211 et #219) : note « remplacé par #214 » à ajouter dans
    `STORE_COMPLIANCE.md` lignes 34–35 (test iOS 27 daté, antérieur à #214) ; URLs privacy / delete-account
    (`easy-rent-54cd4.web.app` → `app.baillan.com` avec #162), question « Achats numériques » — **vérifiée le 2026-10-05** : le paywall n'est PAS atteignable
