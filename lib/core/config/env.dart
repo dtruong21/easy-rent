@@ -188,4 +188,9 @@ class Env {
   static const String revenueCatGoogleApiKey = String.fromEnvironment(
     'REVENUECAT_GOOGLE_API_KEY',
   );
+
+  /// FEAT-060 — identifiant numérique de l'app dans l'App Store (App Store
+  /// Connect → Informations sur l'app → Apple ID). Requis pour « Noter
+  /// l'app » sur iOS ; vide → bouton masqué sur iOS.
+  static const String appStoreId = String.fromEnvironment('APP_STORE_ID');
 }

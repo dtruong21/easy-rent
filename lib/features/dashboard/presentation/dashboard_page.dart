@@ -6,6 +6,7 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../../core/ui/theme/app_spacing.dart';
+import '../../app_review/presentation/app_review_prompt.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../profile/presentation/widgets/section_header.dart';
 import '../../pwa/application/install_prompt_controller.dart';
@@ -206,6 +207,9 @@ class _DataView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // FEAT-060 — sollicitation d'avis (fenêtre native dans les apps,
+        // carte sur le web). Ici seulement : après la checklist de démarrage.
+        const AppReviewPrompt(),
         // ZONE 1 — À traiter
         SectionHeader(title: context.l10n.dashboardZoneTodoTitle),
         SizedBox(height: spacing.md),

@@ -20,6 +20,18 @@ abstract interface class SupportRepository {
     required String appVersion,
     required String appEnv,
   });
+
+  /// Écrit un avis (FEAT-060) dans `support_requests/{auto}` :
+  /// `kind: 'feedback'`, [rating] 1-5, [comment] 0-2000 caractères (peut
+  /// être vide), [platform] `web` / `ios` / `android`. Sujet fixe
+  /// « Avis — {note}/5 ». Create-only, jamais relu.
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
+  });
 }
 
 class FirestoreSupportRepository implements SupportRepository {
@@ -52,6 +64,35 @@ class FirestoreSupportRepository implements SupportRepository {
       'appEnv': appEnv,
       'status': 'new',
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('SupportRepository.submitFeedback requires a user.');
+    }
+    _log.info('submitFeedback() rating=$rating platform=$platform');
+
+    await _firestore.collection('support_requests').add({
+      'landlordId': user.uid,
+      'email': user.email,
+      'subject': 'Avis — $rating/5',
+      'message': comment,
+      'appVersion': appVersion,
+      'appEnv': appEnv,
+      'status': 'new',
+      'createdAt': FieldValue.serverTimestamp(),
+      'kind': 'feedback',
+      'rating': rating,
+      'platform': platform,
     });
   }
 }

@@ -16,6 +16,7 @@ library;
 import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_provider.dart';
 import 'package:easyrent/core/theme/theme_mode_provider.dart';
+import 'package:easyrent/features/app_review/data/store_review_service.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
@@ -23,11 +24,13 @@ import 'package:easyrent/features/profile/presentation/change_password_page.dart
 import 'package:easyrent/features/profile/presentation/profile_details_page.dart';
 import 'package:easyrent/features/profile/presentation/profile_page.dart';
 import 'package:easyrent/features/support/data/support_repository.dart';
+import 'package:easyrent/features/support/presentation/feedback_page.dart';
 import 'package:easyrent/features/support/presentation/support_page.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -171,6 +174,30 @@ class _FakeSupportRepository implements SupportRepository {
     required String appVersion,
     required String appEnv,
   }) async {}
+
+  @override
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
+  }) async {}
+}
+
+/// Fake [StoreReviewService] — enregistre les ouvertures de fiche store.
+class _FakeStoreReviewService implements StoreReviewService {
+  final List<String?> opened = [];
+
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<void> requestReview() async {}
+
+  @override
+  Future<void> openStoreListing({String? appStoreId}) async =>
+      opened.add(appStoreId);
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +266,7 @@ Widget _buildPage({
   required _FakeProfileRepository repo,
   _FakeAuthRepository? authRepo,
   _FakeSupportRepository? supportRepo,
+  StoreReviewService? storeReview,
 }) {
   final router = GoRouter(
     routes: [
@@ -254,6 +282,10 @@ Widget _buildPage({
       GoRoute(
         path: '/profile/support',
         builder: (context, state) => const SupportPage(),
+      ),
+      GoRoute(
+        path: '/profile/feedback',
+        builder: (context, state) => const FeedbackPage(),
       ),
       GoRoute(
         path: '/terms',
@@ -291,6 +323,8 @@ Widget _buildPage({
       supportRepositoryProvider.overrideWithValue(
         supportRepo ?? _FakeSupportRepository(),
       ),
+      if (storeReview != null)
+        storeReviewServiceProvider.overrideWithValue(storeReview),
     ],
     // Consumer (et non `locale: const Locale('fr')` fixe) : ce hub porte le
     // sélecteur de langue lui-même (FEAT-043) — il doit suivre
@@ -548,6 +582,63 @@ void main() {
       expect(find.byType(SupportPage), findsOneWidget);
       expect(find.text('Nous contacter'), findsOneWidget);
       expect(find.byKey(const Key('field_support_subject')), findsOneWidget);
+    });
+
+    testWidgets('groupe Aide — tuile Donner mon avis présente et navigable', (
+      tester,
+    ) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      final tile = find.byKey(const Key('tile_feedback'));
+      expect(tile, findsOneWidget);
+      expect(find.text('Donner mon avis'), findsOneWidget);
+
+      await tester.ensureVisible(tile);
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FeedbackPage), findsOneWidget);
+      expect(find.byKey(const Key('btn_feedback_submit')), findsOneWidget);
+    });
+
+    testWidgets('web → tuile Noter l\'app absente', (tester) async {
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tile_rate_app')), findsNothing);
+    });
+
+    testWidgets('app Android → tuile Noter l\'app ouvre la fiche du store', (
+      tester,
+    ) async {
+      debugIsStoreAppOverride = true;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugIsStoreAppOverride = false);
+      // Remis à null dans le `finally` (pas en addTearDown) : le framework
+      // vérifie les variables `foundation` avant d'exécuter les teardowns.
+      try {
+        final fake = _FakeStoreReviewService();
+        final repo = _FakeProfileRepository()..seed(_makeProfile());
+        await tester.pumpWidget(_buildPage(repo: repo, storeReview: fake));
+        await tester.pumpAndSettle();
+
+        final tile = find.byKey(const Key('tile_rate_app'));
+        expect(tile, findsOneWidget);
+        expect(find.text('Noter l\'app'), findsOneWidget);
+
+        await tester.ensureVisible(tile);
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        // Hermétique : l'identifiant transmis dépend du dart-define
+        // APP_STORE_ID du build, pas du comportement testé ici.
+        expect(fake.opened, hasLength(1));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
 
     testWidgets('groupe Aide — tuiles légales présentes', (tester) async {

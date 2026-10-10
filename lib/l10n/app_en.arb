@@ -3053,6 +3053,14 @@
   "@profileHubContactUsTile": {
     "description": "List tile label navigating to /profile/support (contact form)."
   },
+  "profileHubFeedbackTile": "Give feedback",
+  "@profileHubFeedbackTile": {
+    "description": "FEAT-060 — List tile label in the /profile Help group navigating to /profile/feedback (in-app rating and comment form)."
+  },
+  "profileHubRateAppTile": "Rate the app",
+  "@profileHubRateAppTile": {
+    "description": "FEAT-060 — List tile label in the /profile Help group that opens the app's App Store / Google Play listing so the user can rate it. Only shown in the iOS/Android store apps."
+  },
   "profileHubTermsTile": "Terms of use",
   "@profileHubTermsTile": {
     "description": "List tile label navigating to /terms. Chrome UI only — the legal document body itself (terms_page.dart content) stays French, out of this extraction's scope."
@@ -5154,6 +5162,43 @@
   "@supportFormSendFailedError": {
     "description": "Contact form submission error (SupportSubmitError.sendFailed): generic Firestore/network failure while submitting the support request."
   },
+  "feedbackRatingRequiredError": "Please choose a rating.",
+  "@feedbackRatingRequiredError": {
+    "description": "FEAT-060 — Feedback form validation error: no star rating selected."
+  },
+  "feedbackPageTitle": "Your feedback",
+  "@feedbackPageTitle": {
+    "description": "FEAT-060 — AppBar title of the feedback page (`/profile/feedback`)."
+  },
+  "feedbackPageIntro": "How do you find Baillan? Your rating and comments help us improve it.",
+  "@feedbackPageIntro": {
+    "description": "FEAT-060 — Intro text shown above the feedback form. 'Baillan' is the brand name — keep untranslated."
+  },
+  "feedbackRatingLabel": "Your rating",
+  "@feedbackRatingLabel": {
+    "description": "FEAT-060 — Label above the 1-5 star rating row of the feedback form."
+  },
+  "feedbackStarSemantics": "{count} out of 5",
+  "@feedbackStarSemantics": {
+    "description": "FEAT-060 — Tooltip/accessibility label of one star button in the feedback form (count = 1 to 5).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackCommentLabel": "Comment (optional)",
+  "@feedbackCommentLabel": {
+    "description": "FEAT-060 — Label of the optional comment text field of the feedback form."
+  },
+  "feedbackSubmitButton": "Send",
+  "@feedbackSubmitButton": {
+    "description": "FEAT-060 — Submit button label of the feedback form."
+  },
+  "feedbackSuccessSnackbar": "Thank you for your feedback!",
+  "@feedbackSuccessSnackbar": {
+    "description": "FEAT-060 — Snackbar shown after the feedback was sent successfully."
+  },
 
   "pwaInstallBannerTitle": "Install Baillan.",
   "@pwaInstallBannerTitle": {
@@ -6035,5 +6080,13 @@
   "edlListErrorTitle": "Unable to load condition reports.",
   "@edlListErrorTitle": { "description": "EDL list page: error view title when listForLease fails, with a retry button." },
   "edlPdfButton": "PDF",
-  "@edlPdfButton": { "description": "EDL list page: per-row button label that renders and opens the condition report PDF." }
+  "@edlPdfButton": { "description": "EDL list page: per-row button label that renders and opens the condition report PDF." },
+  "reviewInviteTitle": "Your opinion matters",
+  "@reviewInviteTitle": { "description": "FEAT-060 — Title of the review invitation card shown on the dashboard (web only)." },
+  "reviewInviteBody": "You've been using Baillan for a few weeks. Tell us what you think — it takes 30 seconds.",
+  "@reviewInviteBody": { "description": "FEAT-060 — Body of the review invitation card on the dashboard. 'Baillan' is the brand name — keep untranslated." },
+  "reviewInviteButton": "Give feedback",
+  "@reviewInviteButton": { "description": "FEAT-060 — Button of the review invitation card; opens the in-app feedback form." },
+  "reviewInviteCloseTooltip": "Close",
+  "@reviewInviteCloseTooltip": { "description": "FEAT-060 — Tooltip of the close icon on the review invitation card." }
 }

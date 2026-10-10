@@ -91,5 +91,15 @@ void main() {
       expect(text, contains('Firebase'));
       expect(text, contains('Google'));
     });
+
+    testWidgets('couvre les avis in-app (v1.4, FEAT-060)', (tester) async {
+      await tester.pumpWidget(_wrap(const PrivacyPage()));
+      await tester.pumpAndSettle();
+
+      final text = _allText(tester);
+      expect(text, contains('Version 1.4'));
+      expect(text, contains('Donner mon avis'));
+      expect(text, contains('review_solicited_at'));
+    });
   });
 }

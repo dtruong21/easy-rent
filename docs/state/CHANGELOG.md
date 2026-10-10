@@ -38,6 +38,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - Synchro de session : `logIn(uid)` RevenueCat pour un compte complet seulement, `logOut` en le quittant ; un `logIn` en échec est relancé au prochain changement de session.
 - Prédicat `canOfferUpgrade` (`!isStoreApp || isInAppPurchaseEnabled`) sur les 7 points d'incitation (limites, document trop lourd, scénarios) : comportement strictement identique tant que l'interrupteur est coupé.
 
+### FEAT-060 : avis in-app et notation sur les stores (2026-10-09)
+- Avis = `support_requests` avec `kind: 'feedback'` (note `rating` entière 1-5, `platform` web/ios/android, commentaire 0-2000 facultatif, comptes complets seulement). Règles + tests de règles ; les demandes de support gardent leur comportement. Aucune Cloud Function touchée.
+- Écran « Donner mon avis » (`/profile/feedback`) et deux tuiles Profil : « Donner mon avis » (toujours) et « Noter l'app » (apps store seulement).
+- Sollicitation dans l'Accueil (après la checklist de démarrage) : compte ≥ 15 j, ≥ 1 bien, pas sollicité depuis 120 j sur l'appareil. Apps : fenêtre native (`in_app_review`), jamais précédée d'une question. Web : carte « Votre avis compte » (« Donner mon avis » ou fermer ; les deux la masquent 120 j).
+- « Noter l'app » : Android toujours ; iOS seulement si `APP_STORE_ID` est défini au build (`--dart-define`, cf. `docs/MOBILE.md`).
+- Politique de confidentialité **v1.4** (octobre 2026) : avis (données, base légale intérêt légitime, conservation = support, suppression avec le compte) et date de dernière sollicitation stockée sur l'appareil ; `docs/STORE_FORMS.md` et `docs/STORE_COMPLIANCE.md` §5 déclarent les avis avec les demandes de support. Étoile choisie exposée aux lecteurs d'écran.
+
 ### FIX navigation : bouton retour sur `/pro` (2026-10-09)
 - `/pro` est hors du shell et on y arrivait par `context.go('/pro')` : la pile était remplacée, il n'y avait rien à dépiler et l'AppBar n'affichait pas de retour. Même cas en arrivant par l'URL ou après un rechargement. La page utilise `AppAppBar(fallbackRoute: '/profile')` (retour vers la page précédente si elle existe, sinon vers le profil), et les 5 points d'entrée font `context.push('/pro')` pour revenir à leur page d'origine (profil, section abonnement, simulateur, comparaison, modale de limite). `/pro/cancel` garde `go('/pro')`.
 

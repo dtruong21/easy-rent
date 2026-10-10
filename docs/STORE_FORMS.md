@@ -110,7 +110,7 @@ données du profil)
 | Infos financières | Autres infos financières | Facultatif (loyers, paiements, dépôts — saisis par l'utilisateur) |
 | Photos et vidéos | Photos | Facultatif (justificatifs/documents jpg-png-webp uploadés) |
 | Fichiers et documents | Fichiers et documents | Facultatif (PDF baux, quittances, justificatifs) |
-| Activité dans l'appli | Autre contenu généré par l'utilisateur | Facultatif (demandes de support) |
+| Activité dans l'appli | Autre contenu généré par l'utilisateur | Facultatif (demandes de support + avis in-app : note, commentaire, plateforme — FEAT-060) |
 | ID de l'appareil ou autres ID | ID d'appareil ou autres ID | Obligatoire (Firebase installation ID, UID Auth) |
 | Infos sur l'appli et performances (diagnostics) | Journaux de plantage / Diagnostics (Crashlytics) | **Facultatif** (opt-in : Profil → Confidentialité ; mobile uniquement, désactivé par défaut) — Collectée = Oui · Partagée = **Non** · chiffrée en transit · Finalité = **Fonctionnement de l'appli** uniquement (pas « Gestion du compte »), à confirmer à la saisie |
 
@@ -118,6 +118,13 @@ données du profil)
 le libellé exact de la catégorie dans la console est à confirmer au moment
 du remplissage (`STORE_COMPLIANCE.md` §5 l'appelle « App activity →
 Diagnostics (crash logs) »).
+
+⚠️ Les **avis in-app** (FEAT-060 : note, commentaire facultatif, plateforme)
+sont déclarés dans la ligne « Autre contenu généré par l'utilisateur » (Play) /
+« Other User Content » (Apple, §2.1), comme les demandes de support : collectés,
+non partagés, liés au compte, sans tracking, finalité **Fonctionnement de
+l'appli**. Si la console exige une finalité « amélioration du service »,
+cocher **Analytics** — à confirmer à la saisie.
 
 **Ne PAS déclarer** (vérifié absent du pubspec) : localisation, contacts,
 historique web, apps installées, santé, calendrier.
@@ -139,7 +146,7 @@ Pour chaque type : **Linked to the user = Yes** · **Used for tracking = No**
 | Contact Info → Name / Email Address / Phone Number / Physical Address | Profil bailleur + locataires + adresses des biens |
 | Financial Info → Other Financial Info | Loyers, paiements, dépôts de garantie |
 | User Content → Photos or Videos | Images uploadées (justificatifs) |
-| User Content → Other User Content | Baux, quittances PDF, documents |
+| User Content → Other User Content | Baux, quittances PDF, documents · avis in-app (note, commentaire — FEAT-060) |
 | User Content → Customer Support | Formulaire « Nous contacter » |
 | Identifiers → User ID | UID Firebase Auth + installation ID |
 | Diagnostics → Crash Data (+ Other Diagnostic Data) | Rapport de plantage Crashlytics — mobile, opt-in. **Exception à la règle ci-dessus** : *Not Linked to You*, *Not used for tracking* |

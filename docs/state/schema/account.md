@@ -93,9 +93,9 @@ Marque d'intérêt futur Plan Pro. Singleton par compte complet (anonyme non él
 
 ---
 
-## `support_requests/{id}` — CREATE-ONLY (FEAT-025)
+## `support_requests/{id}` — CREATE-ONLY (FEAT-025, FEAT-060)
 
-Formulaire « Nous contacter ». Traitement Admin SDK / console (pas de back-office in-app V1).
+Formulaire « Nous contacter » **et** avis in-app (`kind: 'feedback'`, FEAT-060). Traitement Admin SDK / console (pas de back-office in-app V1).
 
 | Champ | Type | Notes |
 |---|---|---|
@@ -103,16 +103,25 @@ Formulaire « Nous contacter ». Traitement Admin SDK / console (pas de back-off
 | `landlordId` | string | FK → landlords.id, immuable |
 | `email` | string | adresse contact |
 | `subject` | string | objet (≤ 120 chars) |
-| `message` | string | contenu (≤ 2000 chars) |
+| `message` | string | contenu (≤ 2000 chars) ; **vide autorisé pour un avis**, non vide pour une demande de support |
 | `appVersion` | string | ex: 1.0.0+1 |
 | `appEnv` | string | dev \| staging \| prod |
 | `status` | string | 'new' (jamais changé client) |
 | `createdAt` | timestamp | request.time, immuable |
+| `kind` | string | **FEAT-060** : `'feedback'` pour un avis ; absent = demande de support. Toute autre valeur est refusée |
+| `rating` | int | **FEAT-060**, avis uniquement : entier 1-5 |
+| `platform` | string | **FEAT-060**, avis uniquement : `web` \| `ios` \| `android` |
+
+Un avis a `subject` = `Avis — {note}/5` (texte fixe, non traduit) : **convention client**, non imposée par les règles (qui ne bornent que `subject` à 1-120 caractères).
 
 **Règles Firestore** :
 - `get/list` : false (jamais relu V1)
-- `create` : isFullyAuthed() && landlordId==uid + bornes subject/message
+- `create` : isFullyAuthed() && landlordId==uid + bornes subject (1-120) / message (≤ 2000) + `status=='new'` + `createdAt==request.time`, **et** l'une des deux branches :
+  - `isSupportRequest` : pas de `kind` et `message.size() > 0` (comportement FEAT-025 inchangé) ;
+  - `isFeedback` (FEAT-060) : `kind=='feedback'`, `rating is int` dans [1, 5], `platform in ['web','ios','android']` (message facultatif).
 - `update/delete` : false
+
+Tests : bloc « support_requests — support (FEAT-025) et avis (FEAT-060) » de `functions/rules-tests/firestore_rules.test.ts`.
 
 ## `_ops/{docId}` — configuration serveur globale (FEAT-044e)
 

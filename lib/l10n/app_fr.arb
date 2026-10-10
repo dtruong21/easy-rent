@@ -715,6 +715,8 @@
   "profileHubChangePasswordTile": "Changer le mot de passe",
   "profileHubHelpSection": "Aide",
   "profileHubContactUsTile": "Nous contacter",
+  "profileHubFeedbackTile": "Donner mon avis",
+  "profileHubRateAppTile": "Noter l'app",
   "profileHubTermsTile": "Conditions générales d'utilisation",
   "profileHubPrivacyTile": "Politique de confidentialité",
   "profileHubLegalTile": "Mentions légales",
@@ -1182,6 +1184,14 @@
   "supportFormMessageRequiredError": "Message requis",
   "supportFormMessageTooLongError": "Le message doit faire {limit} caractères max.",
   "supportFormSendFailedError": "Envoi impossible. Réessayez dans quelques instants.",
+  "feedbackRatingRequiredError": "Choisissez une note.",
+  "feedbackPageTitle": "Votre avis",
+  "feedbackPageIntro": "Que pensez-vous de Baillan ? Votre note et vos remarques nous aident à l'améliorer.",
+  "feedbackRatingLabel": "Votre note",
+  "feedbackStarSemantics": "{count} sur 5",
+  "feedbackCommentLabel": "Commentaire (facultatif)",
+  "feedbackSubmitButton": "Envoyer",
+  "feedbackSuccessSnackbar": "Merci pour votre avis !",
 
   "pwaInstallBannerTitle": "Installez Baillan.",
   "pwaInstallBannerNativeSubtitle": "Accédez à votre gestion locative en un clic, même hors-ligne.",
@@ -1421,5 +1431,9 @@
   "edlListEmptyMessage": "Les états des lieux de ce bail apparaissent ici une fois créés.",
   "edlNewButton": "Nouvel état des lieux",
   "edlListErrorTitle": "Impossible de charger les états des lieux.",
-  "edlPdfButton": "PDF"
+  "edlPdfButton": "PDF",
+  "reviewInviteTitle": "Votre avis compte",
+  "reviewInviteBody": "Vous utilisez Baillan depuis quelques semaines. Dites-nous ce que vous en pensez : 30 secondes suffisent.",
+  "reviewInviteButton": "Donner mon avis",
+  "reviewInviteCloseTooltip": "Fermer"
 }
