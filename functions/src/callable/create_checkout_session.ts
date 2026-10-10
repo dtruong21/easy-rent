@@ -62,7 +62,7 @@ const stripeTestSecret = defineSecret("STRIPE_SECRET_KEY_TEST");
 
 /** Base URL web pour les redirections success/cancel. */
 const webAppBaseUrl = defineString("WEB_APP_BASE_URL", {
-  default: "https://baillan.com",
+  default: "https://app.baillan.com",
 });
 
 /**

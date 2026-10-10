@@ -72,10 +72,22 @@ describe("stripeEnvForOrigin — allowlist positive de la prod", () => {
     );
   });
 
-  it("app.baillan.com est pré-autorisé pour la migration de domaine", () => {
+  it("app.baillan.com (app en prod) → live", () => {
     expect(stripeEnvForOrigin("https://app.baillan.com")).toBe<StripeEnv>(
       "live",
     );
+  });
+
+  // FEAT-050e : après la bascule de domaine, baillan.com et www.baillan.com
+  // servent la VITRINE, plus l'app. Ils ne doivent jamais obtenir la clé live —
+  // un checkout appelé depuis la vitrine est refusé. Verrou anti-régression.
+  it("origines de la vitrine (apex, www) → unknown, jamais live", () => {
+    expect(stripeEnvForOrigin("https://baillan.com")).toBe<StripeEnv>("unknown");
+    expect(stripeEnvForOrigin("https://www.baillan.com")).toBe<StripeEnv>(
+      "unknown",
+    );
+    expect(PROD_ORIGINS).not.toContain("https://baillan.com");
+    expect(PROD_ORIGINS).not.toContain("https://www.baillan.com");
   });
 });
 
@@ -86,7 +98,7 @@ describe("resolveStripeKeyOrThrow — seule porte vers sk_live", () => {
   const TEST = "sk_test_xxx";
 
   it("origine prod → clé live", () => {
-    expect(resolveStripeKeyOrThrow("https://baillan.com", LIVE, TEST)).toBe(
+    expect(resolveStripeKeyOrThrow("https://app.baillan.com", LIVE, TEST)).toBe(
       LIVE,
     );
   });
@@ -114,7 +126,7 @@ describe("resolveStripeKeyOrThrow — seule porte vers sk_live", () => {
 
   it("origine prod sans clé live posée → refus explicite", () => {
     expect(() =>
-      resolveStripeKeyOrThrow("https://baillan.com", "", TEST),
+      resolveStripeKeyOrThrow("https://app.baillan.com", "", TEST),
     ).toThrowError(/stripe_live_key_not_configured/);
   });
 });
@@ -136,7 +148,7 @@ describe("assertion de mode — la clé doit correspondre à l'environnement", (
   it("clé de test posée sur le secret live → refus", () => {
     expect(() =>
       resolveStripeKeyOrThrow(
-        "https://baillan.com",
+        "https://app.baillan.com",
         "sk_test_COLLEE_PAR_ERREUR",
         "sk_test_xxx",
       ),
@@ -145,7 +157,7 @@ describe("assertion de mode — la clé doit correspondre à l'environnement", (
 
   it("clés restreintes (rk_) acceptées dans les deux modes", () => {
     expect(
-      resolveStripeKeyOrThrow("https://baillan.com", "rk_live_x", "rk_test_x"),
+      resolveStripeKeyOrThrow("https://app.baillan.com", "rk_live_x", "rk_test_x"),
     ).toBe("rk_live_x");
     expect(
       resolveStripeKeyOrThrow(
