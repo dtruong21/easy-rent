@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/store_billing.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
@@ -9,11 +11,15 @@ import '../../../auth/data/landlord_tier_repository.dart';
 import '../../../auth/domain/plan_level.dart';
 import '../../../profile/presentation/widgets/section_header.dart';
 import '../../application/manage_subscription_controller.dart';
+import '../../data/store_billing_service.dart';
 import '../../data/subscription_repository.dart';
+import '../../domain/store_names.dart';
 import '../pro_pricing_cta.dart' show mobileStores;
 import 'plan_level_label.dart';
 import 'subscription_cancel_dialog.dart';
 import 'subscription_status_views.dart';
+
+final _log = Logger('SubscriptionSection');
 
 /// Section « Abonnement Baillan Pro » de `/profile` (FEAT-044f).
 ///
@@ -22,9 +28,11 @@ import 'subscription_status_views.dart';
 /// convention que `ProfileCrashReportingSection`).
 ///
 /// Rendu selon [LandlordTierSnapshot] (`landlordTierProvider`) :
-/// - `proStore` ∈ [mobileStores] → message info, pas de bouton (résiliation
-///   IAP hors périmètre v1, cf. plan FEAT-044f §Hors périmètre — deep-link
-///   système `showManageSubscriptions`, non implémenté ici) ;
+/// - `proStore` ∈ [mobileStores] → message info + bouton « Gérer dans {store} »
+///   (FEAT-044e), sur le web comme dans les apps : il ouvre la page de gestion
+///   du store D'ORIGINE de l'abonnement (URL RevenueCat, sinon page générique
+///   du store). Ni Résilier, ni Réactiver, ni Changer d'offre : la résiliation
+///   d'un achat intégré se fait chez le store, jamais via Stripe ;
 /// - web (store `null`/inconnu inclus, cf. plan §R5 — ne jamais cacher le
 ///   chemin de résiliation à un abonné web) + `proWillRenew != false` →
 ///   « Actif — renouvellement le … » + bouton destructif « Résilier » →
@@ -61,12 +69,22 @@ class SubscriptionSection extends ConsumerWidget {
       children: [
         SectionHeader(title: l10n.subscriptionSectionTitle(levelLabel)),
         const SizedBox(height: 8),
-        if (isMobileStore)
+        if (isMobileStore) ...[
           Text(
             l10n.subscriptionManageOnStore,
             key: const Key('txt_subscription_manage_on_store'),
-          )
-        else if (snapshot.proWillRenew == false)
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            key: const Key('btn_subscription_manage_in_store'),
+            onPressed: () => _openStoreManagement(ref, snapshot.proStore),
+            child: Text(
+              l10n.subscriptionManageInStoreButton(
+                storeNameForProStore(snapshot.proStore),
+              ),
+            ),
+          ),
+        ] else if (snapshot.proWillRenew == false)
           ScheduledCancelView(
             expiresAt: snapshot.proExpiresAt,
             isBusy: isBusy,
@@ -90,6 +108,27 @@ class SubscriptionSection extends ConsumerWidget {
         const SizedBox(height: 32),
       ],
     );
+  }
+
+  /// Ouvre la page de gestion de l'abonnement du store D'ORIGINE : l'URL de
+  /// RevenueCat si elle est connue, sinon la page générique du store. Aucun
+  /// `context` ni `ref` après l'`await` ; un échec est journalisé, jamais
+  /// propagé (le `onPressed` ne l'attend pas).
+  Future<void> _openStoreManagement(WidgetRef ref, String? proStore) async {
+    final service = ref.read(storeBillingServiceProvider);
+    try {
+      final uri =
+          await service.managementUrl() ?? storeManagementFallbackUri(proStore);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        _log.warning('Impossible d\'ouvrir la gestion de l\'abonnement : $uri');
+      }
+    } on Object catch (e, st) {
+      _log.warning(
+        'Ouverture de la gestion de l\'abonnement impossible',
+        e,
+        st,
+      );
+    }
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {

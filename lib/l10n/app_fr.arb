@@ -1339,6 +1339,7 @@
   "subscriptionCancelDialogBody": "Vous conserverez l'accès à Baillan {level} jusqu'au {date}. Passé cette date, votre compte repassera automatiquement en formule Gratuite. Aucun remboursement au prorata n'est effectué.",
   "subscriptionCancelConfirm": "Confirmer la résiliation",
   "subscriptionManageOnStore": "Gérez votre abonnement depuis l'App Store ou Google Play.",
+  "subscriptionManageInStoreButton": "Gérer dans {store}",
   "subscriptionCancelSuccess": "Résiliation programmée. Vous conservez l'accès Pro jusqu'à la fin de la période en cours.",
   "subscriptionReactivateSuccess": "Abonnement réactivé — le renouvellement automatique reprend.",
   "subscriptionErrorNoWebSub": "Aucun abonnement web actif n'a été trouvé pour ce compte.",
