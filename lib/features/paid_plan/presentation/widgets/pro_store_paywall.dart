@@ -60,6 +60,8 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
   }
 
   Future<void> _buy(ProStorePackage package) async {
+    // Un second appui avant la prochaine frame ne lance pas un second achat.
+    if (_busy) return;
     // `ref` et `context` lus AVANT tout await.
     final service = ref.read(storeBillingServiceProvider);
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
@@ -85,6 +87,7 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
   }
 
   Future<void> _restore() async {
+    if (_busy) return;
     final service = ref.read(storeBillingServiceProvider);
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     final l10n = context.l10n;
@@ -111,8 +114,15 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
     // Palier pas encore connu : ni offre ni bouton (un abonné ne doit jamais
     // voir, même un instant, de quoi acheter une seconde fois).
     final tier = ref.watch(landlordTierProvider);
-    if (tier.isLoading && !tier.hasValue) {
-      return const Center(child: CircularProgressIndicator());
+    if (!tier.hasValue) {
+      // Palier en erreur : toujours inconnu, donc toujours aucun achat. Un
+      // « Réessayer » en cours (erreur précédente conservée) montre le
+      // chargement.
+      return tier.hasError && !tier.isLoading
+          ? StoreOfferUnavailableView(
+              onRetry: () => ref.invalidate(landlordTierProvider),
+            )
+          : const Center(child: CircularProgressIndicator());
     }
     // Déjà Pro (toute origine) : aucun achat proposé. C'est aussi ce qui
     // termine l'attente d'activation.

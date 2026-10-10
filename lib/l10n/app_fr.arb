@@ -1452,5 +1452,6 @@
   "storePurchasePending": "Achat en attente de validation. Votre abonnement s'activera dès qu'il sera approuvé.",
   "storePurchaseError": "L'achat n'a pas abouti. Vérifiez votre connexion et réessayez.",
   "storeRestoreNothing": "Aucun achat à restaurer sur ce compte.",
-  "storeRestoreError": "La restauration a échoué. Réessayez dans un instant."
+  "storeRestoreError": "La restauration a échoué. Réessayez dans un instant.",
+  "storePaywallTitle": "Baillan Pro"
 }

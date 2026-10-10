@@ -6143,5 +6143,7 @@
   "storeRestoreNothing": "No purchase to restore on this account.",
   "@storeRestoreNothing": { "description": "FEAT-044e — Snackbar shown when restoring purchases found nothing." },
   "storeRestoreError": "Restore failed. Try again in a moment.",
-  "@storeRestoreError": { "description": "FEAT-044e — Snackbar shown when restoring purchases failed." }
+  "@storeRestoreError": { "description": "FEAT-044e — Snackbar shown when restoring purchases failed." },
+  "storePaywallTitle": "Baillan Pro",
+  "@storePaywallTitle": { "description": "FEAT-044e — AppBar title of /pro in the iOS/Android store apps when in-app purchase is on. Only Pro is sold there: must not name Max or Ultra. 'Baillan Pro' is the product name — keep untranslated." }
 }

@@ -197,6 +197,10 @@ void main() {
     expect(_key('plan_card_ultra'), findsNothing);
     expect(find.byType(PlanCard), findsNothing);
     expect(find.textContaining('Bientôt disponible'), findsNothing);
+    // Aucun texte de l'écran (titre de la barre compris) ne nomme Max/Ultra.
+    expect(find.text('Baillan Pro'), findsOneWidget);
+    expect(find.textContaining('Max'), findsNothing);
+    expect(find.textContaining('Ultra'), findsNothing);
     expect(find.textContaining('7,99'), findsNothing);
     expect(find.textContaining('79 €'), findsNothing);
     expect(_key('txt_pro_store_app_unavailable'), findsNothing);
@@ -456,6 +460,7 @@ void main() {
     await mount(tester, snapshot: _free);
 
     expect(_key('txt_pro_store_app_unavailable'), findsOneWidget);
+    expect(find.text('Baillan Pro, Max & Ultra'), findsOneWidget);
     expect(_key('btn_store_buy_monthly'), findsNothing);
     expect(_key('btn_store_buy_annual'), findsNothing);
     expect(_key('btn_store_restore'), findsNothing);
@@ -474,5 +479,80 @@ void main() {
     expect(_key('btn_store_restore'), findsNothing);
     expect(_key('txt_store_already_subscribed'), findsNothing);
     expect(fake.offerCalls, 0);
+  });
+
+  testWidgets('palier en erreur : ni achat ni offre demandée, message et '
+      'Réessayer', (tester) async {
+    await mount(tester);
+    tier.addError(StateError('x'));
+    await tester.pump();
+
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(_key('btn_store_buy_annual'), findsNothing);
+    expect(_key('btn_store_restore'), findsNothing);
+    expect(_key('txt_store_offer_unavailable'), findsOneWidget);
+    expect(_key('btn_store_offer_retry'), findsOneWidget);
+    expect(fake.offerCalls, 0);
+  });
+
+  testWidgets('palier en erreur : Réessayer relit le palier puis affiche '
+      'les offres', (tester) async {
+    await mount(tester);
+    tier.addError(StateError('x'));
+    await tester.pump();
+
+    await tester.tap(_key('btn_store_offer_retry'));
+    await tester.pump();
+    // Relu mais pas encore connu : chargement, toujours aucun achat.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(fake.offerCalls, 0);
+
+    tier.add(_free);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(_key('btn_store_buy_monthly'), findsOneWidget);
+    expect(_key('btn_store_buy_annual'), findsOneWidget);
+    expect(fake.offerCalls, 1);
+  });
+
+  testWidgets('double appui dans la même frame : un seul achat', (
+    tester,
+  ) async {
+    fake.purchaseGate = Completer<void>();
+    await mount(tester, snapshot: _free);
+    // Deux appuis AVANT toute reconstruction : `onPressed` lu une fois, appelé
+    // deux fois (annuel puis mensuel) sans `pump` entre les deux.
+    final annual = tester
+        .widget<ButtonStyleButton>(_key('btn_store_buy_annual'))
+        .onPressed!;
+    final monthly = tester
+        .widget<ButtonStyleButton>(_key('btn_store_buy_monthly'))
+        .onPressed!;
+
+    annual();
+    monthly();
+    annual();
+    await tester.pump();
+
+    expect(purchaseCalls(), ['purchase:annual:u1']);
+
+    fake.purchaseGate!.complete();
+    await afterAction(tester);
+  });
+
+  testWidgets('double appui sur Restaurer dans la même frame : une seule '
+      'restauration', (tester) async {
+    await mount(tester, snapshot: _free);
+    final restore = tester
+        .widget<ButtonStyleButton>(_key('btn_store_restore'))
+        .onPressed!;
+
+    restore();
+    restore();
+    await afterAction(tester);
+
+    expect(fake.calls.where((c) => c.startsWith('restore')), ['restore:u1']);
   });
 }

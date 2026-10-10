@@ -67,7 +67,11 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
     if (isStoreApp) {
       return Scaffold(
         appBar: AppAppBar(
-          title: l10n.proPricingTitle,
+          // Achat intégré actif : seul Pro est vendu, le titre ne nomme ni
+          // Max ni Ultra. Coupé : titre inchangé.
+          title: isInAppPurchaseEnabled
+              ? l10n.storePaywallTitle
+              : l10n.proPricingTitle,
           fallbackRoute: '/profile',
         ),
         body: SafeArea(
