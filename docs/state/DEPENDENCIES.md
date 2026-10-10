@@ -37,6 +37,7 @@
 | `flutter_svg` | `^2.0.10+1` | Rendu SVG (logo Google auth buttons) | FEAT-019 | — |
 | `web` | `^1.1.0` | JS interop (install prompt, Web Share API) | FEAT-010, FEAT-008 | — |
 | **`package_info_plus`** | **^9.0.1** | **Version app (version.json web, manifest natif)** | **FEAT-023** | — |
+| `purchases_flutter` | `^10.15.2` | SDK RevenueCat achat intégré iOS/Android, derrière `IAP_ENABLED` (web : remplacé par le plugin vide local `purchases_flutter_web_noop`) | FEAT-044e | — |
 
 **Removed (migration Firebase, FEAT-019)** :
 - ancien client backend (Dart) — remplacé par `firebase_core` / `firebase_auth` / `cloud_firestore` / `firebase_storage`

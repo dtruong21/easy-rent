@@ -318,6 +318,27 @@ void main() {
       },
     );
 
+    testWidgets('achat intégré actif → CTA vers /pro présent', (tester) async {
+      debugInAppPurchaseEnabledOverride = true;
+      addTearDown(() => debugInAppPurchaseEnabledOverride = null);
+
+      await triggerLimit(
+        tester,
+        tier: SubscriptionTier.free,
+        scenarios: [_scenario('s1'), _scenario('s2'), _scenario('s3')],
+      );
+
+      expect(
+        find.byKey(const Key('scenario_limit_reached_modal')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('scenario_limit_upgrade_cta')),
+        findsOneWidget,
+      );
+      expect(find.text('Passer à Pro'), findsOneWidget);
+    });
+
     testWidgets('tier paid Pro (15/15) → aucun CTA « Passer à Max »', (
       tester,
     ) async {
