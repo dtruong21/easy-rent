@@ -24,6 +24,7 @@ import 'widgets/plan_card.dart';
 import 'widgets/plan_change_dialog.dart';
 import 'widgets/plan_comparison_table.dart';
 import 'widgets/plan_level_label.dart';
+import 'widgets/pro_store_paywall.dart';
 
 /// Page `/pro` — 4 offres (Gratuit, Pro, Max, Ultra), FEAT-056 PR-6.
 ///
@@ -39,11 +40,13 @@ import 'widgets/plan_level_label.dart';
 /// rendu pour un palier non `purchasable` — testé par
 /// `test/widget/pro_pricing_page_test.dart`.
 ///
-/// **Apps iOS/Android** ([isStoreApp]) : ni offres, ni prix, ni bouton — un
-/// message neutre. App Store 3.1.1 et la règle Paiements de Google Play
-/// interdisent tout achat hors achat intégré, et toute incitation à acheter
-/// ailleurs (donc aucune mention du site web). L'achat intégré viendra se
-/// brancher sur ce même garde-fou.
+/// **Apps iOS/Android** ([isStoreApp]) : jamais le parcours Stripe ni les
+/// prix web — App Store 3.1.1 et la règle Paiements de Google Play interdisent
+/// tout achat hors achat intégré, et toute incitation à acheter ailleurs
+/// (donc aucune mention du site web). Tant que l'achat intégré est coupé
+/// ([isInAppPurchaseEnabled]) : un message neutre, ni offres ni prix ni
+/// bouton. Sinon [ProStorePaywall] : Pro uniquement, aux prix du store,
+/// jamais Max ni Ultra.
 class ProPricingPage extends ConsumerStatefulWidget {
   const ProPricingPage({super.key});
 
@@ -68,17 +71,21 @@ class _ProPricingPageState extends ConsumerState<ProPricingPage> {
           fallbackRoute: '/profile',
         ),
         body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                l10n.proStoreAppUnavailable,
-                key: const Key('txt_pro_store_app_unavailable'),
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
+          // Achat intégré actif : écran d'achat du store. Sinon message
+          // neutre, comme avant FEAT-044e.
+          child: isInAppPurchaseEnabled
+              ? const ProStorePaywall()
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      l10n.proStoreAppUnavailable,
+                      key: const Key('txt_pro_store_app_unavailable'),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
         ),
       );
     }

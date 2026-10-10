@@ -6088,5 +6088,60 @@
   "reviewInviteButton": "Give feedback",
   "@reviewInviteButton": { "description": "FEAT-060 — Button of the review invitation card; opens the in-app feedback form." },
   "reviewInviteCloseTooltip": "Close",
-  "@reviewInviteCloseTooltip": { "description": "FEAT-060 — Tooltip of the close icon on the review invitation card." }
+  "@reviewInviteCloseTooltip": { "description": "FEAT-060 — Tooltip of the close icon on the review invitation card." },
+  "storePaywallHeadline": "Upgrade to Baillan Pro",
+  "@storePaywallHeadline": { "description": "FEAT-044e — Headline of the in-app purchase screen on /pro (iOS/Android store apps). 'Baillan Pro' is the product name — keep untranslated." },
+  "storeBuyMonthlyButton": "Subscribe — {price} / month",
+  "@storeBuyMonthlyButton": {
+    "description": "FEAT-044e — Button buying the monthly Pro plan. {price} is the localized price read from the store (e.g. 8,49 €).",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "storeBuyAnnualButton": "Subscribe — {price} / year",
+  "@storeBuyAnnualButton": {
+    "description": "FEAT-044e — Button buying the annual Pro plan. {price} is the localized price read from the store (e.g. 84,99 €).",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "storeRestoreButton": "Restore purchases",
+  "@storeRestoreButton": { "description": "FEAT-044e — Button restoring purchases previously made with the same store account (App Store 3.1.1 requires it)." },
+  "storeLegalNotice": "Auto-renewing subscription. Payment is charged to your {store} account at confirmation of purchase. The subscription renews for the same duration unless cancelled at least 24 hours before the end of the current period. You manage and cancel your subscription in your {store} account settings.",
+  "@storeLegalNotice": {
+    "description": "FEAT-044e — Auto-renewal notice required by App Store 3.1.2 under the purchase buttons. {store} is the proper noun 'App Store' or 'Google Play' (never translated).",
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storeTermsLink": "Terms of use",
+  "@storeTermsLink": { "description": "FEAT-044e — Link to the terms of use under the purchase buttons (App Store 3.1.2)." },
+  "storePrivacyLink": "Privacy policy",
+  "@storePrivacyLink": { "description": "FEAT-044e — Link to the privacy policy under the purchase buttons (App Store 3.1.2)." },
+  "storeOfferUnavailable": "Plans are not available right now.",
+  "@storeOfferUnavailable": { "description": "FEAT-044e — Message shown when the store offer could not be loaded; paired with a retry button." },
+  "storeActivatingTitle": "Activating…",
+  "@storeActivatingTitle": { "description": "FEAT-044e — Title shown after a successful purchase or restore while waiting for the server to grant the Pro entitlement." },
+  "storeActivatingBody": "Your purchase is confirmed. We're activating your subscription — this takes a few seconds.",
+  "@storeActivatingBody": { "description": "FEAT-044e — Body shown under the activating title." },
+  "storeActivationDelayedBody": "Activation is taking longer than expected. Your purchase is recorded with the store.",
+  "@storeActivationDelayedBody": { "description": "FEAT-044e — Reassuring message shown when activation exceeds 60 seconds; paired with restore and retry buttons." },
+  "storeAlreadySubscribed": "You're already subscribed.",
+  "@storeAlreadySubscribed": { "description": "FEAT-044e — Shown instead of the purchase buttons when the account already has Pro or more (any origin)." },
+  "storeManageSubscriptionButton": "Manage my subscription",
+  "@storeManageSubscriptionButton": { "description": "FEAT-044e — Button leading to /profile where the subscription is managed." },
+  "storePurchasePending": "Purchase pending approval. Your subscription will activate once it's approved.",
+  "@storePurchasePending": { "description": "FEAT-044e — Snackbar shown when the store reports a deferred purchase (e.g. parental approval)." },
+  "storePurchaseError": "The purchase didn't go through. Check your connection and try again.",
+  "@storePurchaseError": { "description": "FEAT-044e — Snackbar shown when a purchase failed." },
+  "storeRestoreNothing": "No purchase to restore on this account.",
+  "@storeRestoreNothing": { "description": "FEAT-044e — Snackbar shown when restoring purchases found nothing." },
+  "storeRestoreError": "Restore failed. Try again in a moment.",
+  "@storeRestoreError": { "description": "FEAT-044e — Snackbar shown when restoring purchases failed." }
 }

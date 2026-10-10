@@ -1435,5 +1435,22 @@
   "reviewInviteTitle": "Votre avis compte",
   "reviewInviteBody": "Vous utilisez Baillan depuis quelques semaines. Dites-nous ce que vous en pensez : 30 secondes suffisent.",
   "reviewInviteButton": "Donner mon avis",
-  "reviewInviteCloseTooltip": "Fermer"
+  "reviewInviteCloseTooltip": "Fermer",
+  "storePaywallHeadline": "Passez à Baillan Pro",
+  "storeBuyMonthlyButton": "S'abonner — {price} / mois",
+  "storeBuyAnnualButton": "S'abonner — {price} / an",
+  "storeRestoreButton": "Restaurer les achats",
+  "storeLegalNotice": "Abonnement à renouvellement automatique. Le paiement est débité sur votre compte {store} à la confirmation de l'achat. L'abonnement se renouvelle pour la même durée, sauf résiliation au moins 24 heures avant la fin de la période en cours. Vous gérez et résiliez votre abonnement dans les réglages de votre compte {store}.",
+  "storeTermsLink": "Conditions d'utilisation",
+  "storePrivacyLink": "Politique de confidentialité",
+  "storeOfferUnavailable": "Les offres ne sont pas disponibles pour le moment.",
+  "storeActivatingTitle": "Activation en cours…",
+  "storeActivatingBody": "Votre achat est confirmé. Nous activons votre abonnement, cela prend quelques secondes.",
+  "storeActivationDelayedBody": "L'activation prend plus de temps que prévu. Votre achat est bien enregistré auprès du store.",
+  "storeAlreadySubscribed": "Vous êtes déjà abonné.",
+  "storeManageSubscriptionButton": "Gérer mon abonnement",
+  "storePurchasePending": "Achat en attente de validation. Votre abonnement s'activera dès qu'il sera approuvé.",
+  "storePurchaseError": "L'achat n'a pas abouti. Vérifiez votre connexion et réessayez.",
+  "storeRestoreNothing": "Aucun achat à restaurer sur ce compte.",
+  "storeRestoreError": "La restauration a échoué. Réessayez dans un instant."
 }
