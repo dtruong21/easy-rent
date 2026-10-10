@@ -15,9 +15,9 @@ extension TenantSubmitErrorL10n on TenantSubmitError {
     return switch (this) {
       TenantSubmitError.hasActiveLeases => l10n.tenantsErrorHasActiveLeases,
       TenantSubmitError.limitReached =>
-        isStoreApp
-            ? l10n.tenantsErrorLimitReachedStore
-            : l10n.tenantsErrorLimitReached,
+        canOfferUpgrade
+            ? l10n.tenantsErrorLimitReached
+            : l10n.tenantsErrorLimitReachedStore,
       TenantSubmitError.permissionDenied => l10n.tenantsErrorPermissionDenied,
       TenantSubmitError.serviceUnavailable =>
         l10n.tenantsErrorServiceUnavailable,

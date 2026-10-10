@@ -295,6 +295,24 @@ void main() {
       },
     );
 
+    testWidgets('achat intégré actif → CTA vers /pro présent', (tester) async {
+      debugInAppPurchaseEnabledOverride = true;
+      addTearDown(() => debugInAppPurchaseEnabledOverride = null);
+
+      await tester.pumpWidget(
+        _mount(
+          scenarios: [
+            _scenario(id: 'A', name: 'Alpha'),
+            _scenario(id: 'B', name: 'Bravo'),
+          ],
+          tier: SubscriptionTier.free,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('compare_toggle_pro_only')), findsOneWidget);
+    });
+
     testWidgets('2 scénarios + paid → bouton Comparer inchangé', (
       tester,
     ) async {

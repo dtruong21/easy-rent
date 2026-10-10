@@ -70,7 +70,7 @@ nouveau système (exigé depuis le 31/01/2026), déjà listé dans les formulair
   tous les points d'entrée vers `/pro` sont cachés, « Réactiver » et « Changer
   d'offre » d'un abonnement Stripe sont cachés, et la section
   « Prochainement — Plan Pro » du simulateur (avec sa sollicitation de
-  financement) est masquée. **La résiliation d'un abonnement web reste
+  financement) est masquée. Prédicat unique `canOfferUpgrade` (`!isStoreApp || isInAppPurchaseEnabled`) : incitations masquées dans une app store tant que l'achat intégré est coupé, visibles quand il est actif (FEAT-044e). **La résiliation d'un abonnement web reste
   possible depuis l'app** : la callable `manageSubscription` accepte `cancel`
   sans en-tête Origin (cas des apps natives), avec la clé Stripe de la base qui
   porte le compte ; `reactivate` et `change_plan` y restent refusés côté

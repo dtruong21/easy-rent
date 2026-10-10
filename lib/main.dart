@@ -21,6 +21,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
 import 'core/ui/keyboard/dismiss_keyboard_on_tap.dart';
 import 'features/auth/application/anon_expiry_renewer.dart';
+import 'features/paid_plan/application/store_billing_session_sync.dart';
 import 'features/pwa/data/install_prompt_js_bridge_interface.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
@@ -143,6 +144,9 @@ class _BaillanAppState extends ConsumerState<BaillanApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    // FEAT-044e : utilisateur RevenueCat aligné sur la session (inerte tant
+    // que l'achat intégré est coupé).
+    ref.watch(storeBillingSessionSyncProvider);
     // Thème choisi par l'utilisateur (Profil → Apparence), persisté en
     // localStorage. Défaut : suit le système.
     final themeMode = ref.watch(themeModeProvider);

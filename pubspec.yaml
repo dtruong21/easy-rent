@@ -81,6 +81,10 @@ dependencies:
   # Remonte l'annulation du share sheet (dismissed) — requis pour l'invariant
   # « sent_at après partage réussi ».
   share_plus: ^12.0.2
+  purchases_flutter: ^10.15.2
+  # Web : implémentation vide de purchases_flutter (pas de SDK RevenueCat chargé).
+  purchases_flutter_web_noop:
+    path: packages/purchases_flutter_web_noop
   # Notation sur les stores (FEAT-060)
   in_app_review: ^2.0.12
 

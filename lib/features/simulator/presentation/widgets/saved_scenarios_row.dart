@@ -296,9 +296,10 @@ class _CompareScenariosToggle extends StatelessWidget {
     }
 
     if (!hasComparison) {
-      // Apps iOS/Android : la tuile verrouillée ne mène qu'à /pro (achat hors
-      // achat intégré) — on ne l'affiche pas plutôt que d'offrir un cul-de-sac.
-      if (isStoreApp) return const SizedBox.shrink();
+      // App store sans achat intégré ([canOfferUpgrade] faux) : la tuile
+      // verrouillée ne mène qu'à /pro — on ne l'affiche pas plutôt que d'offrir
+      // un cul-de-sac.
+      if (!canOfferUpgrade) return const SizedBox.shrink();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

@@ -17,11 +17,11 @@ import '../../../paid_plan/presentation/widgets/plan_level_label.dart';
 ///   illimité) : CTA « Passer à {palier suivant} » → `/pro`, palier suivant
 ///   dérivé du rang de l'enum [PlanLevel], jamais codé en dur.
 ///
-/// Dans les apps iOS/Android ([isStoreApp]), le CTA vers `/pro` disparaît (aucun
-/// achat hors achat intégré) : la modale garde son message (aucun prix n'y
-/// figure) et sa fermeture, libellée « Fermer » (neutre) — « Plus tard »
-/// renverrait à un achat que l'app ne propose pas. Le cas anonyme garde son CTA
-/// « Créer un compte », donc « Plus tard ».
+/// Dans une app store sans achat intégré ([canOfferUpgrade] faux), le CTA vers
+/// `/pro` disparaît (aucun achat hors achat intégré) : la modale garde son
+/// message (aucun prix n'y figure) et sa fermeture, libellée « Fermer »
+/// (neutre) — « Plus tard » renverrait à un achat que l'app ne propose pas. Le
+/// cas anonyme garde son CTA « Créer un compte », donc « Plus tard ».
 Future<void> showScenarioLimitReachedModal(
   BuildContext context, {
   required PlanEntitlement plan,
@@ -60,8 +60,9 @@ class _ScenarioLimitReachedDialog extends StatelessWidget {
     final isAnonymous = tier == SubscriptionTier.anonymous;
     final isPaid = tier == SubscriptionTier.paid;
     final nextLevel = isPaid ? _nextLevel(plan.level!) : null;
-    final showUpgradeCta = !isAnonymous && !isStoreApp;
-    // Sans aucun CTA (app store, hors anonyme), « Plus tard » n'a plus d'objet.
+    final showUpgradeCta = !isAnonymous && canOfferUpgrade;
+    // Sans aucun CTA (app store sans achat intégré, hors anonyme), « Plus tard »
+    // n'a plus d'objet.
     final hasCta = isAnonymous || showUpgradeCta;
 
     return AlertDialog(

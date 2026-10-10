@@ -169,6 +169,26 @@ class Env {
     defaultValue: false,
   );
 
+  /// FEAT-044e — achat intégré (RevenueCat) dans les apps iOS/Android. Coupé
+  /// par défaut : sans `--dart-define=IAP_ENABLED=true`, une app store garde
+  /// le comportement actuel (aucun achat, aucune incitation). Sans effet sur
+  /// le web (Stripe, cf. [subscriptionsEnabled]). Ne pas l'activer avant le
+  /// lot 3 (écran d'achat).
+  static const bool iapEnabled = bool.fromEnvironment(
+    'IAP_ENABLED',
+    defaultValue: false,
+  );
+
+  /// Clé SDK RevenueCat iOS (`appl_…`) — publique par nature (clé client).
+  static const String revenueCatAppleApiKey = String.fromEnvironment(
+    'REVENUECAT_APPLE_API_KEY',
+  );
+
+  /// Clé SDK RevenueCat Android (`goog_…`) — publique par nature.
+  static const String revenueCatGoogleApiKey = String.fromEnvironment(
+    'REVENUECAT_GOOGLE_API_KEY',
+  );
+
   /// FEAT-060 — identifiant numérique de l'app dans l'App Store (App Store
   /// Connect → Informations sur l'app → Apple ID). Requis pour « Noter
   /// l'app » sur iOS ; vide → bouton masqué sur iOS.

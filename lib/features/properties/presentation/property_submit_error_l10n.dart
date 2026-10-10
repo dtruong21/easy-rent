@@ -17,9 +17,9 @@ extension PropertySubmitErrorL10n on PropertySubmitError {
       PropertySubmitError.hasActiveLeases =>
         l10n.propertiesErrorHasActiveLeases,
       PropertySubmitError.limitReached =>
-        isStoreApp
-            ? l10n.propertiesErrorLimitReachedStore
-            : l10n.propertiesErrorLimitReached,
+        canOfferUpgrade
+            ? l10n.propertiesErrorLimitReached
+            : l10n.propertiesErrorLimitReachedStore,
       PropertySubmitError.permissionDenied =>
         l10n.propertiesErrorPermissionDenied,
       PropertySubmitError.serviceUnavailable =>

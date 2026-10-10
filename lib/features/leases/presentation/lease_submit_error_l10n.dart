@@ -23,9 +23,9 @@ extension LeaseSubmitErrorL10n on LeaseSubmitError {
       LeaseSubmitError.invalidState => l10n.leasesErrorInvalidState,
       LeaseSubmitError.serviceUnavailable => l10n.leasesErrorServiceUnavailable,
       LeaseSubmitError.limitReached =>
-        isStoreApp
-            ? l10n.leasesErrorLimitReachedStore
-            : l10n.leasesErrorLimitReached,
+        canOfferUpgrade
+            ? l10n.leasesErrorLimitReached
+            : l10n.leasesErrorLimitReachedStore,
       LeaseSubmitError.saveFailed => l10n.leasesErrorSaveFailed,
       LeaseSubmitError.unknown => l10n.commonErrorGeneric,
     };
