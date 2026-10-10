@@ -76,6 +76,51 @@ void main() {
     });
   });
 
+  group('mapping de l\'offre RevenueCat', () {
+    const context = PresentedOfferingContext('default', null, null);
+    Package pkg(String id, PackageType type, String price) => Package(
+      id,
+      type,
+      StoreProduct(id, '', 'Pro', 1, price, 'EUR'),
+      context,
+    );
+    final monthly = pkg(r'$rc_monthly', PackageType.monthly, '8,49 €');
+    final annual = pkg(r'$rc_annual', PackageType.annual, '84,99 €');
+    Offering offering({Package? m, Package? a}) =>
+        Offering('default', '', const {}, [?m, ?a], monthly: m, annual: a);
+
+    test('mensuel et annuel → prix du store, sans inversion', () {
+      final offer = proOfferFromOffering(offering(m: monthly, a: annual))!;
+      expect(offer.monthly!.period, StoreBillingPeriod.monthly);
+      expect(offer.monthly!.priceString, '8,49 €');
+      expect(offer.annual!.period, StoreBillingPeriod.annual);
+      expect(offer.annual!.priceString, '84,99 €');
+    });
+
+    test('offre partielle → seule la formule présente', () {
+      final offer = proOfferFromOffering(offering(a: annual))!;
+      expect(offer.monthly, isNull);
+      expect(offer.annual!.priceString, '84,99 €');
+    });
+
+    test('aucune offre courante → null', () {
+      expect(proOfferFromOffering(null), isNull);
+    });
+
+    test('packageForPeriod rend le bon package', () {
+      final current = offering(m: monthly, a: annual);
+      expect(
+        packageForPeriod(current, StoreBillingPeriod.monthly)!.identifier,
+        r'$rc_monthly',
+      );
+      expect(
+        packageForPeriod(current, StoreBillingPeriod.annual)!.identifier,
+        r'$rc_annual',
+      );
+      expect(packageForPeriod(null, StoreBillingPeriod.monthly), isNull);
+    });
+  });
+
   group('achat intégré coupé (non configuré)', () {
     late RevenueCatStoreBillingService service;
     setUp(() async {
@@ -93,6 +138,7 @@ void main() {
           period: StoreBillingPeriod.monthly,
           priceString: '7,99 €',
         ),
+        uid: 'u1',
       );
       expect(
         outcome,
@@ -101,7 +147,7 @@ void main() {
     });
 
     test('restauration → error', () async {
-      expect(await service.restore(), RestoreOutcome.error);
+      expect(await service.restore(uid: 'u1'), RestoreOutcome.error);
     });
 
     test('page de gestion → null', () async {

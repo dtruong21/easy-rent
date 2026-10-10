@@ -22,9 +22,17 @@ abstract interface class StoreBillingService {
   /// Offre Pro courante, prix lus dans le store ; `null` si indisponible.
   Future<ProStoreOffer?> fetchProOffer();
 
-  Future<PurchaseOutcome> purchase(ProStorePackage package);
+  /// Achète [package] pour le compte [uid]. Garantit d'abord que
+  /// l'utilisateur RevenueCat est [uid] (jamais d'achat sur un identifiant
+  /// anonyme) ; sinon `PurchaseFailed('not_logged_in')`. Ne lève jamais.
+  Future<PurchaseOutcome> purchase(
+    ProStorePackage package, {
+    required String uid,
+  });
 
-  Future<RestoreOutcome> restore();
+  /// Restaure les achats du compte store pour [uid] (même garantie de
+  /// rattachement que [purchase]). Ne lève jamais.
+  Future<RestoreOutcome> restore({required String uid});
 
   /// Page de gestion de l'abonnement dans le store, si connue.
   Future<Uri?> managementUrl();

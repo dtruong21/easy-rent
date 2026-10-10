@@ -15,6 +15,10 @@ class FakeStoreBillingService implements StoreBillingService {
   RestoreOutcome restoreOutcome = RestoreOutcome.nothingToRestore;
   Uri? management;
 
+  /// Retient `purchase` jusqu'à sa complétion (tests « achat en cours »).
+  Completer<void>? purchaseGate;
+  int offerCalls = 0;
+
   @override
   Future<void> configure() async => calls.add('configure');
 
@@ -30,19 +34,24 @@ class FakeStoreBillingService implements StoreBillingService {
 
   @override
   Future<ProStoreOffer?> fetchProOffer() async {
+    offerCalls++;
     calls.add('fetchProOffer');
     return offer;
   }
 
   @override
-  Future<PurchaseOutcome> purchase(ProStorePackage package) async {
-    calls.add('purchase:${package.period.name}');
+  Future<PurchaseOutcome> purchase(
+    ProStorePackage package, {
+    required String uid,
+  }) async {
+    calls.add('purchase:${package.period.name}:$uid');
+    if (purchaseGate != null) await purchaseGate!.future;
     return purchaseOutcome;
   }
 
   @override
-  Future<RestoreOutcome> restore() async {
-    calls.add('restore');
+  Future<RestoreOutcome> restore({required String uid}) async {
+    calls.add('restore:$uid');
     return restoreOutcome;
   }
 

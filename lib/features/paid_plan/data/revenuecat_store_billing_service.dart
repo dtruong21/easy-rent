@@ -40,6 +40,34 @@ RestoreOutcome restoreOutcomeFor({required int activeEntitlements}) =>
     ? RestoreOutcome.success
     : RestoreOutcome.nothingToRestore;
 
+/// PURE — offre Pro lue dans l'offering courant, prix du store.
+@visibleForTesting
+ProStoreOffer? proOfferFromOffering(Offering? current) {
+  if (current == null) return null;
+  ProStorePackage? map(StoreBillingPeriod period) {
+    final package = packageForPeriod(current, period);
+    return package == null
+        ? null
+        : ProStorePackage(
+            period: period,
+            priceString: package.storeProduct.priceString,
+          );
+  }
+
+  return ProStoreOffer(
+    monthly: map(StoreBillingPeriod.monthly),
+    annual: map(StoreBillingPeriod.annual),
+  );
+}
+
+/// PURE — package RevenueCat de [period] dans l'offering courant.
+@visibleForTesting
+Package? packageForPeriod(Offering? current, StoreBillingPeriod period) =>
+    switch (period) {
+      StoreBillingPeriod.monthly => current?.monthly,
+      StoreBillingPeriod.annual => current?.annual,
+    };
+
 /// Implémentation RevenueCat — SEULE classe de `lib/` qui importe
 /// `purchases_flutter`. Non configurée (achat intégré coupé, clé absente,
 /// échec du SDK) : chaque méthode est sans effet ou rend une issue neutre.
@@ -95,22 +123,22 @@ class RevenueCatStoreBillingService implements StoreBillingService {
     }
   }
 
+  /// `true` si l'utilisateur RevenueCat est [uid] (rattache au besoin).
+  Future<bool> _ensureLoggedIn(String uid) async {
+    try {
+      if (await Purchases.appUserID != uid) await Purchases.logIn(uid);
+      return true;
+    } catch (e, st) {
+      _log.warning('rattachement RevenueCat impossible avant achat', e, st);
+      return false;
+    }
+  }
+
   @override
   Future<ProStoreOffer?> fetchProOffer() async {
     if (!_configured) return null;
     try {
-      final current = (await Purchases.getOfferings()).current;
-      if (current == null) return null;
-      ProStorePackage? map(Package? p, StoreBillingPeriod period) => p == null
-          ? null
-          : ProStorePackage(
-              period: period,
-              priceString: p.storeProduct.priceString,
-            );
-      return ProStoreOffer(
-        monthly: map(current.monthly, StoreBillingPeriod.monthly),
-        annual: map(current.annual, StoreBillingPeriod.annual),
-      );
+      return proOfferFromOffering((await Purchases.getOfferings()).current);
     } catch (e, st) {
       _log.warning('offres RevenueCat indisponibles', e, st);
       return null;
@@ -118,14 +146,19 @@ class RevenueCatStoreBillingService implements StoreBillingService {
   }
 
   @override
-  Future<PurchaseOutcome> purchase(ProStorePackage package) async {
+  Future<PurchaseOutcome> purchase(
+    ProStorePackage package, {
+    required String uid,
+  }) async {
     if (!_configured) return const PurchaseFailed('not_configured');
+    if (!await _ensureLoggedIn(uid)) {
+      return const PurchaseFailed('not_logged_in');
+    }
     try {
-      final current = (await Purchases.getOfferings()).current;
-      final pkg = switch (package.period) {
-        StoreBillingPeriod.monthly => current?.monthly,
-        StoreBillingPeriod.annual => current?.annual,
-      };
+      final pkg = packageForPeriod(
+        (await Purchases.getOfferings()).current,
+        package.period,
+      );
       if (pkg == null) return const PurchaseFailed('package_unavailable');
       await Purchases.purchase(PurchaseParams.package(pkg));
       return const PurchaseSucceeded();
@@ -143,8 +176,9 @@ class RevenueCatStoreBillingService implements StoreBillingService {
   }
 
   @override
-  Future<RestoreOutcome> restore() async {
+  Future<RestoreOutcome> restore({required String uid}) async {
     if (!_configured) return RestoreOutcome.error;
+    if (!await _ensureLoggedIn(uid)) return RestoreOutcome.error;
     try {
       final info = await Purchases.restorePurchases();
       return restoreOutcomeFor(
