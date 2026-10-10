@@ -40,6 +40,8 @@ class DeleteAccountWarning extends StatelessWidget {
       l10n.deleteAccountWarningItemTenants,
       l10n.deleteAccountWarningItemDocuments,
       l10n.deleteAccountWarningItemSimulations,
+      // Supprimés aussi par `deleteAccount` : plus aucun PDF possible (#209).
+      l10n.deleteAccountWarningItemStatements,
       l10n.deleteAccountWarningItemAccount,
     ];
 

@@ -8,21 +8,88 @@ rules_version = '2';
 // Dart à partir du doc Firestore receipts/{id} (preuve légale loi 1989).
 //
 // 1 dossier géré :
-//   - documents/{landlordId}/...  → upload direct par le propriétaire
+//   - documents/{landlordId}/{docId}.{ext}
+//                                 → upload direct par le propriétaire
 //                                   download via signed URL (callable
 //                                   getDocumentDownloadUrl)
 
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Email de confiance : email/mot de passe VÉRIFIÉ, ou provider Google/Apple
+    // (qui ne posent pas toujours `email_verified`). Jumelle EXACTE de
+    // `hasTrustedEmail()` de `firestore.rules` — les règles Storage ne peuvent
+    // pas importer celles de Firestore, donc la condition est dupliquée : toute
+    // évolution de l'une DOIT être reportée dans l'autre (OWASP-02 / OWASP-04).
+    // `get()` : le claim est absent des jetons anonymes et de certains
+    // providers — un accès direct ferait échouer l'évaluation (donc refuser)
+    // au lieu de retomber sur `false`.
+    function hasTrustedEmail() {
+      return request.auth.token.get('email_verified', false) == true
+        || request.auth.token.firebase.sign_in_provider in ['google.com', 'apple.com'];
+    }
+
     // ============================================================
-    // documents/{landlordId}/...
+    // documents/{landlordId}/{objectName}
+    //
+    // `{objectName}` (UN seul segment, pas `{file=**}`) : aucun sous-dossier.
     // ============================================================
-    match /documents/{landlordId}/{file=**} {
+    match /documents/{landlordId}/{objectName} {
       allow read: if false; // download via signed URL côté callable
+      // Plafond de taille : 50 Mio = le MAXIMUM de la grille des paliers
+      // (`documentMaxBytes` dans config/entitlements.json : 10 Mio en gratuit et
+      // Pro, 25 Mio en Max, 50 Mio en Ultra). Cette règle est un garde-fou
+      // anti-abus GROSSIER, pas le plafond commercial.
+      //
+      // Pourquoi pas le plafond exact du palier ici : les règles Storage ne
+      // savent lire Firestore que sur la base PAR DÉFAUT. Avec ADR 0003
+      // (prod sur `(default)`, staging sur `staging`) le doc landlord d'un
+      // utilisateur de staging est illisible d'ici — un `firestore.get()`
+      // renverrait rien, ou pire le doc de PROD portant le même uid. Le bucket
+      // étant partagé entre les deux environnements, la règle doit être juste
+      // pour les deux : elle ne peut donc pas dépendre du palier.
+      //
+      // Le plafond PAR PALIER est appliqué par `createDocument`
+      // (functions/src/callable/documents.ts, `assertRealSizeWithinPlan`), sur
+      // la taille RÉELLE lue dans les métadonnées Storage — et non sur celle
+      // déclarée par le client. Un fichier refusé là voit son objet purgé du
+      // bucket, donc rien n'est facturé durablement.
+      //
+      // Contrepartie assumée : un compte gratuit peut désormais téléverser
+      // jusqu'à 50 Mio avant d'être refusé, au lieu d'être bloqué à 10 Mio à
+      // l'upload. Le client pré-vérifie déjà le plafond de son palier, donc
+      // seul un client modifié gaspille cette bande passante — et il le
+      // pouvait déjà à 10 Mio.
+      //
+      // ⚠️ Si un palier dépasse un jour 50 Mio dans la table, CE nombre doit
+      // suivre, sinon le palier sera inatteignable en silence.
+      //
+      // OWASP-04 — qui peut écrire, et sous quel nom :
+      //   - compte NON anonyme à email de confiance (cf. hasTrustedEmail) : un
+      //     compte anonyme (création gratuite et illimitée) ou à email jamais
+      //     vérifié ne peut plus remplir le bucket. Le quota « documents »
+      //     (0 pour un anonyme) n'est appliqué que par `createDocument`, que
+      //     rien n'oblige un client à appeler : la règle doit le répliquer.
+      //   - nom d'objet = EXACTEMENT ce que produit le client
+      //     (`DocumentsRepository.upload`) : `{docId}.{ext}` avec `docId` =
+      //     auto-ID Firestore (20 caractères alphanumériques) et `ext` =
+      //     `extensionFromMime` (pdf | jpg | png | webp ; jpeg → `jpg`). Pas
+      //     de nom libre, pas de sous-dossier, pas de double extension.
+      //
+      // ⚠️ Si le format du chemin change côté client (`storagePath` dans
+      // documents_repository.dart, validé par `createDocument`), CE motif doit
+      // suivre, sinon tous les uploads seront refusés en silence.
+      //
+      // Limite assumée : les règles ne peuvent pas COMPTER les objets d'un
+      // compte. Le nombre reste borné par le coût d'un compte vérifié ; les
+      // objets jamais rattachés à un doc `documents` (orphelins) ne sont pas
+      // purgés ici (suivi séparé).
       allow create: if request.auth != null
         && request.auth.uid == landlordId
-        && request.resource.size <= 10 * 1024 * 1024
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && hasTrustedEmail()
+        && objectName.matches('[A-Za-z0-9]{20}\\.(pdf|jpg|png|webp)')
+        && request.resource.size <= 50 * 1024 * 1024
         && request.resource.contentType.matches(
           'application/pdf|image/jpeg|image/png|image/webp',
         );

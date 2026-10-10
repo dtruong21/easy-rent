@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/ui/cards/card_grid.dart';
 import '../../../../core/ui/cards/card_skeleton.dart';
+import '../../../../core/ui/theme/property_color.dart';
 import '../../domain/receipt.dart';
 import 'receipt_card.dart';
 
@@ -19,6 +20,7 @@ class ReceiptsCardView extends StatelessWidget {
     this.tenantFirstName = '',
     this.propertyAddress = '',
     this.landlordFullName = '',
+    this.propertyColorKey,
   });
 
   final List<Receipt> receipts;
@@ -28,6 +30,10 @@ class ReceiptsCardView extends StatelessWidget {
   final String propertyAddress;
   final String landlordFullName;
 
+  /// Couleur d'identité du bien lié — déjà résolue par l'appelant (cf.
+  /// `ReceiptCard.propertyColorKey`).
+  final PropertyColorKey? propertyColorKey;
+
   /// Vue squelette de chargement (6 placeholders).
   static Widget loading() => const _ReceiptsCardViewLoading();
 
@@ -36,6 +42,7 @@ class ReceiptsCardView extends StatelessWidget {
     return CardGrid.builder(
       key: const Key('receipts_card_grid'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      mainAxisExtent: 132,
       itemCount: receipts.length,
       itemBuilder: (context, index) {
         final receipt = receipts[index];
@@ -47,6 +54,7 @@ class ReceiptsCardView extends StatelessWidget {
           tenantFirstName: tenantFirstName,
           propertyAddress: propertyAddress,
           landlordFullName: landlordFullName,
+          propertyColorKey: propertyColorKey,
         );
       },
     );
@@ -60,6 +68,7 @@ class _ReceiptsCardViewLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return CardGrid(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      mainAxisExtent: 132,
       children: List.generate(6, (_) => const CardSkeleton()),
     );
   }

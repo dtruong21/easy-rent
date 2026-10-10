@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/investment_scenario.dart';
 
@@ -111,58 +112,39 @@ class FirestoreInvestmentScenarioRepository
     String? notes,
   }) async {
     _log.info('create(name=$name)');
-    final uid = _uid;
-    final docRef = _col.doc();
-    final now = FieldValue.serverTimestamp();
-
-    // scenario_json est un map JSON arbitraire — on encode tous les
-    // paramètres financiers dedans pour rester aligné avec le schéma
-    // Firestore (cf. docs/plans/FEAT-019-firestore-data-model.md §1.8).
-    final scenarioJson = <String, dynamic>{
-      'purchasePriceCents': purchasePriceCents,
-      'notaryFeesCents': notaryFeesCents,
-      'worksInitialCents': worksInitialCents,
-      'isNewProperty': isNewProperty,
-      'downPaymentCents': downPaymentCents,
-      'loanPrincipalCents': loanPrincipalCents,
-      'loanRateBps': loanRateBps,
-      'loanDurationMonths': loanDurationMonths,
-      'monthlyRentHcCents': monthlyRentHcCents,
-      'propertyTaxAnnualCents': propertyTaxAnnualCents,
-      'insurancePnoAnnualCents': insurancePnoAnnualCents,
-      'condoFeesNonRecoverableCents': condoFeesNonRecoverableCents,
-    };
-
-    final payload = <String, dynamic>{
-      'id': docRef.id,
-      'landlordId': uid,
-      'name': name.trim(),
-      'scenarioJson': scenarioJson,
-      'schemaVersion': 1,
-      'notes': notes?.trim(),
-      // Champs scénario expandés en root (compat freezed Model qui les
-      // attend en top-level snake_case).
-      'purchasePriceCents': purchasePriceCents,
-      'notaryFeesCents': notaryFeesCents,
-      'worksInitialCents': worksInitialCents,
-      'isNewProperty': isNewProperty,
-      'downPaymentCents': downPaymentCents,
-      'loanPrincipalCents': loanPrincipalCents,
-      'loanRateBps': loanRateBps,
-      'loanDurationMonths': loanDurationMonths,
-      'monthlyRentHcCents': monthlyRentHcCents,
-      'propertyTaxAnnualCents': propertyTaxAnnualCents,
-      'insurancePnoAnnualCents': insurancePnoAnnualCents,
-      'condoFeesNonRecoverableCents': condoFeesNonRecoverableCents,
-      'createdAt': now,
-      'updatedAt': now,
-      'deletedAt': null,
-    };
-    await docRef.set(payload);
-    final saved = await docRef.get();
-    return InvestmentScenario.fromJson(
-      firestoreDocToSnakeJson(saved.data()!, docId: saved.id),
+    // FEAT-056 (PR-2b) : la création passe par la Cloud Function
+    // `createScenario`, plus par un `docRef.set` direct. Le plafond de
+    // scénarios est désormais différencié par palier (Pro/Max/Ultra), il doit
+    // donc être imposé côté serveur — la rule `investment_scenarios/create`
+    // vaut `if false` et une écriture directe échouerait en
+    // `permission-denied`. Un dépassement de plafond remonte en
+    // `FirebaseFunctionsException(code: 'resource-exhausted')`, même
+    // convention que `createProperty` / `createTenant`.
+    final callable = _functions.httpsCallable(
+      'createScenario',
+      options: HttpsCallableOptions(timeout: const Duration(seconds: 15)),
     );
+    final res = await callable.call(<String, dynamic>{
+      'name': name.trim(),
+      'purchasePriceCents': purchasePriceCents,
+      'notaryFeesCents': notaryFeesCents,
+      'worksInitialCents': worksInitialCents,
+      'isNewProperty': isNewProperty,
+      'downPaymentCents': downPaymentCents,
+      'loanPrincipalCents': loanPrincipalCents,
+      'loanRateBps': loanRateBps,
+      'loanDurationMonths': loanDurationMonths,
+      'monthlyRentHcCents': monthlyRentHcCents,
+      'propertyTaxAnnualCents': propertyTaxAnnualCents,
+      'insurancePnoAnnualCents': insurancePnoAnnualCents,
+      'condoFeesNonRecoverableCents': condoFeesNonRecoverableCents,
+      'notes': notes?.trim(),
+    });
+    final scenarioId = (res.data as Map?)?['scenarioId'] as String?;
+    if (scenarioId == null) {
+      throw StateError('createScenario did not return a scenarioId');
+    }
+    return getById(scenarioId);
   }
 
   @override
@@ -231,7 +213,7 @@ class InvestmentScenarioNotFoundException implements Exception {
 final investmentScenarioRepositoryProvider =
     Provider<InvestmentScenarioRepository>(
       (ref) => FirestoreInvestmentScenarioRepository(
-        FirebaseFirestore.instance,
+        ref.watch(firestoreProvider),
         FirebaseAuth.instance,
         FirebaseFunctions.instanceFor(region: 'europe-west1'),
       ),

@@ -7,6 +7,8 @@ import 'dart:typed_data';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
+import 'package:easyrent/core/ui/theme/property_color.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
@@ -77,13 +79,17 @@ Receipt _makeReceipt({required String id, required DateTime periodStart}) =>
       createdAt: periodStart.add(const Duration(days: 5)),
     );
 
-Widget _buildView(List<Receipt> receipts) {
+Widget _buildView(List<Receipt> receipts, {PropertyColorKey? colorKey}) {
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
         builder: (context, _) => Scaffold(
-          body: ReceiptsCardView(receipts: receipts, leaseId: 'lease-1'),
+          body: ReceiptsCardView(
+            receipts: receipts,
+            leaseId: 'lease-1',
+            propertyColorKey: colorKey,
+          ),
         ),
       ),
     ],
@@ -187,6 +193,98 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Mars 2026'), findsOneWidget);
+    });
+  });
+
+  group('ReceiptsCardView — couleur d\'identité du bien (FEAT-057)', () {
+    testWidgets('propertyColorKey fourni → chaque carte a un liseré coloré', (
+      tester,
+    ) async {
+      final receipts = [
+        _makeReceipt(id: 'r1', periodStart: DateTime(2026, 3, 1)),
+        _makeReceipt(id: 'r2', periodStart: DateTime(2026, 2, 1)),
+      ];
+
+      await tester.pumpWidget(
+        _buildView(receipts, colorKey: PropertyColorKey.cobalt),
+      );
+      await tester.pumpAndSettle();
+
+      final cards = tester.widgetList<SummaryCard>(find.byType(SummaryCard));
+      expect(cards, hasLength(2));
+      for (final card in cards) {
+        expect(card.accentColor, isNotNull);
+      }
+    });
+
+    testWidgets('propertyColorKey absent → liseré neutre (accentColor null)', (
+      tester,
+    ) async {
+      final receipts = [
+        _makeReceipt(id: 'r1', periodStart: DateTime(2026, 3, 1)),
+      ];
+
+      await tester.pumpWidget(_buildView(receipts));
+      await tester.pumpAndSettle();
+
+      final card = tester.widget<SummaryCard>(find.byType(SummaryCard));
+      expect(card.accentColor, isNull);
+    });
+  });
+
+  group('ReceiptsCardView — hauteur de cellule (mainAxisExtent 132)', () {
+    testWidgets('pire cas desktop 1280 px — aucun overflow', (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final stale = Receipt(
+        id: 'r-stale',
+        landlordId: 'landlord-1',
+        leaseId: 'lease-1',
+        paymentIds: const ['pay-1'],
+        periodStart: DateTime(2026, 9, 1),
+        periodEnd: DateTime(2026, 9, 30),
+        totalCents: 123456789,
+        rentCents: 123000000,
+        chargesCents: 456789,
+        documentType: DocumentType.quittance,
+        pdfPath: 'l-1/r-stale.pdf',
+        isVoided: false,
+        isStale: true,
+        generatedAt: DateTime(2026, 9, 5),
+        createdAt: DateTime(2026, 9, 5),
+        sentAt: DateTime(2026, 9, 6),
+        sentToEmail: 'un.prenom.tres.long@un-domaine-tres-long-example.com',
+      );
+      final voided = Receipt(
+        id: 'r-voided',
+        landlordId: 'landlord-1',
+        leaseId: 'lease-1',
+        paymentIds: const ['pay-1'],
+        periodStart: DateTime(2026, 8, 1),
+        periodEnd: DateTime(2026, 8, 31),
+        totalCents: 123456789,
+        rentCents: 123000000,
+        chargesCents: 456789,
+        documentType: DocumentType.quittance,
+        pdfPath: 'l-1/r-voided.pdf',
+        isVoided: true,
+        voidedAt: DateTime(2026, 8, 10),
+        voidedReason:
+            'Motif d\'annulation très long qui dépasse largement la largeur '
+            'disponible de la carte et doit être tronqué proprement sans '
+            'provoquer le moindre débordement de mise en page',
+        isStale: false,
+        generatedAt: DateTime(2026, 8, 5),
+        createdAt: DateTime(2026, 8, 5),
+      );
+
+      await tester.pumpWidget(_buildView([stale, voided]));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReceiptCard), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
     });
   });
 }

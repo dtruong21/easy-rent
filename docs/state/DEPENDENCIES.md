@@ -37,10 +37,11 @@
 | `flutter_svg` | `^2.0.10+1` | Rendu SVG (logo Google auth buttons) | FEAT-019 | — |
 | `web` | `^1.1.0` | JS interop (install prompt, Web Share API) | FEAT-010, FEAT-008 | — |
 | **`package_info_plus`** | **^9.0.1** | **Version app (version.json web, manifest natif)** | **FEAT-023** | — |
+| `purchases_flutter` | `^10.15.2` | SDK RevenueCat achat intégré iOS/Android, derrière `IAP_ENABLED` (web : remplacé par le plugin vide local `purchases_flutter_web_noop`) | FEAT-044e | — |
 
-**Removed (Supabase pivot → Firebase)** :
-- `supabase_flutter` (2.12.4) — remplacée firebase_*
-- `supabase` (Deno) — remplacée Cloud Functions
+**Removed (migration Firebase, FEAT-019)** :
+- ancien client backend (Dart) — remplacé par `firebase_core` / `firebase_auth` / `cloud_firestore` / `firebase_storage`
+- functions serverless (Deno) — remplacées par Cloud Functions (Node 20 / TS)
 
 ### Dépendances dev (8 packages)
 
@@ -98,13 +99,13 @@ version: 1.0.0+1
 
 ---
 
-## Cloud Functions (Node.js 20 — Firebase)
+## Cloud Functions (Node.js 22 — Firebase)
 
 ### package.json
 
 | Clé | Valeur |
 |---|---|
-| **Node** | 20 (engine) |
+| **Node** | 22 (engine) |
 | **Main** | lib/index.js (compiled output) |
 | **Région** | europe-west1 (firebase.json) |
 | **Max instances** | 10 (global, override per-function) |
@@ -120,7 +121,7 @@ version: 1.0.0+1
 
 | Package | Version | Usage |
 |---|---|---|
-| `@types/node` | `^20.14.0` | Type hints Node.js |
+| `@types/node` | `^22.20.4` | Type hints Node.js |
 | `@typescript-eslint/eslint-plugin` | `^7.18.0` | Linting TypeScript |
 | `@typescript-eslint/parser` | `^7.18.0` | Parser TypeScript |
 | `eslint` | `^8.57.0` | Code linting |
@@ -186,8 +187,9 @@ npm run logs          # Stream logs
 ### firestore.rules
 
 - **isActive()** helper : rsc.data.deletedAt == null (soft-delete filter)
-- **isOwner(uid)** : auth.uid == uid
-- **isFullyAuthed()** : signé && !anonyme
+- **isOwner(uid)** : auth.uid == uid ET session de confiance (anonyme OU email vérifié/Google/Apple — OWASP-02)
+- **hasTrustedEmail()** : `email_verified == true` OU `sign_in_provider in ['google.com','apple.com']` (OWASP-02)
+- **isFullyAuthed()** : signé && !anonyme && hasTrustedEmail()
 - **isAnonymous()** : firebase.sign_in_provider == 'anonymous'
 - **preservesImmutables()** : landlordId, createdAt, deletedAt immuables côté client
 
@@ -200,16 +202,19 @@ npm run logs          # Stream logs
 | `hosting.public` | public | Build output (Flutter Web) |
 | `hosting.cleanUrls` | true | Rewrite /file → /file.html |
 | `hosting.rewrites` | [{source: "**", destination: "/index.html"}] | PWA deep linking |
-| `hosting.headers` | CSP + cache | fonts.gstatic.com, max-age |
+| `hosting.headers` | Sécurité HTTP (OWASP-06) + cache | 4 cibles : `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, `X-Frame-Options: DENY`, CSP (cf. ci-dessous) ; `Cache-Control` / `X-Robots-Tag` par chemin |
 | `functions.source` | functions | Directory root |
 | `functions.runtime` | nodejs20 | Node version |
 | `functions.region` | europe-west1 | Default region |
 
-**CSP Header** (feedback_csp_fonts_gstatic.md) :
-```
-Content-Security-Policy: default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'; font-src 'self' https://fonts.gstatic.com; ...
-```
-(CanvasKit Flutter Web exige fonts.gstatic.com + unsafe-inline script)
+**En-têtes de sécurité HTTP (OWASP-06, 2026-09-30)** — bloc `source: "**"` sur les 4 cibles Hosting de `firebase.json` (`prod`, `stage`, `marketing`, `marketing-stage`). Avant cette date, **aucune** CSP n'existait (l'ancienne description « `script-src 'unsafe-inline' 'unsafe-eval'` » ne correspondait à rien dans `firebase.json`). HSTS : ajouté par défaut par Firebase Hosting (constaté en prod), non redéfini.
+
+| Cible | Commun | CSP |
+|---|---|---|
+| App (`prod`, `stage`) | `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, `X-Frame-Options: DENY` | **Appliquée** : `frame-ancestors 'none'` seul. **`Content-Security-Policy-Report-Only`** : politique complète (non bloquante) — `default-src 'self'`, `script-src 'self' 'wasm-unsafe-eval'` + **7 hashes sha256** + `https://www.gstatic.com` (CanvasKit) + `https://apis.google.com` (popup Google/Apple), `connect-src` limité aux endpoints Firebase, `frame-src` sur le domaine d'auth Firebase, `object-src 'none'` |
+| Vitrine (`marketing`, `marketing-stage`) | idem | **Appliquée** : `default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` |
+
+Les 7 hashes couvrent les scripts inline exécutables : les **2 de `web/index.html`** (migration SW + auto-réparation du cache ; toute modification de leur contenu change le hash — un commentaire HTML signale le couplage au-dessus de chaque `<script>`) et les **5 injectés au boot par FlutterFire** (`firebase_core_web 2.24.1`, SDK JS 11.9.1 : une montée de version FlutterFire les change). La politique complète de l'app reste en **Report-Only** tant que le staging n'a pas été observé (impression de PDF de quittance via `window.open(blob:)`, popup d'auth) ; pas d'endpoint `report-uri`. Détail et justification de chaque directive : champ `"//"` du bloc dans `firebase.json`.
 
 ---
 
@@ -272,5 +277,5 @@ APP_ENV=dev|staging|prod
 |---|---|---|
 | **Riverpod 3.x breaking** | P2 backlog | Stay 2.6.0 for MVP |
 | **GoRouter 17.x breaking** | P2 backlog | Stay 14.6.0 for MVP |
-| **Flutter Web CanvasKit CSP** | ✅ Fixed | fonts.gstatic.com CSP whitelist (firebase.json) |
+| **Flutter Web CanvasKit CSP** | ⚠️ Report-Only | `fonts.gstatic.com` (+ `www.gstatic.com`) autorisés dans la CSP Report-Only de l'app (firebase.json) ; CSP complète non encore appliquée (OWASP-06) |
 | **Firebase deploy retry race** | ⚠️ Known | FAILED_PRECONDITION « current active version » = idempotent no-op (content already live) |

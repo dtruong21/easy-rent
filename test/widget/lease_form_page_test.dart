@@ -41,6 +41,11 @@ class _FakeLeaseRepo implements LeaseRepository {
   Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
+
+  @override
   Future<Lease> getById(String id) async => throw UnimplementedError();
 
   @override
@@ -274,6 +279,8 @@ Lease _makeLease({
 
 Widget _buildForm({
   Lease? initial,
+  String? initialPropertyId,
+  String? initialTenantId,
   _FakeLeaseRepo? leaseRepo,
   List<Property>? properties,
   List<Tenant>? tenants,
@@ -289,7 +296,11 @@ Widget _buildForm({
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, _) => LeaseFormPage(initial: initial),
+        builder: (context, _) => LeaseFormPage(
+          initial: initial,
+          initialPropertyId: initialPropertyId,
+          initialTenantId: initialTenantId,
+        ),
       ),
       GoRoute(
         path: '/leases',
@@ -334,6 +345,43 @@ Widget _buildForm({
 // ---------------------------------------------------------------------------
 
 void main() {
+  // #197 (recette iOS) : « Créer un bail » depuis un locataire ne le
+  // présélectionnait pas — la route ignorait `?tenantId=`.
+  group('LeaseFormPage — présélection en création', () {
+    final tenants = [
+      _makeTenant(),
+      _makeTenant(id: 't2', firstName: 'Sophie', lastName: 'Martin'),
+    ];
+
+    testWidgets('initialTenantId → locataire présélectionné', (tester) async {
+      await tester.pumpWidget(
+        _buildForm(tenants: tenants, initialTenantId: 't2'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('field_tenant')),
+          matching: find.textContaining('Martin'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('sans présélection → aucun locataire choisi', (tester) async {
+      await tester.pumpWidget(_buildForm(tenants: tenants));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('field_tenant')),
+          matching: find.textContaining('Martin'),
+        ),
+        findsNothing,
+      );
+    });
+  });
+
   group('LeaseFormPage', () {
     // -----------------------------------------------------------------------
     // Mode création — champs présents

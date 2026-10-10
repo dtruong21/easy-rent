@@ -56,8 +56,20 @@ sealed class UploadFileStatus with _$UploadFileStatus {
 
   /// Échec de l'upload — [reason] est traduit en présentation (voir
   /// [UploadFileErrorReason]).
+  ///
+  /// [serverLimitBytes]/[serverUpgradeToLevelId] (FEAT-056) sont renseignés
+  /// uniquement quand [reason] == [UploadFileErrorReason.fileTooLarge] **et**
+  /// que le refus vient du serveur (`createDocument`, `resource-exhausted` /
+  /// `file_too_large` — course avec un plafond client périmé), jamais pour un
+  /// refus pré-upload purement client (le plafond du palier vient alors de
+  /// `quotaLimitProvider(PlanQuota.documentMaxBytes)` côté présentation).
+  /// `serverUpgradeToLevelId` vaut `null` quand aucun palier ne débloquerait
+  /// le fichier (fichier plus gros que le plafond du palier le plus élevé) —
+  /// dans ce cas, ne jamais proposer de montée en gamme.
   const factory UploadFileStatus.error({
     required String filename,
     required UploadFileErrorReason reason,
+    int? serverLimitBytes,
+    String? serverUpgradeToLevelId,
   }) = FileError;
 }

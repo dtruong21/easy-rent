@@ -6,15 +6,17 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/breakpoints.dart';
 import '../../../core/ui/theme/app_spacing.dart';
+import '../../app_review/presentation/app_review_prompt.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../profile/presentation/widgets/section_header.dart';
 import '../../pwa/application/install_prompt_controller.dart';
 import '../../pwa/presentation/install_prompt_banner.dart';
 import '../application/dashboard_provider.dart';
 import '../domain/dashboard_snapshot.dart';
+import 'widgets/action_items_panel.dart';
+import 'widgets/collapsible_cashflow_section.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/kpi_grid.dart';
-import 'widgets/monthly_barchart.dart';
 import 'widgets/onboarding_first_steps.dart';
 import 'widgets/portfolio_yield_section.dart';
 import 'widgets/recent_activity_section.dart';
@@ -28,8 +30,12 @@ import 'widgets/shortcuts_row.dart';
 /// - [DashboardHeader] (bonjour + date)
 /// - Contenu conditionnel :
 ///   - Onboarding si 0 biens/locataires/baux → [OnboardingFirstSteps]
-///   - Sinon : [SectionHeader] « Vue d'ensemble » + [KpiGrid] +
-///     [PortfolioYieldSection] + [MonthlyBarchart] + [RecentActivitySection]
+///   - Sinon, 3 zones nommées (chacune introduite par un [SectionHeader]),
+///     actions en tête :
+///     1. « À traiter » → [ActionItemsPanel]
+///     2. « Mon patrimoine » → [KpiGrid] + [PortfolioYieldSection]
+///     3. « Analyse » → [CollapsibleCashflowSection] +
+///        [RecentActivitySection]
 /// - [ShortcutsRow] (mobile uniquement, en bas) — réduite au seul CTA
 ///   simulateur : sur desktop le simulateur est épinglé au rail de
 ///   navigation (FEAT-026), le raccourci y serait redondant ; Biens/
@@ -37,9 +43,9 @@ import 'widgets/shortcuts_row.dart';
 ///   (docs/UX_NAVIGATION.md §7).
 ///
 /// Pull-to-refresh via [RefreshIndicator] + [dashboardProvider]. Le
-/// graphique « Loyers » a son propre cycle de chargement indépendant
-/// ([monthlyAmountsProvider]) : changer sa période ne relance pas ce
-/// `refresh()`.
+/// graphique « Cash-flow mensuel » a son propre cycle de chargement
+/// indépendant ([monthlyCashflowProvider]) : changer sa période ne relance
+/// pas ce `refresh()`.
 ///
 /// Le dashboard n'est plus le hub de navigation (§2 du doc) : pas de bouton
 /// retour (`showBackButton: false`), et les icônes profil/déconnexion ont
@@ -194,19 +200,35 @@ class _DataView extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing =
         Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-    if (snapshot.isOnboarding) {
-      return const OnboardingFirstSteps();
+    final onboarding = snapshot.onboarding;
+    if (onboarding != null) {
+      return OnboardingFirstSteps(progress: onboarding);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: context.l10n.dashboardOverviewSectionTitle),
+        // FEAT-060 — sollicitation d'avis (fenêtre native dans les apps,
+        // carte sur le web). Ici seulement : après la checklist de démarrage.
+        const AppReviewPrompt(),
+        // ZONE 1 — À traiter
+        SectionHeader(title: context.l10n.dashboardZoneTodoTitle),
         SizedBox(height: spacing.md),
-        KpiGrid(snapshot: snapshot),
+        ActionItemsPanel(
+          loyers: snapshot.loyers,
+          docsPendingCount: snapshot.docs.count,
+        ),
+        SizedBox(height: spacing.xl),
+        // ZONE 2 — Mon patrimoine
+        SectionHeader(title: context.l10n.dashboardZonePatrimonyTitle),
+        SizedBox(height: spacing.md),
+        const KpiGrid(),
         SizedBox(height: spacing.xl),
         const PortfolioYieldSection(),
         SizedBox(height: spacing.xl),
-        const MonthlyBarchart(),
+        // ZONE 3 — Analyse
+        SectionHeader(title: context.l10n.dashboardZoneAnalysisTitle),
+        SizedBox(height: spacing.md),
+        const CollapsibleCashflowSection(),
         SizedBox(height: spacing.xl),
         RecentActivitySection(items: snapshot.activity),
       ],

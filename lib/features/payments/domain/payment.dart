@@ -11,7 +11,7 @@ part 'payment.g.dart';
 ///
 /// Mappé directement sur la table `payments` (public + dev).
 /// Les colonnes `created_at`, `updated_at` et `deleted_at` sont gérées par
-/// les triggers Supabase — ne jamais les inclure dans un payload INSERT/UPDATE.
+/// les triggers Cloud Functions — ne jamais les inclure dans un payload de création/mise à jour.
 ///
 /// [landlordId] : FK vers `landlords.id`. Passé explicitement dans l'INSERT
 /// car la policy `payments_insert_own` exige `landlord_id = auth.uid()`.

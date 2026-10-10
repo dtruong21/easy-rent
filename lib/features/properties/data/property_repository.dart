@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../../core/utils/money_format.dart';
 import '../domain/heating_type.dart';
@@ -168,7 +169,8 @@ class FirestorePropertyRepository implements PropertyRepository {
       final firstName = lease['tenantFirstName'] as String? ?? '';
       final lastName = lease['tenantLastName'] as String? ?? '';
       final tenantName = '$firstName $lastName'.trim();
-      final rent = lease['rentAmountCents'] as int? ?? 0;
+      final rentHcCents = lease['rentAmountCents'] as int?;
+      final rent = rentHcCents ?? 0;
       final charges = lease['chargesAmountCents'] as int? ?? 0;
       return PropertyListItem(
         property: property,
@@ -176,6 +178,8 @@ class FirestorePropertyRepository implements PropertyRepository {
         currentTenantName: tenantName.isEmpty ? null : tenantName,
         currentRentLabel:
             '${MoneyFormat.formatEurosFromCents(rent + charges)} CC / mois',
+        currentRentHcCents: rentHcCents,
+        currentRentCcCents: rentHcCents == null ? null : rent + charges,
       );
     }).toList();
   }
@@ -317,6 +321,10 @@ class FirestorePropertyRepository implements PropertyRepository {
           : Timestamp.fromDate(loanStartDate.toUtc()),
       'loanMonthlyPaymentOverrideCents':
           property.loanMonthlyPaymentOverrideCents,
+      // Préférence d'affichage, pas un champ de sécurité — la rule
+      // `properties/update` l'autorise (`preservesImmutables()` ne gèle que
+      // landlordId/createdAt/deletedAt).
+      'colorKey': property.colorKey,
       'updatedAt': FieldValue.serverTimestamp(),
     };
     final ref = _col.doc(property.id);
@@ -366,7 +374,7 @@ class PropertyNotFoundException implements Exception {
 /// Provider exposant le repository biens immobiliers.
 final propertyRepositoryProvider = Provider<PropertyRepository>((ref) {
   return FirestorePropertyRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

@@ -22,9 +22,11 @@
  * provisioning). Voir `functions/scripts/backfill_active_properties_count.ts`.
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
+import {errorCodeFor, quotaLimit, resolvePlan} from "../entitlements/plan";
 import {
   asBag,
   dataOrFail,
@@ -32,37 +34,24 @@ import {
   optionalNumber,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireBool,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 // Miroir de `PropertyType.sqlValue` (Dart) + de la rule `properties/create`.
 const PROPERTY_TYPES = new Set(["appartement", "maison", "studio", "autre"]);
 
-// Plafonds par tier — miroir de `SubscriptionTier.{propertyLimit,activeTenantLimit}`
-// (lib/features/auth/domain/subscription_tier.dart). `null` = illimité.
-const FREE_PROPERTY_LIMIT = 2;
-const FREE_TENANT_LIMIT = 3;
+// FEAT-056 : les plafonds ne sont plus des constantes locales. Ils viennent de
+// `config/entitlements.json` via la table générée — source unique partagée avec
+// le client Flutter, avec garde de parité en CI. Le palier effectif se dérive
+// du couple (subscriptionTier, planLevel) : un compte payant sans planLevel
+// (tous les abonnés d'avant FEAT-056) vaut `pro`.
 
 // Miroir de la validation email de la rule `tenants/create`.
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-/**
- * Plafond du tier pour un compteur donné. `null` = illimité (paid). Tout tier
- * inconnu ou anonyme → 0 (le registre est réservé aux comptes complets ;
- * defense-in-depth avec la rule qui exigeait déjà `isFullyAuthed`).
- */
-function limitForTier(tier: string, freeLimit: number): number | null {
-  switch (tier) {
-    case "paid":
-      return null;
-    case "free":
-      return freeLimit;
-    default:
-      return 0;
-  }
-}
 
 /** Trim + chaîne vide → null (miroir du `_orNull` client). */
 function emptyToNull(s: string | null): string | null {
@@ -101,7 +90,7 @@ async function precomputeSeedCount(
 export const createProperty = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // --- Validation (miroir de la rule `properties/create` + du payload
@@ -184,7 +173,7 @@ export const createProperty = onCall(
       {min: 0},
     );
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const propertyRef = db.collection("properties").doc();
 
@@ -205,11 +194,8 @@ export const createProperty = onCall(
       const landlordSnap = await tx.get(landlordRef);
       const landlord = dataOrFail(landlordSnap, "landlord not found");
 
-      const tier =
-        typeof landlord.subscriptionTier === "string" ?
-          landlord.subscriptionTier :
-          "anonymous";
-      const limit = limitForTier(tier, FREE_PROPERTY_LIMIT);
+      const plan = resolvePlan(landlord);
+      const limit = quotaLimit(plan, "properties");
       const rawCount = landlord.activePropertiesCount;
       const hasCounter = typeof rawCount === "number";
       const count = hasCounter ? rawCount : (seededCount ?? 0);
@@ -217,11 +203,11 @@ export const createProperty = onCall(
       if (limit !== null && count >= limit) {
         throw new HttpsError(
           "resource-exhausted",
-          "property_limit_reached",
+          errorCodeFor("properties"),
         );
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(propertyRef, {
         id: propertyRef.id,
         landlordId: uid,
@@ -267,7 +253,7 @@ export const createProperty = onCall(
       // qu'un increment (qui partirait de 0 et sous-compterait).
       if (hasCounter) {
         tx.update(landlordRef, {
-          activePropertiesCount: admin.firestore.FieldValue.increment(1),
+          activePropertiesCount: FieldValue.increment(1),
           updatedAt: now,
         });
       } else {
@@ -288,7 +274,7 @@ export const createProperty = onCall(
 export const createTenant = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     // Validation (miroir de la rule `tenants/create` + du payload client
@@ -319,7 +305,7 @@ export const createTenant = onCall(
     const guarantorEmail = optionalString(data.guarantorEmail, "guarantorEmail");
     const guarantorPhone = optionalString(data.guarantorPhone, "guarantorPhone");
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const landlordRef = db.doc(`landlords/${uid}`);
     const tenantRef = db.collection("tenants").doc();
 
@@ -335,20 +321,17 @@ export const createTenant = onCall(
       const landlordSnap = await tx.get(landlordRef);
       const landlord = dataOrFail(landlordSnap, "landlord not found");
 
-      const tier =
-        typeof landlord.subscriptionTier === "string" ?
-          landlord.subscriptionTier :
-          "anonymous";
-      const limit = limitForTier(tier, FREE_TENANT_LIMIT);
+      const plan = resolvePlan(landlord);
+      const limit = quotaLimit(plan, "tenants");
       const rawCount = landlord.activeTenantsCount;
       const hasCounter = typeof rawCount === "number";
       const count = hasCounter ? rawCount : (seededCount ?? 0);
 
       if (limit !== null && count >= limit) {
-        throw new HttpsError("resource-exhausted", "tenant_limit_reached");
+        throw new HttpsError("resource-exhausted", errorCodeFor("tenants"));
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(tenantRef, {
         id: tenantRef.id,
         landlordId: uid,
@@ -374,7 +357,7 @@ export const createTenant = onCall(
       });
       if (hasCounter) {
         tx.update(landlordRef, {
-          activeTenantsCount: admin.firestore.FieldValue.increment(1),
+          activeTenantsCount: FieldValue.increment(1),
           updatedAt: now,
         });
       } else {

@@ -18,7 +18,7 @@ typedef PropertyOccupancyPillData = ({
 /// - `activeLeaseId != null` → success "Loué"
 /// - `activeLeaseId == null` → warning "Vacant"
 ///
-/// Note : l'état "Archivé" est théoriquement inaccessible car la RLS
+/// Note : l'état "Archivé" est théoriquement inaccessible car les Firestore Rules
 /// `properties_select_own` filtre `deleted_at IS NULL` — les biens archivés
 /// ne sont jamais renvoyés par l'API. Prévu Phase 3 si le modèle [Property]
 /// expose `deletedAt`.

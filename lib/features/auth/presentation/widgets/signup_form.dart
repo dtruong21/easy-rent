@@ -1,3 +1,4 @@
+import 'package:easyrent/core/config/auth_providers.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -262,17 +263,26 @@ class _SignupFormState extends ConsumerState<SignupForm> {
                   )
                 : Text(l10n.authCreateAccountButton),
           ),
-          const OrDivider(),
-          GoogleSignInButton(
-            onPressed: isSubmitting ? null : _submitGoogle,
-            isLoading: isSubmitting && _googleClickedLast,
-          ),
-          const SizedBox(height: 12),
-          AppleSignInButton(
-            onPressed: isSubmitting ? null : _submitApple,
-            isLoading: isSubmitting && _appleClickedLast,
-          ),
-          const SizedBox(height: 12),
+          // Fournisseurs proposés selon la plateforme (v1 : Google sur web et
+          // Android, email seul sur iOS, Apple masqué) — cf. auth_providers.dart.
+          if (isGoogleSignInOffered || isAppleSignInOffered)
+            const OrDivider()
+          else
+            const SizedBox(height: 12),
+          if (isGoogleSignInOffered) ...[
+            GoogleSignInButton(
+              onPressed: isSubmitting ? null : _submitGoogle,
+              isLoading: isSubmitting && _googleClickedLast,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (isAppleSignInOffered) ...[
+            AppleSignInButton(
+              onPressed: isSubmitting ? null : _submitApple,
+              isLoading: isSubmitting && _appleClickedLast,
+            ),
+            const SizedBox(height: 12),
+          ],
           TextButton(
             onPressed: () => context.go('/login'),
             child: Text(l10n.authAlreadyHaveAccountLink),

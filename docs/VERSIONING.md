@@ -43,7 +43,7 @@ GitHub Release. Pour en ajouter : uniquement **à la fin** du fichier.
 ## Le flux (branché sur Git Flow)
 
 ```
-feature/* ──▶ develop ──▶ (push main) ──▶ CI Deploy prod
+feat/* ──▶ develop ──▶ (push main) ──▶ CI Deploy prod
                                              ├─ build --build-name/--build-number (dérivés)
                                              ├─ deploy Firebase live
                                              └─ tag vX.Y.Z + GitHub Release   ← auto

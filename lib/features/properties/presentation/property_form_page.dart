@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/surface_validator.dart';
 import '../application/property_detail_provider.dart';
 import '../application/property_form_controller.dart';
@@ -14,6 +15,7 @@ import '../domain/property_form_state.dart';
 import '../domain/property_submit_error.dart';
 import '../domain/property_type.dart';
 import 'property_submit_error_l10n.dart';
+import 'widgets/property_color_picker.dart';
 import 'widgets/property_form.dart';
 
 final _log = Logger('PropertyFormPage');
@@ -75,10 +77,19 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
   DateTime? _purchaseDate;
   DateTime? _loanStartDate;
 
+  // Couleur d'identité — édition uniquement (cf. `PropertyColorPicker`).
+  // `null` en mode création : rien à choisir, le bien affichera une couleur
+  // automatique dès sa création (repli déterministe de
+  // `PropertyColorKey.resolve`).
+  PropertyColorKey? _selectedColorKey;
+
   @override
   void initState() {
     super.initState();
     final p = widget.initial;
+    _selectedColorKey = p != null
+        ? PropertyColorKey.resolve(entityId: p.id, stored: p.colorKey)
+        : null;
 
     // Section 1
     _nameCtrl = TextEditingController(text: p?.name ?? '');
@@ -250,6 +261,7 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
           loanStartDate: financial['loanStartDate'] as DateTime?,
           loanMonthlyPaymentOverrideCents:
               financial['loanMonthlyPaymentOverrideCents'] as int?,
+          colorKey: widget.initial != null ? _selectedColorKey?.name : null,
         );
   }
 
@@ -355,6 +367,33 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage> {
               loanStartDate: _loanStartDate,
               onLoanStartDateChanged: (d) => setState(() => _loanStartDate = d),
             ),
+            // Couleur d'identité — édition uniquement (cf. commentaire
+            // `_selectedColorKey`). Rien à afficher en création : la couleur
+            // automatique n'existe qu'une fois le bien créé (repli
+            // déterministe basé sur son id).
+            if (!isCreating && _selectedColorKey != null) ...[
+              const SizedBox(height: 24),
+              Text(
+                l10n.propertiesFormSectionColor,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              PropertyColorPicker(
+                selected: _selectedColorKey!,
+                enabled: !isSubmitting,
+                onChanged: (key) => setState(() => _selectedColorKey = key),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.propertiesFormColorHelper,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             if (errorMessage != null) ...[
               const SizedBox(height: 16),
               Text(

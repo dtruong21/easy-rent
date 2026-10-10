@@ -4,6 +4,7 @@ import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_list_item.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
 import 'package:easyrent/features/properties/presentation/widgets/properties_card_view.dart';
 import 'package:easyrent/features/properties/presentation/widgets/property_card.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
@@ -41,7 +42,7 @@ PropertyListItem _makeItem({
   property: _makeProperty(id: id, name: name),
   activeLeaseId: activeLeaseId,
   currentTenantName: tenantName,
-  currentRentLabel: activeLeaseId != null ? '1 200,00 € CC / mois' : null,
+  currentRentCcCents: activeLeaseId != null ? 120000 : null,
 );
 
 Widget _buildCardView(List<PropertyListItem> items) {
@@ -189,5 +190,26 @@ void main() {
 
       expect(find.text('Loué'), findsOneWidget);
     });
+
+    testWidgets(
+      'chaque bien affiche un liseré de couleur d\'identité (FEAT-057) — '
+      'même un bien "legacy" sans colorKey stockée (repli déterministe, '
+      'jamais sans couleur)',
+      (tester) async {
+        final items = [
+          _makeItem(id: 'p1', name: 'Bien 1'),
+          _makeItem(id: 'p2', name: 'Bien 2'),
+        ];
+
+        await tester.pumpWidget(_buildCardView(items));
+        await tester.pumpAndSettle();
+
+        final cards = tester.widgetList<SummaryCard>(find.byType(SummaryCard));
+        expect(cards, hasLength(2));
+        for (final card in cards) {
+          expect(card.accentColor, isNotNull);
+        }
+      },
+    );
   });
 }

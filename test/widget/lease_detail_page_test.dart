@@ -38,6 +38,11 @@ class _FakeRepo implements LeaseRepository {
   Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
+
+  @override
   Future<Lease> create({
     required String propertyId,
     required String tenantId,
@@ -549,7 +554,7 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Cross-user / "Bail introuvable" (RLS 0 ligne)
+    // Cross-user / "Bail introuvable" (Firestore Rules : aucun document)
     // -----------------------------------------------------------------------
     testWidgets('cross-user — affiche "Bail introuvable"', (tester) async {
       await tester.pumpWidget(

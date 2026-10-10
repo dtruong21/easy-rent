@@ -1,14 +1,26 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
 
+import '../../../core/config/env.dart';
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../app_review/data/store_review_service.dart';
 import '../../auth/application/auth_session_provider.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../auth/data/landlord_tier_repository.dart';
+import '../../auth/domain/plan_level.dart';
+import '../../paid_plan/presentation/pro_badge.dart';
+import '../../paid_plan/presentation/widgets/subscription_section.dart';
+import '../../account/presentation/widgets/export_data_tile.dart';
 import '../application/landlord_profile_provider.dart';
 import 'widgets/profile_settings_sections.dart';
 import 'widgets/section_header.dart';
+
+final _log = Logger('ProfilePage');
 
 /// Page `/profile` — hub de réglages, mobile-first.
 ///
@@ -21,6 +33,7 @@ import 'widgets/section_header.dart';
 ///   stores : point d'entrée facile à trouver, dans le groupe « Compte »)
 /// - `/faq` : questions fréquentes (page publique)
 /// - `/profile/support` : formulaire « Nous contacter »
+/// - `/profile/feedback` : « Donner mon avis » (FEAT-060)
 ///
 /// Ordre des groupes (décision 2026-07-07) : Compte (identité, mot de
 /// passe, suppression) → Apparence → Aide (FAQ, contact, légal) →
@@ -47,6 +60,8 @@ class ProfilePage extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _ProfileHeader(),
+            const SizedBox(height: 16),
+            const _ProUpsellCard(),
             const SizedBox(height: 32),
 
             SectionHeader(title: l10n.profileHubAccountSection),
@@ -68,6 +83,10 @@ class ProfilePage extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/profile/password'),
               ),
+            // Export RGPD (droit à la portabilité, art. 20) : juste avant la
+            // suppression de compte — ordre logique (consulter avant de
+            // supprimer).
+            const ExportDataTile(),
             // Suppression de compte (FEAT-045) : dans le groupe Compte —
             // facile à trouver (exigence stores), style destructif.
             ListTile(
@@ -86,6 +105,13 @@ class ProfilePage extends ConsumerWidget {
             ),
             const SizedBox(height: 32),
 
+            // Résiliation/réactivation d'abonnement (FEAT-044f, conformité
+            // art. L215-1-1) — le widget s'auto-masque pour les non-abonnés
+            // (porte lui-même son espacement final quand visible, même
+            // convention que ProfileCrashReportingSection), donc aucune
+            // condition ni SizedBox supplémentaire ici.
+            const SubscriptionSection(),
+
             const ProfileAppearanceSection(),
             const SizedBox(height: 32),
 
@@ -102,7 +128,7 @@ class ProfilePage extends ConsumerWidget {
               key: const Key('tile_faq'),
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.help_outline),
-              title: const Text('Questions fréquentes (FAQ)'),
+              title: Text(l10n.profileFaqTile),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/faq'),
             ),
@@ -114,6 +140,42 @@ class ProfilePage extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/profile/support'),
             ),
+            ListTile(
+              key: const Key('tile_feedback'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.rate_review_outlined),
+              title: Text(l10n.profileHubFeedbackTile),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/profile/feedback'),
+            ),
+            if (canRateInStore(
+              storeApp: isStoreApp,
+              platform: defaultTargetPlatform,
+            ))
+              ListTile(
+                key: const Key('tile_rate_app'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.star_rate_outlined),
+                title: Text(l10n.profileHubRateAppTile),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: () async {
+                  try {
+                    await ref
+                        .read(storeReviewServiceProvider)
+                        .openStoreListing(
+                          appStoreId: Env.appStoreId.isEmpty
+                              ? null
+                              : Env.appStoreId,
+                        );
+                  } catch (e, st) {
+                    _log.warning(
+                      'Ouverture de la fiche store impossible',
+                      e,
+                      st,
+                    );
+                  }
+                },
+              ),
             const ProfileLegalTiles(),
             const SizedBox(height: 24),
 
@@ -163,12 +225,20 @@ class _ProfileHeader extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (fullName != null && fullName.isNotEmpty)
-                Text(
-                  fullName,
-                  key: const Key('txt_profile_header_name'),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fullName,
+                        key: const Key('txt_profile_header_name'),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const ProBadge(),
+                  ],
                 ),
               Text(
                 email,
@@ -181,6 +251,72 @@ class _ProfileHeader extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// La bannière « Passer à Pro » doit-elle s'afficher ? Oui seulement si les
+/// abonnements sont ouverts ([Env.subscriptionsEnabled]), hors apps iOS/Android
+/// ([isStoreApp] : aucun chemin d'achat hors achat intégré) et pour un compte
+/// pas encore payant. Fonction pure : `Env.subscriptionsEnabled` est figé à la
+/// compilation, elle rend la règle testable dans les deux états.
+@visibleForTesting
+bool proUpsellVisible({
+  required bool subscriptionsEnabled,
+  required bool storeApp,
+  required bool isPaid,
+}) => subscriptionsEnabled && !storeApp && !isPaid;
+
+/// Bannière « Passer à Pro » — masquée tant que [Env.subscriptionsEnabled]
+/// vaut `false` (freemium MVP, juillet 2026) : inutile de faire la publicité
+/// d'un abonnement impossible à souscrire (le checkout Stripe est lui-même
+/// masqué sur `/pro`, cf. `ProPricingPage`), et toujours masquée dans les apps
+/// iOS/Android (cf. [proUpsellVisible]). Les gates fonctionnels (limite
+/// de scénarios, comparaison) restent inchangés — eux expliquent une
+/// limitation réelle, pas une simple incitation commerciale.
+class _ProUpsellCard extends ConsumerWidget {
+  const _ProUpsellCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPaid = ref.watch(planEntitlementProvider).atLeast(PlanLevel.pro);
+    if (!proUpsellVisible(
+      subscriptionsEnabled: Env.subscriptionsEnabled,
+      storeApp: isStoreApp,
+      isPaid: isPaid,
+    )) {
+      return const SizedBox.shrink();
+    }
+
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push('/pro'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.star, color: theme.colorScheme.onPrimaryContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.proUpgradeButton,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

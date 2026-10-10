@@ -25,14 +25,30 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.41.2
+          flutter-version: 3.44.6
           cache: true
 
       - name: Install deps
         run: flutter pub get
 
+      # Même borne que dans `deploy.yml` (incident du 2026-08-13 : blocage de
+      # six heures sur cette étape côté déploiement). Ici l'étape n'a jamais
+      # posé problème — on la borne quand même, parce qu'un blocage identique
+      # sur ce workflow retiendrait la CI de toutes les PR sans rien signaler.
       - name: Generate code (freezed / json_serializable)
+        timeout-minutes: 15
         run: dart run build_runner build --delete-conflicting-outputs
+
+      # FEAT-056 — la grille de droits (quotas/features par palier) a une
+      # SOURCE CANONIQUE UNIQUE, config/entitlements.json, d'où sont générés le
+      # miroir Dart et le miroir TypeScript. Sans cette garde, client et
+      # serveur peuvent diverger silencieusement sur un plafond (risque R1 du
+      # plan : l'UI autorise ce que la Cloud Function refuse). Le script
+      # relance les DEUX générateurs (dart + node, tous deux présents sur ce
+      # runner) et échoue si un miroir est périmé, édité à la main, ou si les
+      # deux sourceSha divergent.
+      - name: Check entitlements parity (FEAT-056)
+        run: bash scripts/check-entitlements-parity.sh
 
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed .
@@ -46,6 +62,18 @@ jobs:
       - name: Detect secrets in repo
         run: bash scripts/check-secrets.sh --all
 
+      - name: Test secret scanner patterns (#131)
+        run: bash scripts/test-check-secrets.sh
+
+      - name: Check Firestore isolation (ADR 0003)
+        run: bash scripts/check-db-isolation.sh
+
+      - name: Check Stripe isolation (issue #138)
+        run: bash scripts/check-stripe-isolation.sh
+
+      - name: Check theme token mirrors
+        run: bash scripts/check-theme-tokens.sh
+
   functions:
     name: Functions (lint · build · test)
     runs-on: ubuntu-latest
@@ -57,7 +85,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
@@ -75,4 +103,79 @@ jobs:
 
       - name: Tests
         run: npm test
+        working-directory: functions
+
+  site:
+    name: Site vitrine (build Astro)
+    runs-on: ubuntu-latest
+    # Le site marketing (site/, FEAT-050) n'était jusqu'ici construit que dans
+    # deploy.yml, après le merge — une PR qui casse `astro build` passait donc
+    # la CI au vert puis faisait échouer le déploiement, app comprise (job
+    # séquentiel, deploy_targets couplés). Ce job met le build sous CI.
+    steps:
+      - uses: actions/checkout@v4
+
+      # `site/package.json` exige `engines.node: ">=22.12.0"` (Astro 7) — ne
+      # jamais descendre sous `node-version: "22"` ici, `npm ci --prefix site`
+      # échouerait dès l'installation.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install deps
+        run: npm ci --prefix site
+
+      - name: Build
+        run: npm run build --prefix site
+
+  firestore-rules:
+    name: Firestore Rules (cross-user)
+    runs-on: ubuntu-latest
+    # Les Firestore Security Rules sont sécurité-critiques (deny-by-default,
+    # scoping cross-user par landlordId, gel de subscriptionTier/compteurs/pro*)
+    # et se déploient TELLES QUELLES en prod (règles partagées prod/staging, cf.
+    # docs/ENVIRONMENTS.md). La suite rules-unit-testing (firestore_rules.test.ts)
+    # n'était jusqu'ici validée qu'en local — ce job la met sous CI (mise en
+    # lumière par FEAT-044f / PR #142 : gel des champs pro* + 3 tests cross-user
+    # non couverts). Répond au Definition of Done : « Règles Firestore testées
+    # (cross-user) ».
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      # `test:rules` épingle `firebase-tools@13` : les CLI >= 14 exigent un
+      # JDK >= 21. On reste sur temurin 17, iso avec la machine de dev (cf.
+      # l'entête de functions/rules-tests/firestore_rules.test.ts).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Évite de re-télécharger les jars des émulateurs Firestore (~63 Mo) et
+      # Storage (runtime des règles) à chaque run. Clé statique versionnée :
+      # firebase-tools est épinglé, donc la version des jars est stable ; bumper
+      # le suffixe pour invalider au besoin (v2 : ajout de l'émulateur Storage,
+      # OWASP-04 — une clé v1 déjà peuplée n'aurait contenu que Firestore).
+      - name: Cache Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-v2
+
+      - name: Install deps
+        run: npm ci
+        working-directory: functions
+
+      # Wrappe `firebase-tools@13 emulators:exec --only firestore,storage`
+      # (projet demo-* : aucun credential requis) puis lance vitest sur
+      # rules-tests/ (firestore_rules + storage_rules).
+      - name: Test Firestore + Storage rules
+        run: npm run test:rules
         working-directory: functions

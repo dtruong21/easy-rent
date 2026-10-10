@@ -132,6 +132,42 @@ export class FakeTransaction {
 
 let autoIdCounter = 0;
 
+/** Convertit une valeur comparable (number, Date, Timestamp) en millis, sinon null. */
+function toComparable(v: unknown): number | null {
+  if (typeof v === "number") return v;
+  if (v instanceof Date) return v.getTime();
+  if (v && typeof (v as {toMillis?: () => number}).toMillis === "function") {
+    return (v as {toMillis: () => number}).toMillis();
+  }
+  return null;
+}
+
+/** Applique un filtre [field, op, value] à un document. */
+function matchesFilter(
+  data: DocData,
+  [field, op, value]: [string, string, unknown],
+): boolean {
+  if (op === "==") return data[field] === value;
+  const actual = data[field];
+  // Sémantique Firestore : un champ absent ne matche jamais une comparaison.
+  if (actual === undefined || actual === null) return false;
+  const a = toComparable(actual);
+  const b = toComparable(value);
+  if (a === null || b === null) return false;
+  switch (op) {
+    case "<=":
+      return a <= b;
+    case "<":
+      return a < b;
+    case ">=":
+      return a >= b;
+    case ">":
+      return a > b;
+    default:
+      return false;
+  }
+}
+
 /**
  * Snapshot de doc retourné par les requêtes (FakeQuery) — expose `ref`
  * en plus de `id`/`data()` pour permettre `batch.delete(doc.ref)`.
@@ -152,24 +188,24 @@ export class FakeQueryDocSnapshot extends FakeDocSnapshot {
 
 /**
  * Requête fake — couvre le sous-ensemble utilisé par `delete_account.ts` :
- * `.where(field, "==", value)` (chaînable) + `.limit(n)` + `.get()`.
+ * `.where(field, op, value)` (chaînable) + `.limit(n)` + `.get()`.
  */
 export class FakeQuery {
   constructor(
     protected readonly collectionName: string,
     protected readonly queryStore: Map<string, DocData>,
-    private readonly filters: ReadonlyArray<[string, unknown]> = [],
+    private readonly filters: ReadonlyArray<[string, string, unknown]> = [],
     private readonly limitCount: number | null = null,
   ) {}
 
   where(field: string, op: string, value: unknown): FakeQuery {
-    if (op !== "==") {
+    if (!["==", "<=", "<", ">=", ">"].includes(op)) {
       throw new Error(`FakeQuery: unsupported operator ${op}`);
     }
     return new FakeQuery(
       this.collectionName,
       this.queryStore,
-      [...this.filters, [field, value]],
+      [...this.filters, [field, op, value]],
       this.limitCount,
     );
   }
@@ -204,7 +240,7 @@ export class FakeQuery {
       // Ne matche que les docs DIRECTS de la collection (pas de sous-coll).
       if (!path.startsWith(prefix)) continue;
       if (path.slice(prefix.length).includes("/")) continue;
-      if (this.filters.every(([field, value]) => data[field] === value)) {
+      if (this.filters.every((f) => matchesFilter(data, f))) {
         docs.push(
           new FakeQueryDocSnapshot(
             path,
@@ -271,6 +307,13 @@ export class FakeWriteBatch {
 export class FakeFirestore {
   readonly store = new Map<string, DocData>();
 
+  /**
+   * Miroir de `Firestore.databaseId` du vrai SDK : `"(default)"` pour la prod,
+   * `"staging"` pour la base nommée du staging. Permet aux callables de savoir
+   * dans quel environnement `dbForRequest` les a routées.
+   */
+  constructor(readonly databaseId: string = "(default)") {}
+
   doc(path: string): FakeDocRef {
     return new FakeDocRef(path, this.store);
   }
@@ -301,31 +344,72 @@ export class FakeFirestore {
 
 /**
  * Fake Storage minimal — couvre le sous-ensemble utilisé par
- * `documents.ts` (`bucket().file(path).exists()` / `.getSignedUrl()`) et
- * `delete_account.ts` (`bucket().deleteFiles({prefix})`). Par défaut tous
- * les fichiers "existent" (upload réputé réussi) ; `existingPaths` permet
- * de simuler un upload manquant pour les tests qui exercent ce garde-fou.
- * `deletedPrefixes` enregistre les purges par préfixe ; `deleteFilesError`
- * simule un échec GCS.
+ * `documents.ts` (`bucket().file(path).getMetadata()` / `.delete()` /
+ * `.getSignedUrl()`) et `delete_account.ts`
+ * (`bucket().deleteFiles({prefix})`). Par défaut tous les fichiers
+ * "existent" (upload réputé réussi) ; `existingPaths` permet de simuler un
+ * upload manquant pour les tests qui exercent ce garde-fou.
+ *
+ * `sizesByPath` pilote la taille RÉELLE renvoyée par `getMetadata()` —
+ * c'est la source de vérité du plafond depuis que `createDocument` ne fait
+ * plus confiance au `sizeBytes` déclaré par le client. Défaut
+ * [defaultSizeBytes] pour les chemins non renseignés. Comme GCS, la taille
+ * est renvoyée en **string** (API JSON) afin que les tests exercent le
+ * parsing réel.
+ *
+ * `deletedPaths` enregistre les suppressions unitaires (nettoyage de
+ * l'objet orphelin quand la création est refusée) ; `deletedPrefixes` les
+ * purges par préfixe ; `deleteFilesError` / `deleteError` simulent un échec
+ * GCS.
  */
 export class FakeStorage {
   existingPaths: Set<string> | null = null; // null = tout existe
+  readonly sizesByPath = new Map<string, number>();
+  defaultSizeBytes = 1024;
+  readonly deletedPaths: string[] = [];
   readonly deletedPrefixes: string[] = [];
   deleteFilesError: Error | null = null;
+  deleteError: Error | null = null;
+
+  private exists(path: string): boolean {
+    return this.existingPaths === null || this.existingPaths.has(path);
+  }
+
+  /** Erreur 404 façon `@google-cloud/storage` (ApiError avec `code`). */
+  private notFound(path: string): Error & {code: number} {
+    const err = new Error(`No such object: ${path}`) as Error & {code: number};
+    err.code = 404;
+    return err;
+  }
 
   bucket(): {
     file: (path: string) => {
       exists: () => Promise<[boolean]>;
+      getMetadata: () => Promise<[{size: string}]>;
+      delete: (opts?: {ignoreNotFound?: boolean}) => Promise<void>;
       getSignedUrl: (opts: unknown) => Promise<[string]>;
     };
     deleteFiles: (opts: {prefix: string}) => Promise<void>;
     } {
     return {
       file: (path: string) => ({
-        exists: () =>
-          Promise.resolve([
-            this.existingPaths === null || this.existingPaths.has(path),
-          ]),
+        exists: () => Promise.resolve([this.exists(path)] as [boolean]),
+        getMetadata: () => {
+          if (!this.exists(path)) return Promise.reject(this.notFound(path));
+          const size = this.sizesByPath.get(path) ?? this.defaultSizeBytes;
+          // GCS renvoie `size` en string — on reproduit fidèlement.
+          return Promise.resolve([{size: String(size)}] as [{size: string}]);
+        },
+        delete: (opts?: {ignoreNotFound?: boolean}) => {
+          if (this.deleteError) return Promise.reject(this.deleteError);
+          // `ignoreNotFound` (utilisé par `deleteStorageObject`) rend l'appel
+          // idempotent : un objet absent n'est pas une erreur.
+          if (!this.exists(path) && opts?.ignoreNotFound !== true) {
+            return Promise.reject(this.notFound(path));
+          }
+          this.deletedPaths.push(path);
+          return Promise.resolve();
+        },
         getSignedUrl: () => Promise.resolve([`https://fake-signed-url/${path}`]),
       }),
       deleteFiles: (opts: {prefix: string}) => {
@@ -343,13 +427,16 @@ export class FakeStorage {
  * `getUserError` simulent un échec (ex. objet avec `code:
  * "auth/user-not-found"` pour les chemins idempotents). `providerDataByUid`
  * pilote la vérification autoritative de l'exemption anonyme (M1) — par
- * défaut, aucun provider lié (vrai compte anonyme).
+ * défaut, aucun provider lié (vrai compte anonyme). `emailVerifiedByUid`
+ * pilote `UserRecord.emailVerified` (OWASP-02).
  */
 export class FakeAuthAdmin {
   readonly deletedUids: string[] = [];
   deleteUserError: unknown = null;
   getUserError: unknown = null;
   readonly providerDataByUid = new Map<string, Array<{providerId: string}>>();
+  /** `UserRecord.emailVerified` par uid (défaut : false) — cf. OWASP-02. */
+  readonly emailVerifiedByUid = new Map<string, boolean>();
 
   private static toError(raw: unknown): Error {
     return raw instanceof Error ?
@@ -368,6 +455,7 @@ export class FakeAuthAdmin {
   getUser(uid: string): Promise<{
     uid: string;
     providerData: Array<{providerId: string}>;
+    emailVerified: boolean;
   }> {
     if (this.getUserError != null) {
       return Promise.reject(FakeAuthAdmin.toError(this.getUserError));
@@ -375,6 +463,7 @@ export class FakeAuthAdmin {
     return Promise.resolve({
       uid,
       providerData: this.providerDataByUid.get(uid) ?? [],
+      emailVerified: this.emailVerifiedByUid.get(uid) ?? false,
     });
   }
 }
@@ -399,6 +488,35 @@ export const fakeAdminFirestoreHolder: {
   storage: undefined,
   authAdmin: undefined,
 };
+
+/**
+ * Base nommée `staging` en test : `getFirestore(STAGING_DATABASE_ID)` (mocké
+ * par `setup_firestore_mock.ts`) renvoie `db`. Vide par défaut — un appel
+ * mobile dont le landlord n'est pas en prod retombe donc sur la prod, comme
+ * en production quand le doc n'existe nulle part.
+ */
+export const fakeStagingFirestoreHolder: {db: FakeFirestore} = {
+  db: new FakeFirestore("staging"),
+};
+
+/**
+ * Remplaçant de `getFirestore` (module `firebase-admin/firestore`) pour les
+ * tests : SEULE la base nommée `"staging"` est servie (FakeFirestore dédiée).
+ * Toute autre valeur lève — une coquille dans `STAGING_DATABASE_ID`, ou un
+ * `getFirestore()` sans identifiant glissé dans le code, fait échouer le test
+ * au lieu de passer en silence. La base `(default)` passe par
+ * `admin.firestore()`, mockée à part.
+ */
+export function fakeGetFirestore(...args: unknown[]): FakeFirestore {
+  const databaseId = args.find((a) => typeof a === "string");
+  if (args.length !== 1 || databaseId !== "staging") {
+    const received = JSON.stringify(args);
+    throw new Error(
+      `fakeGetFirestore: seule la base "staging" est servie (reçu : ${received})`,
+    );
+  }
+  return fakeStagingFirestoreHolder.db;
+}
 
 /**
  * `admin.firestore.Timestamp` fake — `fromMillis`/`fromDate` retournent des

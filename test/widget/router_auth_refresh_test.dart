@@ -18,7 +18,7 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/pwa/application/install_prompt_controller.dart';
@@ -104,21 +104,27 @@ class _FakeDashboardRepo implements DashboardRepository {
   Future<RetardsKpi> fetchRetards() async => const RetardsKpi(count: 0);
 
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
 
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 class _FakeInstallController extends InstallPromptController {

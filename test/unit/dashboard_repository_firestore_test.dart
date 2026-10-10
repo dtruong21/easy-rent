@@ -31,6 +31,7 @@ void main() {
     required String id,
     String status = 'active',
     required DateTime startDate,
+    DateTime? endDate,
     int paymentDay = 1,
   }) async {
     await firestore.collection('leases').doc(id).set({
@@ -40,6 +41,7 @@ void main() {
       'rentAmountCents': 80000,
       'chargesAmountCents': 5000,
       'startDate': Timestamp.fromDate(startDate),
+      'endDate': endDate == null ? null : Timestamp.fromDate(endDate),
       'status': status,
       'paymentDay': paymentDay,
       'createdAt': Timestamp.fromDate(DateTime(2026, 1, 1)),

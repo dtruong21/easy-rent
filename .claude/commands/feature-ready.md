@@ -15,7 +15,7 @@ $ARGUMENTS (défaut : déduit de la branche courante)
 1. **Résoudre le FEAT-ID**
    - Si `$ARGUMENTS` contient un identifiant (`052`, `FEAT-052`) → l'utiliser.
    - Sinon, le déduire de la branche : `git branch --show-current` sur
-     `feature/052-...` → `052`.
+     `feat/052-...` → `052` (accepte aussi l'ancien préfixe `feature/…`).
    - Si aucun ID n'est déductible → demander à l'utilisateur, ne pas deviner.
 
 2. **Lancer le script** (c'est lui qui produit le score, pas toi) :

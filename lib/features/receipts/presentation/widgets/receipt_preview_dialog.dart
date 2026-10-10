@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/document_type.dart';
 import '../../domain/receipt_generation_result.dart';
+import '../open_receipt_pdf.dart';
 import 'document_type_l10n.dart';
 
 /// Dialog affiché après la génération réussie d'une quittance.
@@ -15,13 +16,13 @@ import 'document_type_l10n.dart';
 ///
 /// Note : on ne fait pas de preview embedded — un nouvel onglet est plus simple
 /// et plus pratique sur Flutter Web.
-class ReceiptPreviewDialog extends StatelessWidget {
+class ReceiptPreviewDialog extends ConsumerWidget {
   const ReceiptPreviewDialog({super.key, required this.result});
 
   final ReceiptGenerationResult result;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final isQuittance = result.documentType == DocumentType.quittance;
@@ -91,7 +92,7 @@ class ReceiptPreviewDialog extends StatelessWidget {
         ),
         FilledButton.icon(
           key: const Key('btn_receipt_preview_open'),
-          onPressed: () => _openPdf(context),
+          onPressed: () => _openPdf(context, ref),
           icon: const Icon(Icons.open_in_new, size: 18),
           label: Text(l10n.receiptsOpenPdfLabel),
         ),
@@ -99,16 +100,15 @@ class ReceiptPreviewDialog extends StatelessWidget {
     );
   }
 
-  Future<void> _openPdf(BuildContext context) async {
-    final uri = Uri.parse(result.pdfUrl);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.receiptsErrorOpenPdfBrowser)),
-        );
-      }
-    }
-  }
+  /// Passe par [openReceiptPdf] comme les deux autres points d'ouverture.
+  ///
+  /// Ce dialogue ouvrait `result.pdfUrl` — une URL `data:` — directement via
+  /// `launchUrl`. Les navigateurs bloquent la navigation de premier niveau vers
+  /// une URL `data:` : l'onglet s'ouvrait et restait blanc. Oublié lors du
+  /// correctif initial, qui n'avait traité que le menu d'actions ; re-signalé
+  /// en recette juste après la génération d'une quittance (2026-08-11).
+  Future<void> _openPdf(BuildContext context, WidgetRef ref) =>
+      openReceiptPdf(context, ref, result.receiptId);
 }
 
 class _InfoRow extends StatelessWidget {

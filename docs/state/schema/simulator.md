@@ -2,11 +2,11 @@
 
 > Source d'état — simulator. Maintenu par `state-keeper`.
 
-Collection : `investment_scenarios`. CRUD direct (FEAT-018). Patterns transverses → [README](README.md).
+Collection : `investment_scenarios`. Gating par callable (FEAT-056), patterns transverses → [README](README.md).
 
 ## `investment_scenarios/{id}`
 
-Simulateur immobilier. Accessible anonymes + comptes (CRUD direct client).
+Simulateur immobilier. Accessible anonymes + comptes. **CRÉATION : callable-exclusive depuis FEAT-056** (voir functions).
 
 | Champ | Type | Notes |
 |---|---|---|
@@ -19,12 +19,17 @@ Simulateur immobilier. Accessible anonymes + comptes (CRUD direct client).
 | `updatedAt` | timestamp | CF trigger |
 | `deletedAt` | timestamp\|null | soft-delete |
 
-**RLS** :
-- `get/list` : isOwner(landlordId) && isActive(rsc)
-- `create` : isSignedIn() (anon OK) && landlordId==uid
-- `update` : isOwner(landlordId) && preservesImmutables()
-- `delete` : interdit (soft-delete via `softDeleteEntity`)
+**Règles Firestore** :
+- `get` : isOwner(landlordId) && isActive(rsc)
+- `list` : isOwner(landlordId) — **pas d'`isActive`** (cf. properties, audit FEAT-045)
+- `create` : **`if false` (FEAT-056 PR-2b)** — via callable `createScenario` (Admin SDK) uniquement ; elle impose quota_scenarios par palier effectif
+- `update` : isOwner(landlordId) && isActive(rsc) && preservesImmutables(rsc)
+- `delete` : **if false** (soft-delete via `softDeleteEntity`)
 
-**Index** : landlordId ↑, deletedAt ↑, createdAt ↓ (scenarios list).
+**Index** (1, vérifié) : landlordId ↑, deletedAt ↑, **updatedAt ↓** (scenarios list).
+
+> ⚠️ L'état annonçait `createdAt ↓` — c'est `updatedAt ↓`. Une liste triée par `createdAt` échouerait en index manquant.
 
 **Triggers** : setUpdatedAt.
+
+**Quotas de scénarios** (FEAT-056) : anonymous=1 · free=3 · pro=15 · max=30 · ultra=null (illimité). Source canonique `config/entitlements.json`, appliqué par la callable `createScenario` (count live, pas de compteur dénormalisé).

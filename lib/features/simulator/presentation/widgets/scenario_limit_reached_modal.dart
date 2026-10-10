@@ -1,67 +1,89 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/store_billing.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../auth/domain/plan_entitlement.dart';
+import '../../../auth/domain/plan_level.dart';
 import '../../../auth/domain/subscription_tier.dart';
-import '../../../paid_plan/application/paid_plan_interest_controller.dart';
-
-/// Fonctionnalités Plan Pro proposées au clic « M'avertir du lancement »
-/// depuis la modal limite FREE. Miroir de [ComingSoonPaidPlanSection].
-const List<String> _paidPlanFeatures = [
-  'comparateur',
-  'sensibilite_taux',
-  'fiscal_lmnp',
-  'export_pdf',
-];
+import '../../../paid_plan/presentation/widgets/plan_level_label.dart';
 
 /// Affiche la modal bloquante de limite de scénarios atteinte.
 ///
 /// - `tier == anonymous` : CTA « Créer un compte » (jusqu'à 3 scénarios).
-/// - `tier == free` : CTA « M'avertir du lancement » (Plan Pro, pas encore
-///   disponible) — écrit `paid_plan_interest/{uid}` via
-///   [PaidPlanInterestController].
+/// - `tier == free` : CTA « Passer à Pro » → `/pro` (checkout Stripe).
+/// - `tier == paid` (Pro ou Max, plafonnés depuis FEAT-056 — seul Ultra est
+///   illimité) : CTA « Passer à {palier suivant} » → `/pro`, palier suivant
+///   dérivé du rang de l'enum [PlanLevel], jamais codé en dur.
+///
+/// Dans une app store sans achat intégré ([canOfferUpgrade] faux), le CTA vers
+/// `/pro` disparaît (aucun achat hors achat intégré) : la modale garde son
+/// message (aucun prix n'y figure) et sa fermeture, libellée « Fermer »
+/// (neutre) — « Plus tard » renverrait à un achat que l'app ne propose pas. Le
+/// cas anonyme garde son CTA « Créer un compte », donc « Plus tard ».
 Future<void> showScenarioLimitReachedModal(
   BuildContext context, {
-  required SubscriptionTier tier,
+  required PlanEntitlement plan,
 }) {
   assert(
-    tier != SubscriptionTier.paid,
+    !plan.atLeast(PlanLevel.ultra),
     'showScenarioLimitReachedModal ne doit jamais être appelée pour un '
-    'tier paid (illimité — canSaveAnotherScenarioProvider est déjà true).',
+    'compte Ultra (illimité — canSaveAnotherScenarioProvider est déjà '
+    'true, FEAT-056 §2).',
   );
   return showDialog<void>(
     context: context,
-    builder: (context) => _ScenarioLimitReachedDialog(tier: tier),
+    builder: (context) => _ScenarioLimitReachedDialog(plan: plan),
   );
 }
 
-class _ScenarioLimitReachedDialog extends ConsumerWidget {
-  const _ScenarioLimitReachedDialog({required this.tier});
+/// Palier immédiatement supérieur à [level] parmi les paliers payants
+/// (`pro` → `max` → `ultra`) — `null` si [level] est déjà le plus haut
+/// (ne devrait pas arriver ici, cf. l'assert d'Ultra dans
+/// [showScenarioLimitReachedModal]).
+PlanLevel? _nextLevel(PlanLevel level) {
+  final higher = PlanLevel.values.where((l) => l.rank > level.rank).toList()
+    ..sort((a, b) => a.rank.compareTo(b.rank));
+  return higher.isEmpty ? null : higher.first;
+}
 
-  final SubscriptionTier tier;
+class _ScenarioLimitReachedDialog extends StatelessWidget {
+  const _ScenarioLimitReachedDialog({required this.plan});
+
+  final PlanEntitlement plan;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isAnonymous = tier == SubscriptionTier.anonymous;
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final tier = plan.tier;
+    final isAnonymous = tier == SubscriptionTier.anonymous;
+    final isPaid = tier == SubscriptionTier.paid;
+    final nextLevel = isPaid ? _nextLevel(plan.level!) : null;
+    final showUpgradeCta = !isAnonymous && canOfferUpgrade;
+    // Sans aucun CTA (app store sans achat intégré, hors anonyme), « Plus tard »
+    // n'a plus d'objet.
+    final hasCta = isAnonymous || showUpgradeCta;
 
     return AlertDialog(
       key: const Key('scenario_limit_reached_modal'),
-      title: Text(
-        isAnonymous
-            ? l10n.simulatorLimitReachedTitleAnonymous
-            : l10n.simulatorLimitReachedTitleFree,
-      ),
+      title: Text(_titleFor(l10n, isAnonymous: isAnonymous, isPaid: isPaid)),
       content: Text(
-        isAnonymous
+        isPaid && nextLevel != null
+            ? l10n.simulatorLimitReachedContentPaid(
+                plan.level!.label(context),
+                nextLevel.label(context),
+              )
+            : isAnonymous
             ? l10n.simulatorLimitReachedContentAnonymous
             : l10n.simulatorLimitReachedContentFree,
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.simulatorLimitReachedLaterButton),
+          child: Text(
+            hasCta ? l10n.simulatorLimitReachedLaterButton : l10n.commonClose,
+          ),
         ),
         if (isAnonymous)
           FilledButton(
@@ -72,66 +94,30 @@ class _ScenarioLimitReachedDialog extends ConsumerWidget {
             },
             child: Text(l10n.simulatorLimitReachedSignupButton),
           )
-        else
-          _NotifyMeButton(onSubmitted: () => Navigator.of(context).pop()),
+        else if (showUpgradeCta)
+          FilledButton(
+            key: const Key('scenario_limit_upgrade_cta'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push('/pro');
+            },
+            child: Text(
+              isPaid && nextLevel != null
+                  ? l10n.proUpgradeToLevel(nextLevel.label(context))
+                  : l10n.proUpgradeButton,
+            ),
+          ),
       ],
     );
   }
-}
 
-class _NotifyMeButton extends ConsumerStatefulWidget {
-  const _NotifyMeButton({required this.onSubmitted});
-
-  final VoidCallback onSubmitted;
-
-  @override
-  ConsumerState<_NotifyMeButton> createState() => _NotifyMeButtonState();
-}
-
-class _NotifyMeButtonState extends ConsumerState<_NotifyMeButton> {
-  bool _isSubmitting = false;
-
-  Future<void> _submit() async {
-    setState(() => _isSubmitting = true);
-    await ref
-        .read(paidPlanInterestControllerProvider.notifier)
-        .notifyMe(features: _paidPlanFeatures);
-    if (!mounted) return;
-
-    // Le contrôleur ne throw jamais (AsyncValue.guard) : relire son state.
-    // Erreur → pas de faux succès, le bouton redevient cliquable.
-    if (ref.read(paidPlanInterestControllerProvider).hasError) {
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.simulatorInterestSaveErrorSnackbar),
-        ),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          context.l10n.simulatorLimitReachedNotifyMeSuccessSnackbar,
-        ),
-      ),
-    );
-    widget.onSubmitted();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      key: const Key('scenario_limit_notify_cta'),
-      onPressed: _isSubmitting ? null : _submit,
-      child: _isSubmitting
-          ? const SizedBox(
-              height: 16,
-              width: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Text(context.l10n.simulatorNotifyMeButton),
-    );
+  String _titleFor(
+    AppLocalizations l10n, {
+    required bool isAnonymous,
+    required bool isPaid,
+  }) {
+    if (isAnonymous) return l10n.simulatorLimitReachedTitleAnonymous;
+    if (isPaid) return l10n.simulatorLimitReachedTitlePaid;
+    return l10n.simulatorLimitReachedTitleFree;
   }
 }

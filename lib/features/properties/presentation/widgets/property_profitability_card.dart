@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/finance/profitability_snapshot.dart';
+import '../../../../core/finance/real_expense_charges.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../application/active_lease_provider.dart';
 import '../../application/property_detail_provider.dart';
+import '../../application/property_real_charges_provider.dart';
+import '../../../../core/ui/theme/app_colors.dart';
 import '../../domain/property.dart';
 
 /// Carte de rentabilité affichée sur [PropertyDetailPage].
@@ -26,6 +29,7 @@ class PropertyProfitabilityCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncProperty = ref.watch(propertyDetailProvider(propertyId));
     final asyncRent = ref.watch(activeLeaseRentProvider(propertyId));
+    final asyncRealCharges = ref.watch(propertyRealChargesProvider(propertyId));
 
     return asyncProperty.when(
       loading: () => const _LoadingCard(),
@@ -37,6 +41,11 @@ class PropertyProfitabilityCard extends ConsumerWidget {
           property: property,
           monthlyRentHcCents: monthlyRentHcCents,
           propertyId: propertyId,
+          // Repli gracieux sur le prévisionnel si la lecture des dépenses
+          // échoue ou charge encore — supplémentaire, pas essentiel : ne
+          // doit jamais bloquer l'affichage de la carte rentabilité.
+          realCharges:
+              asyncRealCharges.valueOrNull ?? PropertyRealCharges.empty,
         ),
       ),
     );
@@ -72,17 +81,20 @@ class _ProfitabilityContent extends StatelessWidget {
     required this.property,
     required this.monthlyRentHcCents,
     required this.propertyId,
+    required this.realCharges,
   });
 
   final Property property;
   final int? monthlyRentHcCents;
   final String propertyId;
+  final PropertyRealCharges realCharges;
 
   @override
   Widget build(BuildContext context) {
     final snapshot = computeSnapshotForProperty(
       property: property,
       monthlyRentHcCents: monthlyRentHcCents,
+      realCharges: realCharges,
     );
 
     return Card(
@@ -251,6 +263,19 @@ class _KpiState extends StatelessWidget {
             ),
           ),
         ],
+        if (snapshot.monthlyCashflowBeforeTaxCents != null &&
+            snapshot.cashflowRealChargesCount > 0) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.propertiesProfitabilityCashflowRealBasis(
+              snapshot.cashflowRealChargesCount,
+            ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         Text(
           l10n.propertiesProfitabilityDisclaimer,
@@ -272,9 +297,11 @@ class _YieldKpiChip extends StatelessWidget {
 
   Color _color(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors =
+        Theme.of(context).extension<AppColors>() ?? AppColors.light;
     if (percent < 5) return colors.error;
-    if (percent < 7) return Colors.orange.shade700;
-    return Colors.green.shade700;
+    if (percent < 7) return appColors.warning.solid;
+    return appColors.success.solid;
   }
 
   @override
@@ -318,8 +345,10 @@ class _CashflowChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPositive = cents >= 0;
+    final appColors =
+        Theme.of(context).extension<AppColors>() ?? AppColors.light;
     final color = isPositive
-        ? Colors.green.shade700
+        ? appColors.success.solid
         : Theme.of(context).colorScheme.error;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

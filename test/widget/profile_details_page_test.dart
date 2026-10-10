@@ -10,7 +10,9 @@
 /// - Chargement initial en erreur → bouton Réessayer
 library;
 
+import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/profile/application/profile_form_controller.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/profile/domain/profile_form_state.dart';
@@ -74,9 +76,10 @@ LandlordProfile _makeProfile({
   String? fullName,
   String? phone,
   String? address,
+  String? email = 'test@example.com',
 }) => LandlordProfile(
   id: 'uid-1',
-  email: 'test@example.com',
+  email: email,
   fullName: fullName,
   phone: phone,
   address: address,
@@ -85,6 +88,16 @@ LandlordProfile _makeProfile({
   rgpdConsentAt: DateTime(2024),
   rgpdConsentVersion: 'legacy-1',
 );
+
+/// Auth minimal — la page ne consulte que `currentUser`, pour le repli email
+/// quand la copie Firestore est absente. Le reste n'est jamais appelé.
+class _NoCurrentUserAuth implements AuthRepository {
+  @override
+  User? get currentUser => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 Widget _buildPage({
   required _FakeProfileRepository repo,
@@ -102,6 +115,7 @@ Widget _buildPage({
   return ProviderScope(
     overrides: [
       profileRepositoryProvider.overrideWithValue(repo),
+      authRepositoryProvider.overrideWithValue(_NoCurrentUserAuth()),
       if (initialFormState != null)
         profileFormControllerProvider.overrideWith(
           (ref) => ProfileFormController(ref)..state = initialFormState,
@@ -178,6 +192,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('test@example.com'), findsOneWidget);
+    });
+
+    testWidgets('un email null NE casse PAS la page (régression staging)', (
+      tester,
+    ) async {
+      // `email` était `required String` : un doc `landlords` portant
+      // `email: null` faisait échouer `fromJson`, et l'écran entier tombait sur
+      // « Impossible de charger le profil » — sans autre issue que Réessayer,
+      // qui échouait pareil. Cas réel : compte issu du parcours « essai sans
+      // compte », dont l'upgrade ne renseignait pas l'email.
+      final repo = _FakeProfileRepository()..seed(_makeProfile(email: null));
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      // Le formulaire est rendu : `asyncProfile.when` a pris la branche `data`
+      // et non `error` — les deux s'excluent, donc c'est la preuve directe que
+      // l'écran ne tombe plus en erreur.
+      expect(find.byKey(const Key('field_full_name')), findsOneWidget);
+      expect(find.byKey(const Key('field_email_readonly')), findsOneWidget);
+      expect(find.byKey(const Key('btn_save_profile')), findsOneWidget);
     });
 
     testWidgets('champs vides si profil sans fullName ni address', (

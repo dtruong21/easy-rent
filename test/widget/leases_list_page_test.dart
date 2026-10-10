@@ -37,6 +37,11 @@ class _FakeRepo implements LeaseRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
+
+  @override
   Future<Lease> getById(String id) async => throw UnimplementedError();
 
   @override
@@ -196,12 +201,16 @@ void main() {
       expect(find.byKey(const Key('btn_add_lease_empty')), findsOneWidget);
     });
 
-    testWidgets('état vide — FAB "Créer un bail" présent', (tester) async {
-      await tester.pumpWidget(_buildPage(const _FakeRepo()));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'état vide — un seul bouton d\'ajout : le CTA, pas de FAB (#197)',
+      (tester) async {
+        await tester.pumpWidget(_buildPage(const _FakeRepo()));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('fab_add_lease')), findsOneWidget);
-    });
+        expect(find.byKey(const Key('btn_add_lease_empty')), findsOneWidget);
+        expect(find.byKey(const Key('fab_add_lease')), findsNothing);
+      },
+    );
 
     // -----------------------------------------------------------------------
     // Liste avec items
@@ -224,6 +233,8 @@ void main() {
 
       expect(find.text('Appartement Paris'), findsOneWidget);
       expect(find.text('Jean Dupont'), findsOneWidget);
+      // Liste non vide : le FAB reste l'unique bouton d'ajout.
+      expect(find.byKey(const Key('fab_add_lease')), findsOneWidget);
     });
 
     testWidgets('liste — état vide absent quand des baux existent', (
@@ -381,7 +392,7 @@ void main() {
     );
 
     testWidgets(
-      'filtre "Actifs" — exclut les baux en retard (priorité late > active)',
+      'filtre "Actifs" — inclut les baux en retard (tous les baux en cours)',
       (tester) async {
         final repo = _FakeRepo(
           items: [
@@ -410,7 +421,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Bail Actif À Jour'), findsOneWidget);
-        expect(find.text('Bail En Retard'), findsNothing);
+        expect(find.text('Bail En Retard'), findsOneWidget);
       },
     );
 
@@ -535,7 +546,7 @@ void main() {
     // -----------------------------------------------------------------------
     // ViewMode toggle
     // -----------------------------------------------------------------------
-    testWidgets('desktop — FilterBar visible avec SegmentedButton filtres', (
+    testWidgets('desktop — FilterBar visible avec puces de filtre', (
       tester,
     ) async {
       final repo = _FakeRepo(items: [_makeItem()]);
@@ -543,7 +554,9 @@ void main() {
       await tester.pumpWidget(_buildPage(repo, size: const Size(1200, 800)));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SegmentedButton<LeaseFilter>), findsOneWidget);
+      for (final f in LeaseFilter.values) {
+        expect(find.byKey(Key('filter_chip_$f')), findsOneWidget);
+      }
     });
   });
 

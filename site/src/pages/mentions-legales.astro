@@ -1,0 +1,60 @@
+---
+// site/src/pages/mentions-legales.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { appUrl } from '../lib/urls';
+---
+<BaseLayout
+  title="Mentions légales — Baillan"
+  description="Éditeur, hébergeur et informations légales du site baillan.com."
+>
+  <article class="prose">
+    <h1>Mentions légales</h1>
+
+    <p class="todo">
+      <strong>À compléter avant la mise en ligne en production.</strong>
+      Les informations d'éditeur dépendent de la structure juridique, qui n'est
+      pas encore créée. Cette page ne doit pas être déployée sur
+      <code>baillan.com</code> en l'état.
+    </p>
+
+    <h2>Éditeur du site</h2>
+    <p>
+      Baillan, édité par Daki Studio.<br />
+      Forme juridique, numéro SIREN, adresse du siège et directeur de la
+      publication : à renseigner à la création de la structure.<br />
+      Contact : à renseigner.
+    </p>
+
+    <h2>Hébergement</h2>
+    <p>
+      Site et application hébergés par Google Ireland Limited, Gordon House,
+      Barrow Street, Dublin 4, Irlande, via Firebase Hosting.
+    </p>
+
+    <h2>Propriété intellectuelle</h2>
+    <p>
+      Les contenus de ce site sont protégés par le droit d'auteur. Toute
+      reproduction sans autorisation est interdite.
+    </p>
+
+    <h2>Données personnelles</h2>
+    <p>
+      Le traitement des données est décrit dans la{' '}
+      <a href={`${appUrl}/privacy`}>politique de confidentialité</a>,
+      qui fait foi. Vous disposez d'un droit d'accès, de rectification,
+      d'effacement et de portabilité, exerçables depuis l'application.
+    </p>
+  </article>
+</BaseLayout>
+
+<style>
+  .prose { max-width: 42rem; padding: 3rem 0; }
+  .prose h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin: 0 0 1.5rem; }
+  .prose h2 { font-size: 1.15rem; margin: 2.25rem 0 .5rem; }
+  .prose p { color: var(--color-ink-muted); }
+  .prose a { color: var(--color-olive); }
+  .todo {
+    background: var(--color-paper); border-left: 3px solid var(--color-oxblood);
+    padding: 1rem; color: var(--color-ink);
+  }
+</style>

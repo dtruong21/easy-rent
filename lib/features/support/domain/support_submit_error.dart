@@ -5,6 +5,10 @@
 const int kSupportSubjectMaxLength = 120;
 const int kSupportMessageMaxLength = 2000;
 
+/// Bornes de la note d'un avis (FEAT-060) — mêmes valeurs que les rules.
+const int kFeedbackRatingMin = 1;
+const int kFeedbackRatingMax = 5;
+
 /// Erreurs de validation/soumission du formulaire « Nous contacter »,
 /// indépendantes de la locale d'affichage (FEAT-043 i18n).
 ///
@@ -37,6 +41,9 @@ enum SupportSubmitError {
 
   /// Le message dépasse [kSupportMessageMaxLength] caractères.
   messageTooLong,
+
+  /// Aucune note (ou note hors 1-5) pour un avis (FEAT-060).
+  ratingRequired,
 
   /// Erreur réseau / Firestore générique lors de l'envoi.
   sendFailed;

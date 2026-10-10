@@ -18,10 +18,6 @@ android/build/
 node_modules/
 .pnpm-store/
 
-# Supabase local stack
-supabase/.branches/
-supabase/.temp/
-supabase/.env
 
 # Logs et caches
 *.log

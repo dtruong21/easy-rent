@@ -1,7 +1,7 @@
 /// Tests du contrat [TenantRepository] via un fake in-memory.
 ///
-/// NOTE : [SupabaseTenantRepository] utilise [Db.from()] qui dépend de
-/// [Supabase.instance.client] — non initialisé en test unitaire.
+/// NOTE : [FirestoreTenantRepository] utilise [FirebaseFirestore] qui dépend de
+/// [FirebaseFirestore.instance] — non initialisé en test unitaire.
 /// On teste donc le contrat de l'interface + les invariants du fake.
 /// La vérification du payload SQL (ordre `.order('last_name')`, absence de
 /// `landlord_id`, appel RPC `soft_delete_tenant`) est documentée ici comme

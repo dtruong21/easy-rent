@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/theme/app_spacing.dart';
@@ -348,10 +350,10 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     // le cas où le compte a évolué depuis le dernier rebuild.
     final isCreating = _loadedScenario == null;
     if (isCreating && !ref.read(canSaveAnotherScenarioProvider)) {
-      final tier =
-          ref.read(landlordTierProvider).valueOrNull?.tier ??
-          SubscriptionTier.anonymous;
-      await showScenarioLimitReachedModal(context, tier: tier);
+      await showScenarioLimitReachedModal(
+        context,
+        plan: ref.read(planEntitlementProvider),
+      );
       return;
     }
 
@@ -431,6 +433,26 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
         if (widget.scenarioId == null) {
           context.go('/simulator');
         }
+      }
+    } on FirebaseFunctionsException catch (e) {
+      // FEAT-056 : createScenario (callable) refuse désormais aussi en
+      // course — le pré-check client (canSaveAnotherScenarioProvider) peut
+      // être obsolète d'un instant (autre onglet, palier rétrogradé) — ce
+      // n'est plus réservé au free/anonyme depuis que Pro/Max sont
+      // plafonnés (seul Ultra reste illimité).
+      _log.warning('Erreur sauvegarde scénario (callable): $e');
+      if (e.code == 'resource-exhausted' &&
+          (e.message?.contains('scenario_limit_reached') ?? false)) {
+        if (mounted) {
+          await showScenarioLimitReachedModal(
+            context,
+            plan: ref.read(planEntitlementProvider),
+          );
+        }
+      } else if (mounted) {
+        setState(() {
+          _errorMessage = context.l10n.simulatorSaveErrorMessage;
+        });
       }
     } catch (e) {
       _log.warning('Erreur sauvegarde scénario: $e');
@@ -598,8 +620,12 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                             // uniquement pour les comptes FREE (les anons
                             // voient un CTA les invitant à créer un compte
                             // gratuit d'abord — trop tôt pour leur vendre un
-                            // futur plan payant).
-                            if (tier == SubscriptionTier.free)
+                            // futur plan payant). Jamais dans les apps
+                            // iOS/Android ([isStoreApp]) : contenu « bientôt »
+                            // + sollicitation de financement hors achat
+                            // intégré (App Store 2.1 / 3.1.1, règle Paiements
+                            // de Google Play).
+                            if (tier == SubscriptionTier.free && !isStoreApp)
                               const ComingSoonPaidPlanSection()
                             else if (sessionState == SessionState.anonymous)
                               _CreateFreeAccountFirstHint(),

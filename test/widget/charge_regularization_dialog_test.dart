@@ -13,6 +13,7 @@ library;
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/utils/money_format.dart';
@@ -94,6 +95,9 @@ class _FakeExpensesRepo implements ExpensesRepository {
   Future<List<Expense>> listForProperty(String propertyId) async => _expenses;
 
   @override
+  Future<List<Expense>> listAllForLandlord() async => _expenses;
+
+  @override
   Future<Expense> getById(String id) async => throw UnimplementedError();
 
   @override
@@ -107,6 +111,8 @@ class _FakeExpensesRepo implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async => throw UnimplementedError();
@@ -131,6 +137,12 @@ class _MockWebShare implements WebShareService {
   bool canShareFiles() => false;
 
   @override
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  }) async => false;
+
+  @override
   Future<void> sharePdf({
     required String title,
     required String text,
@@ -143,6 +155,14 @@ class _MockWebShare implements WebShareService {
 
   @override
   Future<List<int>> fetchBytes(String url) async => Uint8List(0);
+
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------
@@ -223,11 +243,6 @@ Widget _buildDialog({
               builder: (_) => const ChargeRegularizationDialog(
                 leaseId: 'lease-1',
                 propertyId: 'prop-1',
-                landlordFullName: 'Marie Martin',
-                landlordAddress: '1 rue de Paris, 75001 Paris',
-                tenantFullName: 'Jean Dupont',
-                tenantFirstName: 'Jean',
-                propertyAddress: '2 rue de Lyon, 69001 Lyon',
                 tenantEmail: 'jean.dupont@example.com',
               ),
             ),

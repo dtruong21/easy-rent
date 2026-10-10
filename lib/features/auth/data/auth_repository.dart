@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/config/env.dart';
+import '../../../core/config/firestore_provider.dart';
 import 'apple_auth_exception.dart';
 import 'google_auth_exception.dart';
 
@@ -1068,7 +1069,7 @@ class FirebaseAuthRepository implements AuthRepository {
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return FirebaseAuthRepository(
     FirebaseAuth.instance,
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     functions: FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );
 });

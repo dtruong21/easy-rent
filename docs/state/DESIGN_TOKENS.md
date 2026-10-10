@@ -1,7 +1,13 @@
 # Design Tokens — Baillan.
 
-> **Source de vérité** : [`lib/core/theme/app_theme.dart`](../../lib/core/theme/app_theme.dart) (constantes statiques sur `AppTheme`).
-> **Dernière mise à jour** : 2026-06-30 (brand polish post FEAT-020).
+> **Source de vérité** : [`config/theme_tokens.json`](../../config/theme_tokens.json).
+> Les constantes de [`app_theme.dart`](../../lib/core/theme/app_theme.dart) et les
+> variables CSS de la vitrine en sont deux miroirs générés
+> (`dart run tool/gen_theme_tokens.dart`, garde-fou `scripts/check-theme-tokens.sh`).
+> Les **alias sémantiques** (`acquitte`, `echu`, `consigne`, `archive`) restent
+> écrits à la main dans `app_theme.dart` : ce sont des indirections métier, pas
+> des couleurs.
+> **Dernière mise à jour** : 2026-09-05 (source canonique partagée avec la vitrine).
 
 Ce fichier **mappe chaque jeton de couleur à un usage métier précis**. Sans cette table, les états se contaminent au fil des features et la posture de marque se dilue.
 
@@ -68,7 +74,7 @@ Ces alias **portent la voix éditoriale Baillan jusqu'au code**. Préférer ces 
 | Mention "Loi du 6 juillet 1989" | `consigne` | Mise en avant légale obligatoire sur PDF |
 | Notification système neutre (export prêt, sync OK) | `consigne` | Pas un succès, pas une alerte |
 | Confirmation d'action utilisateur (snackbar "Quittance envoyée") | `acquitte` | Feedback positif d'action |
-| Erreur réseau / erreur Supabase | `oxblood` | Erreur technique (différent de l'erreur métier) |
+| Erreur réseau / erreur backend | `oxblood` | Erreur technique (différent de l'erreur métier) |
 | Section "Historique des quittances" | `archive` | Surface, pas un texte |
 | Section "Documents conservés" | `archive` | Surface |
 | Champ formulaire désactivé | `stone` | Pas la même couleur qu'un caption |

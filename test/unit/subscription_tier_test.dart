@@ -8,9 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// doc `paid` semé se relirait en `anonymous` (fail-safe) et l'utilisateur
 /// perdrait silencieusement son plan. Ces tests figent ce contrat.
 ///
-/// Ils couvrent aussi les getters de plafonds ([scenarioLimit], etc.) — la
-/// matrice freemium (FEAT-044) — qui n'étaient testés qu'indirectement via les
-/// providers du simulateur, jamais sur l'enum lui-même.
+/// FEAT-056 : les anciens getters de plafonds ([SubscriptionTier] n'en porte
+/// plus) sont désormais testés sur la table générée — voir
+/// `test/unit/plan_matrix_parity_test.dart` et `test/unit/plan_entitlement_test.dart`.
 void main() {
   group('SubscriptionTier — round-trip raw ↔ enum (contrat seed)', () {
     test('chaque palier survit à un aller-retour raw → fromRaw', () {
@@ -44,51 +44,6 @@ void main() {
       expect(SubscriptionTier.fromRaw(''), SubscriptionTier.anonymous);
       // Sensible à la casse : 'Paid' n'est PAS 'paid' → retombe en anonymous.
       expect(SubscriptionTier.fromRaw('Paid'), SubscriptionTier.anonymous);
-    });
-  });
-
-  group('SubscriptionTier — plafonds freemium (FEAT-044)', () {
-    test('scénarios simulateur : anon 1 / free 3 / paid illimité', () {
-      expect(SubscriptionTier.anonymous.scenarioLimit, 1);
-      expect(SubscriptionTier.free.scenarioLimit, 3);
-      expect(SubscriptionTier.paid.scenarioLimit, isNull);
-    });
-
-    test('biens : anon 0 / free 2 / paid illimité', () {
-      expect(SubscriptionTier.anonymous.propertyLimit, 0);
-      expect(SubscriptionTier.free.propertyLimit, 2);
-      expect(SubscriptionTier.paid.propertyLimit, isNull);
-    });
-
-    test('locataires actifs : anon 0 / free 3 / paid illimité', () {
-      expect(SubscriptionTier.anonymous.activeTenantLimit, 0);
-      expect(SubscriptionTier.free.activeTenantLimit, 3);
-      expect(SubscriptionTier.paid.activeTenantLimit, isNull);
-    });
-
-    test('baux actifs : anon 0 / free 2 / paid illimité', () {
-      expect(SubscriptionTier.anonymous.activeLeaseLimit, 0);
-      expect(SubscriptionTier.free.activeLeaseLimit, 2);
-      expect(SubscriptionTier.paid.activeLeaseLimit, isNull);
-    });
-
-    test('documents : anon 0 / free 10 / paid illimité', () {
-      // Gating Pro du stockage (matrice free/Pro 2026-07-20). Source de vérité
-      // serveur : Cloud Function `createDocument`.
-      expect(SubscriptionTier.anonymous.documentLimit, 0);
-      expect(SubscriptionTier.free.documentLimit, 10);
-      expect(SubscriptionTier.paid.documentLimit, isNull);
-    });
-
-    test('paid = aucun plafond sur aucune dimension', () {
-      // Invariant transverse : le palier payant n'est jamais limité. Garde
-      // contre l'ajout d'une nouvelle dimension de plafond qui oublierait
-      // d'exempter `paid`.
-      expect(SubscriptionTier.paid.scenarioLimit, isNull);
-      expect(SubscriptionTier.paid.propertyLimit, isNull);
-      expect(SubscriptionTier.paid.activeTenantLimit, isNull);
-      expect(SubscriptionTier.paid.activeLeaseLimit, isNull);
-      expect(SubscriptionTier.paid.documentLimit, isNull);
     });
   });
 }

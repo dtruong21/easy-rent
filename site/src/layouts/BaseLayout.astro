@@ -1,0 +1,184 @@
+---
+// site/src/layouts/BaseLayout.astro
+import '../styles/tokens.css';
+import theme from '../../../config/theme_tokens.json';
+import { appUrl, getCanonicalUrl, isStaging } from '../lib/urls';
+
+interface Props {
+  title: string;
+  description: string;
+  noindex?: boolean;
+  /** La page gère elle-même ses largeurs (bandes pleine largeur) : `main`
+   *  ne contraint ni la largeur ni les marges. Utilisé par l'accueil. */
+  fullBleed?: boolean;
+}
+const { title, description, noindex = false, fullBleed = false } = Astro.props;
+const canonical = getCanonicalUrl(Astro.url.pathname, Astro.site);
+
+// Carte de partage : l'image sociale 1200x630 de la marque (source :
+// scripts/og-image.svg, rendue par scripts/generate-og-image.sh). Servie sous
+// /icons/ — chemin historique, déjà référencé par les balises de l'app.
+const ogImage = new URL('/icons/og-image-1200x630.png', Astro.site).href;
+const ogImageAlt = 'Baillan — gestion locative pour bailleurs';
+
+// Le staging sert le même HTML que la prod : on y pose un noindex dans le
+// document en plus du header X-Robots-Tag (firebase.json) et du robots.txt.
+const robots =
+  noindex || isStaging
+    ? 'noindex, nofollow'
+    : 'index, follow, max-image-preview:large';
+---
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content={robots} />
+    <meta name="theme-color" content={theme.colors.cream} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:site_name" content="Baillan" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
+    <!-- Polices au-dessus de la ligne de flottaison : Medium (h1, titre de la
+         quittance) et Italic (marque de la nav). Regular n'est utilisée qu'en
+         dessous : pas de préchargement, elle se charge à la demande. -->
+    <link rel="preload" href="/fonts/EBGaramond-Medium.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/EBGaramond-Italic.woff2" as="font" type="font/woff2" crossorigin />
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-nav">
+      <a class="brand" href="/" aria-label="Baillan, accueil">Baillan</a>
+      <nav aria-label="Navigation principale">
+        <a href="/faq">FAQ</a>
+        <a href="/a-propos">À propos</a>
+        <a class="cta" href={appUrl}>Ouvrir l'app</a>
+      </nav>
+    </header>
+    <main class:list={{ 'full-bleed': fullBleed }}><slot /></main>
+    <footer class="site-footer">
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href={`${appUrl}/privacy`}>Confidentialité</a>
+      <a href={`${appUrl}/terms`}>CGU</a>
+      <a href="/supprimer-mon-compte">Supprimer mon compte</a>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  /* EB Garamond : la typographie de titre de l'app (assets/fonts, licence OFL
+     dans public/fonts/OFL.txt), auto-hébergée — aucun appel à un service
+     tiers. Le texte courant reste en police système, comme dans l'app. */
+  @font-face {
+    font-family: 'EB Garamond';
+    src: url('/fonts/EBGaramond-Regular.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'EB Garamond';
+    src: url('/fonts/EBGaramond-Medium.woff2') format('woff2');
+    font-weight: 500; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'EB Garamond';
+    src: url('/fonts/EBGaramond-Italic.woff2') format('woff2');
+    font-weight: 400; font-style: italic; font-display: swap;
+  }
+  :root {
+    --font-display: 'EB Garamond', Garamond, 'Times New Roman', serif;
+    --font-text: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1.12;
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-olive);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+</style>
+
+<style>
+  :root {
+    color-scheme: light;
+    /* Échelle d'espacement de la vitrine (pas des jetons de couleur — locale
+       au gabarit). --space-page : air haut/bas de chaque page ; --space-section
+       : rythme entre les grandes sections de la landing. */
+    --space-page: clamp(2.5rem, 6vw, 4rem);
+    --space-section: clamp(4rem, 8vw, 7rem);
+  }
+  /* Défilement fluide + décalage d'ancre sous la nav collante. Le fluide est
+     désactivé si l'utilisateur a demandé moins d'animations. */
+  html { scroll-padding-top: 4.5rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  body {
+    margin: 0;
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-text);
+    line-height: 1.6;
+  }
+  .site-nav, .site-footer {
+    display: flex; align-items: center; gap: 1.5rem;
+    padding: 1rem clamp(1rem, 5vw, 4rem);
+  }
+  /* Nav collante : reste visible au défilement (ressenti « app »). Fond opaque
+     pour masquer le contenu qui passe dessous. */
+  .site-nav {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--color-cream);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .site-nav nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
+  .brand {
+    font-family: var(--font-display); font-style: italic; font-weight: 400;
+    font-size: 1.55rem; line-height: 1; text-decoration: none; color: var(--color-ink);
+  }
+  .site-nav a, .site-footer a { color: var(--color-ink-muted); text-decoration: none; }
+  .site-nav a:hover, .site-footer a:hover { color: var(--color-ink); text-decoration: underline; }
+  .site-nav .cta {
+    background: var(--color-olive); color: var(--color-cream);
+    padding: .55rem 1rem; border-radius: 6px; font-weight: 600;
+  }
+  .site-nav .cta:hover { background: var(--color-olive-deep); color: var(--color-cream); text-decoration: none; }
+  .site-footer {
+    border-top: 1px solid var(--color-rule);
+    margin-top: 4rem; font-size: .9rem; flex-wrap: wrap;
+  }
+  main {
+    max-width: 68rem; margin: 0 auto;
+    padding: var(--space-page) clamp(1rem, 5vw, 4rem);
+  }
+  main.full-bleed { max-width: none; padding: 0; }
+  .site-nav a { white-space: nowrap; }
+  @media (max-width: 30rem) {
+    .site-nav { gap: 1rem; }
+    .site-nav nav { gap: .9rem; font-size: .92rem; }
+    .brand { font-size: 1.35rem; }
+    .site-nav .cta { padding: .5rem .75rem; }
+  }
+  .full-bleed + .site-footer { margin-top: 0; }
+</style>

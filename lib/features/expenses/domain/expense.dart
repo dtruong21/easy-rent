@@ -2,6 +2,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/finance/expense_recurrence.dart';
 import 'expense_category.dart';
 import 'expense_nature.dart';
 
@@ -41,6 +42,10 @@ class Expense with _$Expense {
     @JsonKey(name: 'period_year') required int periodYear,
     @JsonKey(name: 'period_start') DateTime? periodStart,
     @JsonKey(name: 'period_end') DateTime? periodEnd,
+    @JsonKey(fromJson: _recurrenceFromJson, toJson: _recurrenceToJson)
+    @Default(ExpenseRecurrence.none)
+    ExpenseRecurrence recurrence,
+    @JsonKey(name: 'recurrence_end_date') DateTime? recurrenceEndDate,
     @JsonKey(name: 'document_id') String? documentId,
     String? notes,
     @JsonKey(name: 'created_at') required DateTime createdAt,
@@ -66,6 +71,13 @@ ExpenseCategory _categoryFromJson(dynamic value) =>
 
 String _categoryToJson(ExpenseCategory category) => category.sqlValue;
 
+/// Tolère l'absence du champ : les dépenses créées avant FEAT-041d n'ont pas
+/// de `recurrence` en base et restent ponctuelles — aucune migration.
+ExpenseRecurrence _recurrenceFromJson(dynamic value) =>
+    ExpenseRecurrence.fromSql(value as String?);
+
+String _recurrenceToJson(ExpenseRecurrence recurrence) => recurrence.sqlValue;
+
 // ---------------------------------------------------------------------------
 // Extension — getters calculés (non freezed pour éviter le codegen)
 // ---------------------------------------------------------------------------
@@ -77,4 +89,21 @@ extension ExpenseX on Expense {
 
   /// Vrai si un justificatif est attaché à cette dépense.
   bool get hasDocument => documentId != null;
+
+  /// Vrai si la dépense revient périodiquement (FEAT-041d).
+  bool get isRecurring => recurrence.isRecurring;
+
+  /// Échéances de cette dépense tombant dans `[from, to]` (bornes incluses).
+  ///
+  /// Une dépense ponctuelle en produit au plus une (sa date). Une dépense
+  /// récurrente en produit une par période, **jamais avant [expenseDate]**
+  /// ni après [recurrenceEndDate] — cf. `core/finance/expense_recurrence.dart`.
+  List<DateTime> occurrencesBetween(DateTime from, DateTime to) =>
+      expenseOccurrences(
+        firstOccurrence: expenseDate,
+        recurrence: recurrence,
+        endDate: recurrenceEndDate,
+        from: from,
+        to: to,
+      );
 }

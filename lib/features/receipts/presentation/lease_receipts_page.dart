@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/ui/theme/app_icon_size.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
@@ -9,6 +11,8 @@ import '../../../core/ui/cards/card_empty_state.dart';
 import '../../../core/ui/cards/view_mode.dart';
 import '../../../core/ui/cards/view_mode_provider.dart';
 import '../../../core/ui/breakpoints.dart';
+import '../../../core/ui/theme/property_color.dart';
+import '../../../core/utils/property_address.dart';
 import '../../leases/application/lease_detail_provider.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/property_detail_provider.dart';
@@ -59,8 +63,23 @@ class LeaseReceiptsPage extends ConsumerWidget {
 
     final tenantEmail = asyncTenant?.valueOrNull?.email;
     final tenantFirstName = asyncTenant?.valueOrNull?.firstName ?? '';
-    final propertyAddress = asyncProperty?.valueOrNull?.address ?? '';
+    // Adresse COMPLÈTE : `address` ne porte en pratique que la rue, le code
+    // postal et la ville vivant dans des champs séparés du bien. Elle part
+    // dans le texte de partage de la quittance (« le logement situé … »), qui
+    // doit désigner le logement (cf. property_address.dart).
+    final property = asyncProperty?.valueOrNull;
+    final propertyAddress = composePropertyAddress(
+      address: property?.address,
+      postalCode: property?.postalCode,
+      city: property?.city,
+    );
     final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
+    final propertyColorKey = property != null
+        ? PropertyColorKey.resolve(
+            entityId: property.id,
+            stored: property.colorKey,
+          )
+        : null;
 
     return Scaffold(
       appBar: AppAppBar(
@@ -95,9 +114,11 @@ class LeaseReceiptsPage extends ConsumerWidget {
                     message: l10n.receiptsEmptyStateMessage,
                     action: FilledButton.icon(
                       key: const Key('btn_go_payments_empty'),
-                      onPressed: () =>
-                          context.push('/leases/$leaseId/payments/new'),
-                      icon: const Icon(Icons.add),
+                      // Fiche du bail = liste des paiements + bouton
+                      // « générer la quittance » (le libellé dit « Voir les
+                      // paiements » : ouvrir un formulaire vide trompait).
+                      onPressed: () => context.push('/leases/$leaseId'),
+                      icon: const Icon(Icons.list_alt_outlined),
                       label: Text(l10n.receiptsEmptyStateGoPaymentsButton),
                     ),
                   );
@@ -111,6 +132,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
                     tenantFirstName: tenantFirstName,
                     propertyAddress: propertyAddress,
                     landlordFullName: landlordFullName,
+                    propertyColorKey: propertyColorKey,
                   );
                 }
 
@@ -121,6 +143,7 @@ class LeaseReceiptsPage extends ConsumerWidget {
                   tenantFirstName: tenantFirstName,
                   propertyAddress: propertyAddress,
                   landlordFullName: landlordFullName,
+                  propertyColorKey: propertyColorKey,
                 );
               },
             ),
@@ -150,7 +173,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+            Icon(
+              Icons.error_outline,
+              size: AppIconSize.hero,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: 16),
             Text(
               l10n.receiptsListErrorTitle,

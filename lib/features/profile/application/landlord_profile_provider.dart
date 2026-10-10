@@ -17,7 +17,7 @@ class LandlordProfileNotifier extends AsyncNotifier<LandlordProfile> {
     return ref.read(profileRepositoryProvider).getCurrent();
   }
 
-  /// Recharge le profil depuis Supabase.
+  /// Recharge le profil depuis Firestore.
   ///
   /// À appeler après une mise à jour réussie depuis [ProfileFormController].
   Future<void> refresh() async {

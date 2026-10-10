@@ -134,7 +134,7 @@ Widget _buildMobile(ProviderContainer container) {
 
 void main() {
   group('PropertiesFilterBar', () {
-    testWidgets('desktop — SegmentedButton visible avec 3 segments', (
+    testWidgets('desktop — puces de filtre visibles avec ViewModeToggle', (
       tester,
     ) async {
       final container = ProviderContainer(
@@ -145,15 +145,24 @@ void main() {
       await tester.pumpWidget(_buildDesktop(container));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SegmentedButton<PropertyFilter>), findsOneWidget);
-      expect(find.text('Tous'), findsOneWidget);
-      expect(find.text('Loués'), findsOneWidget);
-      expect(find.text('Vacants'), findsOneWidget);
+      expect(
+        find.byKey(Key('filter_chip_${PropertyFilter.all}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${PropertyFilter.occupied}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${PropertyFilter.vacant}')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Tous'), findsOneWidget);
+      expect(find.textContaining('Loués'), findsOneWidget);
+      expect(find.textContaining('Vacants'), findsOneWidget);
     });
 
-    testWidgets('mobile — DropdownButton visible (pas SegmentedButton)', (
-      tester,
-    ) async {
+    testWidgets('mobile — puces de filtre visibles', (tester) async {
       final container = ProviderContainer(
         overrides: [propertyRepositoryProvider.overrideWithValue(_FakeRepo())],
       );
@@ -162,50 +171,56 @@ void main() {
       await tester.pumpWidget(_buildMobile(container));
       await tester.pumpAndSettle();
 
-      expect(find.byType(DropdownButton<PropertyFilter>), findsOneWidget);
-      expect(find.byType(SegmentedButton<PropertyFilter>), findsNothing);
+      expect(
+        find.byKey(Key('filter_chip_${PropertyFilter.all}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${PropertyFilter.occupied}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${PropertyFilter.vacant}')),
+        findsOneWidget,
+      );
     });
 
-    testWidgets(
-      'desktop — sélection segment "Loués" → état provider = occupied',
-      (tester) async {
-        final container = ProviderContainer(
-          overrides: [
-            propertyRepositoryProvider.overrideWithValue(_FakeRepo()),
-          ],
-        );
-        addTearDown(container.dispose);
+    testWidgets('desktop — tap puce "Loués" → état provider = occupied', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [propertyRepositoryProvider.overrideWithValue(_FakeRepo())],
+      );
+      addTearDown(container.dispose);
 
-        await tester.pumpWidget(_buildDesktop(container));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildDesktop(container));
+      await tester.pumpAndSettle();
 
-        expect(container.read(propertyFilterProvider), PropertyFilter.all);
+      expect(container.read(propertyFilterProvider), PropertyFilter.all);
 
-        await tester.tap(find.text('Loués'));
-        await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(Key('filter_chip_${PropertyFilter.occupied}')),
+      );
+      await tester.pumpAndSettle();
 
-        expect(container.read(propertyFilterProvider), PropertyFilter.occupied);
-      },
-    );
+      expect(container.read(propertyFilterProvider), PropertyFilter.occupied);
+    });
 
-    testWidgets(
-      'desktop — sélection segment "Vacants" → état provider = vacant',
-      (tester) async {
-        final container = ProviderContainer(
-          overrides: [
-            propertyRepositoryProvider.overrideWithValue(_FakeRepo()),
-          ],
-        );
-        addTearDown(container.dispose);
+    testWidgets('desktop — tap puce "Vacants" → état provider = vacant', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [propertyRepositoryProvider.overrideWithValue(_FakeRepo())],
+      );
+      addTearDown(container.dispose);
 
-        await tester.pumpWidget(_buildDesktop(container));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildDesktop(container));
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Vacants'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key('filter_chip_${PropertyFilter.vacant}')));
+      await tester.pumpAndSettle();
 
-        expect(container.read(propertyFilterProvider), PropertyFilter.vacant);
-      },
-    );
+      expect(container.read(propertyFilterProvider), PropertyFilter.vacant);
+    });
   });
 }

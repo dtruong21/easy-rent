@@ -13,6 +13,7 @@ import '../application/tenants_list_provider.dart';
 import '../data/tenant_repository.dart';
 import '../domain/tenant.dart';
 import 'widgets/tenant_lease_summary.dart';
+import 'widgets/tenant_punctuality_indicator.dart';
 
 final _log = Logger('TenantDetailPage');
 
@@ -24,7 +25,7 @@ final _log = Logger('TenantDetailPage');
 /// Section "Baux liés" : query directe `leases` via `TenantRepository.listLeasesForTenant`.
 ///
 /// Critères Gherkin :
-/// - Cross-user : si RLS retourne 0 ligne → "Locataire introuvable".
+/// - Cross-user : si les Firestore Rules ne renvoient aucun document → "Locataire introuvable".
 /// - Archivage via RPC `soft_delete_tenant` (jamais UPDATE direct).
 /// - Dialog standard ou renforcé selon présence de bail actif.
 class TenantDetailPage extends ConsumerWidget {
@@ -73,6 +74,11 @@ class _TenantDetailContent extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _InfoCard(tenant: tenant),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TenantPunctualityIndicator(tenantId: tenant.id),
+            ),
             const SizedBox(height: 24),
 
             // Section baux liés
@@ -465,7 +471,7 @@ class _LeasesSectionState extends ConsumerState<_LeasesSection> {
   }
 }
 
-/// Page "Locataire introuvable" — affichée quand la RLS retourne 0 ligne.
+/// Page "Locataire introuvable" — affichée quand les Firestore Rules ne renvoient aucun document.
 class _NotFoundPage extends StatelessWidget {
   const _NotFoundPage({required this.id});
 

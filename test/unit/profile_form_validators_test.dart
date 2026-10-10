@@ -1,6 +1,6 @@
 /// Tests unitaires des validateurs du formulaire profil bailleur.
 ///
-/// Logique pure — aucune dépendance Flutter ou Supabase.
+/// Logique pure — aucune dépendance Flutter ou Firebase.
 library;
 
 import 'package:easyrent/core/utils/profile_form_validators.dart';

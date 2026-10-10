@@ -1,25 +1,13 @@
-# robots.txt — Baillan (PRODUCTION)
-# Domaine canonique : baillan.com (domaine custom branché 2026-07-20).
-# La ligne Sitemap doit pointer sur l'apex (unique occurrence ici). Voir docs/SEO.md.
+# L'app Flutter n'a rien d'indexable : CanvasKit peint son texte dans un
+# canvas, invisible aux moteurs. Le contenu référençable vit sur la vitrine.
 #
-# App SPA Flutter (rewrite ** -> /index.html) : toute URL renvoie 200 + le shell
-# index.html ; on interdit explicitement les sections privées (rendu canvas, sans
-# valeur SEO) pour éviter des doublons de la landing.
-
+# Limite connue, non traitée ici : ce Disallow bloque l'exploration future,
+# mais ne désindexe pas rétroactivement une URL que Google connaît déjà et
+# qui reste liée ailleurs (Google peut la garder en résultat, sans extrait,
+# indéfiniment). Désindexer l'existant demanderait une séquence transitoire
+# (laisser explorer le temps qu'un <meta name="robots" content="noindex">
+# soit vu, puis bloquer) — hors périmètre ici car l'app déménage vers
+# app.baillan.com (nouvelle origine) : cette désindexation relève du runbook
+# de bascule de domaine, pas de ce fichier.
 User-agent: *
-Allow: /
-
-# Namespace réservé Firebase (helpers auth/hosting)
-Disallow: /__/
-
-# Sections applicatives derrière auth
-Disallow: /dashboard
-Disallow: /properties
-Disallow: /tenants
-Disallow: /leases
-Disallow: /profile
-
-# Pages utilitaires auth avec jetons
-Disallow: /reset-password
-
-Sitemap: https://baillan.com/sitemap.xml
+Disallow: /

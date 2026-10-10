@@ -23,6 +23,14 @@
   "@commonEdit": {
     "description": "Generic edit action (buttons, menu items)."
   },
+  "commonMoreActions": "More actions",
+  "@commonMoreActions": {
+    "description": "Tooltip of the ⋮ overflow menu on list cards"
+  },
+  "commonRentCcPerMonthCaption": "incl. charges / month",
+  "@commonRentCcPerMonthCaption": {
+    "description": "Caption under the monthly rent (rent + charges) key figure on list cards"
+  },
   "commonBack": "Back",
   "@commonBack": {
     "description": "Generic back navigation action."
@@ -208,6 +216,10 @@
   "validationPeriodEndBeforeStart": "The period end must be after the start",
   "@validationPeriodEndBeforeStart": {
     "description": "Validation error: the expense billing period end is before or equal to its start."
+  },
+  "validationRecurrenceEndBeforeExpenseDate": "The recurrence end cannot be before the expense date, which is its first occurrence",
+  "@validationRecurrenceEndBeforeExpenseDate": {
+    "description": "Validation error: the recurrence end date of an expense is earlier than the expense date, which is by definition the first occurrence of the recurrence."
   },
   "validationExpenseNotesTooLong": "Notes cannot exceed 2000 characters",
   "@validationExpenseNotesTooLong": {
@@ -587,6 +599,10 @@
   "@leasesErrorLimitReached": {
     "description": "LeaseSubmitError.limitReached: createLease/updateLease rejected because the free-tier active-lease cap is reached (FEAT-044). Invites the user to upgrade to Pro."
   },
+  "leasesErrorLimitReachedStore": "You've reached the free plan's active-lease limit.",
+  "@leasesErrorLimitReachedStore": {
+    "description": "LeaseSubmitError.limitReached on the iOS/Android store apps: same as leasesErrorLimitReached without the upgrade call to action."
+  },
   "leasesEmptyFilterTitle": "No lease matches this filter",
   "@leasesEmptyFilterTitle": {
     "description": "Empty-state title shown when leases exist but the active filter hides them all."
@@ -628,6 +644,18 @@
   "@leasesArchiveButton": {
     "description": "Button on the lease detail page to soft-delete (archive) the lease."
   },
+  "paymentReminderButton": "Send a reminder",
+  "@paymentReminderButton": {"description": "Button on the lease detail page (shown when rent is overdue) that lets the landlord send an amicable payment reminder to the tenant"},
+  "paymentReminderChannelSheetTitle": "Send the reminder via",
+  "@paymentReminderChannelSheetTitle": {"description": "Title of the bottom sheet letting the landlord pick a channel (email/SMS/WhatsApp) for the payment reminder"},
+  "paymentReminderChannelEmail": "Email",
+  "@paymentReminderChannelEmail": {"description": "Payment reminder channel: email"},
+  "paymentReminderChannelSms": "SMS",
+  "@paymentReminderChannelSms": {"description": "Payment reminder channel: SMS"},
+  "paymentReminderChannelWhatsApp": "WhatsApp",
+  "@paymentReminderChannelWhatsApp": {"description": "Payment reminder channel: WhatsApp"},
+  "paymentReminderLaunchError": "Could not open the messaging app.",
+  "@paymentReminderLaunchError": {"description": "SnackBar shown when launchUrl fails to open the mail/SMS/WhatsApp app for a payment reminder"},
   "leasesArchiveDialogTitle": "Archive this lease?",
   "@leasesArchiveDialogTitle": {
     "description": "Title of the archive confirmation dialog for a lease."
@@ -805,15 +833,6 @@
         "type": "String"
       },
       "tenantName": {
-        "type": "String"
-      }
-    }
-  },
-  "leasesCardRentPerMonth": "{amount} incl. charges / month",
-  "@leasesCardRentPerMonth": {
-    "description": "Lease card row showing the monthly rent including charges; {amount} is already formatted in euros (e.g. '850,00 €').",
-    "placeholders": {
-      "amount": {
         "type": "String"
       }
     }
@@ -1254,11 +1273,11 @@
   },
   "propertiesDetailActiveLeasesTitle": "Active leases",
   "@propertiesDetailActiveLeasesTitle": {
-    "description": "Section title on the property detail page for the (stub) active leases section."
+    "description": "Section title on the property detail page listing the property's active leases (status == active)."
   },
-  "propertiesDetailActiveLeasesStub": "Available after FEAT-005",
-  "@propertiesDetailActiveLeasesStub": {
-    "description": "Placeholder text under the active leases section title, indicating the feature is not yet implemented (internal feature-flag reference, dev-facing but currently user-visible)."
+  "propertiesDetailActiveLeasesEmpty": "No active lease for this property.",
+  "@propertiesDetailActiveLeasesEmpty": {
+    "description": "Empty-state message shown under the active leases section title on the property detail page when the property has no active lease."
   },
   "propertiesDetailArchiveButton": "Archive this property",
   "@propertiesDetailArchiveButton": {
@@ -1463,6 +1482,60 @@
   "propertiesFormSurfaceLabel": "Surface area in m² (optional)",
   "@propertiesFormSurfaceLabel": {
     "description": "Label of the optional surface area text field."
+  },
+  "propertiesFormSectionColor": "Identity color",
+  "@propertiesFormSectionColor": {
+    "description": "Header of the identity color picker section in the property edit form (creation gets an automatic color, no picker shown)."
+  },
+  "propertiesFormColorHelper": "Helps you spot this property across lists, leases, tenants, payments and receipts.",
+  "@propertiesFormColorHelper": {
+    "description": "Helper text under the identity color picker explaining where the color is reused across the app."
+  },
+  "propertiesFieldColor": "Color",
+  "@propertiesFieldColor": {
+    "description": "Label of the identity color row on the property detail page."
+  },
+  "propertiesColorNameRouille": "Rust",
+  "@propertiesColorNameRouille": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameBordeaux": "Bordeaux",
+  "@propertiesColorNameBordeaux": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNamePrune": "Plum",
+  "@propertiesColorNamePrune": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameCobalt": "Cobalt",
+  "@propertiesColorNameCobalt": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameArdoise": "Slate",
+  "@propertiesColorNameArdoise": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameSauge": "Sage",
+  "@propertiesColorNameSauge": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameMoutarde": "Mustard",
+  "@propertiesColorNameMoutarde": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorNameRosePoudre": "Dusty rose",
+  "@propertiesColorNameRosePoudre": {
+    "description": "Name of one of the 8 identity color swatches a landlord can assign to a property."
+  },
+  "propertiesColorSwatchLabel": "{colorName} color",
+  "@propertiesColorSwatchLabel": {
+    "description": "Accessibility label read by screen readers for a tappable color swatch in the identity color picker.",
+    "placeholders": {
+      "colorName": {
+        "type": "String",
+        "example": "Rust"
+      }
+    }
   },
   "propertiesFormSectionCharacteristics": "Characteristics (optional)",
   "@propertiesFormSectionCharacteristics": {
@@ -1786,6 +1859,16 @@
   "@propertiesProfitabilityNetNotComputable": {
     "description": "Note shown when gross yield is available but net yield cannot be computed due to missing annual charges."
   },
+  "propertiesProfitabilityCashflowRealBasis": "{count, plural, =1{Based on your actual expenses for 1 of 3 charges (12-month rolling average).} other{Based on your actual expenses for {count} of 3 charges (12-month rolling average).}}",
+  "@propertiesProfitabilityCashflowRealBasis": {
+    "description": "Note shown under the cash flow chip when at least one of the 3 charge categories (property tax, landlord insurance, non-recoverable condo fees) uses the real rolling 12-month expense average instead of the amount declared on the property — makes explicit whether the displayed figure is actual or forecast.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of charge categories (out of 3) using real expense data instead of the declared forecast amount."
+      }
+    }
+  },
   "propertiesProfitabilityDisclaimer": "Indicative estimate before tax — does not account for the tax regime or social security contributions (17.2%)",
   "@propertiesProfitabilityDisclaimer": {
     "description": "Legal/financial disclaimer shown at the bottom of the profitability card."
@@ -1817,6 +1900,10 @@
   "propertiesErrorLimitReached": "You've reached the free plan's property limit. Upgrade to Pro to add more properties.",
   "@propertiesErrorLimitReached": {
     "description": "PropertySubmitError.limitReached: the createProperty Callable rejected creation because the free-tier property cap is reached (FEAT-044, resource-exhausted / property_limit_reached). Invites the user to upgrade to the Pro plan."
+  },
+  "propertiesErrorLimitReachedStore": "You've reached the free plan's property limit.",
+  "@propertiesErrorLimitReachedStore": {
+    "description": "PropertySubmitError.limitReached on the iOS/Android store apps: same as propertiesErrorLimitReached without the upgrade call to action (store apps offer no purchase path outside in-app purchase)."
   },
 
   "tenantsListTitle": "My tenants",
@@ -2187,6 +2274,18 @@
   "@tenantsCreateLeaseButton": {
     "description": "Button/tooltip label to start creating a new lease for a tenant with no active lease (used on cards and table row actions)."
   },
+  "tenantsCallButton": "Call",
+  "@tenantsCallButton": {
+    "description": "Quick action: phone the tenant"
+  },
+  "tenantsEmailButton": "Send an email",
+  "@tenantsEmailButton": {
+    "description": "Quick action / menu: email the tenant"
+  },
+  "tenantsLaunchFailed": "Couldn't open the app",
+  "@tenantsLaunchFailed": {
+    "description": "Snackbar shown when the phone or email app could not be opened from a tenant card quick action / menu"
+  },
   "tenantsTableColumnName": "Name",
   "@tenantsTableColumnName": {
     "description": "Tenants table column header: tenant full name."
@@ -2284,6 +2383,10 @@
   "tenantsErrorLimitReached": "You've reached the free plan's tenant limit. Upgrade to Pro to add more tenants.",
   "@tenantsErrorLimitReached": {
     "description": "TenantSubmitError.limitReached: createTenant rejected because the free-tier tenant cap is reached (FEAT-044). Invites the user to upgrade to Pro."
+  },
+  "tenantsErrorLimitReachedStore": "You've reached the free plan's tenant limit.",
+  "@tenantsErrorLimitReachedStore": {
+    "description": "TenantSubmitError.limitReached on the iOS/Android store apps: same as tenantsErrorLimitReached without the upgrade call to action."
   },
   "tenantsErrorUnknown": "An error occurred. Please try again.",
   "@tenantsErrorUnknown": {
@@ -2519,7 +2622,7 @@
   "@authLoginAphorismTitle": {
     "description": "Italic editorial aphorism displayed above the login form (brand copy, 'notarial register' concept)."
   },
-  "authLoginAphorismBody": "Sign your entry. Your credentials open the bailiwick's register — receipts, leases, due dates.",
+  "authLoginAphorismBody": "Sign your entry. Your credentials open the ledger — receipts, leases, due dates.",
   "@authLoginAphorismBody": {
     "description": "Body text of the editorial aphorism block above the login form, under authLoginAphorismTitle."
   },
@@ -2662,9 +2765,17 @@
       }
     }
   },
-  "dashboardOverviewSectionTitle": "Overview",
-  "@dashboardOverviewSectionTitle": {
-    "description": "SectionHeader title above the KPI grid on the dashboard home tab (non-onboarding state)."
+  "dashboardZoneTodoTitle": "To do",
+  "@dashboardZoneTodoTitle": {
+    "description": "Dashboard Home zone header for actionable items (late rents, ending leases, pending documents)."
+  },
+  "dashboardZonePatrimonyTitle": "My portfolio",
+  "@dashboardZonePatrimonyTitle": {
+    "description": "Dashboard Home zone header for portfolio state (occupancy, portfolio value, yield)."
+  },
+  "dashboardZoneAnalysisTitle": "Analysis",
+  "@dashboardZoneAnalysisTitle": {
+    "description": "Dashboard Home zone header for analysis (cash-flow chart, recent activity)."
   },
   "dashboardLoadErrorMessage": "Unable to load the dashboard.",
   "@dashboardLoadErrorMessage": {
@@ -2699,21 +2810,9 @@
   "@dashboardKpiRenewalsLabel": {
     "description": "KPI card label: count of leases due for renewal soon (KpiGrid, key kpi_renouvellements)."
   },
-  "dashboardKpiRenewalsSubtitle": "within the next 30 days",
+  "dashboardKpiRenewalsSubtitle": "within the next 60 days",
   "@dashboardKpiRenewalsSubtitle": {
     "description": "KPI card subtitle clarifying the renewal window for the renewals KPI."
-  },
-  "dashboardKpiDocsPendingLabel": "Pending documents",
-  "@dashboardKpiDocsPendingLabel": {
-    "description": "KPI card label: count of documents in the 'other' category awaiting action (KpiGrid, key kpi_docs)."
-  },
-  "dashboardKpiDocsPendingSubtitle": "\"other\" category",
-  "@dashboardKpiDocsPendingSubtitle": {
-    "description": "KPI card subtitle clarifying which document category is counted by the pending-documents KPI."
-  },
-  "dashboardPortfolioYieldSectionTitle": "Portfolio yield",
-  "@dashboardPortfolioYieldSectionTitle": {
-    "description": "Section title above the portfolio yield summary on the dashboard."
   },
   "dashboardPortfolioYieldErrorMessage": "Unable to compute the portfolio yield.",
   "@dashboardPortfolioYieldErrorMessage": {
@@ -2739,13 +2838,9 @@
   "@dashboardPortfolioYieldNetLabel": {
     "description": "Portfolio yield mini-KPI card label: weighted average net yield (key kpi_portfolio_net_yield)."
   },
-  "dashboardPortfolioYieldCashflowLabel": "Total monthly cash flow",
-  "@dashboardPortfolioYieldCashflowLabel": {
-    "description": "Portfolio yield mini-KPI card label: total monthly cash flow across the portfolio (key kpi_portfolio_cashflow)."
-  },
   "dashboardPortfolioYieldBeforeTaxSubtitle": "Before tax",
   "@dashboardPortfolioYieldBeforeTaxSubtitle": {
-    "description": "Subtitle shared by the net yield and cash flow mini-KPI cards, clarifying the amount is pre-tax."
+    "description": "Subtitle for the net yield mini-KPI card, clarifying the amount is pre-tax."
   },
   "dashboardPortfolioYieldFootnote": "{computedCount} of {totalCount} propert{totalCount, plural, one{y} other{ies}} with a purchase price and active lease. Pre-tax estimates.",
   "@dashboardPortfolioYieldFootnote": {
@@ -2759,53 +2854,65 @@
       }
     }
   },
-  "dashboardMonthlyChartTitle": "Rent",
+  "dashboardMonthlyChartTitle": "Monthly cash flow",
   "@dashboardMonthlyChartTitle": {
-    "description": "Title of the monthly rent chart card header (MonthlyBarchart), shown even when there is no data yet (toggles hidden)."
+    "description": "Title of the monthly cash flow chart card header (MonthlyCashflowChart), shown even when there is no data yet (toggles hidden)."
   },
-  "dashboardMonthlyChartErrorMessage": "Unable to load rent data for this period.",
+  "dashboardMonthlyChartMethodologyCaption": "Actual, month by month, not smoothed — rent collected, actual expenses and loan repayment.",
+  "@dashboardMonthlyChartMethodologyCaption": {
+    "description": "Short italic caption under the monthly cash flow chart header, listing what the figure includes (collected rent, actual expenses, loan repayment)."
+  },
+  "dashboardMonthlyChartErrorMessage": "Unable to load cash flow data for this period.",
   "@dashboardMonthlyChartErrorMessage": {
-    "description": "Error message shown in the monthly rent chart body when the monthlyAmountsProvider fails."
+    "description": "Error message shown in the monthly cash flow chart body when the monthlyCashflowProvider fails."
   },
   "dashboardMonthlyChartEmptyTitle": "No history yet",
   "@dashboardMonthlyChartEmptyTitle": {
-    "description": "CardEmptyState title shown in the monthly rent chart when all amounts for the period are zero."
+    "description": "CardEmptyState title shown in the monthly cash flow chart when no month in the period has any data."
   },
-  "dashboardMonthlyChartEmptyMessage": "Rent will appear here after the first payment.",
+  "dashboardMonthlyChartEmptyMessage": "Cash flow will appear here as soon as rent is collected or an expense is recorded.",
   "@dashboardMonthlyChartEmptyMessage": {
-    "description": "CardEmptyState message shown in the monthly rent chart when all amounts for the period are zero."
+    "description": "CardEmptyState message shown in the monthly cash flow chart when no month in the period has any data."
   },
-  "dashboardMonthlyChartEncaisseLabel": "Collected",
-  "@dashboardMonthlyChartEncaisseLabel": {
-    "description": "Label for the 'collected rent' series, used in chart tooltips (bar/line) and in the chart legend chip."
+  "dashboardMonthlyChartPositiveLabel": "Positive",
+  "@dashboardMonthlyChartPositiveLabel": {
+    "description": "Legend chip label for months with a positive net cash flow (collected rent minus non-recoverable expenses) in the monthly cash flow chart."
   },
-  "dashboardMonthlyChartDueLabel": "Due",
-  "@dashboardMonthlyChartDueLabel": {
-    "description": "Label for the 'due rent' series, used in chart tooltips (bar/line) and in the chart legend chip."
+  "dashboardMonthlyChartNegativeLabel": "Negative",
+  "@dashboardMonthlyChartNegativeLabel": {
+    "description": "Legend chip label for months with a negative net cash flow (non-recoverable expenses exceeded collected rent) in the monthly cash flow chart."
+  },
+  "dashboardMonthlyChartNoDataLabel": "No data",
+  "dashboardMonthlyChartNoExpenseNote": "No expenses recorded for this period, so the cash flow shown equals the rent collected.",
+  "@dashboardMonthlyChartNoExpenseNote": {
+    "description": "Note under the monthly cash-flow chart when the period contains rent data but no recorded expenses AND no loan repayment deducted for any displayed month — explains why the net equals the collected rent. Hidden as soon as any month deducts a loan payment, since the net no longer equals the collected rent in that case."
+  },
+  "@dashboardMonthlyChartNoDataLabel": {
+    "description": "Tooltip text shown for a month with no recorded payment and no recorded expense in the monthly cash flow chart — distinguishes an unmeasured month from a month whose measured net cash flow happens to be exactly zero."
   },
   "dashboardChartPeriod6Months": "6 months",
   "@dashboardChartPeriod6Months": {
-    "description": "ChartPeriod.m6 label shown in the monthly rent chart's period SegmentedButton."
+    "description": "ChartPeriod.m6 label shown in the monthly cash flow chart's period SegmentedButton."
   },
   "dashboardChartPeriod12Months": "12 months",
   "@dashboardChartPeriod12Months": {
-    "description": "ChartPeriod.m12 label shown in the monthly rent chart's period SegmentedButton."
+    "description": "ChartPeriod.m12 label shown in the monthly cash flow chart's period SegmentedButton."
   },
   "dashboardChartPeriod24Months": "24 months",
   "@dashboardChartPeriod24Months": {
-    "description": "ChartPeriod.m24 label shown in the monthly rent chart's period SegmentedButton."
+    "description": "ChartPeriod.m24 label shown in the monthly cash flow chart's period SegmentedButton."
   },
   "dashboardChartFormatBars": "Bars",
   "@dashboardChartFormatBars": {
-    "description": "ChartFormat.bars tooltip shown on the monthly rent chart's format SegmentedButton icon."
+    "description": "ChartFormat.bars tooltip shown on the monthly cash flow chart's format SegmentedButton icon."
   },
   "dashboardChartFormatLine": "Lines",
   "@dashboardChartFormatLine": {
-    "description": "ChartFormat.line tooltip shown on the monthly rent chart's format SegmentedButton icon."
+    "description": "ChartFormat.line tooltip shown on the monthly cash flow chart's format SegmentedButton icon."
   },
   "dashboardChartFormatArea": "Areas",
   "@dashboardChartFormatArea": {
-    "description": "ChartFormat.area tooltip shown on the monthly rent chart's format SegmentedButton icon."
+    "description": "ChartFormat.area tooltip shown on the monthly cash flow chart's format SegmentedButton icon."
   },
   "dashboardRecentActivityTitle": "Recent activity",
   "@dashboardRecentActivityTitle": {
@@ -2884,7 +2991,7 @@
   "@dashboardOnboardingTitle": {
     "description": "Title of the onboarding checklist card shown when the landlord has zero properties, tenants and leases."
   },
-  "dashboardOnboardingSubtitle": "Follow these 3 steps to get started.",
+  "dashboardOnboardingSubtitle": "Follow these 5 steps to get started.",
   "@dashboardOnboardingSubtitle": {
     "description": "Subtitle of the onboarding checklist card."
   },
@@ -2899,6 +3006,23 @@
   "dashboardOnboardingStepCreateLeaseLabel": "Create a lease",
   "@dashboardOnboardingStepCreateLeaseLabel": {
     "description": "Onboarding checklist step 3 label, navigates to /leases/new."
+  },
+  "dashboardOnboardingStepRecordPaymentLabel": "Record a payment",
+  "@dashboardOnboardingStepRecordPaymentLabel": {
+    "description": "Onboarding checklist step 4: navigates to the payment form for the landlord's first lease."
+  },
+  "dashboardOnboardingStepGenerateReceiptLabel": "Generate a receipt",
+  "@dashboardOnboardingStepGenerateReceiptLabel": {
+    "description": "Onboarding checklist step 5 (the value moment): navigates to the receipts page of the landlord's first lease."
+  },
+  "dashboardOnboardingProgressLabel": "{done} / {total}",
+  "@dashboardOnboardingProgressLabel": {
+    "description": "Onboarding progress indicator, e.g. '2 / 5'.",
+    "placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}
+  },
+  "dashboardOnboardingSkip": "Skip",
+  "@dashboardOnboardingSkip": {
+    "description": "Link that permanently hides the onboarding checklist on this device."
   },
   "dashboardShortcutSimulatorLabel": "Simulate an investment",
   "@dashboardShortcutSimulatorLabel": {
@@ -2928,6 +3052,14 @@
   "profileHubContactUsTile": "Contact us",
   "@profileHubContactUsTile": {
     "description": "List tile label navigating to /profile/support (contact form)."
+  },
+  "profileHubFeedbackTile": "Give feedback",
+  "@profileHubFeedbackTile": {
+    "description": "FEAT-060 — List tile label in the /profile Help group navigating to /profile/feedback (in-app rating and comment form)."
+  },
+  "profileHubRateAppTile": "Rate the app",
+  "@profileHubRateAppTile": {
+    "description": "FEAT-060 — List tile label in the /profile Help group that opens the app's App Store / Google Play listing so the user can rate it. Only shown in the iOS/Android store apps."
   },
   "profileHubTermsTile": "Terms of use",
   "@profileHubTermsTile": {
@@ -3032,7 +3164,7 @@
   "@profileFormFullNameHint": {
     "description": "Hint/example text of the full-name field in the landlord profile form."
   },
-  "profileFormFullNameHelper": "Required to generate receipts",
+  "profileFormFullNameHelper": "Required for receipts and condition reports",
   "@profileFormFullNameHelper": {
     "description": "Helper text under the full-name field (masculine agreement in French, matches 'nom' — distinct from profileFormAddressHelper which agrees with the feminine 'adresse')."
   },
@@ -3052,9 +3184,13 @@
   "@profileFormAddressHint": {
     "description": "Hint/example text (two lines) of the postal address field in the landlord profile form."
   },
-  "profileFormAddressHelper": "Required to generate receipts",
+  "profileFormAddressHelper": "Required for receipts and condition reports",
   "@profileFormAddressHelper": {
     "description": "Helper text under the address field (feminine agreement in French, matches 'adresse' — distinct from profileFormFullNameHelper which agrees with the masculine 'nom')."
+  },
+  "profileFaqTile": "Frequently asked questions (FAQ)",
+  "@profileFaqTile": {
+    "description": "Title of the profile list tile that opens the FAQ page."
   },
   "profilePasswordTitle": "Change password",
   "@profilePasswordTitle": {
@@ -3111,7 +3247,7 @@
   },
   "receiptsSectionTitle": "Receipts issued",
   "@receiptsSectionTitle": {
-    "description": "Card section header of ReceiptsListSection, embedded in the lease detail page (shows a 3-item preview of receipts)."
+    "description": "Card section header of ReceiptsListSection, embedded in the lease detail page (shows a compact clickable summary row, not the receipts themselves)."
   },
   "receiptsSectionErrorMessage": "Error loading receipts.",
   "@receiptsSectionErrorMessage": {
@@ -3121,9 +3257,23 @@
   "@receiptsSectionEmptyHint": {
     "description": "Small italic hint shown inside ReceiptsListSection (lease detail page) when the lease has no receipt yet; distinct from receiptsEmptyStateTitle, which is the full CardEmptyState on the dedicated /leases/:id/receipts list page."
   },
-  "receiptsSectionSeeAllButton": "View all receipts",
-  "@receiptsSectionSeeAllButton": {
-    "description": "Link button under the receipts preview in ReceiptsListSection (lease detail page), navigating to the full receipts list page."
+  "receiptsSectionSummaryCount": "{count} {count, plural, one{receipt} other{receipts}}",
+  "@receiptsSectionSummaryCount": {
+    "description": "First half of the compact summary row in ReceiptsListSection (lease detail page) — total receipts issued for the lease (including voided ones, same convention as receiptsBannerGeneratedCount); concatenated visually with receiptsSectionSummaryLastLabel on the row's subtitle line. Tapping the row (ListTile, key tile_receipts_summary) navigates to /leases/:id/receipts.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "receiptsSectionSummaryLastLabel": "Latest: {month}",
+  "@receiptsSectionSummaryLastLabel": {
+    "description": "Subtitle of the compact summary row in ReceiptsListSection (lease detail page) — period of the most recent receipt; {month} is already formatted (e.g. 'Août 2026', see receiptPeriodMonthYear — intentionally French month names regardless of app locale, same convention as receipt cards/timeline).",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
   },
   "receiptsBannerPropertyLoadingPlaceholder": "Loading property...",
   "@receiptsBannerPropertyLoadingPlaceholder": {
@@ -3283,15 +3433,6 @@
   "@receiptsCardStaleWarning": {
     "description": "Warning row shown on a receipt card body when the receipt is stale (superseded by a later correction)."
   },
-  "receiptsCardAmountCc": "{amount} incl. charges",
-  "@receiptsCardAmountCc": {
-    "description": "Amount row on a receipt card body; {amount} is already formatted in euros. 'CC' = 'charges comprises' (rent including charges), mirrors the leasesTableRentCc convention.",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "receiptsTimelineVoidReasonPrefix": "Reason: {reason}",
   "@receiptsTimelineVoidReasonPrefix": {
     "description": "Third line of a timeline item, shown when the receipt was voided with a reason; {reason} is free text entered by the landlord (not translated).",
@@ -3301,33 +3442,17 @@
       }
     }
   },
+  "receiptsCardTotalCaption": "rent + charges",
+  "@receiptsCardTotalCaption": {
+    "description": "Caption under the receipt total key figure"
+  },
   "receiptsOpenPdfLabel": "Open PDF",
   "@receiptsOpenPdfLabel": {
     "description": "Tooltip/button label to open a receipt's PDF (desktop actions row icon button, and the receipt-generated preview dialog's action button)."
   },
-  "receiptsOpenPdfMenuItem": "Open PDF",
-  "@receiptsOpenPdfMenuItem": {
-    "description": "Popup menu item label (mobile actions menu) to open a receipt's PDF; kept as a distinct key from receiptsOpenPdfLabel because the source French wording differs slightly ('Ouvrir PDF' vs 'Ouvrir le PDF')."
-  },
-  "receiptsOpenPdfButtonShort": "PDF",
-  "@receiptsOpenPdfButtonShort": {
-    "description": "Short button label (receipt card footer, OutlinedButton.icon) to open the PDF; identical text in both locales."
-  },
-  "receiptsShareMenuItem": "Share",
-  "@receiptsShareMenuItem": {
-    "description": "Popup menu item label (mobile actions menu) to share a receipt."
-  },
   "receiptsVoidTooltip": "Void this receipt",
   "@receiptsVoidTooltip": {
     "description": "Tooltip on the icon button voiding a receipt (desktop actions row and receipt card footer)."
-  },
-  "receiptsVoidMenuItem": "Void",
-  "@receiptsVoidMenuItem": {
-    "description": "Popup menu item label (mobile actions menu) to void a receipt; kept distinct from commonCancel (a dismiss action) because this means 'void/invalidate the receipt', a destructive domain action."
-  },
-  "receiptsActionsMenuTooltip": "Actions",
-  "@receiptsActionsMenuTooltip": {
-    "description": "Tooltip of the overflow (three-dot) popup menu button on a receipt row (mobile actions menu)."
   },
   "receiptsVoidSuccessSnackbar": "Receipt voided",
   "@receiptsVoidSuccessSnackbar": {
@@ -3344,6 +3469,10 @@
   "receiptsGenerateButtonTooltip": "Generate a receipt",
   "@receiptsGenerateButtonTooltip": {
     "description": "Tooltip of the icon button triggering receipt generation from a payment (GenerateReceiptButton)."
+  },
+  "receiptsGenerateButtonLabel": "Receipt",
+  "@receiptsGenerateButtonLabel": {
+    "description": "Short visible label of the generate-receipt button on each payment row of a lease (icon + label, the full action is in receiptsGenerateButtonTooltip). French: 'Quittance'."
   },
   "receiptsProfileIncompleteTitle": "Incomplete profile",
   "@receiptsProfileIncompleteTitle": {
@@ -3780,9 +3909,14 @@
   "@documentsUploadPromptText": {
     "description": "Prompt text inviting the landlord to pick files — shared verbatim between the upload drop zone and the second line of the documents empty-state."
   },
-  "documentsUploadFormatsHint": "PDF, JPG, PNG, WEBP · Max 10 MB per file · Max 10 files",
+  "documentsUploadFormatsHint": "PDF, JPG, PNG, WEBP · Max {maxSizeLabel} per file · Max 10 files",
   "@documentsUploadFormatsHint": {
-    "description": "Hint line under the upload prompt in the drop zone, listing accepted formats and the size/count limits (mirrors the kMaxFileSizeBytes/kMaxFilesPerBatch constants as static text, not dynamically interpolated — same as the original French copy)."
+    "description": "FEAT-056 — Hint line under the upload prompt in the drop zone, listing accepted formats and the size/count limits. {maxSizeLabel} is the current plan's per-file byte cap (PlanQuota.documentMaxBytes), already formatted (ByteFormat.format) — differentiated by tier (10 MiB free/Pro, 25 MiB Max, 50 MiB Ultra); the file count cap stays static (not tier-differentiated).",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      }
+    }
   },
   "documentsUploadPickFilesButton": "Select files",
   "@documentsUploadPickFilesButton": {
@@ -3878,6 +4012,10 @@
   "@documentsCategoryUpdateErrorUnexpected": {
     "description": "Snackbar error shown when updating a document's category fails for an uncategorized reason (UpdateCategoryErrorReason.unexpected, i.e. not a FirebaseException)."
   },
+  "documentsCategoryUpdateErrorLegalHold": "This document is kept to meet a legal obligation (lease, condition report, receipt) and cannot be reclassified.",
+  "@documentsCategoryUpdateErrorLegalHold": {
+    "description": "Snackbar error shown when reclassifying a document is refused because it is under legal hold (UpdateCategoryErrorReason.legalHold; server code document_under_legal_hold)."
+  },
   "documentsActionDownload": "Download",
   "@documentsActionDownload": {
     "description": "Popup menu item on a document list tile: generates a signed URL and opens the file in a new tab."
@@ -3935,9 +4073,26 @@
   "@documentsErrorConnection": {
     "description": "Shared connection-error message for the documents module, used whenever a FirebaseException occurs during delete, category-update or per-file upload (DeleteDocumentErrorReason.connectionError, UpdateCategoryErrorReason.connectionError, UploadFileErrorReason.connectionError). Same wording as the already-existing leasesErrorConnection/propertiesListErrorConnection keys; kept module-scoped rather than promoted to a new common* key, consistent with how those two modules did not converge on a shared key either — flagging in case a future pass wants to consolidate."
   },
-  "documentsUploadErrorFileTooLarge": "The file exceeds 10 MB.",
+  "documentsUploadErrorFileTooLarge": "The file exceeds {maxSizeLabel}.",
   "@documentsUploadErrorFileTooLarge": {
-    "description": "Per-file upload error shown when a picked file is larger than the 10 MB client-side limit (UploadFileErrorReason.fileTooLarge, kMaxFileSizeBytes)."
+    "description": "FEAT-056 — Per-file upload error shown when a picked file is larger than the current plan's per-file cap (UploadFileErrorReason.fileTooLarge, PlanQuota.documentMaxBytes — differentiated by tier). {maxSizeLabel} is already formatted (ByteFormat.format). Used when no server-side upgrade target is known (client-side pre-check, or a server race with an empty `upgradeTo`) — see documentsUploadErrorFileTooLargeWithUpgrade for the variant naming the tier that would unblock the file.",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsUploadErrorFileTooLargeWithUpgrade": "The file exceeds {maxSizeLabel}. Upgrade to {levelLabel} to send larger files.",
+  "@documentsUploadErrorFileTooLargeWithUpgrade": {
+    "description": "FEAT-056 — Per-file upload error variant used when the server rejects `createDocument` in `resource-exhausted`/`file_too_large` (race with a stale client-side cap) AND its `details.upgradeTo` names a tier that would accept the file. {maxSizeLabel} is `details.limitBytes` already formatted; {levelLabel} is the named tier's display label (PlanLevelLabel). Never shown when `upgradeTo` is null (no tier would help) — the plain documentsUploadErrorFileTooLarge is used instead in that case.",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      },
+      "levelLabel": {
+        "type": "String"
+      }
+    }
   },
   "documentsUploadErrorUnsupportedFormat": "Unsupported format. Accepted formats: PDF, JPG, PNG, WEBP.",
   "@documentsUploadErrorUnsupportedFormat": {
@@ -4162,6 +4317,38 @@
   "@expensesFormReceiptUploadInProgressSnackbar": {
     "description": "Snackbar shown when the landlord tries to submit the expense form while a receipt upload is still in progress (submission is blocked until it completes)."
   },
+  "expensesFormRecurrenceEndClearTooltip": "Remove the end date",
+  "@expensesFormRecurrenceEndClearTooltip": {
+    "description": "Tooltip of the clear button that removes the recurrence end date, turning a bounded recurring expense back into an open-ended one."
+  },
+  "expensesFormRecurrenceEndFieldHelper": "Leave empty if the charge has no planned end: it is counted up to the current month, never beyond.",
+  "@expensesFormRecurrenceEndFieldHelper": {
+    "description": "Helper text under the recurrence end date field of the expense form, explaining that an open-ended recurrence is still bounded by today (no future projection)."
+  },
+  "expensesFormRecurrenceEndFieldLabel": "Recurrence end (optional)",
+  "@expensesFormRecurrenceEndFieldLabel": {
+    "description": "Label of the optional recurrence end date field in the expense form (last occurrence of a recurring expense)."
+  },
+  "expensesFormRecurrenceEndNoEndPlaceholder": "No planned end",
+  "@expensesFormRecurrenceEndNoEndPlaceholder": {
+    "description": "Placeholder shown in the recurrence end date field when no end date has been picked (open-ended recurrence)."
+  },
+  "expensesFormRecurrenceEndPickerHelp": "Last occurrence of the recurrence",
+  "@expensesFormRecurrenceEndPickerHelp": {
+    "description": "Help text of the date picker used to choose the recurrence end date of an expense."
+  },
+  "expensesFormRecurrenceExplanation": "The first occurrence is the expense date above: earlier periods are not recomputed. So do not also enter each occurrence by hand — it would be counted twice.",
+  "@expensesFormRecurrenceExplanation": {
+    "description": "Explanation box shown in the expense form once a recurrence is selected: states the two rules the landlord must understand (no retroactivity before the expense date, and do not enter each occurrence manually on top of the recurrence)."
+  },
+  "expensesFormRecurrenceFieldHelper": "A recurring expense is counted automatically at every occurrence, with no extra entry.",
+  "@expensesFormRecurrenceFieldHelper": {
+    "description": "Helper text under the recurrence (frequency) dropdown of the expense form."
+  },
+  "expensesFormRecurrenceFieldLabel": "Frequency",
+  "@expensesFormRecurrenceFieldLabel": {
+    "description": "Label of the recurrence (frequency) dropdown in the expense form: one-off, monthly, quarterly or yearly."
+  },
   "expensesFormSelectDatePlaceholder": "Select a date",
   "@expensesFormSelectDatePlaceholder": {
     "description": "Placeholder text shown in the expense date field before any date has been picked."
@@ -4258,9 +4445,14 @@
   "@expensesReceiptErrorConnection": {
     "description": "ExpenseReceiptUploadErrorReason.connectionError message — generic Firebase error (not Storage) while uploading an expense receipt."
   },
-  "expensesReceiptErrorFileTooLarge": "The file exceeds 10 MB.",
+  "expensesReceiptErrorFileTooLarge": "The file exceeds {maxSizeLabel}.",
   "@expensesReceiptErrorFileTooLarge": {
-    "description": "ExpenseReceiptUploadErrorReason.fileTooLarge message — client-side pre-upload validation of the expense receipt file size."
+    "description": "FEAT-056 — ExpenseReceiptUploadErrorReason.fileTooLarge message — client-side pre-upload validation of the expense receipt file size against the current plan's per-file cap (PlanQuota.documentMaxBytes, differentiated by tier). {maxSizeLabel} is already formatted (ByteFormat.format).",
+    "placeholders": {
+      "maxSizeLabel": {
+        "type": "String"
+      }
+    }
   },
   "expensesReceiptErrorStorage": "Error while uploading. Please try again.",
   "@expensesReceiptErrorStorage": {
@@ -4306,6 +4498,34 @@
         "type": "String"
       }
     }
+  },
+  "expensesRecurrenceBadgeUntil": "{recurrenceLabel} until {endDate}",
+  "@expensesRecurrenceBadgeUntil": {
+    "description": "Badge on an expense row for a recurring expense that has an end date; {recurrenceLabel} is the already-localized frequency label (ExpenseRecurrenceL10n.localizedLabel) and {endDate} the formatted end date.",
+    "placeholders": {
+      "recurrenceLabel": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesRecurrenceMonthly": "Every month",
+  "@expensesRecurrenceMonthly": {
+    "description": "ExpenseRecurrence.monthly localized label (frequency dropdown, expense row badge)."
+  },
+  "expensesRecurrenceNone": "One-off (single time)",
+  "@expensesRecurrenceNone": {
+    "description": "ExpenseRecurrence.none localized label — the default: a plain expense that happens once, on its date."
+  },
+  "expensesRecurrenceQuarterly": "Every quarter",
+  "@expensesRecurrenceQuarterly": {
+    "description": "ExpenseRecurrence.quarterly localized label (frequency dropdown, expense row badge) — typical for co-ownership charge calls."
+  },
+  "expensesRecurrenceYearly": "Every year",
+  "@expensesRecurrenceYearly": {
+    "description": "ExpenseRecurrence.yearly localized label (frequency dropdown, expense row badge) — typical for property tax and landlord insurance."
   },
 
   "chargeRegularizationSectionTitle": "Charge regularization",
@@ -4413,6 +4633,46 @@
   "chargeRegularizationBalanceDirectionBalanced": "no balance",
   "@chargeRegularizationBalanceDirectionBalanced": {
     "description": "Localized label for ChargeRegularizationBalanceDirection.balanced (actual expenses == provisions collected), shown on the on-screen StatusPill in ChargeRegularizationBalanceSummary."
+  },
+  "chargeStatementFinalizeAction": "Finalize & lock the statement",
+  "@chargeStatementFinalizeAction": {
+    "description": "Button that persists the immutable charge regularization statement then shares it"
+  },
+  "chargeStatementFinalizeConfirmTitle": "Lock this statement?",
+  "@chargeStatementFinalizeConfirmTitle": {
+    "description": "Confirmation dialog title before finalizing a charge statement"
+  },
+  "chargeStatementFinalizeConfirmBody": "Once locked, this statement is immutable and kept for 5 years (legal proof). You can void and reissue it if needed.",
+  "@chargeStatementFinalizeConfirmBody": {
+    "description": "Confirmation dialog body explaining immutability before finalizing"
+  },
+  "chargeStatementHistoryTitle": "Locked statements",
+  "@chargeStatementHistoryTitle": {
+    "description": "Section title listing finalized charge regularization statements on the lease page"
+  },
+  "chargeStatementHistoryEmpty": "No locked statement yet.",
+  "@chargeStatementHistoryEmpty": {
+    "description": "Empty state when a lease has no finalized charge statement"
+  },
+  "chargeStatementBadgeSent": "Sent",
+  "@chargeStatementBadgeSent": {
+    "description": "Badge shown on a statement that was shared to the tenant"
+  },
+  "chargeStatementBadgeVoided": "Voided",
+  "@chargeStatementBadgeVoided": {
+    "description": "Badge shown on a voided statement"
+  },
+  "chargeStatementActionReshare": "Re-share",
+  "@chargeStatementActionReshare": {
+    "description": "Action to re-render and re-share an existing locked statement"
+  },
+  "chargeStatementActionVoid": "Void",
+  "@chargeStatementActionVoid": {
+    "description": "Action to void a locked statement"
+  },
+  "chargeStatementVoidReasonHint": "Reason for voiding",
+  "@chargeStatementVoidReasonHint": {
+    "description": "Hint text for the void reason input"
   },
 
   "simulatorPageTitle": "Investment simulator",
@@ -4635,6 +4895,10 @@
   "@simulatorSavedScenariosTitle": {
     "description": "Section header above the horizontal list of saved scenarios on the simulator page."
   },
+  "simulatorNewScenarioCardLabel": "New simulation",
+  "@simulatorNewScenarioCardLabel": {
+    "description": "Label of the '+ New simulation' card, always the first item of the saved-scenarios rail (hidden in comparison selection mode). Navigates to /simulator (blank form) — the only way back to a fresh form when editing an existing scenario, since the AppBar back button targets the dashboard for full accounts."
+  },
   "simulatorDeleteScenarioDialogTitle": "Delete this scenario?",
   "@simulatorDeleteScenarioDialogTitle": {
     "description": "AlertDialog title of the confirmation dialog shown before deleting a saved scenario."
@@ -4665,13 +4929,29 @@
   "@simulatorLimitReachedTitleFree": {
     "description": "Title of the scenario-limit-reached modal when shown to a free-tier account."
   },
+  "simulatorLimitReachedTitlePaid": "Scenario limit reached",
+  "@simulatorLimitReachedTitlePaid": {
+    "description": "FEAT-056 — Title of the scenario-limit-reached modal when shown to a paid account that hit its OWN tier bound (Pro at 15, Max at 30 — only Ultra is unlimited). Distinct from simulatorLimitReachedTitleFree since the CTA here upsells to the next paid tier, not to Pro."
+  },
   "simulatorLimitReachedContentAnonymous": "Demo mode lets you save a single scenario. Create an account to keep up to 3.",
   "@simulatorLimitReachedContentAnonymous": {
     "description": "Body text of the scenario-limit-reached modal when shown to an anonymous (demo) session."
   },
-  "simulatorLimitReachedContentFree": "Your free account lets you save up to 3 scenarios. Upgrade to the Pro plan for unlimited scenarios.",
+  "simulatorLimitReachedContentFree": "Your free account lets you save up to 3 scenarios. Upgrade to Pro to save up to 15.",
   "@simulatorLimitReachedContentFree": {
-    "description": "Body text of the scenario-limit-reached modal when shown to a free-tier account."
+    "description": "FEAT-056 — Body text of the scenario-limit-reached modal when shown to a free-tier account. Updated from the old 'unlimited scenarios' claim: Pro is now bounded at 15 (tightened entitlements grid), only Ultra remains unlimited."
+  },
+  "simulatorLimitReachedContentPaid": "You've reached the scenario limit of your {currentLevel} plan. Upgrade to {nextLevel} to save more.",
+  "@simulatorLimitReachedContentPaid": {
+    "description": "FEAT-056 — Body text of the scenario-limit-reached modal when shown to a paid account (Pro or Max) that hit its own tier bound. {currentLevel} and {nextLevel} are display labels (planLevelPro/Max/Ultra) — nextLevel is derived from PlanLevel rank order, never hardcoded.",
+    "placeholders": {
+      "currentLevel": {
+        "type": "String"
+      },
+      "nextLevel": {
+        "type": "String"
+      }
+    }
   },
   "simulatorLimitReachedLaterButton": "Later",
   "@simulatorLimitReachedLaterButton": {
@@ -4770,6 +5050,14 @@
   "landingCartoucheLabel": "COVER PAGE",
   "@landingCartoucheLabel": {
     "description": "Small-caps kicker label in the landing cover sheet's cartouche header (top-right, next to the date), naming the page as the register's cover/title page. Editorial branding concept mirroring authLoginCartoucheOpening's 'Opening' kicker on the login page, but kept as its own landing* key per module convention."
+  },
+  "landingLinkPrivacy": "Privacy",
+  "@landingLinkPrivacy": {
+    "description": "Discreet footer link on the landing sheet to the privacy policy page (FAQ · Privacy · Terms)."
+  },
+  "landingLinkTerms": "Terms",
+  "@landingLinkTerms": {
+    "description": "Discreet footer link on the landing sheet to the terms of use page (FAQ · Privacy · Terms). French: 'CGU'."
   },
   "landingTagline": "Keep the register.",
   "@landingTagline": {
@@ -4874,6 +5162,43 @@
   "@supportFormSendFailedError": {
     "description": "Contact form submission error (SupportSubmitError.sendFailed): generic Firestore/network failure while submitting the support request."
   },
+  "feedbackRatingRequiredError": "Please choose a rating.",
+  "@feedbackRatingRequiredError": {
+    "description": "FEAT-060 — Feedback form validation error: no star rating selected."
+  },
+  "feedbackPageTitle": "Your feedback",
+  "@feedbackPageTitle": {
+    "description": "FEAT-060 — AppBar title of the feedback page (`/profile/feedback`)."
+  },
+  "feedbackPageIntro": "How do you find Baillan? Your rating and comments help us improve it.",
+  "@feedbackPageIntro": {
+    "description": "FEAT-060 — Intro text shown above the feedback form. 'Baillan' is the brand name — keep untranslated."
+  },
+  "feedbackRatingLabel": "Your rating",
+  "@feedbackRatingLabel": {
+    "description": "FEAT-060 — Label above the 1-5 star rating row of the feedback form."
+  },
+  "feedbackStarSemantics": "{count} out of 5",
+  "@feedbackStarSemantics": {
+    "description": "FEAT-060 — Tooltip/accessibility label of one star button in the feedback form (count = 1 to 5).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackCommentLabel": "Comment (optional)",
+  "@feedbackCommentLabel": {
+    "description": "FEAT-060 — Label of the optional comment text field of the feedback form."
+  },
+  "feedbackSubmitButton": "Send",
+  "@feedbackSubmitButton": {
+    "description": "FEAT-060 — Submit button label of the feedback form."
+  },
+  "feedbackSuccessSnackbar": "Thank you for your feedback!",
+  "@feedbackSuccessSnackbar": {
+    "description": "FEAT-060 — Snackbar shown after the feedback was sent successfully."
+  },
 
   "pwaInstallBannerTitle": "Install Baillan.",
   "@pwaInstallBannerTitle": {
@@ -4924,6 +5249,10 @@
   "@deleteAccountWarningItemSimulations": {
     "description": "Bullet item in the delete-account warning list: investment simulations."
   },
+  "deleteAccountWarningItemStatements": "your charge statements and condition reports — their PDFs can no longer be generated",
+  "@deleteAccountWarningItemStatements": {
+    "description": "Bullet item in the delete-account warning list: charge regularization statements and condition reports (états des lieux) are deleted, so their PDFs cannot be regenerated afterwards (issue #209). Unlike receipts, they are not kept under legal retention."
+  },
   "deleteAccountWarningItemAccount": "your landlord profile and your sign-in account",
   "@deleteAccountWarningItemAccount": {
     "description": "Bullet item in the delete-account warning list: landlord profile and sign-in account."
@@ -4931,6 +5260,14 @@
   "deleteAccountWarningDownloadReminder": "Remember to download any documents you want to keep beforehand: no recovery will be possible.",
   "@deleteAccountWarningDownloadReminder": {
     "description": "Emphasized reminder below the warning list, urging the user to download documents before deletion since nothing can be recovered."
+  },
+  "deleteAccountStoreSubscriptionWarning": "Deleting your account doesn't cancel a subscription bought through the App Store or Google Play. Cancel it in your store settings to stop billing.",
+  "@deleteAccountStoreSubscriptionWarning": {
+    "description": "Warning on the delete-account page for users whose Baillan subscription was bought through the App Store or Google Play (proStore = app_store / play_store): account deletion does not cancel the store subscription, so they must cancel it in their store settings."
+  },
+  "deleteAccountWebSubscriptionNotice": "Your Baillan subscription is canceled immediately, with no refund for the current period.",
+  "@deleteAccountWebSubscriptionNotice": {
+    "description": "Notice on the delete-account page for users with a paid Baillan subscription bought on the web (Stripe): the subscription is canceled immediately on account deletion, with no refund of the current period."
   },
   "deleteAccountRetentionTitle": "Legal retention of rent receipts",
   "@deleteAccountRetentionTitle": {
@@ -5021,6 +5358,26 @@
   "@deleteAccountRequestAnonSuccessSnackbar": {
     "description": "SnackBar shown after an anonymous trial session has been successfully deleted from the public request page."
   },
+  "profileExportDataTile": "Export my data",
+  "@profileExportDataTile": {
+    "description": "Profile tile that triggers a RGPD data export (JSON)."
+  },
+  "profileExportDataSubtitle": "Get a copy of your data as JSON",
+  "@profileExportDataSubtitle": {
+    "description": "Subtitle under the export-my-data profile tile."
+  },
+  "profileExportDataSuccess": "Export ready",
+  "@profileExportDataSuccess": {
+    "description": "Snackbar shown after the data export succeeds."
+  },
+  "profileExportDataError": "Export failed. Please try again.",
+  "@profileExportDataError": {
+    "description": "Snackbar shown when the data export fails."
+  },
+  "profileExportDataRecentLogin": "Please sign in again, then retry the export.",
+  "@profileExportDataRecentLogin": {
+    "description": "Message shown when the export requires a recent login."
+  },
   "profileHubDeleteAccountTile": "Delete my account",
   "@profileHubDeleteAccountTile": {
     "description": "List tile label in the /profile hub Account group navigating to /profile/delete-account. Rendered in the error color (destructive action)."
@@ -5052,5 +5409,684 @@
   "deleteAccountErrorGeneric": "Deletion failed. Please try again.",
   "@deleteAccountErrorGeneric": {
     "description": "Generic fallback error for the account-deletion flow (unexpected failures, and default cases of the auth/callable error mappers)."
-  }
+  },
+
+  "proPricingTitle": "Baillan Pro, Max & Ultra",
+  "@proPricingTitle": {
+    "description": "FEAT-056 — AppBar title of the 4-plan pricing page (/pro): Free, Pro, Max, Ultra."
+  },
+  "proPricingHeadline": "Find the plan that matches your portfolio",
+  "@proPricingHeadline": {
+    "description": "FEAT-056 — Main headline above the 4 plan cards on /pro."
+  },
+  "proPricingSubheadline": "Pro is available right now. Max and Ultra are coming soon — sign up to be notified at launch. No commitment, cancel anytime in 3 clicks.",
+  "@proPricingSubheadline": {
+    "description": "FEAT-056 — Sub-headline below the main pricing headline on /pro."
+  },
+  "proPlanMonthly": "Monthly",
+  "@proPlanMonthly": {
+    "description": "FEAT-044e — Label for the monthly billing option in the pricing toggle."
+  },
+  "proPlanAnnual": "Annual",
+  "@proPlanAnnual": {
+    "description": "FEAT-044e — Label for the annual billing option in the pricing toggle."
+  },
+  "proAnnualSaving": "2 months free",
+  "@proAnnualSaving": {
+    "description": "FEAT-044e — Small badge shown on a paid plan card when annual is toggled, indicating the built-in discount (~2 months free vs. paying monthly)."
+  },
+  "proSubscribeButton": "Upgrade to Pro",
+  "@proSubscribeButton": {
+    "description": "FEAT-056 — Primary CTA of the Pro card specifically (backlog copy, docs/backlog/056-abonnements-pro-max-ultra.md §5) — opens the Stripe Checkout Session for level='pro'. Other purchasable levels (once opened) use proUpgradeToLevel instead."
+  },
+  "proCurrentPlanLabel": "Your current plan",
+  "@proCurrentPlanLabel": {
+    "description": "FEAT-056 — Disabled button label shown on the card matching the landlord's current plan (Free or a paid level) — replaces the old proAlreadySubscribed, now level-agnostic across the 4 cards."
+  },
+  "proCheckoutError": "Unable to start checkout. Please try again.",
+  "@proCheckoutError": {
+    "description": "FEAT-044e — Snackbar shown when createCheckoutSession failed to return a valid Stripe hosted URL, or for any checkout error not specifically mapped (CheckoutException)."
+  },
+  "proCheckoutErrorAlreadySubscribed": "You already have an active subscription. Use “Change plan” to switch to a different tier.",
+  "@proCheckoutErrorAlreadySubscribed": {
+    "description": "FEAT-056 — Snackbar shown when createCheckoutSession throws AlreadySubscribedException (failed-precondition/already_subscribed_use_change_plan) — defense in depth, the UI should already never offer Subscribe to an active subscriber."
+  },
+  "proPlanNotAvailableError": "This plan isn't available yet.",
+  "@proPlanNotAvailableError": {
+    "description": "FEAT-056 — Snackbar shown when a checkout or change-plan call throws LevelNotPurchasableException or PriceNotConfiguredException — defense in depth, the UI should already never offer a payment path for a non-purchasable level."
+  },
+  "proSuccessTitle": "Welcome to Baillan Pro!",
+  "@proSuccessTitle": {
+    "description": "FEAT-044e — Title of the /pro/success page after Stripe redirects back with a successful subscription."
+  },
+  "proSuccessBody": "Your subscription is active. Enjoy all features without limits.",
+  "@proSuccessBody": {
+    "description": "FEAT-044e — Body copy of the /pro/success page confirming the subscription is active."
+  },
+  "proSuccessGoToDashboard": "Go to dashboard",
+  "@proSuccessGoToDashboard": {
+    "description": "FEAT-044e — Primary CTA on /pro/success; navigates to /dashboard."
+  },
+  "proCancelTitle": "Payment cancelled",
+  "@proCancelTitle": {
+    "description": "FEAT-044e — Title of the /pro/cancel page when Stripe redirects back after a cancelled Checkout Session."
+  },
+  "proCancelBody": "No charges were made. You can try again at any time.",
+  "@proCancelBody": {
+    "description": "FEAT-044e — Body copy of the /pro/cancel page reassuring the user that no payment was captured."
+  },
+  "proCancelBackToDashboard": "Go back",
+  "@proCancelBackToDashboard": {
+    "description": "FEAT-044e — Secondary CTA on /pro/cancel; navigates back to /dashboard."
+  },
+  "proCancelRetry": "Try again",
+  "@proCancelRetry": {
+    "description": "FEAT-044e — Primary CTA on /pro/cancel; navigates back to /pro to retry the checkout."
+  },
+  "proStoreAppUnavailable": "Paid plans aren't available in the app yet.",
+  "@proStoreAppUnavailable": {
+    "description": "Neutral message shown on /pro in the iOS/Android store apps instead of plans, prices and purchase buttons (App Store 3.1.1 / Google Play Payments: no purchase outside in-app purchase). Must not mention the website."
+  },
+  "proUpgradeButton": "Upgrade to Pro",
+  "@proUpgradeButton": {
+    "description": "FEAT-044e — Generic upsell CTA used in gated states throughout the app (scenario_limit_upgrade_cta, régularisation section, FEAT-055 comparison page) when the target level is unknown/Pro. Navigates to /pro."
+  },
+  "proUpgradeToLevel": "Upgrade to {level}",
+  "@proUpgradeToLevel": {
+    "description": "FEAT-056 — CTA on a plan card of higher rank than the landlord's current paid level (or the Free landlord's target level on a purchasable card other than Pro); triggers change_plan (already paid) or checkout (not yet paid). Also used as the CTA in the scenario-limit-reached modal when a paid tier (Pro/Max) hits its own bound. {level} is the target level's display label (planLevelPro/Max/Ultra).",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "proDowngradeToLevel": "Switch back to {level}",
+  "@proDowngradeToLevel": {
+    "description": "FEAT-056 — CTA on a plan card of lower rank than the landlord's current paid level; triggers change_plan (self-service downgrade, prorated credit, never a refund). {level} is the target level's display label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "proComingSoonBadge": "Coming soon",
+  "@proComingSoonBadge": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — small badge shown on /pro instead of the Stripe checkout button while subscriptions are not yet open for sale."
+  },
+  "proSubscriptionsPausedNotice": "Subscriptions aren't open yet — leave your details and we'll let you know as soon as Baillan Pro launches.",
+  "@proSubscriptionsPausedNotice": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — explanatory copy shown on /pro above the notify-me button while Stripe checkout is disabled."
+  },
+  "proNotifyMeButton": "Notify me at launch",
+  "@proNotifyMeButton": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — CTA on /pro replacing the Stripe checkout button; records interest via paid_plan_interest."
+  },
+  "proNotifiedButtonLabel": "You'll be notified at launch",
+  "@proNotifiedButtonLabel": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — disabled state of the notify-me button on /pro after a successful interest submission."
+  },
+  "proInterestSaveErrorSnackbar": "Unable to save your interest right now. Please try again.",
+  "@proInterestSaveErrorSnackbar": {
+    "description": "Freemium gating (Env.subscriptionsEnabled = false) — snackbar shown on /pro when markInterest fails (paid_plan_interest write error)."
+  },
+  "planLevelFree": "Free",
+  "@planLevelFree": {
+    "description": "FEAT-056 — Display label and /pro column header for the free tier."
+  },
+  "planLevelPro": "Pro",
+  "@planLevelPro": {
+    "description": "FEAT-056 — Display label of the Pro paid level (PlanLevel.pro) — sole source of truth for the string 'Pro' across ProBadge, /pro, the subscription section and upsell messages."
+  },
+  "planLevelMax": "Max",
+  "@planLevelMax": {
+    "description": "FEAT-056 — Display label of the Max paid level (PlanLevel.max)."
+  },
+  "planLevelUltra": "Ultra",
+  "@planLevelUltra": {
+    "description": "FEAT-056 — Display label of the Ultra paid level (PlanLevel.ultra)."
+  },
+  "planRecommendedBadge": "Recommended",
+  "@planRecommendedBadge": {
+    "description": "FEAT-056 — Small badge shown on the plan card flagged `recommended: true` in the entitlements table (currently Max) — read from config, never hardcoded to a specific level."
+  },
+  "proPricingCompareTitle": "Compare plans",
+  "@proPricingCompareTitle": {
+    "description": "FEAT-056 — Title above the desktop-only (>= Breakpoints.tablet) quota comparison table below the 4 plan cards."
+  },
+  "proPricingIndicativeSuffix": "(indicative)",
+  "@proPricingIndicativeSuffix": {
+    "description": "FEAT-056 — Suffix shown after a plan card's price when PlanLevelSpec.priceIndicative is true (Max/Ultra before they open for sale) — the price is a placeholder, not a firm committed tariff, per docs/backlog/056 §4/§5."
+  },
+  "proQuotaUnlimited": "Unlimited",
+  "@proQuotaUnlimited": {
+    "description": "FEAT-056 — Cell value in the plan comparison table for a quota whose PlanMatrix.quotaLimit is null (currently only Ultra, on every counting quota)."
+  },
+  "proPricingRowProperties": "Active properties",
+  "@proPricingRowProperties": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.properties."
+  },
+  "proPricingRowTenants": "Active tenants",
+  "@proPricingRowTenants": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.tenants."
+  },
+  "proPricingRowLeases": "Active leases",
+  "@proPricingRowLeases": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.activeLeases."
+  },
+  "proPricingRowDocuments": "Active documents",
+  "@proPricingRowDocuments": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.documents (count)."
+  },
+  "proPricingRowDocumentSize": "Max size per document",
+  "@proPricingRowDocumentSize": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.documentMaxBytes (formatted via ByteFormat, never confused with the document count row above)."
+  },
+  "proPricingRowScenarios": "Saved scenarios",
+  "@proPricingRowScenarios": {
+    "description": "FEAT-056 — Row label in the desktop plan comparison table for PlanQuota.scenarios."
+  },
+  "proPricingFreeTagline": "Discover Baillan on your first property",
+  "@proPricingFreeTagline": {
+    "description": "FEAT-056 — Tagline of the Free card on /pro (backlog copy, docs/backlog/056 §5)."
+  },
+  "proPricingFreeCta": "Start for free",
+  "@proPricingFreeCta": {
+    "description": "FEAT-056 — CTA of the Free card (backlog copy) — disabled in practice, /pro is only reachable by an already fully-authenticated landlord (never a fresh anonymous visitor)."
+  },
+  "proPricingProTagline": "For the multi-property landlord, flat-rate — never billed per property",
+  "@proPricingProTagline": {
+    "description": "FEAT-056 — Tagline of the Pro card on /pro (backlog copy)."
+  },
+  "proPricingMaxTagline": "For hands-on, day-to-day rental management",
+  "@proPricingMaxTagline": {
+    "description": "FEAT-056 — Tagline of the Max card on /pro (backlog copy)."
+  },
+  "proPricingUltraTagline": "For shared ownership structures (SCI, joint ownership), no volume limits",
+  "@proPricingUltraTagline": {
+    "description": "FEAT-056 — Tagline of the Ultra card on /pro (backlog copy)."
+  },
+  "proPricingBulletCoreQuota": "Up to {properties} properties, {tenants} tenants, {leases} active leases",
+  "@proPricingBulletCoreQuota": {
+    "description": "FEAT-056 — Shared bullet for Free/Pro/Max cards — the 3 core volume caps, read from PlanMatrix.quotaLimit (properties/tenants/activeLeases), never hardcoded.",
+    "placeholders": {
+      "properties": {
+        "type": "int"
+      },
+      "tenants": {
+        "type": "int"
+      },
+      "leases": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletDocuments": "{count} stored documents",
+  "@proPricingBulletDocuments": {
+    "description": "FEAT-056 — Bullet for Free/Pro cards (Max uses proPricingBulletDocumentsWithSize instead, which also names the per-file size cap). {count} is PlanMatrix.quotaLimit(level, PlanQuota.documents).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletDocumentsWithSize": "{count} stored documents (up to {sizeMb} MiB per file)",
+  "@proPricingBulletDocumentsWithSize": {
+    "description": "FEAT-056 — Bullet for the Max card, combining the document count cap and the per-file size cap in one line (backlog copy). {count} is PlanQuota.documents, {sizeMb} is PlanQuota.documentMaxBytes converted to MiB.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "sizeMb": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletScenarios": "{count} saved simulator scenarios",
+  "@proPricingBulletScenarios": {
+    "description": "FEAT-056 — Bullet for Free/Pro/Max cards — PlanMatrix.quotaLimit(level, PlanQuota.scenarios).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletUnlimitedCore": "Unlimited properties, tenants, leases, documents and scenarios",
+  "@proPricingBulletUnlimitedCore": {
+    "description": "FEAT-056 — Ultra card's single bullet replacing the 3 counting bullets above — Ultra is the only level with every counting quota unbounded (PlanMatrix.quotaLimit returns null on all 5)."
+  },
+  "proPricingBulletDocumentSizeOnly": "Documents up to {sizeMb} MiB",
+  "@proPricingBulletDocumentSizeOnly": {
+    "description": "FEAT-056 — Ultra card's document-size bullet (Ultra's document count is unlimited so it's folded into proPricingBulletUnlimitedCore — only the byte cap, which is never null even for Ultra, gets its own line). {sizeMb} is PlanQuota.documentMaxBytes converted to MiB.",
+    "placeholders": {
+      "sizeMb": {
+        "type": "int"
+      }
+    }
+  },
+  "proPricingBulletReceipts": "Rent receipts compliant with French law (6 July 1989)",
+  "@proPricingBulletReceipts": {
+    "description": "FEAT-056 — Free card bullet (backlog copy) — feature already included at every tier, shown once on the Free card as a baseline."
+  },
+  "proPricingBulletPaymentsExpensesDashboard": "Payments, expenses, dashboard",
+  "@proPricingBulletPaymentsExpensesDashboard": {
+    "description": "FEAT-056 — Free card bullet (backlog copy) — baseline features included at every tier."
+  },
+  "proPricingBulletChargeRegularization": "Annual charges reconciliation",
+  "@proPricingBulletChargeRegularization": {
+    "description": "FEAT-056 — Pro card bullet — PlanFeature.chargeRegularization, minLevel pro, shipped."
+  },
+  "proPricingBulletScenarioComparison": "Investment scenario comparison",
+  "@proPricingBulletScenarioComparison": {
+    "description": "FEAT-056 — Pro card bullet — PlanFeature.scenarioComparison (FEAT-055), minLevel pro, shipped."
+  },
+  "proPricingBulletSupportStandard": "Standard support",
+  "@proPricingBulletSupportStandard": {
+    "description": "FEAT-056 — Pro/Free card bullet — qualitative only, no numeric SLA (support capacity not validated, cf. docs/backlog/056 §5 internal note)."
+  },
+  "proPricingBulletPaymentReminders": "Automatic payment reminders",
+  "@proPricingBulletPaymentReminders": {
+    "description": "FEAT-056 — Max card bullet — PlanFeature.paymentReminders (FEAT-031), minLevel max, status planned (not yet built — the card still shows the bullet as an announced benefit, per plan §2.3-c)."
+  },
+  "proPricingBulletListings": "Reusable listings & multi-portal syndication",
+  "@proPricingBulletListings": {
+    "description": "FEAT-056 — Max card bullet — PlanFeature.listings (FEAT-051), minLevel max, status planned."
+  },
+  "proPricingBulletSupportPriority": "Priority support",
+  "@proPricingBulletSupportPriority": {
+    "description": "FEAT-056 — Max card bullet — PlanFeature.prioritySupport, qualitative only, no numeric SLA (never publish the internal 24h-business-hours target — not validated by support capacity)."
+  },
+  "proPricingBulletAccountingExport": "One-click annual accounting export",
+  "@proPricingBulletAccountingExport": {
+    "description": "FEAT-056 — Ultra card bullet — PlanFeature.accountingExport (FEAT-032), minLevel ultra, status planned."
+  },
+  "proPricingBulletCollaborators": "Up to 3 invited collaborators (accountant, co-owner, managing agent)",
+  "@proPricingBulletCollaborators": {
+    "description": "FEAT-056 — Ultra card bullet — PlanFeature.collaborators (FEAT-034), minLevel ultra, status planned."
+  },
+  "proPricingBulletSupportDedicated": "Dedicated support",
+  "@proPricingBulletSupportDedicated": {
+    "description": "FEAT-056 — Ultra card bullet — qualitative only, no numeric SLA (never publish the internal 12h-business-hours target — not validated by support capacity)."
+  },
+  "proPricingNotifyAtLaunchButton": "Notify me at launch",
+  "@proPricingNotifyAtLaunchButton": {
+    "description": "FEAT-056 — CTA on a plan card whose level is not yet purchasable (Max/Ultra) — records interest via paid_plan_interest, tagged per level (proPricingInterestKeyFor). Distinct from proNotifyMeButton, which is the pre-existing copy for the global Env.subscriptionsEnabled gate."
+  },
+  "proPricingNotifiedAtLaunchLabel": "You'll be notified at launch",
+  "@proPricingNotifiedAtLaunchLabel": {
+    "description": "FEAT-056 — Disabled state of proPricingNotifyAtLaunchButton after a successful interest submission."
+  },
+  "proPricingFooter": "Prices include VAT. Pro: cancel anytime in 3 clicks, no commitment. Max and Ultra: indicative pricing, subject to launch (the displayed caps, however, are already final).",
+  "@proPricingFooter": {
+    "description": "FEAT-056 — Footer disclaimer at the bottom of /pro (backlog copy)."
+  },
+  "planChangeDialogTitle": "Change your plan?",
+  "@planChangeDialogTitle": {
+    "description": "FEAT-056 — Title of the plan-change confirmation dialog (self-service upgrade/downgrade between paid levels, manageSubscription('change_plan'))."
+  },
+  "planChangeUpgradeBody": "Switching to {level} takes effect immediately. The difference is calculated pro rata and added to your next invoice.",
+  "@planChangeUpgradeBody": {
+    "description": "FEAT-056 — Body of the plan-change dialog for an upgrade (higher-rank target) — must be shown BEFORE confirmation: the change is immediate and prorated, billed on the next invoice. {level} is the target level's display label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "planChangeDowngradeBody": "Switching to {level} takes effect immediately. The difference is calculated pro rata and credited to your future invoices — no refund is issued.",
+  "@planChangeDowngradeBody": {
+    "description": "FEAT-056 — Body of the plan-change dialog for a downgrade (lower-rank target) — must be shown BEFORE confirmation: the change is immediate, the price difference becomes a credit on future invoices, never a refund. {level} is the target level's display label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "planChangeConfirm": "Confirm the change",
+  "@planChangeConfirm": {
+    "description": "FEAT-056 — Confirm button of the plan-change dialog; triggers manageSubscription('change_plan')."
+  },
+  "planChangeSuccess": "Your plan is being updated…",
+  "@planChangeSuccess": {
+    "description": "FEAT-056 — Snackbar shown after a successful (or idempotent noop) change_plan call. Optimistic confirmation — the displayed level lags until the RevenueCat webhook (PRODUCT_CHANGE) updates Firestore, same caveat as subscriptionCancelSuccess."
+  },
+  "proSwitchToAnnualButton": "Switch to annual billing",
+  "@proSwitchToAnnualButton": {
+    "description": "FEAT-056 — Button on the card of the level the web subscriber already holds, when the period toggle is on Annual: switches the same level to annual billing (manageSubscription change_plan, same level, period=annual)."
+  },
+  "proSwitchToMonthlyButton": "Switch to monthly billing",
+  "@proSwitchToMonthlyButton": {
+    "description": "FEAT-056 — Button on the card of the level the web subscriber already holds, when the period toggle is on Monthly: switches the same level to monthly billing (manageSubscription change_plan, same level, period=monthly)."
+  },
+  "planSwitchToAnnualBody": "Your {level} subscription switches to annual billing ({price} per year) right away. The unused days of your current month are deducted from this first payment.",
+  "@planSwitchToAnnualBody": {
+    "description": "FEAT-056 — Body of the confirmation dialog for a monthly → annual switch on the same level — shown BEFORE confirmation: Stripe invoices the annual price immediately, minus a prorated credit for the unused days of the month. {level} is the level label, {price} the annual price label (e.g. 79 €).",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "planSwitchToMonthlyBody": "Your {level} subscription switches to monthly billing ({price} per month) right away. The unused days of your current year become a credit deducted from your next invoices — no refund is issued.",
+  "@planSwitchToMonthlyBody": {
+    "description": "FEAT-056 — Body of the confirmation dialog for an annual → monthly switch on the same level — shown BEFORE confirmation: immediate, the unused part of the year becomes a credit on future invoices, never a refund. {level} is the level label, {price} the monthly price label (e.g. 7,99 €).",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionSectionTitle": "{level} subscription",
+  "@subscriptionSectionTitle": {
+    "description": "FEAT-056 — SectionHeader title of the subscription management block on /profile (self-hides for non-paid tiers). {level} is the landlord's real current paid level display label (planLevelPro/Max/Ultra) — replaces the old hardcoded 'Baillan Pro subscription'.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionChangePlanButton": "Change plan",
+  "@subscriptionChangePlanButton": {
+    "description": "FEAT-056 — TextButton in the subscription section of /profile navigating to /pro to change plan — hidden for proStore in {app_store, play_store} (self-service change_plan is web-only)."
+  },
+  "subscriptionActiveRenews": "Active — renews on {date}",
+  "@subscriptionActiveRenews": {
+    "description": "FEAT-044f — Status line shown when the web Pro subscription is renewable (proWillRenew != false). {date} is already formatted DD/MM/YYYY via FrenchDate.format.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionScheduledCancel": "{level} until {date}, then Free",
+  "@subscriptionScheduledCancel": {
+    "description": "FEAT-044f/FEAT-056 — Status line shown when a cancellation is scheduled (proWillRenew == false): access remains until {date} (proExpiresAt, already formatted DD/MM/YYYY), then the account auto-downgrades to Free. {level} is the real current paid level display label — must never say 'Pro' to a Max/Ultra subscriber.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionCancelButton": "Cancel my subscription",
+  "@subscriptionCancelButton": {
+    "description": "FEAT-044f — Destructive OutlinedButton label opening the cancellation confirmation dialog. Only shown for a renewable web subscription."
+  },
+  "subscriptionReactivateButton": "Reactivate my subscription",
+  "@subscriptionReactivateButton": {
+    "description": "FEAT-044f — OutlinedButton label shown when a cancellation is already scheduled; calls the reactivate action directly (no confirmation dialog needed, symmetrical action)."
+  },
+  "subscriptionCancelDialogTitle": "Cancel your subscription?",
+  "@subscriptionCancelDialogTitle": {
+    "description": "FEAT-044f — Title of the cancellation confirmation dialog (art. L215-1-1 recap requirement)."
+  },
+  "subscriptionCancelDialogBody": "You will keep Baillan {level} access until {date}. After that date, your account automatically switches back to the Free plan. No prorated refund is issued.",
+  "@subscriptionCancelDialogBody": {
+    "description": "FEAT-044f/FEAT-056 — Body of the cancellation confirmation dialog: end-of-access date, automatic downgrade to Free, no prorated refund (art. L215-1-1 recap requirement, plan §7). {level} is the real current paid level display label; {date} is already formatted DD/MM/YYYY via FrenchDate.format.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionCancelConfirm": "Confirm cancellation",
+  "@subscriptionCancelConfirm": {
+    "description": "FEAT-044f — Destructive confirm button of the cancellation dialog; triggers the manageSubscription('cancel') callable."
+  },
+  "subscriptionManageOnStore": "Manage your subscription from the App Store or Google Play.",
+  "@subscriptionManageOnStore": {
+    "description": "FEAT-044f — Info message shown instead of a button when proStore is app_store or play_store (mobile IAP cancellation is out of scope v1, handled by the platform's own subscription management UI)."
+  },
+  "subscriptionCancelSuccess": "Cancellation scheduled. You keep Pro access until the end of the current period.",
+  "@subscriptionCancelSuccess": {
+    "description": "FEAT-044f — Snackbar shown after a successful (or idempotent noop) manageSubscription('cancel') call. Optimistic confirmation — Firestore proWillRenew may take up to ~1 min to reflect via the RevenueCat webhook (plan §R2)."
+  },
+  "subscriptionReactivateSuccess": "Subscription reactivated — automatic renewal resumes.",
+  "@subscriptionReactivateSuccess": {
+    "description": "FEAT-044f — Snackbar shown after a successful (or idempotent noop) manageSubscription('reactivate') call."
+  },
+  "subscriptionErrorNoWebSub": "No active web subscription was found for this account.",
+  "@subscriptionErrorNoWebSub": {
+    "description": "FEAT-044f — Snackbar shown when the callable throws NoActiveWebSubscriptionException (failed-precondition/no_active_web_subscription — rare race, e.g. a mislabelled mobile subscriber or a subscription that just expired)."
+  },
+  "subscriptionErrorGeneric": "Something went wrong. Please try again.",
+  "@subscriptionErrorGeneric": {
+    "description": "FEAT-044f — Snackbar shown for any other manageSubscription failure (unauthenticated, network, unmapped Stripe error)."
+  },
+  "simulatorCompareButton": "Compare",
+  "@simulatorCompareButton": {
+    "description": "FEAT-055 — Entry button in the saved-scenarios rail that toggles selection mode to compare 2 or 3 scenarios."
+  },
+  "simulatorCompareCaption": "Compare 2 or 3 scenarios side by side.",
+  "@simulatorCompareCaption": {
+    "description": "Short caption displayed under the compare entry button (below the saved-scenarios rail, in every state — active, locked, or resolving) explaining what the feature does."
+  },
+  "simulatorCompareValidate": "Compare {count} scenarios",
+  "@simulatorCompareValidate": {
+    "description": "FEAT-055 — Confirmation button shown in selection mode; enabled when 2 or 3 scenarios are ticked. `count` is 2 or 3.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "simulatorCompareSelectionHint": "Pick 2 or 3 scenarios to compare.",
+  "@simulatorCompareSelectionHint": {
+    "description": "FEAT-055 — Hint displayed when the selection mode is active but fewer than 2 scenarios are ticked."
+  },
+  "simulatorCompareTitle": "Compare scenarios",
+  "@simulatorCompareTitle": {
+    "description": "FEAT-055 — AppBar title of the /simulator/compare page."
+  },
+  "simulatorCompareProOnly": "Scenario comparison is reserved for the Pro plan.",
+  "@simulatorCompareProOnly": {
+    "description": "FEAT-055 — Locked-state message when the landlord is not on the paid tier. Mirrors chargeRegularizationProOnly (FEAT-044b)."
+  },
+  "simulatorCompareReferenceChip": "Reference",
+  "@simulatorCompareReferenceChip": {
+    "description": "FEAT-055 — Small chip under the first scenario's name in the comparison table indicating it is the baseline for delta % values."
+  },
+  "simulatorCompareBackToRail": "Back to scenarios",
+  "@simulatorCompareBackToRail": {
+    "description": "FEAT-055 — CTA of the empty-state on the comparison page; navigates back to /simulator."
+  },
+  "simulatorCompareEmptyTooFew": "Select 2 or 3 scenarios to start a comparison.",
+  "@simulatorCompareEmptyTooFew": {
+    "description": "FEAT-055 — Body of the empty-state shown when fewer than 2 valid ids remain after filtering (e.g. all deleted mid-session)."
+  },
+  "simulatorCompareKpiDownPaymentLabel": "Required down payment",
+  "@simulatorCompareKpiDownPaymentLabel": {
+    "description": "FEAT-055 — Label of the 'down payment' KPI row on the comparison table."
+  },
+  "simulatorCompareKpiSavingsEffortLabel": "Savings effort",
+  "@simulatorCompareKpiSavingsEffortLabel": {
+    "description": "FEAT-055 — Label of the 'annual savings effort' KPI row on the comparison table. Formula: max(0, -monthlyCashflow) × 12."
+  },
+  "simulatorCompareEffortPerYearSuffix": "/year",
+  "@simulatorCompareEffortPerYearSuffix": {
+    "description": "FEAT-055 — Suffix appended to the formatted 'savings effort' euro amount to indicate the value is annual."
+  },
+  "dashboardActionLateSectionTitle": "Late rents",
+  "@dashboardActionLateSectionTitle": {
+    "description": "Dashboard actionable panel — heading of the sub-section listing leases with a late rent payment."
+  },
+  "dashboardActionEndingSectionTitle": "Leases ending soon",
+  "@dashboardActionEndingSectionTitle": {
+    "description": "Dashboard actionable panel — heading of the sub-section listing leases ending within the renewal window."
+  },
+  "dashboardActionLateBadge": "late",
+  "@dashboardActionLateBadge": {
+    "description": "Dashboard actionable panel — small trailing badge label on a late-rent row."
+  },
+  "dashboardActionEndingDate": "Ends {date}",
+  "@dashboardActionEndingDate": {
+    "description": "Dashboard actionable panel — subtitle of an ending-lease row, giving its formatted end date.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "dashboardActionAllClear": "All up to date",
+  "@dashboardActionAllClear": {
+    "description": "Dashboard actionable panel — empty-state message shown when there are neither late rents nor leases ending soon."
+  },
+  "dashboardActionViewAll": "View all ({count})",
+  "@dashboardActionViewAll": {
+    "description": "Dashboard actionable panel — 'view all' link shown under a section when it has more rows than the panel displays inline.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "dashboardActionDetailUnavailable": "Details unavailable",
+  "@dashboardActionDetailUnavailable": {
+    "description": "Dashboard actionable panel — fallback message shown when the underlying leases provider fails to load."
+  },
+  "dashboardActionDocsPending": "{count, plural, =1{1 pending document} other{{count} pending documents}}",
+  "@dashboardActionDocsPending": {
+    "description": "Passive line in the dashboard action panel showing how many documents are pending. {count} is the number of pending documents.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "dashboardCollectionTitle": "This month's collection",
+  "@dashboardCollectionTitle": {
+    "description": "Dashboard actionable panel — heading of the collection-progress banner (encaissé / attendu) at the top of the panel."
+  },
+  "dashboardCollectionSummary": "{collected} collected of {due} expected",
+  "@dashboardCollectionSummary": {
+    "description": "Dashboard actionable panel — collection banner summary line, formatted amounts already localized.",
+    "placeholders": { "collected": { "type": "String" }, "due": { "type": "String" } }
+  },
+  "dashboardCollectionOutstanding": "{amount} outstanding",
+  "@dashboardCollectionOutstanding": {
+    "description": "Dashboard actionable panel — collection banner, shown when the collected amount is below what's due this month.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+  "dashboardCollectionAllPaid": "Everything collected this month",
+  "@dashboardCollectionAllPaid": {
+    "description": "Dashboard actionable panel — collection banner, shown when the full amount due has been collected this month."
+  },
+  "dashboardCashflowCollapsibleTitle": "Monthly cash flow — details",
+  "@dashboardCashflowCollapsibleTitle": {
+    "description": "Dashboard — title of the collapsible tile (closed by default) wrapping the monthly cash-flow chart below the actionable panel."
+  },
+  "dashboardCashflowCollapsibleSubtitle": "Most useful when you record loan and expenses.",
+  "@dashboardCashflowCollapsibleSubtitle": {
+    "description": "Dashboard — subtitle of the collapsible cash-flow tile, hinting why the chart is more informative once loan/expenses are recorded."
+  },
+  "dashboardKpiOccupancyLabel": "Occupancy",
+  "@dashboardKpiOccupancyLabel": { "description": "Dashboard KPI: occupancy rate label" },
+  "dashboardKpiOccupancyRented": "{occupied}/{total} rented",
+  "@dashboardKpiOccupancyRented": { "description": "Dashboard KPI: rented/total subtitle", "placeholders": { "occupied": { "type": "int" }, "total": { "type": "int" } } },
+  "dashboardKpiOccupancyVacant": "{count} vacant",
+  "@dashboardKpiOccupancyVacant": { "description": "Dashboard KPI: vacant count", "placeholders": { "count": { "type": "int" } } },
+  "dashboardKpiOccupancyNone": "No property",
+  "@dashboardKpiOccupancyNone": { "description": "Dashboard KPI: occupancy empty state" },
+  "dashboardKpiPatrimonyLabel": "Portfolio value",
+  "@dashboardKpiPatrimonyLabel": { "description": "Dashboard KPI: portfolio value label" },
+  "dashboardKpiPatrimonyAtPurchase": "at purchase",
+  "@dashboardKpiPatrimonyAtPurchase": { "description": "Dashboard KPI: patrimony subtitle (purchase-cost basis)" },
+  "dashboardKpiPatrimonyPartial": "on {withPrice}/{total} properties with price",
+  "@dashboardKpiPatrimonyPartial": { "description": "Dashboard KPI: patrimony partial-data subtitle", "placeholders": { "withPrice": { "type": "int" }, "total": { "type": "int" } } },
+  "dashboardKpiPatrimonyNone": "Add purchase prices",
+  "@dashboardKpiPatrimonyNone": { "description": "Dashboard KPI: patrimony empty state" },
+  "paymentsPunctualityOnTime": "{onTime}/{total} on time",
+  "@paymentsPunctualityOnTime": { "description": "Payments: on-time/total count", "placeholders": { "onTime": { "type": "int" }, "total": { "type": "int" } } },
+  "paymentsPunctualityLate": "{count} late",
+  "@paymentsPunctualityLate": { "description": "Payments: late count (full)", "placeholders": { "count": { "type": "int" } } },
+  "paymentsPunctualityLateShort": "{count} late",
+  "@paymentsPunctualityLateShort": { "description": "Payments: late count (compact pill)", "placeholders": { "count": { "type": "int" } } },
+  "paymentsPunctualitySheetTitle": "Payment punctuality",
+  "@paymentsPunctualitySheetTitle": { "description": "Payments: punctuality detail sheet title" },
+  "paymentsPunctualityMethod": "On time = paid within 5 days of the due date.",
+  "@paymentsPunctualityMethod": { "description": "Payments: punctuality method note" },
+  "paymentsPunctualityPrivacy": "Private, from your records. Never shared.",
+  "@paymentsPunctualityPrivacy": { "description": "Payments: punctuality privacy note" },
+  "paymentsPunctualityOnTimeLabel": "On time",
+  "@paymentsPunctualityOnTimeLabel": { "description": "Payments: on-time tile label" },
+  "paymentsPunctualityLateLabel": "Late",
+  "@paymentsPunctualityLateLabel": { "description": "Payments: late tile label" },
+
+  "edlFormTitle": "New condition report",
+  "@edlFormTitle": { "description": "EDL (état des lieux) form page title (creation, FEAT-037)." },
+  "edlListTitle": "Condition reports",
+  "@edlListTitle": { "description": "EDL list page title (per lease)." },
+  "edlTypeLabel": "Condition report type",
+  "@edlTypeLabel": { "description": "EDL form: label above the entree/sortie SegmentedButton." },
+  "edlTypeEntree": "Move-in",
+  "@edlTypeEntree": { "description": "EDL type segment: move-in condition report (EtatDesLieuxType.entree)." },
+  "edlTypeSortie": "Move-out",
+  "@edlTypeSortie": { "description": "EDL type segment: move-out condition report (EtatDesLieuxType.sortie)." },
+  "edlDateLabel": "Condition report date",
+  "@edlDateLabel": { "description": "EDL form: date field label (date picker, defaults to today)." },
+  "edlConditionNeuf": "New",
+  "@edlConditionNeuf": { "description": "EDL element condition: new (EdlCondition.neuf)." },
+  "edlConditionBon": "Good",
+  "@edlConditionBon": { "description": "EDL element condition: good (EdlCondition.bon)." },
+  "edlConditionMoyen": "Fair",
+  "@edlConditionMoyen": { "description": "EDL element condition: fair (EdlCondition.moyen)." },
+  "edlConditionMauvais": "Poor",
+  "@edlConditionMauvais": { "description": "EDL element condition: poor (EdlCondition.mauvais)." },
+  "edlSectionRooms": "Rooms",
+  "@edlSectionRooms": { "description": "EDL form: rooms section title." },
+  "edlRoomNameLabel": "Room name",
+  "@edlRoomNameLabel": { "description": "EDL form: editable room name field label." },
+  "edlAddRoom": "Add a room",
+  "@edlAddRoom": { "description": "EDL form: button to append a new room to the list." },
+  "edlRemoveRoomTooltip": "Remove room",
+  "@edlRemoveRoomTooltip": { "description": "EDL form: tooltip on the icon button removing a room card." },
+  "edlElementNameLabel": "Element",
+  "@edlElementNameLabel": { "description": "EDL form: editable element name field label, within a room." },
+  "edlElementCommentLabel": "Comment",
+  "@edlElementCommentLabel": { "description": "EDL form: optional comment field label, within an element row." },
+  "edlAddElement": "Add an element",
+  "@edlAddElement": { "description": "EDL form: button to append a new element to a room." },
+  "edlRemoveElementTooltip": "Remove element",
+  "@edlRemoveElementTooltip": { "description": "EDL form: tooltip on the icon button removing an element row." },
+  "edlSectionMeters": "Meter readings",
+  "@edlSectionMeters": { "description": "EDL form: meter readings section title (all three fields optional)." },
+  "edlMeterWater": "Water",
+  "@edlMeterWater": { "description": "EDL form: water meter reading field label." },
+  "edlMeterElectricity": "Electricity",
+  "@edlMeterElectricity": { "description": "EDL form: electricity meter reading field label." },
+  "edlMeterGas": "Gas",
+  "@edlMeterGas": { "description": "EDL form: gas meter reading field label." },
+  "edlKeysCount": "Number of keys handed over",
+  "@edlKeysCount": { "description": "EDL form: keys count field label (integer)." },
+  "edlGeneralComment": "General comment",
+  "@edlGeneralComment": { "description": "EDL form: optional free-text general comment field label." },
+  "edlGenerate": "Generate",
+  "@edlGenerate": { "description": "EDL form: submit button label — creates the condition report and opens its PDF." },
+  "edlCreatedSnackbar": "Condition report generated.",
+  "@edlCreatedSnackbar": { "description": "SnackBar shown after createEtatDesLieux succeeds." },
+  "edlErrorLeaseNotOwned": "This lease does not belong to you.",
+  "@edlErrorLeaseNotOwned": { "description": "SnackBar error when the server refuses createEtatDesLieux (FirebaseFunctionsException message 'lease not owned')." },
+  "edlErrorProfileIncomplete": "Complete your landlord profile (name, address) before generating a condition report.",
+  "@edlErrorProfileIncomplete": { "description": "SnackBar error when the server refuses createEtatDesLieux (FirebaseFunctionsException message 'profile_incomplete')." },
+  "edlErrorGeneric": "Something went wrong. Please try again.",
+  "@edlErrorGeneric": { "description": "SnackBar error for any other createEtatDesLieux failure (EdlFormErrorReason.generic)." },
+  "edlErrorOpenPdf": "Unable to open the PDF.",
+  "@edlErrorOpenPdf": { "description": "SnackBar shown when rendering or opening the generated condition report PDF fails, after a successful creation." },
+  "edlListEmptyTitle": "No condition reports yet",
+  "@edlListEmptyTitle": { "description": "EDL list page: empty state title when the lease has no condition report yet." },
+  "edlListEmptyMessage": "Condition reports for this lease appear here once you create one.",
+  "@edlListEmptyMessage": { "description": "EDL list page: empty state explanatory message." },
+  "edlNewButton": "New condition report",
+  "@edlNewButton": { "description": "EDL list page: CTA button label (empty state action and list header) that pushes the creation form." },
+  "edlListErrorTitle": "Unable to load condition reports.",
+  "@edlListErrorTitle": { "description": "EDL list page: error view title when listForLease fails, with a retry button." },
+  "edlPdfButton": "PDF",
+  "@edlPdfButton": { "description": "EDL list page: per-row button label that renders and opens the condition report PDF." },
+  "reviewInviteTitle": "Your opinion matters",
+  "@reviewInviteTitle": { "description": "FEAT-060 — Title of the review invitation card shown on the dashboard (web only)." },
+  "reviewInviteBody": "You've been using Baillan for a few weeks. Tell us what you think — it takes 30 seconds.",
+  "@reviewInviteBody": { "description": "FEAT-060 — Body of the review invitation card on the dashboard. 'Baillan' is the brand name — keep untranslated." },
+  "reviewInviteButton": "Give feedback",
+  "@reviewInviteButton": { "description": "FEAT-060 — Button of the review invitation card; opens the in-app feedback form." },
+  "reviewInviteCloseTooltip": "Close",
+  "@reviewInviteCloseTooltip": { "description": "FEAT-060 — Tooltip of the close icon on the review invitation card." }
 }

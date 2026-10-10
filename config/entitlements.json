@@ -1,0 +1,154 @@
+{
+  "_readme": [
+    "SOURCE CANONIQUE UNIQUE des droits par palier (FEAT-056, plan docs/plans/FEAT-056-multi-tier-subscriptions.md §2).",
+    "Ce fichier est la SEULE source de verite. Les deux miroirs sont GENERES, jamais ecrits a la main :",
+    "  - Dart : lib/features/auth/domain/plan_matrix.g.dart      (tool/gen_entitlements.dart)",
+    "  - TS   : functions/src/entitlements/plan_matrix.generated.ts (functions/tool/gen_entitlements.mjs)",
+    "Apres toute edition : bash scripts/check-entitlements-parity.sh (relance les generateurs + verifie la parite).",
+    "JSON STRICT (pas de JSONC) : le fichier est parse tel quel par json.decode (Dart) ET JSON.parse (Node),",
+    "sans stripper de commentaires. Les notes vivent donc dans des cles '_...' ignorees par les generateurs."
+  ],
+  "_invariants": [
+    "I5 — NE JAMAIS introduire un palier payant de rang INFERIEUR a 'pro'. Le client fait un fail-UP : un",
+    "     planLevel inconnu sur un doc 'paid' est traite comme 'pro'. Une offre moins-disante que Pro serait",
+    "     donc sur-autorisee par toutes les builds deja diffusees. Une offre inferieure se traite comme une",
+    "     revision de la grille 'free', jamais comme un nouveau palier.",
+    "R4 — rcEntitlementId 'Bailan Pro' (un seul 'l') est une TYPO HISTORIQUE LOAD-BEARING : c'est la cle",
+    "     effective des abonnes existants cote RevenueCat. La corriger ferait passer tous leurs events par",
+    "     levelForRcEntitlement() -> null -> ignored : plus aucune expiration ni renouvellement applique,",
+    "     silencieusement. NE JAMAIS LA RENOMMER.",
+    "rcEntitlementId: null = aucun entitlement RevenueCat n'existe encore pour ce palier (a creer au",
+    "     dashboard RC avant de le rendre achetable). Un palier purchasable:true DOIT avoir un rcEntitlementId.",
+    "CONTRAT D'IDENTIFIANT (2026-08-02) : 'Baillan Max' et 'Baillan Ultra' sont ecrits ICI EN PREMIER,",
+    "     avant d'exister cote RevenueCat. Les entitlements crees au dashboard DOIVENT porter EXACTEMENT",
+    "     ces chaines, casse et espace compris. Toute divergence est SILENCIEUSE : levelForRcEntitlement()",
+    "     renvoie null, l'event est classe 'ignored', le webhook repond 2xx et l'abonne ne recoit jamais",
+    "     son acces. Aucun test ni log d'erreur ne le signalera.",
+    "     L'orthographe correcte (deux 'l') est volontaire ici : ces entitlements sont NEUFS, sans aucun",
+    "     abonne, donc rien n'oblige a propager la typo historique de 'Bailan Pro' (cf. R4 ci-dessus)."
+  ],
+  "schemaVersion": 1,
+  "levels": [
+    {
+      "id": "pro",
+      "rank": 10,
+      "rcEntitlementId": "Bailan Pro",
+      "stripePriceParam": {
+        "monthly": "STRIPE_PRICE_PRO_MONTHLY",
+        "annual": "STRIPE_PRICE_PRO_ANNUAL"
+      },
+      "priceLabel": {
+        "monthly": "7,99 €",
+        "annual": "79 €"
+      },
+      "purchasable": true,
+      "priceIndicative": false,
+      "recommended": false
+    },
+    {
+      "id": "max",
+      "rank": 20,
+      "rcEntitlementId": "Baillan Max",
+      "stripePriceParam": {
+        "monthly": "STRIPE_PRICE_MAX_MONTHLY",
+        "annual": "STRIPE_PRICE_MAX_ANNUAL"
+      },
+      "priceLabel": {
+        "monthly": "14,99 €",
+        "annual": "149 €"
+      },
+      "purchasable": false,
+      "priceIndicative": true,
+      "recommended": true
+    },
+    {
+      "id": "ultra",
+      "rank": 30,
+      "rcEntitlementId": "Baillan Ultra",
+      "stripePriceParam": {
+        "monthly": "STRIPE_PRICE_ULTRA_MONTHLY",
+        "annual": "STRIPE_PRICE_ULTRA_ANNUAL"
+      },
+      "priceLabel": {
+        "monthly": "24,99 €",
+        "annual": "249 €"
+      },
+      "purchasable": false,
+      "priceIndicative": true,
+      "recommended": false
+    }
+  ],
+  "_quotasReadme": [
+    "STRUCTURE : chaque quota porte une valeur par PALIER EFFECTIF — anonymous | free | pro | max | ultra —",
+    "et JAMAIS par classe d'acces (anonymous|free|paid). Le palier effectif est derive de",
+    "(subscriptionTier, planLevel) par resolvePlan() ; un doc legacy 'paid' sans planLevel se derive en 'pro'.",
+    "Indexer sur subscriptionTier rendrait la differenciation Pro/Max/Ultra inexprimable — ne pas le faire.",
+    "null = illimite. 'unit' distingue les compteurs (count) des tailles en octets (bytes) — ne jamais",
+    "additionner les deux. 'enforcement' : server = une Cloud Function refuse ; client = UI seule, donc",
+    "contournable (choix assume et documente) ; none = promesse commerciale hors produit.",
+    "GRILLE COMMERCIALE (PR-7, arbitree par le proprietaire le 2026-08-01, cf.",
+    "docs/backlog/056-abonnements-pro-max-ultra.md §2) : les plafonds de volume sont DIFFERENCIES entre",
+    "paliers payants — Pro et Max sont FINIS, seul Ultra est illimite. C'est la seule differenciation",
+    "Pro/Max/Ultra livrable sans dependre d'un chantier metier non construit.",
+    "Cout par bien au plafond : Pro 1,60 EUR/bien, Max 1,00 EUR/bien — contre 9,75 a 12,99 EUR/bien chez",
+    "les concurrents qui facturent a l'unite. L'argument forfaitaire tient meme sur le palier le plus borne.",
+    "ATTENTION legacy : un doc 'paid' sans planLevel se derive en 'pro' et herite donc de plafonds FINIS,",
+    "alors que l'ancienne offre unique etait illimitee. En production l'ensemble concerne est VIDE",
+    "(SUBSCRIPTIONS_ENABLED=false, aucun abonne reel) ; des comptes de test staging peuvent l'etre.",
+    "Changer un plafond = editer ce fichier + regenerer, aucune ligne de Dart ou de TypeScript."
+  ],
+  "quotas": {
+    "properties": {
+      "errorCode": "property_limit_reached",
+      "enforcement": "server",
+      "unit": "count",
+      "values": {"anonymous": 0, "free": 2, "pro": 5, "max": 15, "ultra": null}
+    },
+    "tenants": {
+      "errorCode": "tenant_limit_reached",
+      "enforcement": "server",
+      "unit": "count",
+      "values": {"anonymous": 0, "free": 3, "pro": 8, "max": 20, "ultra": null}
+    },
+    "activeLeases": {
+      "errorCode": "lease_limit_reached",
+      "enforcement": "server",
+      "unit": "count",
+      "values": {"anonymous": 0, "free": 2, "pro": 5, "max": 15, "ultra": null}
+    },
+    "documents": {
+      "errorCode": "document_limit_reached",
+      "enforcement": "server",
+      "unit": "count",
+      "values": {"anonymous": 0, "free": 10, "pro": 50, "max": 150, "ultra": null}
+    },
+    "_scenariosNote": "enforcement 'server' depuis PR-2b : la callable createScenario (functions/src/callable/scenarios.ts) impose le plafond et la rule investment_scenarios/create est passee a 'if false'. Le chemin d'ecriture client doit donc appeler la callable.",
+    "scenarios": {
+      "errorCode": "scenario_limit_reached",
+      "enforcement": "server",
+      "unit": "count",
+      "values": {"anonymous": 1, "free": 3, "pro": 15, "max": 30, "ultra": null}
+    },
+    "_documentMaxBytesNote": "Quota de TAILLE par fichier (pas un compteur cumule, unit 'bytes' : ne jamais additionner avec les quotas 'count' ci-dessus). Applique sur TROIS niveaux, du plus grossier au plus fin : (1) storage.rules plafonne l'upload a 50 Mio = le MAX de cette ligne, garde-fou anti-abus qui ne peut PAS dependre du palier (les regles Storage ne lisent que la base Firestore par defaut, or staging vit sur une base nommee, ADR 0003) ; (2) createDocument applique le plafond DU PALIER via assertRealSizeWithinPlan(), sur la taille REELLE lue dans les metadonnees Storage et non sur celle declaree par le client, en 'resource-exhausted' + message 'file_too_large' avec details {limitBytes, sizeBytes, upgradeTo} ; un refus purge l'objet orphelin du bucket ; (3) le client pre-verifie via quotaLimitProvider(PlanQuota.documentMaxBytes) pour eviter un upload voue a l'echec. Le plafond de NOMBRE est evalue AVANT celui de taille, sinon un compte anonymous (0 octet autorise) s'entendrait repondre 'fichier trop volumineux'. Si un palier depasse un jour 50 Mio ici, storage.rules doit suivre : scripts/check-entitlements-parity.sh le verifie et fait echouer la CI sinon.",
+    "documentMaxBytes": {
+      "errorCode": "file_too_large",
+      "enforcement": "server",
+      "unit": "bytes",
+      "values": {"anonymous": 0, "free": 10485760, "pro": 10485760, "max": 26214400, "ultra": 52428800}
+    }
+  },
+  "_featuresReadme": [
+    "status 'planned' = feature annoncee mais NON construite : hasFeature() renvoie false pour TOUS les",
+    "paliers, Ultra compris (sinon on promet a un abonne Ultra un export comptable qui n'existe pas).",
+    "'feat' pointe le chantier metier qui debloque le passage a 'shipped'."
+  ],
+  "features": {
+    "chargeRegularization": {"minLevel": "pro", "enforcement": "client", "status": "shipped"},
+    "scenarioComparison": {"minLevel": "pro", "enforcement": "client", "status": "shipped"},
+    "prioritySupport": {"minLevel": "max", "enforcement": "none", "status": "shipped"},
+    "paymentReminders": {"minLevel": "max", "enforcement": "server", "status": "planned", "feat": "FEAT-031"},
+    "listings": {"minLevel": "max", "enforcement": "server", "status": "planned", "feat": "FEAT-051"},
+    "accountingExport": {"minLevel": "ultra", "enforcement": "server", "status": "planned", "feat": "FEAT-032"},
+    "collaborators": {"minLevel": "ultra", "enforcement": "server", "status": "planned", "feat": "FEAT-034"}
+  }
+}

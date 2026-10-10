@@ -3,6 +3,7 @@
 /// Couvre : rendu form, validators, disclaimer, save dialog, load scenario.
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
@@ -801,6 +802,72 @@ void main() {
       );
       expect(priceField.controller.text, isEmpty);
       expect(find.text("Simulateur d'investissement"), findsOneWidget);
+    });
+  });
+
+  group('SimulatorPage — pied « Prochainement — Plan Pro »', () {
+    const sectionKey = Key('coming_soon_paid_plan_section');
+    const anonHintKey = Key('create_free_account_first_hint');
+
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    testWidgets('web + compte free → section affichée', (tester) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(sectionKey, skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Prochainement — Plan Pro', skipOffstage: false),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'app store (iOS/Android) + compte free → section, notify-me et financement absents',
+      (tester) async {
+        debugIsStoreAppOverride = true;
+        await tester.pumpWidget(_buildPage());
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(sectionKey, skipOffstage: false), findsNothing);
+        expect(
+          find.byKey(
+            const Key('coming_soon_notify_button'),
+            skipOffstage: false,
+          ),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const Key('funding_interest_button'), skipOffstage: false),
+          findsNothing,
+        );
+        expect(
+          find.text('Prochainement — Plan Pro', skipOffstage: false),
+          findsNothing,
+        );
+        expect(
+          find.textContaining('financement', skipOffstage: false),
+          findsNothing,
+        );
+        // Le reste de la page est intact.
+        expect(find.byKey(const Key('save_scenario_button')), findsOneWidget);
+      },
+    );
+
+    testWidgets('app store + anonyme → hint « créer un compte » inchangé', (
+      tester,
+    ) async {
+      debugIsStoreAppOverride = true;
+      await tester.pumpWidget(
+        _buildPage(
+          sessionState: SessionState.anonymous,
+          tier: SubscriptionTier.anonymous,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(anonHintKey, skipOffstage: false), findsOneWidget);
+      expect(find.byKey(sectionKey, skipOffstage: false), findsNothing);
     });
   });
 }
