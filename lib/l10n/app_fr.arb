@@ -1454,5 +1454,7 @@
   "storePurchaseError": "L'achat n'a pas abouti. Vérifiez votre connexion et réessayez.",
   "storeRestoreNothing": "Aucun achat à restaurer sur ce compte.",
   "storeRestoreError": "La restauration a échoué. Réessayez dans un instant.",
+  "storePurchaseAlreadyOwned": "Vous avez déjà cet abonnement sur votre compte {store}. Touchez « Restaurer les achats » pour le retrouver.",
+  "storeSubscriptionOwnedByAnotherAccount": "L'abonnement de ce compte {store} est déjà rattaché à un autre compte Baillan. Connectez-vous avec ce compte pour en profiter.",
   "storePaywallTitle": "Baillan Pro"
 }

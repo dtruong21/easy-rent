@@ -6154,6 +6154,24 @@
   "@storeRestoreNothing": { "description": "FEAT-044e — Snackbar shown when restoring purchases found nothing." },
   "storeRestoreError": "Restore failed. Try again in a moment.",
   "@storeRestoreError": { "description": "FEAT-044e — Snackbar shown when restoring purchases failed." },
+  "storePurchaseAlreadyOwned": "You already have this subscription on your {store} account. Tap “Restore purchases” to get it back.",
+  "@storePurchaseAlreadyOwned": {
+    "description": "FEAT-044e — Snackbar shown when a purchase fails because the store account already has this subscription active: the user must restore, not buy again. {store} is the proper noun 'App Store' or 'Google Play' (never translated).",
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storeSubscriptionOwnedByAnotherAccount": "The subscription on this {store} account is already linked to another Baillan account. Sign in with that account to use it.",
+  "@storeSubscriptionOwnedByAnotherAccount": {
+    "description": "FEAT-044e — Snackbar shown when a purchase or a restore fails because the store account's subscription belongs to another Baillan account. {store} is the proper noun 'App Store' or 'Google Play' (never translated).",
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
   "storePaywallTitle": "Baillan Pro",
-  "@storePaywallTitle": { "description": "FEAT-044e — AppBar title of /pro in the iOS/Android store apps when in-app purchase is on. Only Pro is sold there: must not name Max or Ultra. 'Baillan Pro' is the product name — keep untranslated." }
+  "@storePaywallTitle": { "description": "FEAT-044e — AppBar title of /pro in the iOS/Android store apps (in-app purchase on or off). Only Pro is sold there: must not name Max or Ultra. 'Baillan Pro' is the product name — keep untranslated." }
 }

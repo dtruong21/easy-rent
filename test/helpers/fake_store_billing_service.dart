@@ -55,6 +55,20 @@ class FakeStoreBillingService implements StoreBillingService {
     return restoreOutcome;
   }
 
+  /// Le store rapporte déjà un abonnement actif (achat fait, activation
+  /// serveur pas encore visible). [entitlementGate] retient la réponse.
+  bool activeEntitlement = false;
+  Completer<void>? entitlementGate;
+  int entitlementCalls = 0;
+
+  @override
+  Future<bool> hasActiveEntitlement({required String uid}) async {
+    entitlementCalls++;
+    calls.add('hasActiveEntitlement:$uid');
+    if (entitlementGate != null) await entitlementGate!.future;
+    return activeEntitlement;
+  }
+
   @override
   Future<Uri?> managementUrl() async {
     calls.add('managementUrl');

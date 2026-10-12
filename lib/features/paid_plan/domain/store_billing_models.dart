@@ -41,13 +41,29 @@ final class PurchasePending extends PurchaseOutcome {
   const PurchasePending();
 }
 
+/// Pourquoi un achat a échoué — sert à choisir le message affiché.
+enum PurchaseFailureReason {
+  /// Le compte store a déjà cet abonnement actif : il faut le restaurer, pas
+  /// le racheter.
+  alreadyOwned,
+
+  /// L'abonnement du compte store est rattaché à un autre compte Baillan.
+  ownedByAnotherAccount,
+
+  /// Toute autre cause (réseau, store, service non configuré…).
+  other,
+}
+
 final class PurchaseFailed extends PurchaseOutcome {
-  const PurchaseFailed(this.code);
+  const PurchaseFailed(this.code, {this.reason = PurchaseFailureReason.other});
 
   /// Code technique (nom du `PurchasesErrorCode`, ou `not_configured` /
   /// `package_unavailable`) — journal et support, jamais affiché tel quel.
   final String code;
+
+  final PurchaseFailureReason reason;
 }
 
-/// Issue de « Restaurer les achats ».
-enum RestoreOutcome { success, nothingToRestore, error }
+/// Issue de « Restaurer les achats ». [ownedByAnotherAccount] : l'abonnement
+/// du compte store est rattaché à un autre compte Baillan.
+enum RestoreOutcome { success, nothingToRestore, ownedByAnotherAccount, error }

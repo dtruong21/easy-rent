@@ -39,6 +39,39 @@ void main() {
         );
       }
     });
+
+    PurchaseFailureReason reasonFor(PurchasesErrorCode code) =>
+        (purchaseOutcomeForError(code) as PurchaseFailed).reason;
+
+    test('produit déjà actif sur le compte store → alreadyOwned', () {
+      expect(
+        reasonFor(PurchasesErrorCode.productAlreadyPurchasedError),
+        PurchaseFailureReason.alreadyOwned,
+      );
+    });
+
+    test('reçu utilisé par un autre abonné → ownedByAnotherAccount', () {
+      for (final code in [
+        PurchasesErrorCode.receiptAlreadyInUseError,
+        PurchasesErrorCode.receiptInUseByOtherSubscriberError,
+      ]) {
+        expect(
+          reasonFor(code),
+          PurchaseFailureReason.ownedByAnotherAccount,
+          reason: code.name,
+        );
+      }
+    });
+
+    test('toute autre erreur → other', () {
+      for (final code in [
+        PurchasesErrorCode.storeProblemError,
+        PurchasesErrorCode.networkError,
+        PurchasesErrorCode.unknownError,
+      ]) {
+        expect(reasonFor(code), PurchaseFailureReason.other, reason: code.name);
+      }
+    });
   });
 
   group('errorCodeOrNull', () {
@@ -73,6 +106,29 @@ void main() {
 
     test('au moins un entitlement actif → success', () {
       expect(restoreOutcomeFor(activeEntitlements: 1), RestoreOutcome.success);
+    });
+  });
+
+  group('restoreOutcomeForError', () {
+    test('reçu utilisé par un autre abonné → ownedByAnotherAccount', () {
+      for (final code in [
+        PurchasesErrorCode.receiptAlreadyInUseError,
+        PurchasesErrorCode.receiptInUseByOtherSubscriberError,
+      ]) {
+        expect(
+          restoreOutcomeForError(code),
+          RestoreOutcome.ownedByAnotherAccount,
+          reason: code.name,
+        );
+      }
+    });
+
+    test('autre erreur ou code illisible → error', () {
+      expect(
+        restoreOutcomeForError(PurchasesErrorCode.networkError),
+        RestoreOutcome.error,
+      );
+      expect(restoreOutcomeForError(null), RestoreOutcome.error);
     });
   });
 
@@ -152,6 +208,10 @@ void main() {
 
     test('page de gestion → null', () async {
       expect(await service.managementUrl(), isNull);
+    });
+
+    test('droit actif côté store → false (jamais de faux positif)', () async {
+      expect(await service.hasActiveEntitlement(uid: 'u1'), isFalse);
     });
 
     test('logIn / logOut → sans effet ni exception', () async {
