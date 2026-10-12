@@ -17,7 +17,7 @@ par défaut : message neutre inchangé). Points de conformité couverts par le c
 - **3.1.2** : sur l'écran d'achat, mentions du renouvellement automatique et de
   la résiliation dans les réglages du store, liens vers les CGU (`/terms`) et la
   politique de confidentialité (`/privacy`), bouton « Restaurer les achats ».
-- **2.1** : Max et Ultra ne sont pas affichés dans les apps (Pro seul).
+- **2.1** : Max et Ultra ne sont pas affichés dans les apps (Pro seul), y compris dans le titre de `/pro` (« Baillan Pro »), interrupteur actif ou coupé.
 - **3.1.3(b)** : un abonné web retrouve Pro dans l'app : « Vous êtes déjà abonné »,
   sans bouton d'achat ; « Gérer mon abonnement » mène au profil.
 
