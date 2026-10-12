@@ -68,7 +68,9 @@ Sur le Mac de release (Xcode à jour — 26.6 utilisé en juillet) :
    l'option Apple).
 4. App Store Connect → créer l'app sur le bundle ID `com.daki.baillan`.
 5. Build (Flutter **3.44.6**, version épinglée en CI — `flutter --version` doit
-   concorder) : `flutter build ipa`
+   concorder) :
+   `flutter build ipa --release --dart-define-from-file=dart-defines.prod.json`
+   (réglages de prod obligatoires, cf. [`FASTLANE.md`](FASTLANE.md) §2.4)
    → upload via Xcode Organizer ou Transporter.
 6. Firebase : **rien à faire** côté iOS (pas de SHA). Le provider Apple de Firebase
    Auth n'est pas utilisé en v1.
@@ -97,8 +99,15 @@ cd <repo>                                  # branche develop/main à jour
 cp ~/keystores/baillan/key.properties android/    # du compte propriétaire de la clé
 flutter --version                          # doit afficher 3.44.6 (épinglé en CI)
 flutter pub get && dart run build_runner build --delete-conflicting-outputs
-flutter build appbundle --release          # → build/app/outputs/bundle/release/app-release.aab
+cp dart-defines.prod.example.json dart-defines.prod.json   # une fois, puis le renseigner
+flutter build appbundle --release \
+  --dart-define-from-file=dart-defines.prod.json   # → build/app/outputs/bundle/release/app-release.aab
 ```
+
+- **Réglages de prod obligatoires** (`dart-defines.prod.json`, gitignoré) : sans
+  `APP_ENV=prod`, l'app publiée afficherait le badge « DEV/STAGING ». Les lanes
+  Fastlane (`cd android && bundle exec fastlane build`) refusent de builder si le
+  fichier est absent ou incohérent — cf. [`FASTLANE.md`](FASTLANE.md) §2.4.
 
 - Sans `android/key.properties`, le build retombe **silencieusement** en
   signature debug (fallback CI voulu) → Play refusera l'AAB. Vérifier :

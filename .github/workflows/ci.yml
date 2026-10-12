@@ -74,6 +74,11 @@ jobs:
       - name: Check theme token mirrors
         run: bash scripts/check-theme-tokens.sh
 
+      # Garde-fou des builds de release mobile (réglages de prod obligatoires,
+      # lu par les Fastfile iOS et Android). Ruby est préinstallé sur le runner.
+      - name: Check mobile release defines guard
+        run: ruby tool/release/release_defines_test.rb
+
   functions:
     name: Functions (lint · build · test)
     runs-on: ubuntu-latest

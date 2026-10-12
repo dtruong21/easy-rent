@@ -228,19 +228,17 @@ FEAT-044e. Spec : `docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-desig
   App Store Connect et Play Console, offre RevenueCat par défaut avec les
   formules mensuelle et annuelle, compte de démo dans `_ops/sandboxAllowlist`,
   RevenueCat déclaré comme sous-traitant, build Android release vérifié.
-  Ensuite seulement, build d'essai avec `IAP_ENABLED=true` et les clés :
+  Ensuite seulement, build d'essai : passer `IAP_ENABLED` à `true` et renseigner
+  `REVENUECAT_APPLE_API_KEY` (`appl_…`) et `REVENUECAT_GOOGLE_API_KEY` (`goog_…`)
+  dans `dart-defines.prod.json`, puis :
 
   ```bash
-  flutter build ipa --release \
-    --dart-define=APP_ENV=prod \
-    --dart-define=IAP_ENABLED=true \
-    --dart-define=REVENUECAT_APPLE_API_KEY=appl_xxx
-
-  flutter build appbundle --release \
-    --dart-define=APP_ENV=prod \
-    --dart-define=IAP_ENABLED=true \
-    --dart-define=REVENUECAT_GOOGLE_API_KEY=goog_xxx
+  flutter build ipa --release --dart-define-from-file=dart-defines.prod.json
+  flutter build appbundle --release --dart-define-from-file=dart-defines.prod.json
   ```
+
+  Les lanes Fastlane `build` font la même chose et refusent un fichier
+  incohérent (clé absente, clé `test_…`) — cf. [`FASTLANE.md`](FASTLANE.md) §2.4.
 
 - Checklist d'activation (#207), en plus des points ci-dessus :
   1. **Bloquant — restauration et transfert entre comptes** : décider le
@@ -399,13 +397,16 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
 
   ```bash
   flutter build appbundle --release \
-    --dart-define=APP_ENV=prod \
+    --dart-define-from-file=dart-defines.prod.json \
     --build-name="$(bash tool/release/version.sh name)" \
     --build-number="$(bash tool/release/version.sh code)"
   ```
 
-  > ⚠️ **`--dart-define=APP_ENV=prod` obligatoire sur les builds de release
-  > mobile.** Sans lui, `APP_ENV` retombe sur son défaut `'dev'` → l'app afficherait
+  > ⚠️ **`APP_ENV=prod` obligatoire sur les builds de release mobile** — il vit
+  > dans `dart-defines.prod.json` (gitignoré ; modèle
+  > `dart-defines.prod.example.json`). Les lanes Fastlane `build` passent ce
+  > fichier et refusent de builder s'il est absent ou incohérent (cf.
+  > [`FASTLANE.md`](FASTLANE.md) §2.4). Sans lui, `APP_ENV` retombe sur son défaut `'dev'` → l'app afficherait
   > le badge « DEV/STAGING » à de vrais utilisateurs. La base Firestore, elle,
   > reste protégée quoi qu'il arrive : le `firestoreProvider` route **tout build
   > mobile de release** vers `(default)` (garde `kIsWeb` ; `MOBILE_STAGING` est
@@ -413,9 +414,8 @@ configuration de plateforme (bundle ID, Firebase apps, signing).
   > ce flag. Seul le build **debug** de test avec `MOBILE_STAGING` vise `staging`
   > (cf. [Test Lab (Robo)](#test-lab-robo)).
 
-  > ℹ️ **iOS : ajouter `--dart-define=APP_STORE_ID=<Apple ID numérique>` au build
-  > de release** (`flutter build ipa --release …`, ou la clé `APP_STORE_ID` de
-  > `dart-defines.prod.json`). Sans lui, « Noter l'app » est masqué sur iOS ; la
+  > ℹ️ **iOS : renseigner `APP_STORE_ID` (Apple ID numérique) dans
+  > `dart-defines.prod.json`.** Sans lui, « Noter l'app » est masqué sur iOS ; la
   > demande d'avis native fonctionne sans. Android n'en a pas besoin (FEAT-060).
 
   Le build number (= nb de commits) est strictement croissant → un nouveau
