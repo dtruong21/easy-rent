@@ -10,14 +10,35 @@ import 'store_billing_service.dart';
 
 final _log = Logger('RevenueCatStoreBillingService');
 
+/// PURE — raison d'un échec, pour le message affiché : abonnement déjà actif
+/// sur le compte store, ou rattaché à un autre compte Baillan.
+PurchaseFailureReason _failureReasonFor(PurchasesErrorCode code) =>
+    switch (code) {
+      PurchasesErrorCode.productAlreadyPurchasedError =>
+        PurchaseFailureReason.alreadyOwned,
+      PurchasesErrorCode.receiptAlreadyInUseError ||
+      PurchasesErrorCode.receiptInUseByOtherSubscriberError =>
+        PurchaseFailureReason.ownedByAnotherAccount,
+      _ => PurchaseFailureReason.other,
+    };
+
 /// PURE — issue d'un achat selon le code d'erreur du SDK.
 @visibleForTesting
 PurchaseOutcome purchaseOutcomeForError(PurchasesErrorCode code) =>
     switch (code) {
       PurchasesErrorCode.purchaseCancelledError => const PurchaseCancelled(),
       PurchasesErrorCode.paymentPendingError => const PurchasePending(),
-      _ => PurchaseFailed(code.name),
+      _ => PurchaseFailed(code.name, reason: _failureReasonFor(code)),
     };
+
+/// PURE — issue d'une restauration en échec selon le code d'erreur du SDK
+/// (`null` = code illisible).
+@visibleForTesting
+RestoreOutcome restoreOutcomeForError(PurchasesErrorCode? code) =>
+    code != null &&
+        _failureReasonFor(code) == PurchaseFailureReason.ownedByAnotherAccount
+    ? RestoreOutcome.ownedByAnotherAccount
+    : RestoreOutcome.error;
 
 /// PURE — code d'erreur du SDK pour [e], ou `null` si illisible. Le SDK fait
 /// `num.parse(e.code)` puis indexe l'enum : un code non numérique lève
@@ -186,7 +207,21 @@ class RevenueCatStoreBillingService implements StoreBillingService {
       );
     } catch (e, st) {
       _log.warning('restauration RevenueCat échouée', e, st);
-      return RestoreOutcome.error;
+      return restoreOutcomeForError(
+        e is PlatformException ? errorCodeOrNull(e) : null,
+      );
+    }
+  }
+
+  @override
+  Future<bool> hasActiveEntitlement({required String uid}) async {
+    if (!_configured) return false;
+    if (!await _ensureLoggedIn(uid)) return false;
+    try {
+      return (await Purchases.getCustomerInfo()).entitlements.active.isNotEmpty;
+    } catch (e, st) {
+      _log.warning('droits RevenueCat illisibles', e, st);
+      return false;
     }
   }
 

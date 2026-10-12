@@ -222,12 +222,13 @@ FEAT-044e. Spec : `docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-desig
   `logIn(uid)` ; à défaut aucun achat ne part). L'écran d'achat (lot 3,
   `lib/features/paid_plan/presentation/widgets/pro_store_paywall.dart`) ne fait
   que passer l'uid Firebase à `purchase` et `restore`.
-- Le code du lot 3 (écran d'achat `/pro` en mode store) est complet. L'activation
-  n'attend plus que la checklist #207 : produits App Store Connect et Play
-  Console, offre RevenueCat par défaut avec les formules mensuelle et annuelle,
-  compte de démo dans `_ops/sandboxAllowlist`, RevenueCat déclaré comme
-  sous-traitant, build Android release vérifié. Ensuite seulement, build d'essai
-  avec `IAP_ENABLED=true` et les clés :
+- Le code de l'écran d'achat (`/pro` en mode store) est livré, compléments du
+  2026-10-12 inclus (points 2 et 3 ci-dessous). L'activation n'attend plus que
+  la checklist #207, **dont la décision bloquante du point 1** : produits
+  App Store Connect et Play Console, offre RevenueCat par défaut avec les
+  formules mensuelle et annuelle, compte de démo dans `_ops/sandboxAllowlist`,
+  RevenueCat déclaré comme sous-traitant, build Android release vérifié.
+  Ensuite seulement, build d'essai avec `IAP_ENABLED=true` et les clés :
 
   ```bash
   flutter build ipa --release \
@@ -249,15 +250,19 @@ FEAT-044e. Spec : `docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-desig
      l'événement `TRANSFER` et le cron ne fait jamais passer de gratuit à
      payant : le nouveau compte resterait gratuit jusqu'au prochain
      renouvellement. Option recommandée : régler RevenueCat pour conserver
-     l'abonnement sur l'identifiant d'origine (aucun code) et afficher un
-     message dédié pour `receiptAlreadyInUseError` ; sinon gérer `TRANSFER`
-     côté serveur.
-  2. Messages d'erreur d'achat : `productAlreadyPurchasedError` et
-     `receiptAlreadyInUseError` ne doivent pas afficher « Vérifiez votre
-     connexion et réessayez » (à faire avant l'activation).
-  3. Activation en cours conservée si l'utilisateur quitte `/pro` et y revient
-     avant l'écriture du webhook (ne pas réafficher les boutons d'achat tant que
-     le SDK voit un droit actif) — à faire avant l'activation.
+     l'abonnement sur l'identifiant d'origine (aucun code : le message dédié
+     existe, cf. point 2) ; sinon gérer `TRANSFER` côté serveur.
+  2. **Fait (2026-10-12)** — messages d'erreur. Abonnement déjà actif sur le
+     compte store (`productAlreadyPurchasedError`) : message qui renvoie vers
+     « Restaurer les achats ». Abonnement rattaché à un autre compte Baillan
+     (`receiptAlreadyInUseError`, `receiptInUseByOtherSubscriberError`) :
+     message dédié, à l'achat comme à la restauration. Plus de « Vérifiez votre
+     connexion et réessayez » dans ces deux cas.
+  3. **Fait (2026-10-12)** — attente conservée. À l'ouverture de `/pro`, si le
+     store voit déjà un abonnement actif pour le compte
+     (`StoreBillingService.hasActiveEntitlement`), l'écran reprend
+     « Activation en cours… » au lieu de réafficher les boutons d'achat. Cela
+     n'accorde rien : seul le serveur met fin à l'attente.
   4. Liaison RevenueCat ↔ stores : clé d'achat intégré App Store Connect côté
      iOS, compte de service Google Play côté Android.
   5. Forme des produits : un seul groupe d'abonnements iOS ; un abonnement Play

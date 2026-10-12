@@ -18,6 +18,7 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/paid_plan/domain/store_billing_models.dart';
+import 'package:easyrent/features/paid_plan/domain/store_names.dart';
 import 'package:easyrent/features/paid_plan/data/store_billing_service.dart';
 import 'package:easyrent/features/paid_plan/presentation/pro_pricing_page.dart';
 import 'package:easyrent/features/paid_plan/presentation/widgets/plan_card.dart';
@@ -25,6 +26,7 @@ import 'package:easyrent/features/paid_plan/presentation/widgets/pro_store_paywa
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -605,5 +607,146 @@ void main() {
     await afterAction(tester);
 
     expect(fake.calls.where((c) => c.startsWith('restore')), ['restore:u1']);
+  });
+
+  // ── Abonnement déjà présent côté store (compléments FEAT-044e) ──────────
+
+  final l10n = lookupAppLocalizations(const Locale('fr'));
+  String store() => storeNameForPlatform(defaultTargetPlatform);
+
+  /// Monte la page pour un compte gratuit SANS `pumpAndSettle` : à utiliser
+  /// quand l'écran reste sur un indicateur de chargement ou sur l'attente
+  /// d'activation.
+  Future<void> mountFree(WidgetTester tester) async {
+    await mount(tester);
+    tier.add(_free);
+    await tester.pump(); // palier réglé
+    await tester.pump(); // droit côté store résolu
+    await tester.pump(); // attente d'activation démarrée
+  }
+
+  testWidgets('achat : abonnement déjà actif sur le compte store → message '
+      'qui renvoie vers « Restaurer », pas « vérifiez votre connexion »', (
+    tester,
+  ) async {
+    fake.purchaseOutcome = const PurchaseFailed(
+      'productAlreadyPurchasedError',
+      reason: PurchaseFailureReason.alreadyOwned,
+    );
+    await mount(tester, snapshot: _free);
+
+    await tester.tap(_key('btn_store_buy_monthly'));
+    await afterAction(tester);
+
+    expect(_key('snackbar_store_purchase_already_owned'), findsOneWidget);
+    expect(find.text(l10n.storePurchaseAlreadyOwned(store())), findsOneWidget);
+    expect(_key('snackbar_store_purchase_error'), findsNothing);
+    expect(_key('txt_store_activating'), findsNothing);
+    expectOfferButtons(tester, enabled: true);
+  });
+
+  testWidgets('achat : abonnement rattaché à un autre compte Baillan → '
+      'message dédié', (tester) async {
+    fake.purchaseOutcome = const PurchaseFailed(
+      'receiptAlreadyInUseError',
+      reason: PurchaseFailureReason.ownedByAnotherAccount,
+    );
+    await mount(tester, snapshot: _free);
+
+    await tester.tap(_key('btn_store_buy_annual'));
+    await afterAction(tester);
+
+    expect(_key('snackbar_store_purchase_other_account'), findsOneWidget);
+    expect(
+      find.text(l10n.storeSubscriptionOwnedByAnotherAccount(store())),
+      findsOneWidget,
+    );
+    expect(_key('snackbar_store_purchase_error'), findsNothing);
+    expectOfferButtons(tester, enabled: true);
+  });
+
+  testWidgets('restaurer : abonnement rattaché à un autre compte Baillan → '
+      'message dédié, pas d\'attente d\'activation', (tester) async {
+    fake.restoreOutcome = RestoreOutcome.ownedByAnotherAccount;
+    await mount(tester, snapshot: _free);
+
+    await tester.tap(_key('btn_store_restore'));
+    await afterAction(tester);
+
+    expect(_key('snackbar_store_restore_other_account'), findsOneWidget);
+    expect(
+      find.text(l10n.storeSubscriptionOwnedByAnotherAccount(store())),
+      findsOneWidget,
+    );
+    expect(_key('snackbar_store_restore_error'), findsNothing);
+    expect(_key('txt_store_activating'), findsNothing);
+  });
+
+  testWidgets('retour sur /pro avant l\'activation : le store voit déjà un '
+      'abonnement → attente, aucun bouton d\'achat, offre non demandée', (
+    tester,
+  ) async {
+    fake.activeEntitlement = true;
+    await mountFree(tester);
+
+    expect(_key('txt_store_activating'), findsOneWidget);
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(_key('btn_store_buy_annual'), findsNothing);
+    expect(fake.calls, contains('hasActiveEntitlement:u1'));
+    expect(fake.offerCalls, 0);
+    expect(purchaseCalls(), isEmpty);
+
+    // Le serveur accorde le droit : fin de l'attente.
+    tier.add(_pro);
+    await tester.pump();
+    await tester.pump();
+    expect(_key('txt_store_already_subscribed'), findsOneWidget);
+    expect(_key('txt_store_activating'), findsNothing);
+  });
+
+  testWidgets('abonnement vu par le store mais pas encore activé après le '
+      'délai : Réessayer et Restaurer, toujours aucun achat', (tester) async {
+    fake.activeEntitlement = true;
+    await mountFree(tester);
+
+    await tester.pump(kStoreActivationTimeout + const Duration(seconds: 1));
+
+    expect(_key('txt_store_activation_delayed'), findsOneWidget);
+    expect(_key('btn_store_activation_retry'), findsOneWidget);
+    expect(_key('btn_store_activation_restore'), findsOneWidget);
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(_key('btn_store_buy_annual'), findsNothing);
+    expect(purchaseCalls(), isEmpty);
+  });
+
+  testWidgets('vérification du droit côté store en cours : ni offre ni '
+      'bouton ; sans abonnement, les offres s\'affichent ensuite', (
+    tester,
+  ) async {
+    fake.entitlementGate = Completer<void>();
+    await mount(tester);
+    tier.add(_free);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(_key('btn_store_buy_annual'), findsNothing);
+    expect(fake.offerCalls, 0);
+
+    fake.entitlementGate!.complete();
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expectOfferButtons(tester, enabled: true);
+    expect(fake.offerCalls, 1);
+  });
+
+  testWidgets('déjà Pro : le store n\'est pas interrogé', (tester) async {
+    await mount(tester, snapshot: _pro);
+
+    expect(_key('txt_store_already_subscribed'), findsOneWidget);
+    expect(fake.entitlementCalls, 0);
   });
 }

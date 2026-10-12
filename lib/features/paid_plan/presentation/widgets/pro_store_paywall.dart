@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import '../../../auth/domain/plan_level.dart';
 import '../../application/store_offer_provider.dart';
 import '../../data/store_billing_service.dart';
 import '../../domain/store_billing_models.dart';
+import '../../domain/store_names.dart';
 import 'pro_store_paywall_views.dart';
 
 /// Délai au-delà duquel l'activation est signalée comme lente.
@@ -24,7 +26,9 @@ enum _Phase { offers, activating, delayed }
 /// Le serveur seul accorde le droit : après un achat ou une restauration
 /// réussis, l'écran attend que [planEntitlementProvider] passe en Pro (écrit
 /// par le webhook RevenueCat). Il ne débloque jamais rien lui-même, et
-/// « Réessayer » relance l'attente, jamais un second achat.
+/// « Réessayer » relance l'attente, jamais un second achat. Si le store voit
+/// déjà un abonnement actif à l'ouverture (achat fait, puis écran quitté avant
+/// l'activation), l'écran reprend cette attente au lieu de reproposer l'achat.
 class ProStorePaywall extends ConsumerStatefulWidget {
   const ProStorePaywall({super.key});
 
@@ -66,6 +70,7 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
     final service = ref.read(storeBillingServiceProvider);
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     final l10n = context.l10n;
+    final store = storeNameForPlatform(defaultTargetPlatform);
     if (uid == null) {
       _snack('snackbar_store_purchase_error', l10n.storePurchaseError);
       return;
@@ -81,8 +86,22 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
         break;
       case PurchasePending():
         _snack('snackbar_store_purchase_pending', l10n.storePurchasePending);
-      case PurchaseFailed():
-        _snack('snackbar_store_purchase_error', l10n.storePurchaseError);
+      case PurchaseFailed(:final reason):
+        // Abonnement déjà présent côté store : ne pas inviter à réessayer.
+        switch (reason) {
+          case PurchaseFailureReason.alreadyOwned:
+            _snack(
+              'snackbar_store_purchase_already_owned',
+              l10n.storePurchaseAlreadyOwned(store),
+            );
+          case PurchaseFailureReason.ownedByAnotherAccount:
+            _snack(
+              'snackbar_store_purchase_other_account',
+              l10n.storeSubscriptionOwnedByAnotherAccount(store),
+            );
+          case PurchaseFailureReason.other:
+            _snack('snackbar_store_purchase_error', l10n.storePurchaseError);
+        }
     }
   }
 
@@ -91,6 +110,7 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
     final service = ref.read(storeBillingServiceProvider);
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     final l10n = context.l10n;
+    final store = storeNameForPlatform(defaultTargetPlatform);
     if (uid == null) {
       _snack('snackbar_store_restore_error', l10n.storeRestoreError);
       return;
@@ -104,6 +124,11 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
         _startActivation();
       case RestoreOutcome.nothingToRestore:
         _snack('snackbar_store_restore_nothing', l10n.storeRestoreNothing);
+      case RestoreOutcome.ownedByAnotherAccount:
+        _snack(
+          'snackbar_store_restore_other_account',
+          l10n.storeSubscriptionOwnedByAnotherAccount(store),
+        );
       case RestoreOutcome.error:
         _snack('snackbar_store_restore_error', l10n.storeRestoreError);
     }
@@ -138,27 +163,43 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
         onRestore: _restore,
         onRetry: _startActivation,
       ),
-      _Phase.offers =>
-        ref
-            .watch(storeProOfferProvider)
-            .when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, _) => StoreOfferUnavailableView(
-                onRetry: () => ref.invalidate(storeProOfferProvider),
-              ),
-              data: (offer) =>
-                  offer == null ||
-                      (offer.monthly == null && offer.annual == null)
-                  ? StoreOfferUnavailableView(
-                      onRetry: () => ref.invalidate(storeProOfferProvider),
-                    )
-                  : StoreOffersView(
-                      offer: offer,
-                      busy: _busy,
-                      onBuy: _buy,
-                      onRestore: _restore,
-                    ),
-            ),
+      _Phase.offers => _offersOrResumeWait(),
     };
+  }
+
+  /// Offres du store — sauf si le store voit déjà un abonnement actif pour ce
+  /// compte : l'achat a été fait, puis l'écran quitté avant que le serveur
+  /// n'accorde le droit. On reprend alors l'attente au lieu de reproposer
+  /// l'achat. Cela n'accorde rien : seul [planEntitlementProvider] y met fin.
+  Widget _offersOrResumeWait() {
+    final owned = ref.watch(storeActiveEntitlementProvider);
+    if (owned.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (owned.valueOrNull ?? false) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _phase == _Phase.offers) _startActivation();
+      });
+      return const StoreActivatingView();
+    }
+    return ref
+        .watch(storeProOfferProvider)
+        .when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, _) => StoreOfferUnavailableView(
+            onRetry: () => ref.invalidate(storeProOfferProvider),
+          ),
+          data: (offer) =>
+              offer == null || (offer.monthly == null && offer.annual == null)
+              ? StoreOfferUnavailableView(
+                  onRetry: () => ref.invalidate(storeProOfferProvider),
+                )
+              : StoreOffersView(
+                  offer: offer,
+                  busy: _busy,
+                  onBuy: _buy,
+                  onRestore: _restore,
+                ),
+        );
   }
 }

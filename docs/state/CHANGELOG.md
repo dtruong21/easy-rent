@@ -30,7 +30,12 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-10)
+## Changements (2026-08-03 → 2026-10-12)
+
+### FEAT-044e : compléments de l'écran d'achat des apps (2026-10-12)
+- Abonnement déjà présent côté store : un achat refusé parce que le compte store a déjà l'abonnement (`productAlreadyPurchasedError`) renvoie vers « Restaurer les achats » ; un abonnement rattaché à un autre compte Baillan (`receiptAlreadyInUseError`, `receiptInUseByOtherSubscriberError`) a son message dédié, à l'achat comme à la restauration (`PurchaseFailureReason`, `RestoreOutcome.ownedByAnotherAccount`). Plus de « Vérifiez votre connexion et réessayez » dans ces cas.
+- Attente conservée : à l'ouverture de `/pro`, si le store voit déjà un abonnement actif pour le compte (`hasActiveEntitlement`, `storeActiveEntitlementProvider`), l'écran reprend « Activation en cours… » au lieu de reproposer l'achat ; rien n'est accordé par l'app, seul le serveur met fin à l'attente. Le store n'est pas interrogé pour un compte déjà Pro ni tant que le palier n'est pas réglé.
+- Toujours derrière `IAP_ENABLED` (coupé par défaut) ; aucune Cloud Function modifiée. Reste bloquant avant activation : la décision sur la restauration entre comptes (`docs/MOBILE.md`, checklist #207, point 1).
 
 ### FEAT-044e lot 3 : achat intégré, écran d'achat des apps (2026-10-10)
 - Rattachement garanti avant achat : `purchase` et `restore` reçoivent l'uid Firebase et garantissent `Purchases.appUserID == uid` (sinon `logIn(uid)`) ; en échec, `PurchaseFailed('not_logged_in')` / `RestoreOutcome.error`. Un achat ne part jamais sur un identifiant RevenueCat anonyme.

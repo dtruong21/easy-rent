@@ -34,6 +34,12 @@ abstract interface class StoreBillingService {
   /// rattachement que [purchase]). Ne lève jamais.
   Future<RestoreOutcome> restore({required String uid});
 
+  /// `true` si le store rapporte déjà un abonnement actif pour [uid] : achat
+  /// fait, mais activation par le serveur pas encore visible. Sert UNIQUEMENT
+  /// à ne pas reproposer l'achat ; n'accorde aucun droit. Ne lève jamais ;
+  /// `false` au moindre doute.
+  Future<bool> hasActiveEntitlement({required String uid});
+
   /// Page de gestion de l'abonnement dans le store, si connue.
   Future<Uri?> managementUrl();
 }
