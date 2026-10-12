@@ -216,18 +216,60 @@ FEAT-044e. Spec : `docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-desig
   seule `RevenueCatStoreBillingService` importe `purchases_flutter`),
   `lib/features/paid_plan/application/store_billing_session_sync.dart`
   (`logIn` pour un compte complet seulement, `logOut` en le quittant).
-- Un `logIn` RevenueCat en échec est relancé au prochain changement de session ;
-  l'écran d'achat du lot 3 doit revérifier le rattachement avant tout achat.
-- **Ne pas activer avant le lot 3** (écran d'achat `/pro` en mode store) ni
-  avant les produits App Store / Play et l'offre RevenueCat (checklist #207).
-- Build d'essai, une fois prêt :
+- Un `logIn` RevenueCat en échec est relancé au prochain changement de session.
+  Le rattachement est revérifié avant tout achat ou restauration par le SERVICE
+  (`RevenueCatStoreBillingService` : `Purchases.appUserID == uid`, sinon
+  `logIn(uid)` ; à défaut aucun achat ne part). L'écran d'achat (lot 3,
+  `lib/features/paid_plan/presentation/widgets/pro_store_paywall.dart`) ne fait
+  que passer l'uid Firebase à `purchase` et `restore`.
+- Le code du lot 3 (écran d'achat `/pro` en mode store) est complet. L'activation
+  n'attend plus que la checklist #207 : produits App Store Connect et Play
+  Console, offre RevenueCat par défaut avec les formules mensuelle et annuelle,
+  compte de démo dans `_ops/sandboxAllowlist`, RevenueCat déclaré comme
+  sous-traitant, build Android release vérifié. Ensuite seulement, build d'essai
+  avec `IAP_ENABLED=true` et les clés :
 
   ```bash
   flutter build ipa --release \
     --dart-define=APP_ENV=prod \
     --dart-define=IAP_ENABLED=true \
     --dart-define=REVENUECAT_APPLE_API_KEY=appl_xxx
+
+  flutter build appbundle --release \
+    --dart-define=APP_ENV=prod \
+    --dart-define=IAP_ENABLED=true \
+    --dart-define=REVENUECAT_GOOGLE_API_KEY=goog_xxx
   ```
+
+- Checklist d'activation (#207), en plus des points ci-dessus :
+  1. **Bloquant — restauration et transfert entre comptes** : décider le
+     comportement RevenueCat quand un compte store déjà abonné est utilisé par
+     un AUTRE compte Baillan. Aujourd'hui, avec le comportement par défaut de
+     RevenueCat (transfert vers le nouvel identifiant), le webhook ignore
+     l'événement `TRANSFER` et le cron ne fait jamais passer de gratuit à
+     payant : le nouveau compte resterait gratuit jusqu'au prochain
+     renouvellement. Option recommandée : régler RevenueCat pour conserver
+     l'abonnement sur l'identifiant d'origine (aucun code) et afficher un
+     message dédié pour `receiptAlreadyInUseError` ; sinon gérer `TRANSFER`
+     côté serveur.
+  2. Messages d'erreur d'achat : `productAlreadyPurchasedError` et
+     `receiptAlreadyInUseError` ne doivent pas afficher « Vérifiez votre
+     connexion et réessayez » (à faire avant l'activation).
+  3. Activation en cours conservée si l'utilisateur quitte `/pro` et y revient
+     avant l'écriture du webhook (ne pas réafficher les boutons d'achat tant que
+     le SDK voit un droit actif) — à faire avant l'activation.
+  4. Liaison RevenueCat ↔ stores : clé d'achat intégré App Store Connect côté
+     iOS, compte de service Google Play côté Android.
+  5. Forme des produits : un seul groupe d'abonnements iOS ; un abonnement Play
+     avec deux offres de base (mensuelle et annuelle) — c'est ce qui empêche un
+     double abonnement mensuel + annuel.
+  6. Lien vers les conditions d'utilisation dans les métadonnées App Store
+     Connect.
+  7. Scénarios à passer en sandbox : achat ; quitter et revenir avant
+     l'activation ; restauration ; second compte Baillan sur le même compte
+     store.
+  8. Builds de release des deux plateformes (`flutter build ipa` et
+     `flutter build appbundle`, commandes ci-dessus).
 
 ## TL;DR
 

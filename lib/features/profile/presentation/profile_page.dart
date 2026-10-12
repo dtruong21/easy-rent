@@ -255,23 +255,26 @@ class _ProfileHeader extends ConsumerWidget {
   }
 }
 
-/// La bannière « Passer à Pro » doit-elle s'afficher ? Oui seulement si les
-/// abonnements sont ouverts ([Env.subscriptionsEnabled]), hors apps iOS/Android
-/// ([isStoreApp] : aucun chemin d'achat hors achat intégré) et pour un compte
-/// pas encore payant. Fonction pure : `Env.subscriptionsEnabled` est figé à la
-/// compilation, elle rend la règle testable dans les deux états.
+/// La bannière « Passer à Pro » doit-elle s'afficher ? Dans une app iOS/Android
+/// ([storeApp]) dès que l'achat intégré est actif ([inAppPurchaseEnabled]) ;
+/// sur le web, dès que les abonnements sont ouverts
+/// ([Env.subscriptionsEnabled]) ; dans les deux cas pour un compte pas encore
+/// payant seulement. Fonction pure : ces interrupteurs sont figés à la
+/// compilation, elle rend la règle testable dans tous les états.
 @visibleForTesting
 bool proUpsellVisible({
   required bool subscriptionsEnabled,
   required bool storeApp,
+  required bool inAppPurchaseEnabled,
   required bool isPaid,
-}) => subscriptionsEnabled && !storeApp && !isPaid;
+}) => (storeApp ? inAppPurchaseEnabled : subscriptionsEnabled) && !isPaid;
 
-/// Bannière « Passer à Pro » — masquée tant que [Env.subscriptionsEnabled]
-/// vaut `false` (freemium MVP, juillet 2026) : inutile de faire la publicité
-/// d'un abonnement impossible à souscrire (le checkout Stripe est lui-même
-/// masqué sur `/pro`, cf. `ProPricingPage`), et toujours masquée dans les apps
-/// iOS/Android (cf. [proUpsellVisible]). Les gates fonctionnels (limite
+/// Bannière « Passer à Pro » — masquée sur le web tant que
+/// [Env.subscriptionsEnabled] vaut `false` (freemium MVP, juillet 2026) : inutile
+/// de faire la publicité d'un abonnement impossible à souscrire (le checkout
+/// Stripe est lui-même masqué sur `/pro`, cf. `ProPricingPage`). Dans les apps
+/// iOS/Android elle suit l'achat intégré ([isInAppPurchaseEnabled]), jamais
+/// Stripe (cf. [proUpsellVisible]). Les gates fonctionnels (limite
 /// de scénarios, comparaison) restent inchangés — eux expliquent une
 /// limitation réelle, pas une simple incitation commerciale.
 class _ProUpsellCard extends ConsumerWidget {
@@ -283,6 +286,7 @@ class _ProUpsellCard extends ConsumerWidget {
     if (!proUpsellVisible(
       subscriptionsEnabled: Env.subscriptionsEnabled,
       storeApp: isStoreApp,
+      inAppPurchaseEnabled: isInAppPurchaseEnabled,
       isPaid: isPaid,
     )) {
       return const SizedBox.shrink();

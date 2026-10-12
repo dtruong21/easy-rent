@@ -17,7 +17,7 @@ droits (Firestore, écrite par le webhook RevenueCat).
 | Sujet | Décision |
 |---|---|
 | Écran d'achat | Écran Flutter maison : la page `/pro` existante en **mode store** (pas le paywall RevenueCat) |
-| Produits v1 | **Pro mensuel + Pro annuel** uniquement (Max / Ultra : plus tard) |
+| Produits v1 | **Pro mensuel + Pro annuel** uniquement (Max / Ultra : plus tard ; **non affichés dans les apps**, amendement 2026-10-10) |
 | Prix stores | **Identiques au web** : 7,99 € / mois, 79 € / an |
 | Essai gratuit | **Aucun** en v1 (cohérent avec le web ; l'offre gratuite existe) |
 | Liste blanche sandbox | **Document Firestore prod** `_ops/sandboxAllowlist`, édité dans la console ; **achats App Store / Google Play uniquement** (amendement 2026-10-06) |
@@ -70,7 +70,13 @@ Actif quand `isInAppPurchaseEnabled` :
 - **« Restaurer les achats »**.
 - Mentions 3.1.2 : renouvellement automatique, résiliation dans les réglages du
   store, liens CGU et Politique de confidentialité.
-- Max et Ultra affichés « bientôt », sans achat.
+- Max et Ultra **ne sont pas affichés** dans les apps.
+
+> **Amendement 2026-10-10 (Daki)** : la version initiale affichait Max et
+> Ultra « bientôt ». Tout contenu « bientôt » a été retiré des apps le
+> 2026-09-30 (risque de refus App Store 2.1, contenu provisoire) : l'écran
+> d'achat des apps ne montre donc que Pro. Max et Ultra restent visibles sur
+> le web.
 - Compte **déjà Pro** (toute origine : web, autre store, liste blanche) :
   « Vous êtes déjà abonné » + où gérer, **aucun bouton d'achat**.
 - Après `success` : écran **« Activation en cours… »** qui observe
@@ -196,6 +202,24 @@ Max / Ultra dans les stores, essai gratuit, codes promo, Sign in with Apple,
 paywall RevenueCat, Web Billing RevenueCat.
 
 ## Points hérités du lot 2 (à traiter au lot 3)
+
+> **Arbitrage du lot 3 (2026-10-10)** — plan
+> `docs/superpowers/plans/2026-10-10-iap-lot3-store-paywall.md` :
+> - *Rattachement avant achat* : **traité** — `purchase` et `restore`
+>   reçoivent l'uid et garantissent `Purchases.appUserID == uid` avant d'agir
+>   (`PurchaseFailed('not_logged_in')` sinon).
+> - *État de la synchro* : **sans objet** — le service garantit lui-même le
+>   rattachement, l'écran n'a pas besoin de l'état de la synchro.
+> - *Source d'écoute* : **écarté** — le risque (achat sur le mauvais compte)
+>   est couvert par le rattachement avant achat ; à reprendre seulement si un
+>   parcours permet de changer de compte sans déconnexion.
+> - *Textes de la modale de limite* : **inchangés** — avec l'achat actif le
+>   bouton est présent ; achat coupé, c'est l'état validé le 2026-09-30.
+> - *Tests du mapping mensuel / annuel* : **traité** (fonctions pures testées
+>   sur de vrais objets du SDK).
+> - *#207* : checklist d'activation, hors code (`docs/MOBILE.md`).
+> - Ajout : « Réessayer », après 60 s d'attente, relance l'attente et ne
+>   rachète jamais ; aucun bouton d'achat tant que le palier n'est pas connu.
 
 Relevés à la revue finale du lot 2 (2026-10-09), volontairement non traités :
 

@@ -804,6 +804,7 @@ void main() {
           proUpsellVisible(
             subscriptionsEnabled: true,
             storeApp: false,
+            inAppPurchaseEnabled: false,
             isPaid: false,
           ),
           isTrue,
@@ -811,12 +812,42 @@ void main() {
       },
     );
 
-    test('app store → jamais visible, même abonnements ouverts', () {
+    test(
+      'app store sans achat intégré → jamais visible, même abonnements ouverts',
+      () {
+        expect(
+          proUpsellVisible(
+            subscriptionsEnabled: true,
+            storeApp: true,
+            inAppPurchaseEnabled: false,
+            isPaid: false,
+          ),
+          isFalse,
+        );
+      },
+    );
+
+    test('app store + achat intégré actif + non payant → visible', () {
+      for (final subscriptionsEnabled in [true, false]) {
+        expect(
+          proUpsellVisible(
+            subscriptionsEnabled: subscriptionsEnabled,
+            storeApp: true,
+            inAppPurchaseEnabled: true,
+            isPaid: false,
+          ),
+          isTrue,
+        );
+      }
+    });
+
+    test('app store + achat intégré actif + déjà payant → masquée', () {
       expect(
         proUpsellVisible(
           subscriptionsEnabled: true,
           storeApp: true,
-          isPaid: false,
+          inAppPurchaseEnabled: true,
+          isPaid: true,
         ),
         isFalse,
       );
@@ -827,6 +858,7 @@ void main() {
         proUpsellVisible(
           subscriptionsEnabled: false,
           storeApp: false,
+          inAppPurchaseEnabled: false,
           isPaid: false,
         ),
         isFalse,
@@ -835,6 +867,7 @@ void main() {
         proUpsellVisible(
           subscriptionsEnabled: true,
           storeApp: false,
+          inAppPurchaseEnabled: false,
           isPaid: true,
         ),
         isFalse,
@@ -851,6 +884,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Passer à Pro'), findsNothing);
+    });
+
+    testWidgets('app store + achat intégré actif → bannière « Passer à Pro »', (
+      tester,
+    ) async {
+      debugIsStoreAppOverride = true;
+      debugInAppPurchaseEnabledOverride = true;
+      addTearDown(() {
+        debugIsStoreAppOverride = false;
+        debugInAppPurchaseEnabledOverride = null;
+      });
+      final repo = _FakeProfileRepository()..seed(_makeProfile());
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Passer à Pro'), findsOneWidget);
     });
   });
 }
