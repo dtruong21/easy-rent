@@ -30,7 +30,13 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-09)
+## Changements (2026-08-03 → 2026-10-10)
+
+### FEAT-044e lot 3 : achat intégré, écran d'achat des apps (2026-10-10)
+- Rattachement garanti avant achat : `purchase` et `restore` reçoivent l'uid Firebase et garantissent `Purchases.appUserID == uid` (sinon `logIn(uid)`) ; en échec, `PurchaseFailed('not_logged_in')` / `RestoreOutcome.error`. Un achat ne part jamais sur un identifiant RevenueCat anonyme.
+- Écran d'achat sur `/pro` (apps, interrupteur actif) : Pro seul, mensuel et annuel, prix lus dans le store (jamais Max, Ultra ni prix web). « Activation en cours… » jusqu'à ce que le serveur accorde le droit (`planEntitlementProvider`) ; au-delà de 60 s, « Réessayer » (jamais un second achat) et « Restaurer les achats ». Déjà abonné → « Vous êtes déjà abonné ». Mentions 3.1.2 et liens CGU / confidentialité.
+- Profil : « Gérer dans {store} » pour un abonné store (web et apps) ; bannière « Passer à Pro » dans une app store quand l'achat intégré est actif.
+- Toujours derrière `IAP_ENABLED`, coupé par défaut : aucun changement visible tant qu'il est coupé ; aucune Cloud Function modifiée.
 
 ### FEAT-044e lot 2 : achat intégré, fondations de l'app (2026-10-09)
 - Interrupteur `IAP_ENABLED` coupé par défaut, clés RevenueCat par dart-define (`REVENUECAT_APPLE_API_KEY`, `REVENUECAT_GOOGLE_API_KEY`) : aucun effet visible, aucun appel au SDK tant qu'il est coupé. Clé absente alors que l'interrupteur est actif : achat coupé + log `severe` (émis par `storeBillingSessionSyncProvider`), jamais de crash.

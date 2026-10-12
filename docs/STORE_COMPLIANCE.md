@@ -7,6 +7,22 @@
 > **non contre-vérifiés** (limite de budget) — re-valider chaque valeur datée
 > au moment du remplissage des consoles.
 
+## Achat intégré (FEAT-044e lot 3) — 2026-10-10
+
+Écran d'achat des apps sur `/pro`, derrière l'interrupteur `IAP_ENABLED` (coupé
+par défaut : message neutre inchangé). Points de conformité couverts par le code :
+
+- **3.1.1** : dans les apps, seul l'achat intégré est proposé ; aucun prix web,
+  aucun lien ni mention du site pour acheter.
+- **3.1.2** : sur l'écran d'achat, mentions du renouvellement automatique et de
+  la résiliation dans les réglages du store, liens vers les CGU (`/terms`) et la
+  politique de confidentialité (`/privacy`), bouton « Restaurer les achats ».
+- **2.1** : Max et Ultra ne sont pas affichés dans les apps (Pro seul).
+- **3.1.3(b)** : un abonné web retrouve Pro dans l'app : « Vous êtes déjà abonné »,
+  sans bouton d'achat ; « Gérer mon abonnement » mène au profil.
+
+Activation de l'interrupteur : après la checklist #207 (voir [MOBILE.md](MOBILE.md)).
+
 ## Notation des apps (FEAT-060) — 2026-10-09
 
 Demande de note via l'API native (`in_app_review`, Apple 5.6.1 / Google In-App

@@ -216,11 +216,17 @@ FEAT-044e. Spec : `docs/superpowers/specs/2026-10-05-iap-revenuecat-mobile-desig
   seule `RevenueCatStoreBillingService` importe `purchases_flutter`),
   `lib/features/paid_plan/application/store_billing_session_sync.dart`
   (`logIn` pour un compte complet seulement, `logOut` en le quittant).
-- Un `logIn` RevenueCat en échec est relancé au prochain changement de session ;
-  l'écran d'achat du lot 3 doit revérifier le rattachement avant tout achat.
-- **Ne pas activer avant le lot 3** (écran d'achat `/pro` en mode store) ni
-  avant les produits App Store / Play et l'offre RevenueCat (checklist #207).
-- Build d'essai, une fois prêt :
+- Un `logIn` RevenueCat en échec est relancé au prochain changement de session.
+  L'écran d'achat (lot 3, `lib/features/paid_plan/presentation/widgets/pro_store_paywall.dart`)
+  revérifie le rattachement avant tout achat ou restauration : `purchase` et
+  `restore` reçoivent l'uid Firebase et garantissent `Purchases.appUserID == uid`
+  (sinon `logIn(uid)`), à défaut aucun achat ne part.
+- Le code du lot 3 (écran d'achat `/pro` en mode store) est complet. L'activation
+  n'attend plus que la checklist #207 : produits App Store Connect et Play
+  Console, offre RevenueCat par défaut avec les formules mensuelle et annuelle,
+  compte de démo dans `_ops/sandboxAllowlist`, RevenueCat déclaré comme
+  sous-traitant, build Android release vérifié. Ensuite seulement, build d'essai
+  avec `IAP_ENABLED=true` et les clés :
 
   ```bash
   flutter build ipa --release \
