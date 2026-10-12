@@ -32,6 +32,11 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 
 ## Changements (2026-08-03 → 2026-10-12)
 
+### Build de sortie des apps : réglages de prod obligatoires (2026-10-12)
+- Les lanes Fastlane `build` (iOS et Android) passent désormais `dart-defines.prod.json` à Flutter et refusent de builder s'il est absent ou incohérent : `APP_ENV` ≠ `prod`, achat intégré activé sans la clé RevenueCat de la plateforme (ou avec une clé `test_…`), réglage de build de test (`TEST_*`, `MOBILE_STAGING`, `USE_FIREBASE_EMULATOR`). `APP_STORE_ID` vide sur iOS = simple avertissement. Règles dans `tool/release/release_defines.rb`, vérifiées en CI (`release_defines_test.rb`).
+- FIX : les deux Fastfile calculaient la racine du projet depuis `Dir.pwd`, qui vaut `<plateforme>/fastlane` pendant l'évaluation — `flutter` était lancé depuis `android/` ou `ios/` et le chemin de l'AAB était faux. Les lanes n'avaient jamais tourné ; racine désormais calculée depuis l'emplacement du Fastfile.
+- Docs alignées (`FASTLANE.md` §2.4, `RUNBOOK_STORE_RELEASE.md`, `MOBILE.md`). Vérifié avec fastlane 2.241.0 et un `flutter` simulé ; un vrai build signé de bout en bout reste à faire au premier envoi.
+
 ### FEAT-044e : compléments de l'écran d'achat des apps (2026-10-12)
 - Abonnement déjà présent côté store : un achat refusé parce que le compte store a déjà l'abonnement (`productAlreadyPurchasedError`) renvoie vers « Restaurer les achats » ; un abonnement rattaché à un autre compte Baillan (`receiptAlreadyInUseError`, `receiptInUseByOtherSubscriberError`) a son message dédié, à l'achat comme à la restauration (`PurchaseFailureReason`, `RestoreOutcome.ownedByAnotherAccount`). Plus de « Vérifiez votre connexion et réessayez » dans ces cas.
 - Attente conservée : à l'ouverture de `/pro`, si le store voit déjà un abonnement actif pour le compte (`hasActiveEntitlement`, `storeActiveEntitlementProvider`), l'écran reprend « Activation en cours… » au lieu de reproposer l'achat ; rien n'est accordé par l'app, seul le serveur met fin à l'attente. Le store n'est pas interrogé pour un compte déjà Pro ni tant que le palier n'est pas réglé.
