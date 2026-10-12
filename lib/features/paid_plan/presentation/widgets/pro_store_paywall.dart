@@ -111,18 +111,18 @@ class _ProStorePaywallState extends ConsumerState<ProStorePaywall> {
 
   @override
   Widget build(BuildContext context) {
-    // Palier pas encore connu : ni offre ni bouton (un abonné ne doit jamais
-    // voir, même un instant, de quoi acheter une seconde fois).
+    // Le palier doit être RÉGLÉ et PRÉSENT avant toute offre : un abonné ne
+    // doit jamais voir, même un instant, de quoi acheter une seconde fois, et
+    // un compte sans document `landlords/{uid}` ne pourrait jamais être activé
+    // par le webhook (`no_landlord`). Pas connu = en chargement (y compris un
+    // rechargement qui garde la valeur précédente, après un changement de
+    // compte), en erreur, ou réglé à `null`.
     final tier = ref.watch(landlordTierProvider);
-    if (!tier.hasValue) {
-      // Palier en erreur : toujours inconnu, donc toujours aucun achat. Un
-      // « Réessayer » en cours (erreur précédente conservée) montre le
-      // chargement.
-      return tier.hasError && !tier.isLoading
-          ? StoreOfferUnavailableView(
-              onRetry: () => ref.invalidate(landlordTierProvider),
-            )
-          : const Center(child: CircularProgressIndicator());
+    if (tier.isLoading) return const Center(child: CircularProgressIndicator());
+    if (tier.hasError || tier.valueOrNull == null) {
+      return StoreOfferUnavailableView(
+        onRetry: () => ref.invalidate(landlordTierProvider),
+      );
     }
     // Déjà Pro (toute origine) : aucun achat proposé. C'est aussi ce qui
     // termine l'attente d'activation.

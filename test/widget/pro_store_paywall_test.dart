@@ -460,7 +460,10 @@ void main() {
     await mount(tester, snapshot: _free);
 
     expect(_key('txt_pro_store_app_unavailable'), findsOneWidget);
-    expect(find.text('Baillan Pro, Max & Ultra'), findsOneWidget);
+    // Titre des apps : « Baillan Pro » seul, interrupteur coupé comme actif.
+    expect(find.text('Baillan Pro'), findsOneWidget);
+    expect(find.textContaining('Max'), findsNothing);
+    expect(find.textContaining('Ultra'), findsNothing);
     expect(_key('btn_store_buy_monthly'), findsNothing);
     expect(_key('btn_store_buy_annual'), findsNothing);
     expect(_key('btn_store_restore'), findsNothing);
@@ -479,6 +482,54 @@ void main() {
     expect(_key('btn_store_restore'), findsNothing);
     expect(_key('txt_store_already_subscribed'), findsNothing);
     expect(fake.offerCalls, 0);
+  });
+
+  testWidgets('palier réglé à null (aucun document landlord) : ni achat ni '
+      'offre demandée, message et Réessayer', (tester) async {
+    await mount(tester);
+    tier.add(null);
+    await tester.pump();
+
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(_key('btn_store_buy_annual'), findsNothing);
+    expect(_key('btn_store_restore'), findsNothing);
+    expect(_key('txt_store_already_subscribed'), findsNothing);
+    expect(_key('txt_store_offer_unavailable'), findsOneWidget);
+    expect(_key('btn_store_offer_retry'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(fake.offerCalls, 0);
+  });
+
+  testWidgets('palier rechargé (valeur précédente conservée) : plus aucun '
+      'achat jusqu\'à la prochaine émission', (tester) async {
+    await mount(tester, snapshot: _free);
+    expect(_key('btn_store_buy_monthly'), findsOneWidget);
+    expect(fake.offerCalls, 1);
+
+    // Changement de compte : le provider repart en chargement en gardant la
+    // valeur précédente (`isLoading` ET `hasValue`).
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProStorePaywall)),
+    );
+    container.invalidate(landlordTierProvider);
+    // La lecture force la reconstruction du provider : c'est bien l'état
+    // « en chargement, valeur précédente conservée » que l'écran doit refuser.
+    final reloading = container.read(landlordTierProvider);
+    expect(reloading.isLoading, isTrue);
+    expect(reloading.hasValue, isTrue);
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(_key('btn_store_buy_monthly'), findsNothing);
+    expect(_key('btn_store_buy_annual'), findsNothing);
+    expect(_key('btn_store_restore'), findsNothing);
+
+    tier.add(_free);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(_key('btn_store_buy_monthly'), findsOneWidget);
+    expect(_key('btn_store_buy_annual'), findsOneWidget);
   });
 
   testWidgets('palier en erreur : ni achat ni offre demandée, message et '

@@ -417,6 +417,12 @@ void main() {
           findsOneWidget,
         );
 
+        // Titre des apps : « Baillan Pro » seul (décision Daki 2026-10-10 :
+        // ni Max ni Ultra dans les apps, App Store 2.1).
+        expect(find.text('Baillan Pro'), findsOneWidget);
+        expect(find.textContaining('Max'), findsNothing);
+        expect(find.textContaining('Ultra'), findsNothing);
+
         // Ni cartes d'offres, ni bascule mensuel/annuel, ni tableau comparatif.
         for (final id in ['free', 'pro', 'max', 'ultra']) {
           expect(find.byKey(Key('plan_card_$id')), findsNothing);
