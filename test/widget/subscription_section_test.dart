@@ -84,6 +84,12 @@ class _FakeUrlLauncher extends UrlLauncherPlatform
 // Helper
 // ---------------------------------------------------------------------------
 
+/// `managementUrl()` lève (le fake partagé ne sait que rendre une URL ou null).
+class _ThrowingManagementUrlService extends FakeStoreBillingService {
+  @override
+  Future<Uri?> managementUrl() async => throw StateError('rc down');
+}
+
 Widget _buildApp({
   required LandlordTierSnapshot? snapshot,
   required SubscriptionRepository repo,
@@ -443,9 +449,8 @@ void main() {
       expect(launcher.launched, ['https://example.test/manage']);
     });
 
-    testWidgets('lanceur d\'URL en échec → aucune erreur non gérée', (
-      tester,
-    ) async {
+    testWidgets('lanceur d\'URL en échec → snackbar d\'erreur, aucune erreur '
+        'non gérée', (tester) async {
       launcher.result = false;
       await pumpStore(tester, 'app_store');
 
@@ -455,6 +460,43 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+      expect(
+        find.byKey(const Key('snackbar_subscription_error')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Une erreur est survenue. Veuillez réessayer.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('URL de gestion qui lève → snackbar d\'erreur, rien d\'ouvert, '
+        'aucune erreur non gérée', (tester) async {
+      fake = _ThrowingManagementUrlService();
+      await pumpStore(tester, 'app_store');
+
+      await tester.tap(
+        find.byKey(const Key('btn_subscription_manage_in_store')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(launcher.launched, isEmpty);
+      expect(
+        find.byKey(const Key('snackbar_subscription_error')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('ouverture réussie → aucun snackbar', (tester) async {
+      await pumpStore(tester, 'app_store');
+
+      await tester.tap(
+        find.byKey(const Key('btn_subscription_manage_in_store')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
     });
   });
 

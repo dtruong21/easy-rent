@@ -77,7 +77,8 @@ class SubscriptionSection extends ConsumerWidget {
           const SizedBox(height: 8),
           OutlinedButton(
             key: const Key('btn_subscription_manage_in_store'),
-            onPressed: () => _openStoreManagement(ref, snapshot.proStore),
+            onPressed: () =>
+                _openStoreManagement(context, ref, snapshot.proStore),
             child: Text(
               l10n.subscriptionManageInStoreButton(
                 storeNameForProStore(snapshot.proStore),
@@ -111,16 +112,37 @@ class SubscriptionSection extends ConsumerWidget {
   }
 
   /// Ouvre la page de gestion de l'abonnement du store D'ORIGINE : l'URL de
-  /// RevenueCat si elle est connue, sinon la page générique du store. Aucun
-  /// `context` ni `ref` après l'`await` ; un échec est journalisé, jamais
-  /// propagé (le `onPressed` ne l'attend pas).
-  Future<void> _openStoreManagement(WidgetRef ref, String? proStore) async {
+  /// RevenueCat si elle est connue, sinon la page générique du store. C'est le
+  /// SEUL chemin de résiliation d'un abonné store : un échec (lanceur d'URL
+  /// refusé, exception) est journalisé ET signalé par un snackbar, jamais
+  /// propagé (le `onPressed` ne l'attend pas). `ref`, `context` et leurs
+  /// valeurs sont lus AVANT le premier `await`.
+  Future<void> _openStoreManagement(
+    BuildContext context,
+    WidgetRef ref,
+    String? proStore,
+  ) async {
     final service = ref.read(storeBillingServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    final message = context.l10n.subscriptionErrorGeneric;
+    final background = Theme.of(context).colorScheme.errorContainer;
+    void showFailure() {
+      if (!messenger.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          key: const Key('snackbar_subscription_error'),
+          content: Text(message),
+          backgroundColor: background,
+        ),
+      );
+    }
+
     try {
       final uri =
           await service.managementUrl() ?? storeManagementFallbackUri(proStore);
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         _log.warning('Impossible d\'ouvrir la gestion de l\'abonnement : $uri');
+        showFailure();
       }
     } on Object catch (e, st) {
       _log.warning(
@@ -128,6 +150,7 @@ class SubscriptionSection extends ConsumerWidget {
         e,
         st,
       );
+      showFailure();
     }
   }
 
