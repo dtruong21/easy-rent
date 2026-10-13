@@ -70,6 +70,8 @@ beforeAll(async () => {
     }
     // FEAT-044e — liste blanche sandbox, lue uniquement par les Functions.
     await db.doc("_ops/sandboxAllowlist").set({uids: [LANDLORD_A]});
+    // #207 — lien compte ↔ client Stripe, écrit uniquement par les Functions.
+    await db.doc(`stripe_customers/${LANDLORD_A}`).set({customerId: "cus_a"});
     // FEAT-056 (PR-2b) : scénario complet (avec createdAt) — support du test
     // de non-régression « l'update client reste autorisé après le passage de
     // `create` à `if false` ». Le doc `doc-a` seedé ci-dessus n'a pas de
@@ -1197,6 +1199,46 @@ describe("OWASP-02 — email vérifié exigé par les rules", () => {
         asAnonymous(ANON).doc(`properties/prop-${ANON}`).update({name: "x"}),
       );
     });
+  });
+});
+
+describe("stripe_customers — lien compte ↔ client Stripe, aucun accès client (#207)", () => {
+  it("le propriétaire ne lit pas son propre lien", async () => {
+    await assertFails(asOwnerA().doc(`stripe_customers/${LANDLORD_A}`).get());
+  });
+  it("le propriétaire ne peut pas réécrire son lien (viser le client Stripe d'autrui)", async () => {
+    await assertFails(
+      asOwnerA()
+        .doc(`stripe_customers/${LANDLORD_A}`)
+        .set({customerId: "cus_autre"}),
+    );
+    await assertFails(
+      asOwnerA()
+        .doc(`stripe_customers/${LANDLORD_A}`)
+        .update({customerId: "cus_autre"}),
+    );
+  });
+  it("le propriétaire ne peut pas supprimer son lien", async () => {
+    await assertFails(asOwnerA().doc(`stripe_customers/${LANDLORD_A}`).delete());
+  });
+  it("un compte ne peut pas créer le lien d'un autre, ni le sien", async () => {
+    await assertFails(
+      asOtherB().doc(`stripe_customers/${LANDLORD_B}`).set({customerId: "cus_b"}),
+    );
+    await assertFails(
+      asOtherB().doc(`stripe_customers/${LANDLORD_A}`).set({customerId: "cus_b"}),
+    );
+  });
+  it("un autre compte ne lit ni ne liste les liens", async () => {
+    await assertFails(asOtherB().doc(`stripe_customers/${LANDLORD_A}`).get());
+    await assertFails(asOtherB().collection("stripe_customers").get());
+  });
+  it("un non-authentifié ne lit ni n'écrit", async () => {
+    const db = env.unauthenticatedContext().firestore();
+    await assertFails(db.doc(`stripe_customers/${LANDLORD_A}`).get());
+    await assertFails(
+      db.doc(`stripe_customers/${LANDLORD_A}`).set({customerId: "cus_x"}),
+    );
   });
 });
 

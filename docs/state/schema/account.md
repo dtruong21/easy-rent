@@ -2,7 +2,7 @@
 
 > Source d'état — account. Maintenu par `state-keeper`.
 
-Collections : `landlords`, `paid_plan_interest`, `support_requests`. Patterns transverses → [README](README.md).
+Collections : `landlords`, `paid_plan_interest`, `support_requests`, `stripe_customers`, `_ops`. Patterns transverses → [README](README.md).
 
 ---
 
@@ -122,6 +122,17 @@ Un avis a `subject` = `Avis — {note}/5` (texte fixe, non traduit) : **conventi
 - `update/delete` : false
 
 Tests : bloc « support_requests — support (FEAT-025) et avis (FEAT-060) » de `functions/rules-tests/firestore_rules.test.ts`.
+
+## `stripe_customers/{uid}` — lien compte ↔ client Stripe (#207)
+
+Singleton par compte, **serveur seul** : écrit par `createCheckoutSession` (Admin SDK) à la première ouverture de paiement, lu par `manageSubscription`, `deleteAccount` et `exportAccountData`, supprimé par `deleteAccount` (étape singletons). Vit dans la base routée : `staging` porte des clients Stripe **test**, `(default)` des clients **live**.
+
+| Champ | Type | Rôle |
+|---|---|---|
+| `customerId` | string | identifiant du client Stripe (`cus_…`) |
+| `createdAt` | timestamp | création du lien |
+
+**Rules** : `match /stripe_customers/{uid}` → `allow read, write: if false`, explicite en plus du fallback. Un compte capable d'y écrire ferait pointer son uid vers le client Stripe d'autrui et résilierait SES abonnements. Testé (`firestore_rules.test.ts`, describe `stripe_customers`) ; le test de parité de `delete_account.test.ts` exige que le bloc reste fermé.
 
 ## `_ops/{docId}` — configuration serveur globale (FEAT-044e)
 

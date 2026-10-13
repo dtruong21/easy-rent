@@ -26,10 +26,18 @@ import {
 const stripeMock = vi.hoisted(() => ({
   keys: [] as string[],
   create: vi.fn(),
+  customerCreate: vi.fn(),
+  customerUpdate: vi.fn(),
+  customerDel: vi.fn(),
 }));
 vi.mock("stripe", () => ({
   default: class FakeStripe {
     readonly checkout = {sessions: {create: stripeMock.create}};
+    readonly customers = {
+      create: stripeMock.customerCreate,
+      update: stripeMock.customerUpdate,
+      del: stripeMock.customerDel,
+    };
 
     constructor(key: string) {
       stripeMock.keys.push(key);
@@ -40,6 +48,13 @@ vi.mock("stripe", () => ({
 vi.mock("firebase-admin", async () => {
   const {makeFakeAdminModule} = await import("./helpers/fake_firestore");
   return makeFakeAdminModule();
+});
+
+// Par défaut, Stripe crée le client du compte sans histoire (#207).
+beforeEach(() => {
+  stripeMock.customerCreate.mockReset().mockResolvedValue({id: "cus_new"});
+  stripeMock.customerUpdate.mockReset().mockResolvedValue({});
+  stripeMock.customerDel.mockReset().mockResolvedValue({});
 });
 
 /** Les six offres configurées — l'état « tout est ouvert » côté Stripe. */
@@ -238,24 +253,15 @@ describe("buildCheckoutSessionParams — les 6 combinaisons", () => {
     expect(p.cancel_url).toBe("https://app.test/pro/cancel");
   });
 
-  it("email client inclus si fourni, absent sinon", () => {
-    expect(
-      buildCheckoutSessionParams({
-        uid: "u1",
-        level: "pro",
-        period: "monthly",
-        config,
-        customerEmail: "jean@example.com",
-      }).customer_email,
-    ).toBe("jean@example.com");
-    expect(
-      buildCheckoutSessionParams({
-        uid: "u1",
-        level: "pro",
-        period: "monthly",
-        config,
-      }).customer_email,
-    ).toBeUndefined();
+  it("ne pose ni customer ni customer_email (le handler pose le client Stripe du compte)", () => {
+    const p = buildCheckoutSessionParams({
+      uid: "u1",
+      level: "pro",
+      period: "monthly",
+      config,
+    });
+    expect(p.customer).toBeUndefined();
+    expect(p.customer_email).toBeUndefined();
   });
 });
 
@@ -484,6 +490,122 @@ describe("createCheckoutSession — handler (OWASP-01 : doc landlord requis)", (
 
     expect((err as HttpsError).message).toBe("already_subscribed_use_change_plan");
     expect(stripeMock.create).not.toHaveBeenCalled();
+    expect(stripeMock.customerCreate).not.toHaveBeenCalled();
+  });
+
+  // #207 : l'abonnement doit naître sur un client Stripe connu du serveur
+  // AVANT le paiement, pour être résiliable sans attendre la recherche Stripe.
+  describe("client Stripe du compte (#207)", () => {
+    const missingCustomer = Object.assign(new Error("No such customer"), {
+      code: "resource_missing",
+      param: "customer",
+    });
+
+    beforeEach(() => {
+      prodDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+    });
+
+    it("★ première ouverture → client créé, enregistré, et porté par la session", async () => {
+      await createCheckoutSession.run(makeRequest(PROD_ORIGIN));
+
+      expect(stripeMock.customerCreate).toHaveBeenCalledWith({
+        email: "a@example.test",
+        metadata: {rc_app_user_id: UID},
+      });
+      expect(prodDb.peek(`stripe_customers/${UID}`)).toMatchObject({
+        customerId: "cus_new",
+      });
+      const params = stripeMock.create.mock.calls[0]?.[0] as {
+        customer?: string;
+        customer_email?: string;
+      };
+      expect(params.customer).toBe("cus_new");
+      expect(params.customer_email).toBeUndefined();
+    });
+
+    it("client déjà enregistré → réutilisé, aucun nouveau client Stripe", async () => {
+      prodDb.seed(`stripe_customers/${UID}`, {customerId: "cus_1"});
+
+      await createCheckoutSession.run(makeRequest(PROD_ORIGIN));
+
+      expect(stripeMock.customerCreate).not.toHaveBeenCalled();
+      expect(stripeMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({customer: "cus_1"}),
+      );
+    });
+
+    it("staging → client enregistré dans la base staging, jamais dans (default)", async () => {
+      stagingDb.seed(`landlords/${UID}`, {id: UID, subscriptionTier: "free"});
+
+      await createCheckoutSession.run(makeRequest(STAGING_ORIGIN));
+
+      expect(stagingDb.peek(`stripe_customers/${UID}`)).toMatchObject({
+        customerId: "cus_new",
+      });
+      expect(prodDb.peek(`stripe_customers/${UID}`)).toBeUndefined();
+    });
+
+    it("client supprimé côté Stripe → remplacé par un client neuf, session ouverte au 2e essai", async () => {
+      prodDb.seed(`stripe_customers/${UID}`, {customerId: "cus_gone"});
+      stripeMock.create
+        .mockReset()
+        .mockRejectedValueOnce(missingCustomer)
+        .mockResolvedValueOnce({url: "https://checkout.stripe.test/s", id: "cs_2"});
+
+      const result = (await createCheckoutSession.run(
+        makeRequest(PROD_ORIGIN),
+      )) as {sessionId: string};
+
+      expect(result.sessionId).toBe("cs_2");
+      expect(stripeMock.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({customer: "cus_new"}),
+      );
+      expect(prodDb.peek(`stripe_customers/${UID}`)).toMatchObject({
+        customerId: "cus_new",
+      });
+    });
+
+    it("autre erreur Stripe (price introuvable) → propagée, client enregistré INCHANGÉ, aucun 2e essai", async () => {
+      prodDb.seed(`stripe_customers/${UID}`, {customerId: "cus_1"});
+      stripeMock.create.mockReset().mockRejectedValue(
+        Object.assign(new Error("No such price"), {
+          code: "resource_missing",
+          param: "line_items[0][price]",
+        }),
+      );
+
+      await expect(
+        createCheckoutSession.run(makeRequest(PROD_ORIGIN)),
+      ).rejects.toThrow("No such price");
+      expect(stripeMock.create).toHaveBeenCalledOnce();
+      expect(stripeMock.customerCreate).not.toHaveBeenCalled();
+      expect(prodDb.peek(`stripe_customers/${UID}`)).toMatchObject({
+        customerId: "cus_1",
+      });
+    });
+
+    it("palier non vendable → refus AVANT tout appel Stripe : aucun client créé ni enregistré", async () => {
+      const request = {
+        ...makeRequest(PROD_ORIGIN),
+        data: {level: "max", period: "monthly"},
+      } as CallableRequest;
+
+      await expect(createCheckoutSession.run(request)).rejects.toMatchObject({
+        message: "level_not_purchasable",
+      });
+      expect(stripeMock.customerCreate).not.toHaveBeenCalled();
+      expect(stripeMock.create).not.toHaveBeenCalled();
+      expect(prodDb.peek(`stripe_customers/${UID}`)).toBeUndefined();
+    });
+
+    it("création du client en échec → erreur, AUCUNE session ouverte", async () => {
+      stripeMock.customerCreate.mockRejectedValue(new Error("stripe down"));
+
+      await expect(
+        createCheckoutSession.run(makeRequest(PROD_ORIGIN)),
+      ).rejects.toThrow("stripe down");
+      expect(stripeMock.create).not.toHaveBeenCalled();
+    });
   });
 });
 

@@ -72,10 +72,16 @@ import {
   requireAuthUid,
 } from "../utils/callable_helpers";
 import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
+import {
+  expireOpenCheckoutSessions,
+  isStripeResourceMissing,
+  listSubscriptionsForUid,
+  readStripeCustomerId,
+  STRIPE_CUSTOMERS_COLLECTION,
+} from "../utils/stripe_customer";
 import {resolveStripeKeyForDb} from "../utils/stripe_env";
 
-import {RC_APP_USER_ID_METADATA_KEY} from "./create_checkout_session";
-import {assertSafeUid, CANCELABLE_STATUSES} from "./manage_subscription";
+import {ENDED_STATUSES} from "./manage_subscription";
 
 /** Clé secrète Stripe live (serveur uniquement) — secret déjà utilisé ailleurs. */
 const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
@@ -201,6 +207,7 @@ export const deleteAccount = onCall(
       // (c) Singletons (delete idempotent, absent = no-op).
       const singletonBatch = db.batch();
       singletonBatch.delete(db.doc(`paid_plan_interest/${uid}`));
+      singletonBatch.delete(db.doc(`${STRIPE_CUSTOMERS_COLLECTION}/${uid}`));
       singletonBatch.delete(db.doc(`landlords/${uid}`));
       await singletonBatch.commit();
 
@@ -244,18 +251,31 @@ export const deleteAccount = onCall(
 );
 
 /**
- * Résilie immédiatement (sans remboursement) tous les abonnements Stripe
- * gérables d'un compte facturé sur le web. Étape (0) de la suppression : lève
- * AVANT toute purge.
+ * Résilie immédiatement (sans remboursement) tous les abonnements Stripe non
+ * terminés d'un compte passé par le paiement web — y compris ceux en suspens
+ * (`incomplete`, `paused`), qui pourraient reprendre après la suppression.
+ * Étape (0) de la suppression : lève AVANT toute purge.
  *
- * - Portée : uniquement si le doc landlord de la base routée montre une
- *   facturation web ([hasWebBilling]) — lu AVANT de construire Stripe ou de
- *   résoudre la clé, pour que la suppression d'un compte gratuit/store ne
- *   dépende jamais de la configuration des secrets Stripe.
+ * - Portée : uniquement si le compte a un client Stripe enregistré (il a
+ *   ouvert un paiement — #207 : couvre l'achat que le webhook RevenueCat n'a
+ *   pas encore inscrit) OU si son doc landlord montre une facturation web
+ *   ([hasWebBilling]). Lu AVANT de construire Stripe ou de résoudre la clé,
+ *   pour que la suppression d'un compte gratuit/store ne dépende jamais de la
+ *   configuration des secrets Stripe.
  * - Clé : par la SEULE base routée ([resolveStripeKeyForDb]), jamais par
  *   l'Origin — `staging` → test, sinon live.
- * - Recherche par metadata `rc_app_user_id` = uid : le client ne fournit jamais
+ * - Abonnements retrouvés par [listSubscriptionsForUid] (client Stripe
+ *   enregistré + metadata `rc_app_user_id` = uid) : le client ne fournit jamais
  *   d'identifiant Stripe, donc ne peut viser l'abonnement d'autrui.
+ * - Un abonnement déjà terminé au moment de l'appel (double validation,
+ *   résiliation concurrente) est le résultat voulu : jamais une erreur.
+ * - Sessions de paiement encore ouvertes : fermées d'abord
+ *   ([expireOpenCheckoutSessions]), sinon une page Stripe restée ouverte
+ *   créerait un abonnement après la suppression.
+ * - Client Stripe jamais abonné : supprimé, lien `stripe_customers` compris
+ *   (RGPD art. 17 — aucune pièce comptable ne justifie de garder son email).
+ *   Un client qui a eu un abonnement est conservé : ses factures sont des
+ *   pièces comptables.
  * - Erreurs : TOUTES journalisées. Le client mappe chaque `failed-precondition`
  *   de deleteAccount sur « session trop ancienne, reconnectez-vous » : une
  *   erreur de configuration serveur (clé absente / de mauvais mode) est donc
@@ -278,8 +298,10 @@ async function cancelStripeSubscriptions(
   // Lecture Firestore séparée de l'appel Stripe : son échec doit se lire comme
   // tel dans les journaux, pas comme une résiliation Stripe ratée.
   let landlord: Record<string, unknown> | undefined;
+  let customerId: string | null;
   try {
     landlord = (await db.doc(`landlords/${uid}`).get()).data();
+    customerId = await readStripeCustomerId(db, uid);
   } catch (err) {
     logger.error(
       `deleteAccount: billing lookup failed for uid=${uid}`,
@@ -287,7 +309,7 @@ async function cancelStripeSubscriptions(
     );
     throw new HttpsError("internal", "billing lookup failed — retry");
   }
-  if (!hasWebBilling(landlord)) {
+  if (customerId === null && !hasWebBilling(landlord)) {
     logger.info(
       `deleteAccount: no web billing, Stripe not called (uid=${uid})`,
     );
@@ -295,10 +317,6 @@ async function cancelStripeSubscriptions(
   }
 
   try {
-    // Défense en profondeur avant l'interpolation de l'uid dans la requête de
-    // recherche Stripe (même garde que manageSubscription).
-    assertSafeUid(uid);
-
     const stripe = new Stripe(
       resolveStripeKeyForDb(
         db.databaseId === STAGING_DATABASE_ID,
@@ -307,17 +325,36 @@ async function cancelStripeSubscriptions(
       ),
     );
 
-    const search = await stripe.subscriptions.search({
-      query: `metadata['${RC_APP_USER_ID_METADATA_KEY}']:'${uid}'`,
-      limit: 20,
-    });
+    if (customerId !== null) {
+      await expireOpenCheckoutSessions(stripe, customerId);
+    }
+    const subs = await listSubscriptionsForUid(stripe, uid, customerId);
 
     let cancelled = 0;
-    for (const sub of search.data) {
-      if (!CANCELABLE_STATUSES.has(sub.status)) continue;
-      // Effet immédiat, sans prorata ni facture finale : aucun remboursement.
-      await stripe.subscriptions.cancel(sub.id);
+    for (const sub of subs) {
+      if (ENDED_STATUSES.has(sub.status)) continue;
+      try {
+        // Effet immédiat, sans prorata ni facture finale : aucun remboursement.
+        await stripe.subscriptions.cancel(sub.id);
+      } catch (err) {
+        if (await isStillRunning(stripe, sub.id)) throw err;
+      }
       cancelled++;
+    }
+
+    if (
+      customerId !== null &&
+      !subs.some((sub) => customerIdOfSubscription(sub) === customerId)
+    ) {
+      try {
+        await stripe.customers.del(customerId);
+      } catch (err) {
+        if (!isStripeResourceMissing(err)) throw err;
+      }
+      // Le lien pointe désormais dans le vide : retiré tout de suite, pour
+      // qu'une suppression relancée (purge interrompue plus loin) ne dépende
+      // pas de la façon dont Stripe répond pour un client supprimé.
+      await db.doc(`${STRIPE_CUSTOMERS_COLLECTION}/${uid}`).delete();
     }
     logger.info(
       `deleteAccount: cancelled ${cancelled} Stripe subscription(s) ` +
@@ -345,6 +382,28 @@ async function cancelStripeSubscriptions(
       describeError(err),
     );
     throw new HttpsError("internal", "subscription cancel failed — retry");
+  }
+}
+
+/** Identifiant du client d'un abonnement, que Stripe le rende en id ou en objet. */
+function customerIdOfSubscription(sub: Stripe.Subscription): string {
+  return typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+}
+
+/**
+ * Après un `cancel` en échec : l'abonnement court-il encore ? `false` s'il
+ * s'est terminé entre-temps (résilié en parallèle) — l'échec n'en est alors pas
+ * un. Dans le doute (relecture impossible) : `true`, l'erreur d'origine remonte.
+ */
+async function isStillRunning(
+  stripe: Stripe,
+  subscriptionId: string,
+): Promise<boolean> {
+  try {
+    const current = await stripe.subscriptions.retrieve(subscriptionId);
+    return !ENDED_STATUSES.has(current.status);
+  } catch {
+    return true;
   }
 }
 

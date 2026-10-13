@@ -30,7 +30,16 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-12)
+## Changements (2026-08-03 → 2026-10-13)
+
+### FIX : résiliation Stripe fiable — abonnements retrouvés par le client Stripe du compte (2026-10-13, #207)
+- Cause : résiliation et suppression de compte cherchaient l'abonnement par Stripe Search (metadata `rc_app_user_id`), à **cohérence différée** et lue sur 20 résultats sans pagination. Juste après un paiement, la recherche ne voyait rien : « aucun abonnement web » à la résiliation, et un compte supprimé restait prélevé. La suppression ne visait en plus que les comptes déjà marqués « web » par le webhook RevenueCat.
+- Correctif : `createCheckoutSession` crée le client Stripe du compte **avant** le paiement et l'enregistre dans `stripe_customers/{uid}` (nouvelle collection, serveur seul, fermée à tout client par les Rules) ; la session porte `customer` au lieu de `customer_email`. `manageSubscription` et `deleteAccount` passent par `listSubscriptionsForUid` (`utils/stripe_customer.ts`) : liste du client enregistré (cohérente dès l'écriture) + Search en filet pour les abonnements plus anciens, paginées et dédoublonnées. `deleteAccount` appelle Stripe dès qu'un client est enregistré, même sans facturation web inscrite.
+- « Déjà résilié » n'est plus une erreur : `cancel` rend `noop` quand tous les abonnements du compte sont terminés ; à la suppression, un `cancel` en échec sur un abonnement terminé entre-temps compte comme un succès.
+- Suppression de compte durcie : les sessions de paiement encore ouvertes sont fermées d'abord (une page Stripe ouverte reste payable ~24 h), tout abonnement non terminé est résilié (`incomplete` et `paused` compris), et le client Stripe d'un compte jamais abonné est supprimé (RGPD) — celui d'un ancien abonné est conservé (factures).
+- Reste en suivi (#207) : deux sessions de paiement payées coup sur coup créent deux abonnements, et `manageSubscription` n'agit que sur le plus récent ; la recherche Stripe reste obligatoire à la suppression (filet des abonnements d'avant ce correctif) ; une session de paiement ouverte **pendant** la purge d'un compte (autre onglet) n'est pas fermée ; décision à prendre sur la suppression du client Stripe d'un ancien abonné. À la pose des clés live : une clé restreinte doit autoriser Subscriptions, Customers et Checkout Sessions en écriture.
+- `deleteAccount` purge `stripe_customers/{uid}` ; `exportAccountData` rend `stripeCustomerId`. Rules + tests cross-user (6 cas), parité export/purge étendue.
+- ⚠️ **Redéploiement manuel des Functions requis.** Les Rules partent par la CI. Aucun changement côté app.
 
 ### Build de sortie des apps : réglages de prod obligatoires (2026-10-12)
 - Les lanes Fastlane `build` (iOS et Android) passent désormais `dart-defines.prod.json` à Flutter et refusent de builder s'il est absent ou incohérent : `APP_ENV` ≠ `prod`, achat intégré activé sans la clé RevenueCat de la plateforme (ou avec une clé `test_…`), réglage de build de test (`TEST_*`, `MOBILE_STAGING`, `USE_FIREBASE_EMULATOR`). `APP_STORE_ID` vide sur iOS = simple avertissement. Règles dans `tool/release/release_defines.rb`, vérifiées en CI (`release_defines_test.rb`).

@@ -14,8 +14,9 @@
  *
  * Frontière de sécurité : le client ne fournit JAMAIS d'identifiant Stripe. La
  * fonction dérive l'UID via `requireVerifiedUid` puis résout l'abonnement par la
- * metadata `rc_app_user_id` posée au checkout à la valeur de CE propriétaire
- * (`create_checkout_session.ts`, [RC_APP_USER_ID_METADATA_KEY]). Aucun paramètre
+ * client Stripe enregistré côté serveur pour CE propriétaire, et par la
+ * metadata `rc_app_user_id` posée au checkout à sa valeur
+ * (`utils/stripe_customer.ts`, [listSubscriptionsForUid]). Aucun paramètre
  * client ne peut donc viser l'abonnement d'autrui — l'IDOR est structurellement
  * impossible. `change_plan` ne fait PAS exception : il n'accepte qu'un palier
  * et une périodicité, jamais un subscription id, un item id ni un price id.
@@ -55,6 +56,11 @@ import {
 } from "../utils/callable_helpers";
 import {dbForRequest, STAGING_DATABASE_ID} from "../utils/db_router";
 import {
+  assertSafeUid,
+  listSubscriptionsForUid,
+  readStripeCustomerId,
+} from "../utils/stripe_customer";
+import {
   assertStripeEnvMatchesDb,
   isFunctionsEmulator,
   resolveStripeKeyForDb,
@@ -62,10 +68,10 @@ import {
   stripeEnvForOrigin,
 } from "../utils/stripe_env";
 
-import {
-  parsePlanSelection,
-  RC_APP_USER_ID_METADATA_KEY,
-} from "./create_checkout_session";
+import {parsePlanSelection} from "./create_checkout_session";
+
+// Défini dans `utils/stripe_customer` (la requête de recherche y vit désormais).
+export {assertSafeUid};
 
 /** Clé secrète Stripe (serveur uniquement) — réutilise le secret existant. */
 const stripeSecret = defineSecret("STRIPE_SECRET_KEY");
@@ -87,6 +93,12 @@ export const CANCELABLE_STATUSES: ReadonlySet<string> = new Set<string>([
   "trialing",
   "past_due",
   "unpaid",
+]);
+
+/** Statuts Stripe d'un abonnement terminé pour de bon : plus rien ne sera prélevé. */
+export const ENDED_STATUSES: ReadonlySet<string> = new Set<string>([
+  "canceled",
+  "incomplete_expired",
 ]);
 
 export type SubscriptionAction =
@@ -138,8 +150,8 @@ export interface ManageableSubscriptionLike {
 }
 
 /**
- * PURE — sélectionne l'unique abonnement à gérer parmi les résultats de la
- * Search API. Ignore les statuts non gérables (canceled, incomplete_expired…),
+ * PURE — sélectionne l'unique abonnement à gérer parmi les abonnements Stripe
+ * du compte. Ignore les statuts non gérables (canceled, incomplete_expired…),
  * et si plusieurs subsistent, prend le plus récemment créé (déterministe).
  * Retourne `null` si aucun abonnement gérable (abonné mobile IAP, abonnement
  * déjà terminé, jamais passé par Stripe).
@@ -244,20 +256,6 @@ export function parseAction(value: unknown): SubscriptionAction {
 }
 
 /**
- * Défense en profondeur avant interpolation de l'UID dans la requête Stripe
- * Search : un UID Firebase est alphanumérique URL-safe, donc ne contient jamais
- * l'apostrophe qui casserait le littéral `'...'` de la query (seul métacaractère
- * dangereux). Tout UID hors de cette forme est rejeté — l'interpolation §handler
- * n'est donc jamais injectable. Fonction pure exportée pour être testée : c'est
- * la garantie « injection impossible » qui repose dessus.
- */
-export function assertSafeUid(uid: string): void {
-  if (!/^[A-Za-z0-9_-]+$/.test(uid)) {
-    throw new HttpsError("invalid-argument", "malformed uid");
-  }
-}
-
-/**
  * Offre visée par un `change_plan`, résolue en un bloc : palier, périodicité et
  * price ID cible.
  *
@@ -326,14 +324,13 @@ export const manageSubscription = onCall(
         ) :
         null;
 
+    const db = await dbForRequest(request);
+    const isStagingDb = db.databaseId === STAGING_DATABASE_ID;
+
     // Web : une origine locale (clé test) contre la base prod est refusée hors
     // émulateur (#209) — même garde que `createCheckoutSession`.
     if (!fromNativeApp) {
-      assertStripeEnvMatchesDb(
-        origin,
-        (await dbForRequest(request)).databaseId === STAGING_DATABASE_ID,
-        isFunctionsEmulator(),
-      );
+      assertStripeEnvMatchesDb(origin, isStagingDb, isFunctionsEmulator());
     }
 
     // Issue #138 : web → clé résolue par l'Origin de l'appel. Sans ce
@@ -344,7 +341,7 @@ export const manageSubscription = onCall(
     const stripe = new Stripe(
       fromNativeApp ?
         resolveStripeKeyForDb(
-          (await dbForRequest(request)).databaseId === STAGING_DATABASE_ID,
+          isStagingDb,
           stripeSecret.value(),
           stripeTestSecret.value(),
         ) :
@@ -355,13 +352,16 @@ export const manageSubscription = onCall(
         ),
     );
 
-    const search = await stripe.subscriptions.search({
-      query: `metadata['${RC_APP_USER_ID_METADATA_KEY}']:'${uid}'`,
-      limit: 20,
-    });
+    // #207 : par le client Stripe enregistré (cohérent dès le paiement), avec la
+    // recherche par metadata en filet pour les abonnements plus anciens.
+    const subs = await listSubscriptionsForUid(
+      stripe,
+      uid,
+      await readStripeCustomerId(db, uid),
+    );
 
     const target = pickManageableSubscription(
-      search.data.map((s) => ({
+      subs.map((s) => ({
         id: s.id,
         status: s.status,
         cancel_at_period_end: s.cancel_at_period_end,
@@ -370,6 +370,17 @@ export const manageSubscription = onCall(
       })),
     );
     if (target === null) {
+      // Déjà résilié pour de bon (tous ses abonnements sont terminés, droit pas
+      // encore retiré par le webhook) : la demande est satisfaite, ce n'est pas
+      // une erreur. Un abonnement encore en suspens (`incomplete`, `paused`)
+      // l'empêche : on n'annonce jamais une résiliation sans effet.
+      if (
+        action === "cancel" &&
+        subs.length > 0 &&
+        subs.every((s) => ENDED_STATUSES.has(s.status))
+      ) {
+        return {status: "noop", cancelAtPeriodEnd: true};
+      }
       // Abonné via un store mobile (IAP) ou sans abonnement web : l'UI renvoie
       // vers le store, le changement de palier y est obligatoire.
       throw new HttpsError("failed-precondition", "no_active_web_subscription");
