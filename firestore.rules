@@ -531,6 +531,18 @@ service cloud.firestore {
     }
 
     // ====================================================================
+    // stripe_customers/{uid} — lien compte ↔ client Stripe (#207)
+    // Écrit UNIQUEMENT par `createCheckoutSession` (Admin SDK), lu par
+    // `manageSubscription` / `deleteAccount` pour retrouver les abonnements à
+    // résilier. Aucun accès client, explicitement : y écrire permettrait de
+    // faire pointer son compte vers le client Stripe d'autrui (et de résilier
+    // SES abonnements).
+    // ====================================================================
+    match /stripe_customers/{uid} {
+      allow read, write: if false;
+    }
+
+    // ====================================================================
     // Fallback — tout le reste bloqué
     // ====================================================================
     match /{document=**} {

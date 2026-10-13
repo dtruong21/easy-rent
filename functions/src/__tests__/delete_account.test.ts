@@ -30,14 +30,32 @@ import {
 const stripeMock = vi.hoisted(() => ({
   keys: [] as string[],
   search: vi.fn(),
+  list: vi.fn(),
+  retrieve: vi.fn(),
   cancel: vi.fn(),
+  sessionsList: vi.fn(),
+  sessionsExpire: vi.fn(),
+  sessionsRetrieve: vi.fn(),
+  customerDel: vi.fn(),
+  /** Ordre des appels Stripe, pour prouver « sessions fermées AVANT la liste ». */
+  order: [] as string[],
 }));
 vi.mock("stripe", () => ({
   default: class FakeStripe {
     readonly subscriptions = {
       search: stripeMock.search,
+      list: stripeMock.list,
+      retrieve: stripeMock.retrieve,
       cancel: stripeMock.cancel,
     };
+    readonly checkout = {
+      sessions: {
+        list: stripeMock.sessionsList,
+        expire: stripeMock.sessionsExpire,
+        retrieve: stripeMock.sessionsRetrieve,
+      },
+    };
+    readonly customers = {del: stripeMock.customerDel};
 
     constructor(key: string) {
       stripeMock.keys.push(key);
@@ -162,6 +180,21 @@ beforeEach(() => {
   vi.stubEnv("STRIPE_SECRET_KEY_TEST", TEST_KEY);
   stripeMock.keys.length = 0;
   stripeMock.search.mockReset().mockResolvedValue({data: []});
+  stripeMock.order.length = 0;
+  stripeMock.list.mockReset().mockImplementation(() => {
+    stripeMock.order.push("subscriptions.list");
+    return Promise.resolve({data: []});
+  });
+  stripeMock.sessionsList.mockReset().mockResolvedValue({data: []});
+  stripeMock.sessionsExpire.mockReset().mockImplementation((id: string) => {
+    stripeMock.order.push(`sessions.expire:${id}`);
+    return Promise.resolve({});
+  });
+  stripeMock.sessionsRetrieve
+    .mockReset()
+    .mockRejectedValue(new Error("not stubbed"));
+  stripeMock.customerDel.mockReset().mockResolvedValue({});
+  stripeMock.retrieve.mockReset().mockRejectedValue(new Error("not stubbed"));
   stripeMock.cancel.mockReset().mockResolvedValue({});
 });
 
@@ -216,6 +249,7 @@ describe("deleteAccount", () => {
 
   it("purge toutes les collections du landlord + singletons + Storage + Auth", async () => {
     seedLandlordDataset(LANDLORD_A, "a1");
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
 
     const result = await deleteAccount.run(makeRequest(LANDLORD_A));
 
@@ -223,6 +257,7 @@ describe("deleteAccount", () => {
     for (const path of [
       `landlords/${LANDLORD_A}`,
       `paid_plan_interest/${LANDLORD_A}`,
+      `stripe_customers/${LANDLORD_A}`,
       "properties/prop-a1",
       "tenants/ten-a1",
       "leases/lease-a1",
@@ -501,14 +536,18 @@ describe("deleteAccount — résiliation de l'abonnement Stripe", () => {
     expect(fakeAuth.deletedUids).toEqual([LANDLORD_A]);
   });
 
-  it("résilie aussi trialing / past_due / unpaid, ignore incomplete_expired", async () => {
+  it("résilie tout abonnement non terminé (trialing, past_due, unpaid, incomplete, paused), ignore canceled / incomplete_expired", async () => {
     seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
     stripeMock.search.mockResolvedValue({
       data: [
         {id: "sub_trial", status: "trialing"},
         {id: "sub_due", status: "past_due"},
         {id: "sub_unpaid", status: "unpaid"},
+        // En suspens : pourraient reprendre après la suppression du compte.
+        {id: "sub_inc", status: "incomplete"},
+        {id: "sub_paused", status: "paused"},
         {id: "sub_exp", status: "incomplete_expired"},
+        {id: "sub_old", status: "canceled"},
       ],
     });
 
@@ -519,6 +558,8 @@ describe("deleteAccount — résiliation de l'abonnement Stripe", () => {
       .sort();
     expect(cancelledIds).toEqual([
       "sub_due",
+      "sub_inc",
+      "sub_paused",
       "sub_trial",
       "sub_unpaid",
     ]);
@@ -550,6 +591,216 @@ describe("deleteAccount — résiliation de l'abonnement Stripe", () => {
 
     expect(stripeMock.keys).toEqual([LIVE_KEY]);
     expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+  });
+
+  // #207 : la recherche Stripe est à cohérence différée, et le webhook
+  // RevenueCat n'inscrit la facturation web qu'après coup. Un compte supprimé
+  // juste après le paiement restait prélevé.
+  it("★ achat tout juste payé (webhook pas encore passé, recherche encore vide) → résilié par le client Stripe enregistré", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {
+      subscriptionTier: "free",
+      proStore: null,
+    });
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.list.mockResolvedValue({
+      data: [{...activeSub, customer: "cus_a"}],
+      has_more: false,
+    });
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(stripeMock.list).toHaveBeenCalledWith(
+      expect.objectContaining({customer: "cus_a", status: "all"}),
+    );
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+    // Client qui vient de payer : conservé chez Stripe (facture).
+    expect(stripeMock.customerDel).not.toHaveBeenCalled();
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek(`stripe_customers/${LANDLORD_A}`)).toBeUndefined();
+  });
+
+  // Une page de paiement Stripe restée ouverte reste payable ~24 h : payée
+  // après la suppression, elle créerait un abonnement sans compte.
+  it("★ sessions de paiement encore ouvertes → fermées AVANT de lister les abonnements", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.sessionsList.mockResolvedValue({
+      data: [{id: "cs_1"}, {id: "cs_2"}],
+    });
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(stripeMock.sessionsList).toHaveBeenCalledWith(
+      expect.objectContaining({customer: "cus_a", status: "open"}),
+    );
+    expect(stripeMock.order).toEqual([
+      "sessions.expire:cs_1",
+      "sessions.expire:cs_2",
+      "subscriptions.list",
+    ]);
+    expect(result).toMatchObject({deleted: true});
+  });
+
+  it("session impossible à fermer et toujours ouverte → 'internal', rien purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.sessionsList.mockResolvedValue({data: [{id: "cs_1"}]});
+    stripeMock.sessionsExpire.mockRejectedValue(new Error("stripe down"));
+    stripeMock.sessionsRetrieve.mockResolvedValue({id: "cs_1", status: "open"});
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeDb.peek(`stripe_customers/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("client Stripe jamais abonné → supprimé chez Stripe (RGPD), puis purge", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(stripeMock.customerDel).toHaveBeenCalledWith("cus_a");
+    expect(result).toMatchObject({deleted: true});
+  });
+
+  it("client Stripe déjà supprimé chez Stripe → toléré, purge effectuée", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.customerDel.mockRejectedValue(
+      Object.assign(new Error("No such customer"), {code: "resource_missing"}),
+    );
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(result).toMatchObject({deleted: true});
+  });
+
+  it("suppression du client Stripe en échec → 'internal', rien purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.customerDel.mockRejectedValue(new Error("stripe down"));
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+  });
+
+  it("client Stripe qui a eu un abonnement → conservé (pièces comptables)", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.list.mockResolvedValue({
+      data: [{...canceledSub, customer: {id: "cus_a"}}],
+    });
+
+    await deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}));
+
+    expect(stripeMock.customerDel).not.toHaveBeenCalled();
+  });
+
+  it("ancien abonnement sur un AUTRE client Stripe (d'avant #207) + client enregistré resté vide → le client vide est supprimé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    stripeMock.search.mockResolvedValue({
+      data: [{...activeSub, customer: "cus_legacy"}],
+    });
+
+    await deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}));
+
+    expect(stripeMock.cancel).toHaveBeenCalledWith("sub_active");
+    expect(stripeMock.customerDel).toHaveBeenCalledWith("cus_a");
+  });
+
+  it("purge interrompue APRÈS la suppression du client Stripe → la relance ne dépend plus de Stripe et aboutit", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    // La purge casse dès sa première requête, AVANT l'étape des singletons
+    // (qui retire aussi le lien) : rien d'autre ne l'a donc supprimé.
+    const purgeDown = vi.spyOn(fakeDb, "collection").mockImplementation(() => {
+      throw new Error("firestore unavailable");
+    });
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+    expect(stripeMock.customerDel).toHaveBeenCalledWith("cus_a");
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    // Le lien vers le client supprimé est déjà retiré.
+    expect(fakeDb.peek(`stripe_customers/${LANDLORD_A}`)).toBeUndefined();
+
+    // Relance : Stripe répondrait n'importe quoi pour ce client supprimé.
+    purgeDown.mockRestore();
+    stripeMock.keys.length = 0;
+    stripeMock.sessionsList.mockRejectedValue(new Error("customer deleted"));
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(result).toMatchObject({deleted: true});
+    expect(stripeMock.keys).toHaveLength(0);
+  });
+
+  it("client enregistré + clé Stripe absente → 'internal', rien purgé (jamais une suppression sans résiliation)", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", {subscriptionTier: "free"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+    expect(stripeMock.keys).toHaveLength(0);
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
+  });
+
+  it("client Stripe d'un AUTRE compte jamais consulté", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    fakeDb.seed(`stripe_customers/${LANDLORD_B}`, {customerId: "cus_b"});
+
+    await deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}));
+
+    expect(stripeMock.list).not.toHaveBeenCalled();
+    expect(fakeDb.peek(`stripe_customers/${LANDLORD_B}`)).toBeDefined();
+  });
+
+  it("cancel en échec mais abonnement terminé entre-temps (résiliation concurrente) → succès, purge effectuée", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+    stripeMock.cancel.mockRejectedValue(new Error("No such subscription"));
+    stripeMock.retrieve.mockResolvedValue({id: "sub_active", status: "canceled"});
+
+    const result = await deleteAccount.run(
+      makeRequest(LANDLORD_A, {origin: PROD_ORIGIN}),
+    );
+
+    expect(stripeMock.retrieve).toHaveBeenCalledWith("sub_active");
+    expect(result).toMatchObject({deleted: true});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeUndefined();
+  });
+
+  it("cancel en échec et abonnement TOUJOURS actif à la relecture → 'internal', rien purgé", async () => {
+    seedLandlordDataset(LANDLORD_A, "a1", WEB_BILLING);
+    stripeMock.search.mockResolvedValue({data: [activeSub]});
+    stripeMock.cancel.mockRejectedValue(new Error("stripe unavailable"));
+    stripeMock.retrieve.mockResolvedValue({id: "sub_active", status: "active"});
+
+    await expect(
+      deleteAccount.run(makeRequest(LANDLORD_A, {origin: PROD_ORIGIN})),
+    ).rejects.toMatchObject({code: "internal"});
+    expect(fakeDb.peek(`landlords/${LANDLORD_A}`)).toBeDefined();
+    expect(fakeAuth.deletedUids).toHaveLength(0);
   });
 
   it("aucun abonnement → aucun cancel, purge effectuée", async () => {
@@ -918,14 +1169,16 @@ describe("parité export ↔ effacement du compte", () => {
       (m) => m[1],
     );
     // Singletons clés par uid (purgés explicitement par deleteAccount, étape c).
-    const singletons = ["landlords", "paid_plan_interest"];
+    const singletons = ["landlords", "paid_plan_interest", "stripe_customers"];
     // Configuration serveur globale (FEAT-044e `_ops/sandboxAllowlist`) : ne
     // porte que les uids (pseudonymes) des comptes de test de l'éditeur (démo
     // App Review, testeurs), retirés à la main — aucune donnée d'un bailleur
     // client, rien à exporter ni à purger. Exemption valable tant que le bloc
     // reste fermé à tout client (vérifié ci-dessous).
     const globalConfig = ["_ops"];
-    for (const name of globalConfig) {
+    // `stripe_customers` (#207) : purgé comme singleton, ET fermé à tout client
+    // — y écrire ferait pointer un compte vers le client Stripe d'autrui.
+    for (const name of [...globalConfig, "stripe_customers"]) {
       expect(
         rules,
         `${name} doit rester refusé à tout client pour être exempté`,

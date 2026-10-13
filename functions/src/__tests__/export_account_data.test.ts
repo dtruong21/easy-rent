@@ -22,6 +22,7 @@ vi.mock("firebase-admin", async () => {
 interface ExportResult {
   account: {id: string} | null;
   paidPlanInterest: {id: string} | null;
+  stripeCustomerId: string | null;
   properties: Array<{id: string; name: string; createdAt?: string}>;
   payments: unknown[];
   schemaVersion: number;
@@ -122,6 +123,18 @@ describe("exportAccountData", () => {
 
     expect(res.account).toBeNull();
     expect(res.paidPlanInterest).toBeNull();
+    expect(res.stripeCustomerId).toBeNull();
+  });
+
+  it("#207 : exporte l'identifiant du client Stripe du compte, jamais celui d'un autre", async () => {
+    fakeDb.seed(`stripe_customers/${LANDLORD_A}`, {customerId: "cus_a"});
+    fakeDb.seed(`stripe_customers/${LANDLORD_B}`, {customerId: "cus_b"});
+
+    const res = (await exportAccountData.run(
+      makeRequest(LANDLORD_A),
+    )) as ExportResult;
+
+    expect(res.stripeCustomerId).toBe("cus_a");
   });
 
   it("compte non-anonyme au token trop vieux → recent-login-required", async () => {

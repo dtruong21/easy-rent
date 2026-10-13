@@ -14,6 +14,7 @@ import {
   requireAuthUid,
 } from "../utils/callable_helpers";
 import {dbForRequest} from "../utils/db_router";
+import {readStripeCustomerId} from "../utils/stripe_customer";
 
 /** clé de sortie → nom de collection Firestore. */
 export const EXPORTED_COLLECTIONS: Record<string, string> = {
@@ -73,6 +74,9 @@ export const exportAccountData = onCall(
     result.paidPlanInterest = ppiSnap.exists ?
       serialize({id: ppiSnap.id, ...ppiSnap.data()}) :
       null;
+    // Identifiant du client Stripe rattaché au compte (#207), s'il a ouvert un
+    // paiement — une donnée du compte comme une autre (RGPD art. 15).
+    result.stripeCustomerId = await readStripeCustomerId(db, uid);
 
     for (const [key, name] of Object.entries(EXPORTED_COLLECTIONS)) {
       const qs = await db.collection(name)

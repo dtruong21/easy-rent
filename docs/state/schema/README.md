@@ -4,7 +4,7 @@
 
 **Source** : `firestore.rules` + `firestore.indexes.json` + Cloud Functions callables. **Dernière sync** : 2026-07-21 (FEAT-044 paiement : champs `pro*` sur `landlords` ; quota documents free). **Pivot** : FEAT-019 (2026-06-30) — migration du backend vers Firestore camelCase (plus de backend SQL ; les sections de garde s'appellent désormais « Règles Firestore »).
 
-## 14 collections → shard
+## 15 collections → shard
 
 | Collection | Type | Access | Shard |
 |---|---|---|---|
@@ -21,6 +21,7 @@
 | `documents` | multi | CF exclusive | [expenses-documents](expenses-documents.md) |
 | `expenses` | multi | CF exclusive (FEAT-041) | [expenses-documents](expenses-documents.md) |
 | `investment_scenarios` | multi | CRUD signed (anon OK) | [simulator](simulator.md) |
+| `stripe_customers` | singleton (uid) | aucun accès client (Functions seules, #207) | [account](account.md) |
 | `_ops` | config serveur globale | aucun accès client (Functions seules) | [account](account.md) |
 
 ## Patterns transverses

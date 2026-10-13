@@ -93,6 +93,12 @@ export class FakeDocRef {
     this.store.set(this.path, resolveWrite(existing, patch));
     return Promise.resolve();
   }
+
+  /** Idempotent, comme Firestore : supprimer un doc absent ne lève pas. */
+  delete(): Promise<void> {
+    this.store.delete(this.path);
+    return Promise.resolve();
+  }
 }
 
 export class FakeDocSnapshot {

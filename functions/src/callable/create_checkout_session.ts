@@ -39,6 +39,11 @@ import {
 } from "../utils/callable_helpers";
 import {STAGING_DATABASE_ID, dbForRequest} from "../utils/db_router";
 import {
+  ensureStripeCustomer,
+  isStripeResourceMissing,
+  RC_APP_USER_ID_METADATA_KEY,
+} from "../utils/stripe_customer";
+import {
   assertStripeEnvMatchesDb,
   isFunctionsEmulator,
   resolveStripeKeyOrThrow,
@@ -65,12 +70,8 @@ const webAppBaseUrl = defineString("WEB_APP_BASE_URL", {
   default: "https://baillan.com",
 });
 
-/**
- * Nom du champ metadata que RevenueCat lit pour lier l'abonnement Stripe à
- * l'App User ID (= UID Firebase). ⚠️ DOIT correspondre au champ configuré dans
- * le dashboard RevenueCat (intégration Stripe).
- */
-export const RC_APP_USER_ID_METADATA_KEY = "rc_app_user_id";
+// Défini dans `utils/stripe_customer` (le client Stripe porte la même metadata).
+export {RC_APP_USER_ID_METADATA_KEY};
 
 /**
  * Palier acheté, posé en metadata pour le support et le rapprochement
@@ -195,6 +196,10 @@ export function assertCanOpenCheckout(
  * vit la logique critique : le bon price et l'App User ID posé en metadata aux
  * DEUX endroits que RevenueCat inspecte.
  *
+ * Ni `customer` ni `customer_email` ici : le handler pose le client Stripe du
+ * compte ([ensureStripeCustomer], #207), qui porte l'email — Stripe refuse les
+ * deux champs ensemble.
+ *
  * Lève avant tout appel Stripe si le palier n'est pas vendable
  * (`level_not_purchasable`) ou si son price n'est pas configuré
  * (`price_not_configured`) — cf. [resolvePriceIdOrThrow].
@@ -204,9 +209,8 @@ export function buildCheckoutSessionParams(args: {
   level: LevelId;
   period: BillingPeriod;
   config: CheckoutConfig;
-  customerEmail?: string | null;
 }): Stripe.Checkout.SessionCreateParams {
-  const {uid, level, period, config, customerEmail} = args;
+  const {uid, level, period, config} = args;
   const price = resolvePriceIdOrThrow(config.prices, level, period);
   const metadata: Stripe.MetadataParam = {
     [RC_APP_USER_ID_METADATA_KEY]: uid,
@@ -228,7 +232,6 @@ export function buildCheckoutSessionParams(args: {
     metadata,
     subscription_data: {metadata},
   };
-  if (customerEmail) params.customer_email = customerEmail;
   return params;
 }
 
@@ -286,16 +289,35 @@ export const createCheckoutSession = onCall(
         request.auth.token.email :
         null;
 
-    const params = buildCheckoutSessionParams({
-      uid,
-      level,
-      period,
-      config,
-      customerEmail: email,
-    });
+    // Offre validée (palier vendable, price configuré) AVANT tout appel Stripe,
+    // création du client comprise.
+    const params = buildCheckoutSessionParams({uid, level, period, config});
 
     const stripe = new Stripe(stripeKey);
-    const session = await stripe.checkout.sessions.create(params);
+    const openSession = (customer: string): Promise<Stripe.Checkout.Session> =>
+      stripe.checkout.sessions.create({...params, customer});
+
+    // #207 : l'abonnement naît sur le client Stripe du compte, enregistré côté
+    // serveur AVANT le paiement — résiliation et suppression de compte le
+    // retrouvent sans dépendre de la recherche Stripe (cohérence différée).
+    const customerId = await ensureStripeCustomer({db, stripe, uid, email});
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await openSession(customerId);
+    } catch (err) {
+      // Client supprimé côté Stripe (tableau de bord, purge des données de
+      // test) : on repart d'un client neuf plutôt que de bloquer l'achat à vie.
+      if (!isStripeResourceMissing(err, "customer")) throw err;
+      session = await openSession(
+        await ensureStripeCustomer({
+          db,
+          stripe,
+          uid,
+          email,
+          staleCustomerId: customerId,
+        }),
+      );
+    }
 
     // L'URL hostée Stripe vers laquelle le client web redirige.
     return {url: session.url, sessionId: session.id, level, period};

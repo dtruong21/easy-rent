@@ -33,12 +33,14 @@ import {VERIFIED_TOKEN} from "./helpers/verified_token";
 const stripeMock = vi.hoisted(() => ({
   keys: [] as string[],
   search: vi.fn(),
+  list: vi.fn(),
   update: vi.fn(),
 }));
 vi.mock("stripe", () => ({
   default: class FakeStripe {
     readonly subscriptions = {
       search: stripeMock.search,
+      list: stripeMock.list,
       update: stripeMock.update,
     };
 
@@ -390,6 +392,7 @@ describe("manageSubscription — handler (Origin web vs app native)", () => {
     vi.stubEnv("STRIPE_SECRET_KEY_TEST", TEST_KEY);
     stripeMock.keys.length = 0;
     stripeMock.search.mockReset().mockResolvedValue({data: [renewingSub]});
+    stripeMock.list.mockReset().mockResolvedValue({data: []});
     stripeMock.update
       .mockReset()
       .mockImplementation((_id: string, params: {cancel_at_period_end?: boolean}) =>
@@ -611,6 +614,136 @@ describe("manageSubscription — handler (Origin web vs app native)", () => {
         code: "failed-precondition",
         message: "no_active_web_subscription",
       });
+    });
+  });
+
+  // #207 : la recherche Stripe est à cohérence différée — un abonné qui
+  // résiliait juste après avoir payé recevait « aucun abonnement web ».
+  describe("abonnements retrouvés par le client Stripe enregistré (#207)", () => {
+    beforeEach(() => {
+      fakeDb.seed(`landlords/${UID}`, {id: UID});
+    });
+
+    it("★ abonnement tout juste payé, encore invisible de la recherche → résilié", async () => {
+      fakeDb.seed(`stripe_customers/${UID}`, {customerId: "cus_a"});
+      stripeMock.search.mockResolvedValue({data: []});
+      stripeMock.list.mockResolvedValue({data: [renewingSub]});
+
+      const result = await manageSubscription.run(
+        makeRequest({action: "cancel"}),
+      );
+
+      expect(stripeMock.list).toHaveBeenCalledWith(
+        expect.objectContaining({customer: "cus_a", status: "all"}),
+      );
+      expect(stripeMock.update).toHaveBeenCalledWith("sub_1", {
+        cancel_at_period_end: true,
+      });
+      expect(result).toEqual({status: "updated", cancelAtPeriodEnd: true});
+    });
+
+    it("★ résilier → réactiver → résilier dans la minute : la recherche périmée ne masque pas l'état réel", async () => {
+      fakeDb.seed(`stripe_customers/${UID}`, {customerId: "cus_a"});
+      // Stripe (liste, à jour) : renouvellement actif. Recherche : copie
+      // d'avant la réactivation, encore « résiliation programmée ».
+      stripeMock.list.mockResolvedValue({data: [renewingSub]});
+      stripeMock.search.mockResolvedValue({
+        data: [{...renewingSub, cancel_at_period_end: true}],
+      });
+
+      const result = await manageSubscription.run(
+        makeRequest({action: "cancel"}),
+      );
+
+      expect(stripeMock.update).toHaveBeenCalledWith("sub_1", {
+        cancel_at_period_end: true,
+      });
+      expect(result).toEqual({status: "updated", cancelAtPeriodEnd: true});
+    });
+
+    it("sans client enregistré → la liste par client n'est jamais appelée", async () => {
+      await manageSubscription.run(makeRequest({action: "cancel"}));
+
+      expect(stripeMock.list).not.toHaveBeenCalled();
+    });
+
+    it("le client Stripe d'un AUTRE compte n'est jamais consulté", async () => {
+      fakeDb.seed("stripe_customers/landlord-b", {customerId: "cus_b"});
+
+      await manageSubscription.run(makeRequest({action: "cancel"}));
+
+      expect(stripeMock.list).not.toHaveBeenCalled();
+    });
+
+    it("compte staging → client lu dans la base staging, pas dans (default)", async () => {
+      fakeStagingDb.seed(`landlords/${UID}`, {id: UID});
+      fakeStagingDb.seed(`stripe_customers/${UID}`, {customerId: "cus_test"});
+      fakeDb.seed(`stripe_customers/${UID}`, {customerId: "cus_live"});
+
+      await manageSubscription.run(
+        makeRequest({action: "cancel"}, STAGING_ORIGIN),
+      );
+
+      expect(stripeMock.keys).toEqual([TEST_KEY]);
+      expect(stripeMock.list).toHaveBeenCalledWith(
+        expect.objectContaining({customer: "cus_test"}),
+      );
+    });
+  });
+
+  describe("résiliation d'un abonnement déjà terminé (#207)", () => {
+    const endedSub = {...renewingSub, status: "canceled"};
+
+    beforeEach(() => {
+      fakeDb.seed(`landlords/${UID}`, {id: UID});
+      stripeMock.search.mockResolvedValue({data: [endedSub]});
+    });
+
+    it("cancel → succès sans appel Stripe (la demande est déjà satisfaite)", async () => {
+      const result = await manageSubscription.run(
+        makeRequest({action: "cancel"}),
+      );
+
+      expect(result).toEqual({status: "noop", cancelAtPeriodEnd: true});
+      expect(stripeMock.update).not.toHaveBeenCalled();
+    });
+
+    it("reactivate → toujours no_active_web_subscription (rien à reprendre)", async () => {
+      await expect(
+        manageSubscription.run(
+          makeRequest({action: "reactivate"}, "https://app.baillan.com"),
+        ),
+      ).rejects.toMatchObject({message: "no_active_web_subscription"});
+    });
+
+    it("change_plan / current_plan → toujours no_active_web_subscription", async () => {
+      vi.stubEnv("STRIPE_PRICE_PRO_ANNUAL", "price_pro_annual");
+      for (const data of [
+        {action: "current_plan"},
+        {action: "change_plan", level: "pro", period: "annual"},
+      ]) {
+        await expect(
+          manageSubscription.run(makeRequest(data, "https://app.baillan.com")),
+        ).rejects.toMatchObject({message: "no_active_web_subscription"});
+      }
+    });
+
+    it("un abonnement terminé + un autre en suspens (incomplete) → pas de succès annoncé à tort", async () => {
+      stripeMock.search.mockResolvedValue({
+        data: [endedSub, {...renewingSub, id: "sub_2", status: "incomplete"}],
+      });
+
+      await expect(
+        manageSubscription.run(makeRequest({action: "cancel"})),
+      ).rejects.toMatchObject({message: "no_active_web_subscription"});
+    });
+
+    it("cancel sans AUCUN abonnement (abonné store, jamais passé par Stripe) → no_active_web_subscription", async () => {
+      stripeMock.search.mockResolvedValue({data: []});
+
+      await expect(
+        manageSubscription.run(makeRequest({action: "cancel"})),
+      ).rejects.toMatchObject({message: "no_active_web_subscription"});
     });
   });
 
