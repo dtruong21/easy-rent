@@ -1,10 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 
+import '../../auth/data/landlord_tier_repository.dart';
+import '../../auth/domain/plan_matrix.g.dart';
 import '../../documents/application/upload_documents_controller.dart'
     show kAllowedMimeTypes, kMaxFileSizeBytes;
 import '../../documents/data/documents_repository.dart';
@@ -42,7 +45,12 @@ class ExpenseReceiptUploadController
     required Uint8List bytes,
     required String mimeType,
   }) async {
-    if (bytes.length > kMaxFileSizeBytes) {
+    // FEAT-056 : plafond de taille différencié par palier — jamais la
+    // constante de repli directement (cf. sa doc, `upload_documents_controller.dart`).
+    final maxFileSizeBytes =
+        _ref.read(quotaLimitProvider(PlanQuota.documentMaxBytes)) ??
+        kMaxFileSizeBytes;
+    if (bytes.length > maxFileSizeBytes) {
       state = ExpenseReceiptUploadState.error(
         filename: filename,
         message: ExpenseReceiptUploadErrorReason.fileTooLarge.name,
@@ -82,6 +90,27 @@ class ExpenseReceiptUploadController
       state = ExpenseReceiptUploadState.success(
         filename: filename,
         documentId: document.id,
+      );
+    } on FirebaseFunctionsException catch (e, st) {
+      // FEAT-056 : race avec un plafond client périmé — mappé sur le même
+      // motif que le pré-check ci-dessus plutôt que sur `connectionError`
+      // (générique, trompeur pour un vrai dépassement de taille). Le message
+      // affiché réutilise le plafond du palier courant (présentation), pas
+      // les `details` serveur — cf. `upload_documents_controller.dart` pour
+      // la version complète (upsell nommé) côté documents de bail.
+      final isFileTooLarge =
+          e.code == 'resource-exhausted' &&
+          (e.message?.contains('file_too_large') ?? false);
+      _log.warning(
+        'FirebaseFunctionsException uploading receipt $filename',
+        e,
+        st,
+      );
+      state = ExpenseReceiptUploadState.error(
+        filename: filename,
+        message: isFileTooLarge
+            ? ExpenseReceiptUploadErrorReason.fileTooLarge.name
+            : ExpenseReceiptUploadErrorReason.connectionError.name,
       );
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException uploading receipt $filename', e, st);

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../payments/domain/payment.dart';
 import '../../payments/domain/payment_method.dart';
@@ -28,6 +29,20 @@ abstract interface class LeaseRepository {
   /// cf. `lease_lateness.dart`) — les appelants prod ne le fournissent
   /// jamais et obtiennent le défaut `DateTime.now()`.
   Future<List<LeaseListItem>> listForDisplay({DateTime? now});
+
+  /// Liste les baux actifs (`status == 'active'`) d'un bien, hors soft-delete.
+  ///
+  /// Format retour Map brut snake_case, aligné sur
+  /// `TenantRepository.listLeasesForTenant` — même patron consommé par la
+  /// fiche bien (section « Baux actifs », `PropertyLeaseSummary`) que par la
+  /// fiche locataire (section « Baux liés », `TenantLeaseSummary`), pour un
+  /// rendu strictement identique entre les deux écrans. Le filtre `active`
+  /// est appliqué côté client pour réutiliser l'index composite existant
+  /// `landlordId, propertyId, deletedAt, startDate DESC` sans en ajouter un
+  /// nouveau.
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  );
 
   Future<Lease> getById(String id);
 
@@ -106,12 +121,30 @@ class FirestoreLeaseRepository implements LeaseRepository {
     // Tri côté serveur : startDate DESC. Le tri status ASC (active d'abord)
     // est appliqué côté client après lecture pour ne pas multiplier les
     // indexes composites.
-    final qs = await _col
+    final leasesQuery = _col
         .where('landlordId', isEqualTo: _uid)
         .where('deletedAt', isNull: true)
         .orderBy('startDate', descending: true)
         .limit(200)
         .get();
+
+    // Couleur d'identité (FEAT-057) : 1 SEULE lecture groupée des biens du
+    // landlord, en parallèle de la requête baux — jamais une lecture par
+    // bail. Bornée à 200 comme `PropertyRepository.list()` (portefeuille
+    // cible : 1-20 biens, cf. docstring du repository).
+    final propertiesQuery = _firestore
+        .collection('properties')
+        .where('landlordId', isEqualTo: _uid)
+        .where('deletedAt', isNull: true)
+        .limit(200)
+        .get();
+
+    final results = await Future.wait([leasesQuery, propertiesQuery]);
+    final qs = results[0];
+    final colorKeyByPropertyId = <String, String?>{
+      for (final doc in results[1].docs)
+        doc.id: doc.data()['colorKey'] as String?,
+    };
 
     final leases = qs.docs
         .map(
@@ -149,6 +182,7 @@ class FirestoreLeaseRepository implements LeaseRepository {
         propertyName: propertyName,
         tenantDisplayName: tenantDisplayName,
         isLate: isLate,
+        propertyColorKey: colorKeyByPropertyId[lease.propertyId],
       );
     }).toList();
 
@@ -201,6 +235,39 @@ class FirestoreLeaseRepository implements LeaseRepository {
       }
     }
     return result;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async {
+    _log.info('listActiveLeasesForProperty($propertyId)');
+    final qs = await _col
+        .where('landlordId', isEqualTo: _uid)
+        .where('propertyId', isEqualTo: propertyId)
+        .where('deletedAt', isNull: true)
+        .orderBy('startDate', descending: true)
+        .get();
+
+    return qs.docs.where((d) => d.data()['status'] == 'active').map((d) {
+      final raw = d.data();
+      // Aligne le format avec `TenantRepository.listLeasesForTenant`
+      // (snake_case + ISO strings) — même patron d'affichage.
+      return {
+        'id': d.id,
+        'property_id': raw['propertyId'],
+        'start_date': (raw['startDate'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+        'end_date': (raw['endDate'] as Timestamp?)
+            ?.toDate()
+            .toUtc()
+            .toIso8601String(),
+        'status': raw['status'],
+        'rent_amount_cents': raw['rentAmountCents'],
+      };
+    }).toList();
   }
 
   @override
@@ -359,7 +426,7 @@ class LeaseAlreadyClosedException implements Exception {
 
 final leaseRepositoryProvider = Provider<LeaseRepository>((ref) {
   return FirestoreLeaseRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

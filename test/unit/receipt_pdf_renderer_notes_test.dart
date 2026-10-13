@@ -28,6 +28,10 @@ ReceiptPdfData _makeData({String? notes}) => ReceiptPdfData(
 );
 
 void main() {
+  // Le renderer charge la police EB Garamond embarquée via `rootBundle`
+  // (cf. `PdfBrandFonts`) — nécessite le binding Flutter Test initialisé.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('renderReceiptPdf — champ notes (FEAT-029 V1.1)', () {
     test('notes null → PDF généré sans exception', () async {
       final bytes = await renderReceiptPdf(_makeData());

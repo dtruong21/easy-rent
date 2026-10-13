@@ -1,7 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
+
+import '../../../core/config/firestore_provider.dart';
 
 final _log = Logger('ActiveLeaseProvider');
 
@@ -14,7 +15,8 @@ final activeLeaseRentProvider = FutureProvider.autoDispose.family<int?, String>(
     _log.info('activeLeaseRentProvider($propertyId)');
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return null;
-    final qs = await FirebaseFirestore.instance
+    final qs = await ref
+        .watch(firestoreProvider)
         .collection('leases')
         .where('landlordId', isEqualTo: uid)
         .where('propertyId', isEqualTo: propertyId)
@@ -34,7 +36,8 @@ final activeLeaseIdProvider = FutureProvider.autoDispose
       _log.info('activeLeaseIdProvider($propertyId)');
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return null;
-      final qs = await FirebaseFirestore.instance
+      final qs = await ref
+          .watch(firestoreProvider)
           .collection('leases')
           .where('landlordId', isEqualTo: uid)
           .where('propertyId', isEqualTo: propertyId)

@@ -15,14 +15,23 @@
  *   3. Dénormalisation (`propertyName`/`tenantLastName`, pattern `payments`)
  *      + soft-delete protégé (`deletedAt` jamais écrit côté client).
  *
+ * FEAT-041d : ces callables acceptent en plus `recurrence` /
+ * `recurrenceEndDate`. Aucune écriture n'est générée par échéance — la
+ * récurrence est virtuelle, les clients la déroulent au calcul. Il n'y a donc
+ * rien à ajouter dans `firestore.rules` : la collection est déjà
+ * `allow create, update, delete: if false` (écriture 100 % CF), et la lecture
+ * est autorisée au document entier, pas champ par champ.
+ *
  * `NATURE_DEFAULT_CATEGORY` est la source unique de vérité juridique — elle
  * est répliquée en enum Dart `ExpenseNature` côté client pour la
  * présélection UI uniquement (la dérivation reste serveur, non
  * contournable).
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
+
 
 import {makeSetUpdatedAt} from "../triggers/set_updated_at";
 import {
@@ -32,11 +41,12 @@ import {
   optionalInt,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireInt,
   requireString,
   toTimestamp,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
 
 export type ExpenseCategory = "recoverable" | "non_recoverable";
 
@@ -73,8 +83,37 @@ export const NATURE_DEFAULT_CATEGORY: Readonly<
   other: {category: "non_recoverable", locked: false},
 };
 
+/**
+ * Périodicité d'une dépense (FEAT-041d) — récurrence VIRTUELLE.
+ *
+ * Le serveur ne matérialise AUCUNE écriture par échéance : il stocke le
+ * rythme et, éventuellement, une date de fin. Ce sont les clients qui
+ * déroulent les échéances au moment du calcul (cf.
+ * `lib/core/finance/expense_recurrence.dart`). Corriger le montant d'une
+ * dépense récurrente corrige donc instantanément toutes ses échéances, sans
+ * rattrapage ni cron.
+ *
+ * Réplique fidèle de l'enum Dart `ExpenseRecurrence`.
+ */
+export const EXPENSE_RECURRENCES = [
+  "none",
+  "monthly",
+  "quarterly",
+  "yearly",
+] as const;
+
+export type ExpenseRecurrence = (typeof EXPENSE_RECURRENCES)[number];
+
+const EXPENSE_RECURRENCE_SET: ReadonlySet<string> = new Set(
+  EXPENSE_RECURRENCES,
+);
+
 function isExpenseNature(value: string): value is ExpenseNature {
   return EXPENSE_NATURE_SET.has(value);
+}
+
+function isExpenseRecurrence(value: string): value is ExpenseRecurrence {
+  return EXPENSE_RECURRENCE_SET.has(value);
 }
 
 function isExpenseCategory(value: string): value is ExpenseCategory {
@@ -124,13 +163,57 @@ export function deriveExpensePeriodYear(opts: {
   return opts.expenseDate.toDate().getUTCFullYear();
 }
 
+/**
+ * Valide et normalise le couple (périodicité, fin de récurrence).
+ *
+ * Règles :
+ *  - absence de `recurrence` → `none` (dépenses créées avant FEAT-041d : elles
+ *    restent ponctuelles, aucune migration n'est faite ni nécessaire) ;
+ *  - une dépense ponctuelle ne peut pas porter de fin de récurrence — la
+ *    valeur est **normalisée à null** plutôt que refusée : le client qui
+ *    repasse une dépense en « ponctuelle » n'a pas à penser à effacer aussi
+ *    la date de fin, et un document ne peut jamais se retrouver dans cet
+ *    état incohérent ;
+ *  - la fin de récurrence ne peut pas précéder `expenseDate`, qui est la
+ *    PREMIÈRE échéance : une telle récurrence n'aurait aucune échéance.
+ *
+ * Fonction pure (hors type Timestamp) — testable sans émulateur.
+ */
+export function resolveExpenseRecurrence(opts: {
+  recurrence: string | null;
+  recurrenceEndDate: admin.firestore.Timestamp | null;
+  expenseDate: admin.firestore.Timestamp;
+}): {
+  recurrence: ExpenseRecurrence;
+  recurrenceEndDate: admin.firestore.Timestamp | null;
+} {
+  const raw = opts.recurrence ?? "none";
+  if (!isExpenseRecurrence(raw)) {
+    throw new HttpsError("invalid-argument", `invalid recurrence: ${raw}`);
+  }
+
+  if (raw === "none") {
+    return {recurrence: "none", recurrenceEndDate: null};
+  }
+
+  const end = opts.recurrenceEndDate;
+  if (end !== null && end.toMillis() < opts.expenseDate.toMillis()) {
+    throw new HttpsError(
+      "invalid-argument",
+      "recurrence_end_before_expense_date",
+    );
+  }
+
+  return {recurrence: raw, recurrenceEndDate: end};
+}
+
 // ============================================================================
 // createExpense
 // ============================================================================
 export const createExpense = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const propertyId = requireString(data.propertyId, "propertyId");
@@ -191,13 +274,22 @@ export const createExpense = onCall(
       expenseDate,
     });
 
+    const {recurrence, recurrenceEndDate} = resolveExpenseRecurrence({
+      recurrence: optionalString(data.recurrence, "recurrence"),
+      recurrenceEndDate: optionalTimestamp(
+        data.recurrenceEndDate,
+        "recurrenceEndDate",
+      ),
+      expenseDate,
+    });
+
     const documentId = optionalString(data.documentId, "documentId");
     const notes = optionalString(data.notes, "notes");
     if (notes !== null && notes.length > 2000) {
       throw new HttpsError("invalid-argument", "notes must be <= 2000 chars");
     }
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const propertyRef = db.doc(`properties/${propertyId}`);
     const leaseRef = leaseId ? db.doc(`leases/${leaseId}`) : null;
     const documentRef = documentId ? db.doc(`documents/${documentId}`) : null;
@@ -234,7 +326,7 @@ export const createExpense = onCall(
         assertOwnedAndActive(document, uid, "document");
       }
 
-      const now = admin.firestore.FieldValue.serverTimestamp();
+      const now = FieldValue.serverTimestamp();
       tx.set(expenseRef, {
         id: expenseRef.id,
         landlordId: uid,
@@ -250,6 +342,8 @@ export const createExpense = onCall(
         periodYear,
         periodStart,
         periodEnd,
+        recurrence,
+        recurrenceEndDate,
         documentId,
         notes,
         createdAt: now,
@@ -276,6 +370,8 @@ const EXPENSE_MUTABLE_FIELDS = new Set([
   "periodStart",
   "periodEnd",
   "periodYear",
+  "recurrence",
+  "recurrenceEndDate",
   "documentId",
   "notes",
 ]);
@@ -283,7 +379,7 @@ const EXPENSE_MUTABLE_FIELDS = new Set([
 export const updateExpense = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const id = requireString(data.id, "id");
     const patch = asBag(data.patch);
@@ -297,7 +393,7 @@ export const updateExpense = onCall(
       }
     }
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const expenseRef = db.doc(`expenses/${id}`);
 
     return await db.runTransaction(async (tx) => {
@@ -409,6 +505,33 @@ export const updateExpense = onCall(
         });
       }
 
+      // recurrence / recurrenceEndDate — l'invariante « la fin ne précède pas
+      // la première échéance » est revérifiée à CHAQUE update, même quand le
+      // patch ne touche que `expenseDate` : déplacer la date de la dépense
+      // après la fin de récurrence produirait une récurrence sans aucune
+      // échéance.
+      const resolvedRecurrence = resolveExpenseRecurrence({
+        recurrence:
+          patch.recurrence !== undefined ?
+            requireString(patch.recurrence, "recurrence") :
+            ((expense.recurrence as string | undefined) ?? null),
+        recurrenceEndDate:
+          patch.recurrenceEndDate !== undefined ?
+            optionalTimestamp(patch.recurrenceEndDate, "recurrenceEndDate") :
+            ((expense.recurrenceEndDate as
+              | admin.firestore.Timestamp
+              | null
+              | undefined) ?? null),
+        expenseDate,
+      });
+      if (
+        patch.recurrence !== undefined ||
+        patch.recurrenceEndDate !== undefined
+      ) {
+        cleanPatch.recurrence = resolvedRecurrence.recurrence;
+        cleanPatch.recurrenceEndDate = resolvedRecurrence.recurrenceEndDate;
+      }
+
       // documentId — ownership re-validée si changé.
       if (patch.documentId !== undefined) {
         const documentId = optionalString(patch.documentId, "documentId");
@@ -451,7 +574,7 @@ export const updateExpense = onCall(
 
       tx.update(expenseRef, {
         ...cleanPatch,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       return {updated: true};

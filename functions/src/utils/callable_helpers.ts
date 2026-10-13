@@ -8,8 +8,10 @@
  * code des handlers propre et type-safe.
  */
 
+import * as admin from "firebase-admin";
 import type {DocumentSnapshot} from "firebase-admin/firestore";
 import {Timestamp} from "firebase-admin/firestore";
+import {logger} from "firebase-functions/v2";
 import {HttpsError} from "firebase-functions/v2/https";
 import type {CallableRequest} from "firebase-functions/v2/https";
 
@@ -24,6 +26,179 @@ export function requireAuthUid<T = unknown>(request: CallableRequest<T>): string
     throw new HttpsError("unauthenticated", "sign-in required");
   }
   return request.auth.uid;
+}
+
+/** Providers dont l'email est vérifié par le fournisseur d'identité. */
+const TRUSTED_EMAIL_PROVIDERS: ReadonlySet<string> = new Set([
+  "google.com",
+  "apple.com",
+]);
+
+/** Code d'erreur renvoyé aux comptes dont l'email n'est pas vérifié. */
+export const EMAIL_NOT_VERIFIED = "email_not_verified";
+
+/**
+ * OWASP-02 — comme [requireAuthUid], mais exige en plus un compte « de
+ * confiance », miroir serveur de `isFullyAuthed()` des Firestore rules. Sont
+ * acceptés :
+ *   - un compte dont l'email est vérifié (`email_verified` du token) ;
+ *   - un compte Google / Apple (email vérifié par le fournisseur) ;
+ *   - un compte ANONYME (essai sans compte) — ses limites sont portées par les
+ *     paliers / quotas, pas par cette garde.
+ * Sinon : `failed-precondition` / `email_not_verified`. Fail-closed : un token
+ * sans claim `firebase` ou `email_verified` est traité comme non vérifié.
+ *
+ * Le claim `sign_in_provider == 'anonymous'` reste porté par les tokens émis
+ * AVANT un linkWithCredential/Provider (upgrade d'essai) : il ne prouve pas que
+ * le compte est toujours anonyme. Or `finalizeAnonymousUpgrade` ne vérifie pas
+ * l'email — sans confirmation, un compte lié à une adresse (éventuellement celle
+ * d'un tiers) et jamais vérifié garderait un accès complet en conservant son
+ * token. On confirme donc l'état AUTORITATIF côté Admin SDK : vrai anonyme ⇔
+ * aucun provider lié ; sinon l'email doit être vérifié ou le provider de
+ * confiance. Le coût (un `getUser`) ne concerne que ces tokens « anonymous ».
+ *
+ * À appeler en PREMIÈRE ligne des callables métier. Exemptées volontairement :
+ * `deleteAccount`, `exportAccountData` (droits RGPD, accessibles à un compte non
+ * vérifié) et `finalizeAnonymousUpgrade` (appelée AVANT l'email de vérification
+ * lors du passage anonyme → compte complet) — elles gardent `requireAuthUid`.
+ */
+export async function requireVerifiedUid<T = unknown>(
+  request: CallableRequest<T>,
+): Promise<string> {
+  const uid = requireAuthUid(request);
+  const token = request.auth?.token;
+  const provider = token?.firebase?.sign_in_provider;
+
+  if (provider === "anonymous") {
+    await assertAnonymousClaimIsTrusted(uid);
+    return uid;
+  }
+  if (
+    token?.email_verified === true ||
+    (typeof provider === "string" && TRUSTED_EMAIL_PROVIDERS.has(provider))
+  ) {
+    return uid;
+  }
+  throw new HttpsError("failed-precondition", EMAIL_NOT_VERIFIED);
+}
+
+/**
+ * Confirme, via Admin SDK, qu'un token au claim « anonymous » appartient bien à
+ * un compte anonyme pur, ou à un compte upgradé dont l'email est de confiance.
+ */
+async function assertAnonymousClaimIsTrusted(uid: string): Promise<void> {
+  let record: {
+    providerData: ReadonlyArray<{providerId: string}>;
+    emailVerified: boolean;
+  };
+  try {
+    record = await admin.auth().getUser(uid);
+  } catch (err) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err ?
+        (err as {code: unknown}).code :
+        undefined;
+    if (code === "auth/user-not-found") {
+      // Compte supprimé (ex. purge d'un essai expiré) : token orphelin.
+      throw new HttpsError("unauthenticated", "account no longer exists");
+    }
+    // Fail-closed, sans donnée personnelle dans le log (ni uid, ni email).
+    logger.error(
+      `requireVerifiedUid: account lookup failed (${
+        typeof code === "string" ? code : "unknown"
+      })`,
+    );
+    throw new HttpsError("internal", "account lookup failed — retry");
+  }
+
+  if (record.providerData.length === 0) return; // anonyme pur
+  if (record.emailVerified) return;
+  if (record.providerData.some((p) => TRUSTED_EMAIL_PROVIDERS.has(p.providerId))) {
+    return;
+  }
+  throw new HttpsError("failed-precondition", EMAIL_NOT_VERIFIED);
+}
+
+/** Code d'erreur : un compte anonyme (essai sans compte) ne peut pas payer. */
+export const ANONYMOUS_ACCOUNT_NOT_ALLOWED = "anonymous_account_not_allowed";
+
+/**
+ * Refuse un compte ANONYME pur (essai sans compte) sur une callable de
+ * facturation (#209). Un anonyme pouvait ouvrir un paiement Stripe ; son achat
+ * ne se rattachait à aucun compte durable — purgé à l'expiration de l'essai,
+ * il perdait ce qu'il avait payé. L'app ne lui montre pas `/pro` ; ceci est la
+ * garde serveur.
+ *
+ * Autoritatif comme [requireVerifiedUid] : le claim `sign_in_provider` reste
+ * `"anonymous"` sur un token émis avant un passage à un compte complet par
+ * liaison, d'où la confirmation par l'Admin SDK (`providerData` vide = anonyme
+ * pur). Un token d'un autre fournisseur ne peut pas porter un compte anonyme :
+ * aucune lecture dans ce cas. À appeler APRÈS [requireVerifiedUid].
+ */
+export async function assertNotAnonymousAccount(
+  request: CallableRequest<unknown>,
+  uid: string,
+): Promise<void> {
+  if (request.auth?.token?.firebase?.sign_in_provider !== "anonymous") return;
+  let providerCount: number;
+  try {
+    providerCount = (await admin.auth().getUser(uid)).providerData.length;
+  } catch (err) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err ?
+        (err as {code: unknown}).code :
+        undefined;
+    // Fail-closed, sans donnée personnelle dans le log.
+    logger.error(
+      `assertNotAnonymousAccount: account lookup failed (${
+        typeof code === "string" ? code : "unknown"
+      })`,
+    );
+    throw new HttpsError("internal", "account lookup failed — retry");
+  }
+  if (providerCount === 0) {
+    throw new HttpsError("failed-precondition", ANONYMOUS_ACCOUNT_NOT_ALLOWED);
+  }
+}
+
+/** Fraîcheur maximale de l'authentification pour un compte non-anonyme. */
+export const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
+
+/**
+ * Rejette si un compte NON-anonyme présente un token d'auth trop vieux
+ * (> RECENT_AUTH_MAX_AGE_SECONDS). Un compte anonyme (confirmé AUTORITATIVEMENT
+ * via Admin SDK `providerData`, car le claim `sign_in_provider` reste
+ * "anonymous" sur les tokens émis avant un upgrade par linking) est exempté.
+ */
+export async function assertRecentAuthForNonAnonymousAccount(
+  request: CallableRequest,
+  uid: string,
+): Promise<void> {
+  const token = request.auth?.token;
+  let isAnonymous = token?.firebase?.sign_in_provider === "anonymous";
+  if (isAnonymous) {
+    try {
+      const userRecord = await admin.auth().getUser(uid);
+      isAnonymous = userRecord.providerData.length === 0;
+    } catch (err) {
+      const code =
+        typeof err === "object" && err !== null && "code" in err ?
+          (err as {code: unknown}).code :
+          undefined;
+      if (code !== "auth/user-not-found") {
+        logger.error(`assertRecentAuth: getUser failed for uid=${uid}`, err);
+        throw new HttpsError("internal", "account lookup failed — retry");
+      }
+    }
+  }
+  if (!isAnonymous) {
+    const authTime =
+      typeof token?.auth_time === "number" ? token.auth_time : 0;
+    const ageSeconds = Date.now() / 1000 - authTime;
+    if (ageSeconds > RECENT_AUTH_MAX_AGE_SECONDS) {
+      throw new HttpsError("failed-precondition", "recent-login-required");
+    }
+  }
 }
 
 export function requireString(value: unknown, name: string): string {

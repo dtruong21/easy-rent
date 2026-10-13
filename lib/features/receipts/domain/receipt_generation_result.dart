@@ -1,6 +1,6 @@
 import 'document_type.dart';
 
-/// Résultat retourné par l'Edge Function `generate-receipt`.
+/// Résultat retourné par la Cloud Function `generateReceipt`.
 ///
 /// Contient les informations nécessaires pour afficher le dialog de prévisualisation
 /// et ouvrir le PDF.
@@ -17,7 +17,7 @@ class ReceiptGenerationResult {
     required this.periodEnd,
   });
 
-  /// Identifiant de la quittance créée côté Supabase.
+  /// Identifiant de la quittance créée côté Firestore.
   final String receiptId;
 
   /// URL signée (5 min) pour accéder au PDF.

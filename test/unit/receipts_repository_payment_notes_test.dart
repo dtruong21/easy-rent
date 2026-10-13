@@ -64,6 +64,11 @@ Map<String, dynamic> _paymentDoc({String? notes}) => {
 };
 
 void main() {
+  // `renderPdfBytes` délègue à `renderReceiptPdf`, qui charge la police EB
+  // Garamond embarquée via `rootBundle` (cf. `PdfBrandFonts`) — nécessite le
+  // binding Flutter Test initialisé.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakeFirebaseFirestore firestore;
   late FirestoreReceiptsRepository repo;
 

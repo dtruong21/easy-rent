@@ -36,12 +36,20 @@ Document _makeDoc() => Document(
   updatedAt: DateTime(2026, 6, 1),
 );
 
-Widget _buildList(List<UploadFileStatus> files) {
+Widget _buildList(
+  List<UploadFileStatus> files, {
+  int maxFileSizeBytes = 10 * 1024 * 1024,
+}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     locale: const Locale('fr'),
     supportedLocales: supportedLocales,
-    home: Scaffold(body: UploadProgressList(files: files)),
+    home: Scaffold(
+      body: UploadProgressList(
+        files: files,
+        maxFileSizeBytes: maxFileSizeBytes,
+      ),
+    ),
   );
 }
 
@@ -111,6 +119,61 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('doc.docx'), findsOneWidget);
+    });
+
+    group('FEAT-056 — message fileTooLarge dynamique par palier', () {
+      testWidgets('plafond Max (25 Mo) → message mentionne 25 Mo', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildList([
+            const UploadFileStatus.error(
+              filename: 'scan.pdf',
+              reason: UploadFileErrorReason.fileTooLarge,
+            ),
+          ], maxFileSizeBytes: 25 * 1024 * 1024),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('25 Mo'), findsOneWidget);
+      });
+
+      testWidgets(
+        'détails serveur (course, upgradeTo=ultra) → priment sur le plafond client et nomment le palier',
+        (tester) async {
+          await tester.pumpWidget(
+            _buildList([
+              const UploadFileStatus.error(
+                filename: 'scan.pdf',
+                reason: UploadFileErrorReason.fileTooLarge,
+                serverLimitBytes: 26214400,
+                serverUpgradeToLevelId: 'ultra',
+              ),
+            ], maxFileSizeBytes: 10 * 1024 * 1024),
+          );
+          await tester.pumpAndSettle();
+          expect(find.textContaining('25 Mo'), findsOneWidget);
+          expect(find.textContaining('Ultra'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'détails serveur sans upgradeTo (aucun palier ne débloque) → pas de mention de palier',
+        (tester) async {
+          await tester.pumpWidget(
+            _buildList([
+              const UploadFileStatus.error(
+                filename: 'scan.pdf',
+                reason: UploadFileErrorReason.fileTooLarge,
+                serverLimitBytes: 52428800,
+              ),
+            ]),
+          );
+          await tester.pumpAndSettle();
+          expect(find.textContaining('50 Mo'), findsOneWidget);
+          expect(find.textContaining('Ultra'), findsNothing);
+          expect(find.textContaining('Passez'), findsNothing);
+        },
+      );
     });
 
     testWidgets('plusieurs fichiers → affiche tous les noms', (tester) async {

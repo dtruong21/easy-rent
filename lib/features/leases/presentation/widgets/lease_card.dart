@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
-import '../../../../core/ui/cards/entity_card.dart';
-import '../../../../core/ui/cards/entity_card_header.dart';
 import '../../../../core/ui/cards/status_pill.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
+import '../../../../core/ui/cards/summary_card.dart';
+import '../../../../core/ui/theme/property_color.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
 import '../../domain/lease.dart';
@@ -13,17 +13,11 @@ import '../../domain/lease_list_item.dart';
 import '../lease_list_item_display_l10n.dart';
 import 'lease_status_mapper.dart';
 
-/// Card v2 représentant un bail dans la liste.
-///
-/// Utilise [EntityCard] pour le layout cohérent avec les autres entités.
-/// Header : nom du bien + [StatusPill] statut + menu overflow (baux en mode
-/// provisions uniquement, FEAT-030 + FEAT-042).
-/// Body : locataire, période, loyer CC.
-/// Footer : boutons "Quittances" et "+ Paiement".
-///
-/// Le tap sur la carte entière navigue vers le détail du bail.
-/// Les boutons footer et le menu overflow sont indépendants (hit-testing
-/// Flutter natif).
+/// Carte d'un bail dans la liste — adaptateur [SummaryCard] (spec
+/// 2026-09-29). Chiffre clé : loyer CC. Statut : pastille bail (actif / à
+/// renouveler / en retard / terminé). Action rapide : « + Paiement ». Menu
+/// ⋮ : Quittances · Régulariser les charges (si applicable, FEAT-030/042) ·
+/// Modifier.
 class LeaseCard extends StatelessWidget {
   const LeaseCard({super.key, required this.item, required this.onTap});
 
@@ -32,69 +26,61 @@ class LeaseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final l10n = context.l10n;
     final lease = item.lease;
     final pillData = leaseStatusPill(context, lease, isLate: item.isLate);
+    final colorKey = PropertyColorKey.resolve(
+      entityId: lease.propertyId,
+      stored: item.propertyColorKey,
+    );
 
-    return EntityCard(
+    return SummaryCard(
       onTap: onTap,
-      semanticLabel: context.l10n.leasesCardSemanticLabel(
+      accentColor: colorKey.resolveColor(context),
+      semanticLabel: l10n.leasesCardSemanticLabel(
         item.displayPropertyName(context),
         item.displayTenantName(context),
       ),
-      header: EntityCardHeader(
-        title: Text(
-          item.displayPropertyName(context),
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            StatusPill(
-              tone: pillData.tone,
-              label: pillData.label,
-              icon: pillData.icon,
-              size: StatusPillSize.sm,
-            ),
-            // Raccourci "Régulariser les charges" (FEAT-030) — gate légal :
-            // uniquement les baux en mode provisions (art. 23 loi du 6
-            // juillet 1989, cf. ChargeRegularizationSection). Le critère
-            // n'est PAS le type de bail mais le mode de charges effectif
-            // (FEAT-042) — voir `Lease.canRegularizeCharges`. Les données
-            // riches requises par le dialog (adresses, email, nom bailleur)
-            // ne sont PAS portées par LeaseListItem — on navigue vers la
-            // fiche qui les charge et ouvre le dialog automatiquement.
-            if (lease.canRegularizeCharges)
-              _RegularizeChargesMenu(leaseId: lease.id),
-          ],
-        ),
+      title: item.displayPropertyName(context),
+      subtitle: item.displayTenantName(context),
+      keyFigure: SummaryKeyFigure(
+        value: MoneyFormat.formatEurosFromCents(lease.totalAmountCents),
+        caption: l10n.commonRentCcPerMonthCaption,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _LeaseCardRow(
-            icon: Icons.person_outline,
-            text: item.displayTenantName(context),
-          ),
-          const SizedBox(height: 4),
-          _LeaseCardRow(
-            icon: Icons.calendar_today_outlined,
-            text: _formatPeriod(context, lease.startDate, lease.endDate),
-          ),
-          const SizedBox(height: 4),
-          _LeaseCardRow(
-            icon: Icons.euro_outlined,
-            text: context.l10n.leasesCardRentPerMonth(
-              MoneyFormat.formatEurosFromCents(lease.totalAmountCents),
-            ),
-          ),
-        ],
+      status: StatusPill(
+        tone: pillData.tone,
+        label: pillData.label,
+        icon: pillData.icon,
+        size: StatusPillSize.sm,
       ),
-      footer: _LeaseCardFooter(leaseId: lease.id),
+      meta: _formatPeriod(context, lease.startDate, lease.endDate),
+      quickAction: SummaryQuickActionButton(
+        key: Key('card_add_payment_${lease.id}'),
+        icon: Icons.add,
+        label: l10n.leasesCardPaymentButton,
+        onPressed: () => context.push('/leases/${lease.id}/payments/new'),
+      ),
+      menuKey: Key('lease_menu_${lease.id}'),
+      menuItems: [
+        SummaryMenuItem(
+          key: Key('card_receipts_${lease.id}'),
+          label: l10n.leasesCardReceiptsButton,
+          onSelected: () => context.push('/leases/${lease.id}/receipts'),
+        ),
+        // Gate légal inchangé (FEAT-030/042) : mode provisions uniquement.
+        if (lease.canRegularizeCharges)
+          SummaryMenuItem(
+            key: const Key('menu_item_regularize_charges'),
+            label: l10n.leasesRegularizeChargesMenuItem,
+            onSelected: () =>
+                context.push('/leases/${lease.id}?action=regularize'),
+          ),
+        SummaryMenuItem(
+          key: Key('card_edit_lease_${lease.id}'),
+          label: l10n.commonEdit,
+          onSelected: () => context.push('/leases/${lease.id}/edit'),
+        ),
+      ],
     );
   }
 
@@ -114,129 +100,5 @@ class LeaseCard extends StatelessWidget {
       return l10n.leasesCardPeriodWithYears(start, end, years);
     }
     return l10n.leasesCardPeriod(start, end);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Widgets privés
-// ---------------------------------------------------------------------------
-
-class _LeaseCardRow extends StatelessWidget {
-  const _LeaseCardRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LeaseCardFooter extends StatelessWidget {
-  const _LeaseCardFooter({required this.leaseId});
-
-  final String leaseId;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      children: [
-        OutlinedButton.icon(
-          onPressed: () => context.push('/leases/$leaseId/receipts'),
-          icon: const Icon(Icons.receipt_long_outlined, size: 16),
-          label: Text(context.l10n.leasesCardReceiptsButton),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: Theme.of(context).textTheme.labelSmall,
-          ),
-        ),
-        OutlinedButton.icon(
-          onPressed: () => context.push('/leases/$leaseId/payments/new'),
-          icon: const Icon(Icons.add, size: 16),
-          label: Text(context.l10n.leasesCardPaymentButton),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: Theme.of(context).textTheme.labelSmall,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Seule action du menu overflow (FEAT-030). Enum à une valeur plutôt que
-/// `PopupMenuButton<void>` : `PopupMenuButton` interprète une valeur
-/// sélectionnée `null` comme une ANNULATION (cf.
-/// `PopupMenuButtonState.showButtonMenu` — `if (newValue == null) {
-/// onCanceled?.call(); return; }`), donc `onSelected` ne serait jamais
-/// appelé avec `PopupMenuItem<void>` (dont la `value` par défaut est aussi
-/// `null`) — piège découvert en test (le tap "réussissait" sans jamais
-/// déclencher la navigation).
-enum _LeaseCardMenuAction { regularizeCharges }
-
-/// Menu overflow "Régulariser les charges" (FEAT-030).
-///
-/// Navigue vers la fiche du bail avec `?action=regularize` — la fiche
-/// (chargée avec toutes les données riches requises par le dialog) ouvre
-/// automatiquement le dialog de régularisation. Le tap sur ce bouton ne doit
-/// PAS propager au tap de la carte parente (hit-testing Flutter natif via
-/// [PopupMenuButton], même mécanisme que les boutons du footer).
-class _RegularizeChargesMenu extends StatelessWidget {
-  const _RegularizeChargesMenu({required this.leaseId});
-
-  final String leaseId;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_LeaseCardMenuAction>(
-      key: Key('lease_menu_$leaseId'),
-      icon: const Icon(Icons.more_vert, size: 18),
-      tooltip: context.l10n.leasesCardActionsTooltip,
-      // Bouton icône compact : le tap target Material par défaut (48×48,
-      // ConstrainedBox interne kMinInteractiveDimension) fait déborder le
-      // header de EntityCard, dont la hauteur est dictée par le StatusPill
-      // (20dp en taille sm) — cf. RenderFlex overflow détecté par
-      // shell_branch_state_test.dart. `style` est transmis tel quel à
-      // l'IconButton interne (cf. `PopupMenuButtonState.build` du SDK).
-      padding: EdgeInsets.zero,
-      splashRadius: 16,
-      style: IconButton.styleFrom(
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-      ),
-      onSelected: (_) => context.push('/leases/$leaseId?action=regularize'),
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          key: const Key('menu_item_regularize_charges'),
-          value: _LeaseCardMenuAction.regularizeCharges,
-          child: Text(context.l10n.leasesRegularizeChargesMenuItem),
-        ),
-      ],
-    );
   }
 }

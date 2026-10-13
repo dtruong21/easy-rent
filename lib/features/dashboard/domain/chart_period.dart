@@ -1,6 +1,6 @@
-/// Période affichée par le graphique « Loyers ».
+/// Période affichée par le graphique « Cash-flow mensuel ».
 ///
-/// Choisie via le toggle de `MonthlyBarchart`, persistée par
+/// Choisie via le toggle de `MonthlyCashflowChart`, persistée par
 /// `chartPeriodProvider` (localStorage sur le web).
 ///
 /// FEAT-043 : cet enum ne porte plus de libellé FR en dur — la présentation

@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
+import '../../../core/finance/expense_recurrence.dart';
 import '../../../core/firestore_helpers.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
@@ -12,6 +14,16 @@ import '../domain/expense_nature.dart';
 final _log = Logger('ExpensesRepository');
 
 const int _kMaxExpensesPerList = 500;
+
+/// Cap de la requête landlord-wide (`listAllForLandlord`) — un cap unique
+/// couvrant tous les biens plutôt qu'un cap par bien ; 500 dépenses au total
+/// est très généreux pour un portefeuille (dizaines de biens, plusieurs
+/// années d'historique). Au-delà, le repli gracieux est le comportement
+/// habituel : les dépenses les plus anciennes (hors des 500 plus récentes)
+/// ne contribuent plus à la couverture 12 mois d'une charge → cash flow
+/// réel non exploitable pour ce poste → repli sur le prévisionnel déclaré,
+/// jamais un crash.
+const int _kMaxExpensesForLandlordWide = 500;
 
 /// Dépenses = entité first-class « l'argent qui sort » (FEAT-041).
 ///
@@ -34,6 +46,14 @@ abstract interface class ExpensesRepository {
   /// `expenseDate DESC`.
   Stream<List<Expense>> watchForProperty(String propertyId);
 
+  /// Liste (one-shot) TOUTES les dépenses actives du landlord courant, tous
+  /// biens confondus, triées par `expenseDate DESC` — **une seule requête**
+  /// Firestore (index `landlordId, deletedAt, expenseDate` existant) au
+  /// lieu d'une requête par bien. Alimente l'agrégation portfolio du
+  /// dashboard (cash flow réel — `PortfolioYieldSection`) : voir
+  /// `groupRealChargesByProperty`.
+  Future<List<Expense>> listAllForLandlord();
+
   Future<Expense> getById(String id);
 
   /// Crée une nouvelle dépense via la Callable `createExpense`.
@@ -50,6 +70,8 @@ abstract interface class ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   });
@@ -119,6 +141,23 @@ class FirestoreExpensesRepository implements ExpensesRepository {
   }
 
   @override
+  Future<List<Expense>> listAllForLandlord() async {
+    _log.info('listAllForLandlord()');
+    final qs = await _col
+        .where('landlordId', isEqualTo: _uid)
+        .where('deletedAt', isNull: true)
+        .orderBy('expenseDate', descending: true)
+        .limit(_kMaxExpensesForLandlordWide)
+        .get();
+    return qs.docs
+        .map(
+          (d) =>
+              Expense.fromJson(firestoreDocToSnakeJson(d.data(), docId: d.id)),
+        )
+        .toList();
+  }
+
+  @override
   Future<Expense> getById(String id) async {
     _log.info('getById($id)');
     final snap = await _col.doc(id).get();
@@ -143,6 +182,8 @@ class FirestoreExpensesRepository implements ExpensesRepository {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async {
@@ -157,6 +198,8 @@ class FirestoreExpensesRepository implements ExpensesRepository {
       'periodStart': periodStart?.toUtc().toIso8601String(),
       'periodEnd': periodEnd?.toUtc().toIso8601String(),
       'periodYear': periodYear,
+      'recurrence': recurrence.sqlValue,
+      'recurrenceEndDate': recurrenceEndDate?.toUtc().toIso8601String(),
       'documentId': documentId,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
     });
@@ -178,6 +221,8 @@ class FirestoreExpensesRepository implements ExpensesRepository {
       'periodYear': expense.periodYear,
       'periodStart': expense.periodStart?.toUtc().toIso8601String(),
       'periodEnd': expense.periodEnd?.toUtc().toIso8601String(),
+      'recurrence': expense.recurrence.sqlValue,
+      'recurrenceEndDate': expense.recurrenceEndDate?.toUtc().toIso8601String(),
       'documentId': expense.documentId,
       'notes': expense.notes,
     };
@@ -205,7 +250,7 @@ class ExpenseNotFoundException implements Exception {
 
 final expensesRepositoryProvider = Provider<ExpensesRepository>((ref) {
   return FirestoreExpensesRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

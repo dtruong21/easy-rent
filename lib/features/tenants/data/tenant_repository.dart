@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../../core/utils/french_date.dart';
 import '../domain/tenant.dart';
@@ -221,10 +222,23 @@ class FirestoreTenantRepository implements TenantRepository {
         .where('deletedAt', isNull: true)
         .where('status', isEqualTo: 'active')
         .get();
+    // Couleur d'identité (FEAT-057) : 1 SEULE lecture groupée des biens du
+    // landlord, en parallèle des 2 autres requêtes — jamais une lecture par
+    // locataire. Bornée à 200 comme `PropertyRepository.list()`.
+    final propertiesQs = _firestore
+        .collection('properties')
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isNull: true)
+        .limit(200)
+        .get();
 
-    final results = await Future.wait([tenantsQs, leasesQs]);
+    final results = await Future.wait([tenantsQs, leasesQs, propertiesQs]);
     final tenantDocs = results[0].docs;
     final leaseDocs = results[1].docs;
+    final colorKeyByPropertyId = <String, String?>{
+      for (final doc in results[2].docs)
+        doc.id: doc.data()['colorKey'] as String?,
+    };
 
     // Index par tenantId — si plusieurs actifs, garde celui au startDate le plus récent.
     final activeByTenantId = <String, Map<String, dynamic>>{};
@@ -269,12 +283,18 @@ class FirestoreTenantRepository implements TenantRepository {
         }
       }
 
+      final propertyId = lease['propertyId'] as String?;
       return TenantListItem(
         tenant: tenant,
         activeLeaseId: lease['id'] as String?,
         currentPropertyName: lease['propertyName'] as String?,
         activeLeasePeriodLabel: periodLabel,
         activeLeaseRentCents: lease['rentAmountCents'] as int?,
+        activeLeaseChargesCents: lease['chargesAmountCents'] as int?,
+        currentPropertyId: propertyId,
+        currentPropertyColorKey: propertyId != null
+            ? colorKeyByPropertyId[propertyId]
+            : null,
       );
     }).toList();
   }
@@ -309,6 +329,7 @@ class FirestoreTenantRepository implements TenantRepository {
             .toIso8601String(),
         'status': raw['status'],
         'rent_amount_cents': raw['rentAmountCents'],
+        'payment_day': raw['paymentDay'],
       };
     }).toList();
   }
@@ -329,7 +350,7 @@ class TenantNotFoundException implements Exception {
 
 final tenantRepositoryProvider = Provider<TenantRepository>((ref) {
   return FirestoreTenantRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
     FirebaseFunctions.instanceFor(region: 'europe-west1'),
   );

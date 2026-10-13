@@ -42,6 +42,22 @@ un levier de *taille*, il *ralentit* le build). Ne pas activer sans mesure.
    `.ruby-version` (3.3.5) est déjà posé dans `android/` et `ios/`.
 2. `cd android && bundle install` puis `cd ios && bundle install` (génère les `Gemfile.lock` — à committer).
 3. Tout se lance en `bundle exec fastlane <lane>` **depuis `android/` ou `ios/`**.
+4. **Réglages de prod** : copier `dart-defines.prod.example.json` →
+   `dart-defines.prod.json` (gitignoré, à la racine) et le renseigner. Les lanes
+   `build` le passent à Flutter (`--dart-define-from-file`) et **refusent de
+   builder** s'il est absent ou incohérent
+   ([`tool/release/release_defines.rb`](../tool/release/release_defines.rb)) :
+
+   | Réglage | Règle |
+   |---|---|
+   | `APP_ENV` | doit valoir `prod` (sinon badge « DEV/STAGING » dans l'app publiée) |
+   | `IAP_ENABLED` | `true` exige la clé RevenueCat de la plateforme : `REVENUECAT_APPLE_API_KEY` (`appl_…`) sur iOS, `REVENUECAT_GOOGLE_API_KEY` (`goog_…`) sur Android — une clé `test_…` est refusée |
+   | `APP_STORE_ID` | iOS : simple avertissement s'il est vide (« Noter l'app » masqué) |
+   | `TEST_*`, `MOBILE_STAGING`, `USE_FIREBASE_EMULATOR` | interdits : réglages des builds de test |
+
+   Vérifié le 2026-10-12 avec fastlane 2.241.0 et un `flutter` simulé (les deux
+   lanes `build` démarrent bien depuis la racine du projet). Un vrai build signé
+   de bout en bout reste à faire au premier envoi.
 
 ## 3. Android — livraison Play (exécutable maintenant)
 
@@ -53,7 +69,7 @@ Le keystore upload + `android/key.properties` existent déjà (signent l'AAB).
 la console (l'API Play refuse le tout premier upload) — déjà fait (#82).
 
 Lanes (`android/fastlane/Fastfile`) :
-- `build` — AAB release signé (`flutter build appbundle --release`).
+- `build` — AAB release signé (`flutter build appbundle --release` + réglages de prod, cf. §2.4).
 - `beta` — build + upload piste **internal** en **brouillon** (`release_status: draft`).
 - `deploy` — build + upload piste **beta** en brouillon.
 
@@ -74,7 +90,7 @@ Credentials à fournir alors (tous en `.env`/CI, **jamais commités**) :
 - App ID `com.daki.baillan` enregistré au Developer Portal + fiche créée dans ASC.
 - Copier `ios/ExportOptions.plist.example` → `ios/ExportOptions.plist` (gitignored) et renseigner `teamID`.
 
-Lanes (`ios/fastlane/Fastfile`) : `build` (IPA) · `beta` (match + `flutter build ipa` + upload TestFlight).
+Lanes (`ios/fastlane/Fastfile`) : `build` (IPA + réglages de prod, cf. §2.4) · `beta` (match + `flutter build ipa` + upload TestFlight).
 
 ## 5. Sécurité — ne jamais committer
 

@@ -4,6 +4,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {softDeleteEntity} from "../callable/soft_delete";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Cf. expenses.test.ts pour la justification du import() dynamique interne
 // (le factory `vi.mock` est hoisted au-dessus des imports du fichier).
@@ -17,7 +18,7 @@ let fakeDb: FakeFirestore;
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }

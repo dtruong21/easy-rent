@@ -57,18 +57,31 @@ class PaymentListTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           GenerateReceiptButton(paymentId: payment.id, leaseId: leaseId),
-          IconButton(
-            key: Key('btn_edit_payment_${payment.id}'),
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: context.l10n.commonEdit,
-            onPressed: onEdit,
-          ),
-          IconButton(
-            key: Key('btn_archive_payment_${payment.id}'),
-            icon: const Icon(Icons.archive_outlined),
-            tooltip: context.l10n.paymentsArchiveTooltip,
-            color: theme.colorScheme.error,
-            onPressed: () => _confirmArchive(context),
+          // Modifier / Archiver : menu ⋮ à libellés (comme les cartes de
+          // liste) plutôt que deux icônes muettes (recette iOS, #197).
+          PopupMenuButton<_PaymentAction>(
+            key: Key('payment_menu_${payment.id}'),
+            icon: const Icon(Icons.more_vert),
+            tooltip: context.l10n.commonMoreActions,
+            onSelected: (action) => switch (action) {
+              _PaymentAction.edit => onEdit(),
+              _PaymentAction.archive => _confirmArchive(context),
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                key: Key('btn_edit_payment_${payment.id}'),
+                value: _PaymentAction.edit,
+                child: Text(context.l10n.commonEdit),
+              ),
+              PopupMenuItem(
+                key: Key('btn_archive_payment_${payment.id}'),
+                value: _PaymentAction.archive,
+                child: Text(
+                  context.l10n.paymentsArchiveTooltip,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -92,3 +105,5 @@ class PaymentListTile extends StatelessWidget {
     );
   }
 }
+
+enum _PaymentAction { edit, archive }

@@ -31,6 +31,9 @@ class _CloseLeaseDialogState extends State<CloseLeaseDialog> {
   }
 
   Future<void> _pickDate() async {
+    // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+    // saisi et rouvre le clavier (recette iOS, #197).
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,

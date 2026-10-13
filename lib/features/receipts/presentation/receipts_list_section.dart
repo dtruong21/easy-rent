@@ -4,42 +4,35 @@ import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
+import '../../../core/ui/theme/property_color.dart';
+import '../../properties/presentation/widgets/property_color_dot.dart';
 import '../application/lease_receipts_provider.dart';
 import '../domain/receipt.dart';
-import 'widgets/receipts_timeline_view.dart';
+import 'widgets/receipt_status_mapper.dart';
 
 final _log = Logger('ReceiptsListSection');
 
 /// Section "Quittances émises" à intégrer dans [LeaseDetailPage].
 ///
-/// Affiche la liste des quittances triées par [period_start DESC].
-/// Inclut les quittances annulées avec badge "Annulée" pour traçabilité.
-///
-/// Pour activer le bouton de partage, passer [tenantEmail], [tenantFirstName],
-/// [propertyAddress] et [landlordFullName].
+/// N'affiche plus la liste embarquée des quittances (retour utilisateur
+/// 2026-08-11 : zone trop étroite pour une timeline, même limitée à 3
+/// éléments) mais une ligne de synthèse compacte et cliquable — nombre de
+/// quittances émises + période de la plus récente — qui ouvre l'écran
+/// complet `/leases/:id/receipts`. C'est désormais [LeaseReceiptsPage] qui
+/// porte seule la liste, ses filtres et le partage.
 class ReceiptsListSection extends ConsumerWidget {
   const ReceiptsListSection({
     super.key,
     required this.leaseId,
-    this.tenantEmail,
-    this.tenantFirstName = '',
-    this.propertyAddress = '',
-    this.landlordFullName = '',
+    this.propertyColorKey,
   });
 
   final String leaseId;
 
-  /// Email du locataire — nécessaire pour activer le bouton de partage.
-  final String? tenantEmail;
-
-  /// Prénom du locataire — pour le corps du message de partage.
-  final String tenantFirstName;
-
-  /// Adresse du logement — pour le corps du message de partage.
-  final String propertyAddress;
-
-  /// Nom complet du bailleur — pour la signature du message de partage.
-  final String landlordFullName;
+  /// Couleur d'identité du bien lié — déjà résolue par l'appelant
+  /// (`LeaseDetailPage`, qui charge déjà le bien pour d'autres besoins :
+  /// zéro lecture supplémentaire).
+  final PropertyColorKey? propertyColorKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,28 +46,41 @@ class ReceiptsListSection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.receiptsSectionTitle, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (propertyColorKey != null) ...[
+                  PropertyColorDot(colorKey: propertyColorKey!),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  l10n.receiptsSectionTitle,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             asyncReceipts.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(child: CircularProgressIndicator()),
+              ),
               error: (e, _) {
                 _log.warning('Erreur chargement quittances', e);
-                return Text(
-                  l10n.receiptsSectionErrorMessage,
-                  style: TextStyle(color: theme.colorScheme.error),
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    l10n.receiptsSectionErrorMessage,
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
                 );
               },
               data: (receipts) {
                 if (receipts.isEmpty) {
                   return const _EmptyReceiptsHint();
                 }
-                return _ReceiptsList(
-                  receipts: receipts,
+                return _ReceiptsSummaryEntry(
                   leaseId: leaseId,
-                  tenantEmail: tenantEmail,
-                  tenantFirstName: tenantFirstName,
-                  propertyAddress: propertyAddress,
-                  landlordFullName: landlordFullName,
+                  receipts: receipts,
                 );
               },
             ),
@@ -85,53 +91,39 @@ class ReceiptsListSection extends ConsumerWidget {
   }
 }
 
-class _ReceiptsList extends StatelessWidget {
-  const _ReceiptsList({
-    required this.receipts,
-    required this.leaseId,
-    this.tenantEmail,
-    this.tenantFirstName = '',
-    this.propertyAddress = '',
-    this.landlordFullName = '',
-  });
+/// Ligne de synthèse cliquable — remplace l'ancienne timeline embarquée.
+///
+/// Affiche le nombre de quittances émises et la période de la plus récente,
+/// pour que le bailleur voie l'information sans avoir à cliquer. Un tap
+/// n'importe où sur la ligne ouvre `/leases/:id/receipts`.
+///
+/// [receipts] est trié `period_start DESC` par [LeaseReceiptsNotifier] (voir
+/// `lease_receipts_provider.dart`) : [receipts.first] est donc toujours la
+/// quittance la plus récente. Le compte inclut les quittances annulées, par
+/// cohérence avec [LeaseContextBanner] (`totalReceipts` sur la page complète)
+/// — une quittance annulée reste une quittance émise, juste plus valide.
+class _ReceiptsSummaryEntry extends StatelessWidget {
+  const _ReceiptsSummaryEntry({required this.leaseId, required this.receipts});
 
-  final List<Receipt> receipts;
   final String leaseId;
-  final String? tenantEmail;
-  final String tenantFirstName;
-  final String propertyAddress;
-  final String landlordFullName;
+  final List<Receipt> receipts;
 
   @override
   Widget build(BuildContext context) {
-    // Affiche les 3 premières quittances max avec la timeline compacte.
-    // Pour la liste complète, naviguer vers /leases/:id/receipts.
-    final preview = receipts.take(3).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: preview.length * 90.0,
-          child: ReceiptsTimelineView(
-            receipts: preview,
-            leaseId: leaseId,
-            tenantEmail: tenantEmail,
-            tenantFirstName: tenantFirstName,
-            propertyAddress: propertyAddress,
-            landlordFullName: landlordFullName,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            key: const Key('btn_see_all_receipts'),
-            onPressed: () => context.go('/leases/$leaseId/receipts'),
-            icon: const Icon(Icons.list_alt_outlined, size: 18),
-            label: Text(context.l10n.receiptsSectionSeeAllButton),
-          ),
-        ),
-      ],
+    final l10n = context.l10n;
+    final lastPeriodLabel = receiptPeriodMonthYear(
+      receipts.first,
+      l10n.localeName,
+    );
+
+    return ListTile(
+      key: const Key('tile_receipts_summary'),
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.receipt_long_outlined),
+      title: Text(l10n.receiptsSectionSummaryCount(receipts.length)),
+      subtitle: Text(l10n.receiptsSectionSummaryLastLabel(lastPeriodLabel)),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => context.push('/leases/$leaseId/receipts'),
     );
   }
 }
@@ -143,7 +135,7 @@ class _EmptyReceiptsHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(top: 8),
       child: Text(
         context.l10n.receiptsSectionEmptyHint,
         style: theme.textTheme.bodyMedium?.copyWith(

@@ -69,8 +69,6 @@ ThemeData _appTheme() => ThemeData(
   extensions: const [AppColors.light, AppRadii()],
 );
 
-/// Construit un widget pour tester la FilterBar dans un contexte desktop
-/// (largeur >= 600px).
 Widget _buildDesktop(ProviderContainer container) {
   final router = GoRouter(
     routes: [
@@ -89,15 +87,13 @@ Widget _buildDesktop(ProviderContainer container) {
         routerConfig: router,
         theme: _appTheme(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: supportedLocales,
         locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
       ),
     ),
   );
 }
 
-/// Construit un widget pour tester la FilterBar en mode mobile
-/// (largeur < 600px).
 Widget _buildMobile(ProviderContainer container) {
   final router = GoRouter(
     routes: [
@@ -116,8 +112,8 @@ Widget _buildMobile(ProviderContainer container) {
         routerConfig: router,
         theme: _appTheme(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: supportedLocales,
         locale: const Locale('fr'),
+        supportedLocales: supportedLocales,
       ),
     ),
   );
@@ -129,7 +125,7 @@ Widget _buildMobile(ProviderContainer container) {
 
 void main() {
   group('TenantsFilterBar', () {
-    testWidgets('desktop — SegmentedButton visible avec 3 segments', (
+    testWidgets('desktop — puces de filtre visibles avec ViewModeToggle', (
       tester,
     ) async {
       final container = ProviderContainer(
@@ -140,15 +136,24 @@ void main() {
       await tester.pumpWidget(_buildDesktop(container));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SegmentedButton<TenantFilter>), findsOneWidget);
-      expect(find.text('Tous'), findsOneWidget);
-      expect(find.text('Actifs'), findsOneWidget);
-      expect(find.text('Sans bail'), findsOneWidget);
+      expect(
+        find.byKey(Key('filter_chip_${TenantFilter.all}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${TenantFilter.withActiveLease}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${TenantFilter.withoutActiveLease}')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Tous'), findsOneWidget);
+      expect(find.textContaining('Actifs'), findsOneWidget);
+      expect(find.textContaining('Sans bail'), findsOneWidget);
     });
 
-    testWidgets('mobile — DropdownButton visible (pas SegmentedButton)', (
-      tester,
-    ) async {
+    testWidgets('mobile — puces de filtre visibles', (tester) async {
       final container = ProviderContainer(
         overrides: [tenantRepositoryProvider.overrideWithValue(_FakeRepo())],
       );
@@ -157,12 +162,22 @@ void main() {
       await tester.pumpWidget(_buildMobile(container));
       await tester.pumpAndSettle();
 
-      expect(find.byType(DropdownButton<TenantFilter>), findsOneWidget);
-      expect(find.byType(SegmentedButton<TenantFilter>), findsNothing);
+      expect(
+        find.byKey(Key('filter_chip_${TenantFilter.all}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${TenantFilter.withActiveLease}')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(Key('filter_chip_${TenantFilter.withoutActiveLease}')),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
-      'desktop — sélection segment "Sans bail" → état provider = withoutActiveLease',
+      'desktop — tap puce "Sans bail" → état provider = withoutActiveLease',
       (tester) async {
         final container = ProviderContainer(
           overrides: [tenantRepositoryProvider.overrideWithValue(_FakeRepo())],
@@ -172,11 +187,11 @@ void main() {
         await tester.pumpWidget(_buildDesktop(container));
         await tester.pumpAndSettle();
 
-        // Vérifier l'état initial
         expect(container.read(tenantFilterProvider), TenantFilter.all);
 
-        // Taper sur "Sans bail"
-        await tester.tap(find.text('Sans bail'));
+        await tester.tap(
+          find.byKey(Key('filter_chip_${TenantFilter.withoutActiveLease}')),
+        );
         await tester.pumpAndSettle();
 
         expect(
@@ -187,7 +202,7 @@ void main() {
     );
 
     testWidgets(
-      'desktop — sélection segment "Actifs" → état provider = withActiveLease',
+      'desktop — tap puce "Actifs" → état provider = withActiveLease',
       (tester) async {
         final container = ProviderContainer(
           overrides: [tenantRepositoryProvider.overrideWithValue(_FakeRepo())],
@@ -197,7 +212,9 @@ void main() {
         await tester.pumpWidget(_buildDesktop(container));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Actifs'));
+        await tester.tap(
+          find.byKey(Key('filter_chip_${TenantFilter.withActiveLease}')),
+        );
         await tester.pumpAndSettle();
 
         expect(

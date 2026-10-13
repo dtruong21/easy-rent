@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
+import '../../../paid_plan/presentation/pro_badge.dart';
 
 /// Header du dashboard avec salutation et date du jour.
 ///
@@ -37,11 +38,19 @@ class DashboardHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            greeting,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  greeting,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const ProBadge(),
+            ],
           ),
           const SizedBox(height: 2),
           Text(

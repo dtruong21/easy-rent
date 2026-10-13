@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Génère la carte sociale Open Graph de Baillan : web/icons/og-image-1200x630.png
+# Génère la carte sociale Open Graph de Baillan (1200x630) :
+#   - web/icons/og-image-1200x630.png        (app Flutter)
+#   - site/public/icons/og-image-1200x630.png (vitrine Astro, balises og:image/twitter:image)
+# Les deux fichiers sont identiques ; les régénérer ensemble par ce script.
 #
 # Source éditable : scripts/og-image.svg (charte encre/papier/accent, « B »
 # paraphe en Cochin italique — cf. le favicon inline de web/index.html).
@@ -19,12 +22,18 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC="$DIR/og-image.svg"
-OUT="$DIR/../web/icons/og-image-1200x630.png"
+OUTS=(
+  "$DIR/../web/icons/og-image-1200x630.png"
+  "$DIR/../site/public/icons/og-image-1200x630.png"
+)
 
 if ! command -v rsvg-convert >/dev/null 2>&1; then
   echo "Erreur : rsvg-convert introuvable. Installer avec : brew install librsvg" >&2
   exit 1
 fi
 
-rsvg-convert -w 1200 -h 630 "$SRC" -o "$OUT"
-echo "  ✓ $(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")  (1200x630)"
+for OUT in "${OUTS[@]}"; do
+  mkdir -p "$(dirname "$OUT")"
+  rsvg-convert -w 1200 -h 630 "$SRC" -o "$OUT"
+  echo "  ✓ $(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")  (1200x630)"
+done

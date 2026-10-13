@@ -6,15 +6,30 @@ set -e
 
 # Liste des patterns suspects (regex étendues)
 PATTERNS=(
-  # Supabase secret keys (nouveau format)
-  'sb_secret_[A-Za-z0-9_-]{20,}'
-  # Supabase service role (ancien format JWT — commence souvent par eyJ et contient "service_role")
+  # JWT (3 segments base64url) — attrape tout token type service account / session
   'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
   # Resend API key
   're_[A-Za-z0-9]{20,}'
-  # Stripe live keys
+  # Stripe — préfixes vérifiés sur docs.stripe.com/keys (2026-10-05) : clés
+  # secrètes et limitées live ET test, clés d'organisation, secrets de
+  # signature de webhook (docs.stripe.com/webhooks/signature : « whsec_ »).
+  # Une clé de test en clair reste une fuite (et signe souvent une confusion
+  # d'environnement, cf. #138).
   'sk_live_[A-Za-z0-9]{20,}'
   'rk_live_[A-Za-z0-9]{20,}'
+  'sk_test_[A-Za-z0-9]{20,}'
+  'rk_test_[A-Za-z0-9]{20,}'
+  'sk_org_[A-Za-z0-9]{20,}'
+  'whsec_[A-Za-z0-9]{20,}'
+  # RevenueCat — clé SECRÈTE (REVENUECAT_API_KEY) : préfixe « sk_ » documenté
+  # (revenuecat.com/docs/projects/authentication), longueur non documentée →
+  # plancher de 20 caractères comme pour Stripe. Ancré sur un début de mot :
+  # sans ça, « task_… » ou « mask_… » déclencheraient. Les clés Stripe
+  # (sk_live_/sk_test_/sk_org_) ne matchent pas ce motif (« _ » après le mode).
+  # NON détectable : REVENUECAT_WEBHOOK_AUTH — valeur LIBRE choisie dans le
+  # dashboard RevenueCat (pas de format) ; seule la discipline la protège.
+  # Les clés PUBLIQUES du SDK (appl_, goog_…) ne sont pas des secrets.
+  '(^|[^A-Za-z0-9_])sk_[A-Za-z0-9]{20,}'
   # GitHub Personal Access Tokens
   'ghp_[A-Za-z0-9]{20,}'
   'github_pat_[A-Za-z0-9_]{20,}'
@@ -47,13 +62,16 @@ for file in $FILES; do
     *.png|*.jpg|*.jpeg|*.gif|*.ico|*.pdf|*.zip|*.tar|*.gz|*.lock) continue ;;
   esac
 
-  # Skip les fichiers de doc qui peuvent légitimement mentionner les patterns
+  # Skip ce script et l'installeur du hook (ils contiennent les motifs eux-mêmes)
   # + configs Firebase clientes : les apiKey Firebase (AIza…) y sont PUBLIQUES
-  #   par design (équivalent du anon key Supabase) ; sécurité via Rules +
+  #   par design (comme toute clé client Firebase) ; sécurité via Rules +
   #   App Check. Couvre le web (firebase_options.dart) et les apps natives
   #   FEAT-024 (google-services.json Android, GoogleService-Info.plist iOS).
   case "$file" in
-    docs/SECURITY.md|scripts/check-secrets.sh|scripts/install-hooks.sh|*.example.*|*.md.tmpl) continue ;;
+    # docs/SECURITY.md n'est PLUS exclu (#131) : il ne cite les motifs que sous
+    # forme abrégée (« sk_live_… ») et ne déclenche aucun d'eux — l'exclure
+    # rendait invisible une vraie clé collée dans ce fichier.
+    scripts/check-secrets.sh|scripts/install-hooks.sh|*.example.*|*.md.tmpl) continue ;;
     lib/firebase_options.dart) continue ;;
     android/app/google-services.json|ios/Runner/GoogleService-Info.plist) continue ;;
   esac

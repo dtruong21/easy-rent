@@ -198,6 +198,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   }
 
   Future<void> _pickStartDate() async {
+    // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+    // saisi et rouvre le clavier (recette iOS, #197).
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _startDate ?? DateTime.now(),
@@ -215,6 +218,9 @@ class LeaseFormWidgetState extends State<LeaseForm> {
   }
 
   Future<void> _pickEndDate() async {
+    // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+    // saisi et rouvre le clavier (recette iOS, #197).
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _endDate ?? (_startDate ?? DateTime.now()),

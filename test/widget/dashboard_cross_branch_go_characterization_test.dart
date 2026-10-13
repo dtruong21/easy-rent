@@ -25,7 +25,7 @@ import 'package:easyrent/features/auth/domain/session_state.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -157,15 +157,13 @@ class _FakeDashboardRepoWithActivity implements DashboardRepository {
   Future<RetardsKpi> fetchRetards() async => const RetardsKpi(count: 0);
 
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [
@@ -179,7 +177,15 @@ class _FakeDashboardRepoWithActivity implements DashboardRepository {
   ];
 
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 final _fakeProfile = LandlordProfile(
@@ -330,6 +336,11 @@ class _FakeLeaseRepo implements LeaseRepository {
       tenantDisplayName: 'Jean Dupont',
     ),
   ];
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
 
   @override
   Future<Lease> getById(String id) async {

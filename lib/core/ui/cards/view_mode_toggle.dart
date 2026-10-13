@@ -16,10 +16,23 @@ import 'view_mode_provider.dart';
 /// ViewModeToggle(pageKey: 'leases')
 /// ```
 class ViewModeToggle extends ConsumerWidget {
-  const ViewModeToggle({super.key, required this.pageKey});
+  const ViewModeToggle({
+    super.key,
+    required this.pageKey,
+    this.cardsLabel,
+    this.tableLabel,
+  });
 
   /// Identifiant de la page, utilisé comme clé de persistance.
   final String pageKey;
+
+  /// Libellé du segment carte. Défaut : `commonViewModeCards`.
+  final String? cardsLabel;
+
+  /// Libellé du segment table. Défaut : `commonViewModeTable`. Une page dont
+  /// le mode `table` n'est pas un tableau (ex. la timeline des quittances)
+  /// le remplace pour ne pas induire en erreur.
+  final String? tableLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,12 +48,12 @@ class ViewModeToggle extends ConsumerWidget {
         ButtonSegment(
           value: ViewMode.card,
           icon: const Icon(Icons.grid_view_outlined),
-          label: Text(l10n.commonViewModeCards),
+          label: Text(cardsLabel ?? l10n.commonViewModeCards),
         ),
         ButtonSegment(
           value: ViewMode.table,
           icon: const Icon(Icons.view_list_outlined),
-          label: Text(l10n.commonViewModeTable),
+          label: Text(tableLabel ?? l10n.commonViewModeTable),
         ),
       ],
       selected: {currentMode},

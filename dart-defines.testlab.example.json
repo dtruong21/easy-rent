@@ -1,0 +1,6 @@
+{
+  "APP_ENV": "dev",
+  "MOBILE_STAGING": "true",
+  "TEST_AUTO_LOGIN_EMAIL": "",
+  "TEST_AUTO_LOGIN_PASSWORD": ""
+}

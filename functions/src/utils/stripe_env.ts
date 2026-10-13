@@ -1,0 +1,229 @@
+/**
+ * Résolution de l'environnement Stripe par l'Origin de l'appel (issue #138).
+ *
+ * Avant ce module, `createCheckoutSession` et `manageSubscription` lisaient un
+ * secret `STRIPE_SECRET_KEY` unique, sans regarder d'où venait l'appel. Comme
+ * les Cloud Functions sont callables depuis les deux hosts et partagent le même
+ * projet, un test du paywall depuis `stage.baillan.com` créait une vraie
+ * Checkout `sk_live` : transaction réelle, puis webhook qui passait le compte
+ * en `paid` dans la base de prod.
+ *
+ * ⚠️ Le fail-safe ici est **l'inverse** de celui de [db_router.isStagingOrigin].
+ * Pour Firestore, une origine inconnue retombe sur `(default)` — on ne veut
+ * jamais écrire un vrai compte prod dans `staging`. Pour Stripe, « défaut =
+ * prod » voudrait dire « défaut = argent réel » : c'est précisément le défaut
+ * que décrit #138. D'où une **allowlist positive** : la clé live n'est servie
+ * que sur une origine prod reconnue au caractère près ; tout le reste est
+ * `test` (staging, émulateur) ou `unknown` (refus par l'appelant).
+ *
+ * Un client non-navigateur peut forger l'Origin. L'impact reste borné : forger
+ * une origine staging ne donne qu'un tunnel Stripe en mode test (argent fictif,
+ * aucun entitlement prod accordé — le déverrouillage passe par le webhook
+ * RevenueCat). Forger une origine prod depuis ailleurs ne permet que de payer
+ * réellement, avec sa propre carte, pour son propre compte.
+ */
+
+import {HttpsError} from "firebase-functions/v2/https";
+
+import {STAGING_ORIGIN} from "./db_router";
+
+/**
+ * Origines servant l'application de production. La clé Stripe live n'est
+ * accessible QUE depuis l'une d'elles, en comparaison exacte.
+ *
+ * `app.baillan.com` y figure avant même la migration de domaine (sujet cadré
+ * dans `docs/BACKLOG.md`, = FEAT-050e) : le sous-domaine nous appartient, rien
+ * ne le sert aujourd'hui, et l'y inscrire d'avance évite l'échec silencieux le
+ * jour de la bascule — un paiement prod refusé parce que l'allowlist n'a pas
+ * suivi le DNS.
+ */
+export const PROD_ORIGINS: readonly string[] = [
+  "https://baillan.com",
+  "https://www.baillan.com",
+  "https://app.baillan.com",
+];
+
+/**
+ * Origines servant l'app en mode test. Le littéral staging vient de
+ * [db_router] plutôt que d'être retapé : si l'hôte de staging déménage et
+ * qu'une seule des deux listes suit, le checkout staging casse — ou pire,
+ * l'ancien hôte se retrouve hors des deux listes et bascule en `unknown`.
+ */
+export const TEST_ORIGINS: readonly string[] = [STAGING_ORIGIN];
+
+/**
+ * Origine locale (émulateur), en correspondance STRICTE. Un simple
+ * `startsWith("http://localhost:")` acceptait `http://localhost:0@evil.tld`,
+ * dont l'hôte réel est `evil.tld` : la partie avant `@` est un userinfo, pas
+ * un hôte. Comme l'origine est ensuite réutilisée pour les URLs de retour
+ * Stripe, ça donnait une redirection ouverte sous la marque.
+ */
+const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
+
+/**
+ * Environnement Stripe d'un appel.
+ * - `live` : origine de production reconnue → clé `sk_live` autorisée.
+ * - `test` : staging ou émulateur → clé `sk_test` obligatoire.
+ * - `unknown` : Origin absent, forgé ou inattendu → l'appelant DOIT refuser.
+ *   On ne retombe pas silencieusement sur `test` pour ne pas transformer un
+ *   vrai achat prod (dont l'en-tête aurait été perdu par un proxy) en session
+ *   de test que l'utilisateur croirait valide.
+ */
+export type StripeEnv = "live" | "test" | "unknown";
+
+/**
+ * Environnement Stripe pour une origine. Comparaison EXACTE sur les origines
+ * connues : `https://baillan.com/` (slash final), `http://baillan.com` (schéma
+ * clair) et `https://baillan.com.evil.tld` (suffixe) sont tous `unknown`.
+ */
+export function stripeEnvForOrigin(origin: unknown): StripeEnv {
+  if (typeof origin !== "string" || origin === "") return "unknown";
+  if (PROD_ORIGINS.includes(origin)) return "live";
+  if (TEST_ORIGINS.includes(origin)) return "test";
+  if (LOCAL_ORIGIN_RE.test(origin)) return "test";
+  return "unknown";
+}
+
+/**
+ * Refuse l'environnement Stripe `test` quand la requête vise la base de prod
+ * `(default)`, hors émulateur (#209).
+ *
+ * `test` est servi au staging ET aux origines locales (`http://localhost:…`,
+ * émulateur). Mais une origine locale n'est pas routée vers `staging` par
+ * `dbForRequest` : forgée contre les Functions déployées, elle obtenait une
+ * session Stripe de TEST pour un compte de la base prod — un paiement fictif
+ * qu'un vrai client pourrait croire valide. Aucun droit n'en découle (l'achat
+ * SANDBOX est routé vers `staging` par le webhook, OWASP-01), mais la session
+ * elle-même est trompeuse : refus.
+ *
+ * @param origin      En-tête `Origin` de la requête.
+ * @param isStagingDb `true` si la base routée pour la requête est `staging`.
+ * @param isEmulator  `true` sous l'émulateur Functions ([isFunctionsEmulator]).
+ */
+export function assertStripeEnvMatchesDb(
+  origin: unknown,
+  isStagingDb: boolean,
+  isEmulator: boolean,
+): void {
+  if (stripeEnvForOrigin(origin) === "test" && !isStagingDb && !isEmulator) {
+    throw new HttpsError("failed-precondition", "origin_not_allowed");
+  }
+}
+
+/** `true` sous l'émulateur Functions (variable posée par l'émulateur). */
+export function isFunctionsEmulator(): boolean {
+  return process.env.FUNCTIONS_EMULATOR === "true";
+}
+
+/**
+ * Clé Stripe à utiliser pour un appel callable, ou refus.
+ *
+ * Avec [resolveStripeKeyForDb] (arrêt d'une facturation existante), seule porte
+ * vers `sk_live` du code serveur : les callables ne doivent JAMAIS lire
+ * `stripeSecret.value()` directement, sinon la garantie de #138 fuit par
+ * l'appel oublié.
+ *
+ * @param origin  En-tête `Origin` de la requête (`request.rawRequest.headers`).
+ * @param liveKey Valeur du secret `STRIPE_SECRET_KEY` (mode live en prod).
+ * @param testKey Valeur du secret `STRIPE_SECRET_KEY_TEST`, vide si non posé.
+ */
+export function resolveStripeKeyOrThrow(
+  origin: unknown,
+  liveKey: string,
+  testKey: string,
+): string {
+  const env = stripeEnvForOrigin(origin);
+
+  if (env === "unknown") {
+    // Ni prod ni test reconnu : on refuse plutôt que de deviner. Deviner
+    // « live » rejouerait #138 ; deviner « test » donnerait à un vrai client
+    // prod une session de paiement fictive qu'il croirait valide.
+    throw new HttpsError(
+      "failed-precondition",
+      "origin_not_allowed",
+    );
+  }
+
+  return requireKeyForEnv(env, liveKey, testKey);
+}
+
+/**
+ * Clé Stripe choisie par la SEULE base Firestore qui porte le compte, jamais
+ * par l'Origin : base `staging` → clé test, toute autre base (`(default)`,
+ * prod) → clé live.
+ *
+ * Pour les opérations qui ne font qu'ARRÊTER une facturation existante du
+ * compte appelant (suppression du compte, résiliation depuis une app native) :
+ * - la base est résolue par `dbForRequest` (web : par l'Origin — seul
+ *   `app.staging.baillan.com` va vers `staging` ; mobile : par la base qui
+ *   porte le doc landlord). Le staging ne reçoit donc jamais la clé live
+ *   (#138 tient), et un compte prod reçoit la live quelle que soit l'origine
+ *   web (URL Firebase Hosting, localhost…) — l'allowlist d'Origin de
+ *   [resolveStripeKeyOrThrow] y refusait des appels légitimes ;
+ * - forger l'Origin ne fait que choisir la base de SON propre compte : aucune
+ *   opération sur l'abonnement d'autrui (recherche par `rc_app_user_id` = uid).
+ *
+ * Mêmes garde-fous que le chemin web : clé absente ou de mauvais mode → refus,
+ * aucun repli sur la clé live.
+ *
+ * @param isStagingDb `true` si la base routée pour la requête est `staging`.
+ * @param liveKey     Valeur du secret `STRIPE_SECRET_KEY`.
+ * @param testKey     Valeur du secret `STRIPE_SECRET_KEY_TEST`.
+ */
+export function resolveStripeKeyForDb(
+  isStagingDb: boolean,
+  liveKey: string,
+  testKey: string,
+): string {
+  return requireKeyForEnv(isStagingDb ? "test" : "live", liveKey, testKey);
+}
+
+/**
+ * Sélectionne la clé de l'environnement résolu, en fail-secure : clé absente
+ * → refus (jamais de repli sur la clé live), clé du mauvais mode → refus.
+ */
+function requireKeyForEnv(
+  env: "live" | "test",
+  liveKey: string,
+  testKey: string,
+): string {
+  if (env === "test") {
+    if (!testKey) {
+      // Fail-secure : sans clé de test configurée, on refuse. Le repli sur la
+      // clé live est exactement le bug que cette fonction existe pour rendre
+      // impossible.
+      throw new HttpsError(
+        "failed-precondition",
+        "stripe_test_key_not_configured",
+      );
+    }
+    assertKeyMode(testKey, "test");
+    return testKey;
+  }
+
+  if (!liveKey) {
+    throw new HttpsError(
+      "failed-precondition",
+      "stripe_live_key_not_configured",
+    );
+  }
+  assertKeyMode(liveKey, "live");
+  return liveKey;
+}
+
+/**
+ * Refuse une clé dont le mode ne correspond pas à l'environnement résolu.
+ *
+ * Les Functions se déploient à la main et `defineSecret` demande la valeur en
+ * invite interactive : coller la clé live dans `STRIPE_SECRET_KEY_TEST`
+ * rouvrirait #138 en entier, avec CI verte, tests verts et garde-fou vert.
+ * C'est la seule défense contre cette faute de frappe. Stripe préfixe ses
+ * clés secrètes `sk_` et ses clés restreintes `rk_`.
+ */
+function assertKeyMode(key: string, mode: "live" | "test"): void {
+  if (key.startsWith(`sk_${mode}_`) || key.startsWith(`rk_${mode}_`)) return;
+  throw new HttpsError(
+    "failed-precondition",
+    `stripe_key_mode_mismatch_${mode}`,
+  );
+}

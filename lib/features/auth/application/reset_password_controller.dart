@@ -18,10 +18,10 @@ class ResetPasswordController extends StateNotifier<ResetPasswordState> {
 
   /// Confirme le reset password Firebase via l'oobCode reçu par email.
   ///
-  /// Firebase ne maintient pas de "session recovery" comme Supabase —
-  /// l'utilisateur n'est PAS signé pendant le reset, il fournit juste le
-  /// code one-time + le nouveau password. Une fois validé, il doit se
-  /// reconnecter via le formulaire de login standard.
+  /// Firebase ne crée pas de session de récupération : l'utilisateur n'est
+  /// PAS signé pendant le reset, il fournit juste le code one-time + le
+  /// nouveau password. Une fois validé, il doit se reconnecter via le
+  /// formulaire de login standard.
   Future<void> confirmReset({
     required String oobCode,
     required String newPassword,

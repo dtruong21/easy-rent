@@ -1,7 +1,7 @@
 /// Tests du contrat [ReceiptsRepository] via un fake in-memory.
 ///
-/// NOTE : [SupabaseReceiptsRepository] utilise [Db.from()] et
-/// [Db.invokeFunction()] qui dépendent de [Supabase.instance.client] —
+/// NOTE : [FirestoreReceiptsRepository] utilise [FirebaseFirestore] et les
+/// Cloud Functions callables, qui dépendent de [FirebaseFirestore.instance] —
 /// non initialisé en test unitaire.
 /// On teste le contrat de l'interface, les invariants du fake, et les
 /// exceptions (ProfileIncompleteException, ReceiptNotFoundException).

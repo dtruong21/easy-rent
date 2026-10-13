@@ -22,7 +22,7 @@ class LeasesListNotifier extends AsyncNotifier<List<LeaseListItem>> {
     return ref.read(leaseRepositoryProvider).listForDisplay();
   }
 
-  /// Recharge la liste depuis Supabase.
+  /// Recharge la liste depuis Firestore.
   ///
   /// À appeler après une création, modification, clôture ou archivage réussis.
   Future<void> refresh() async {

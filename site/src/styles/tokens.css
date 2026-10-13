@@ -1,0 +1,24 @@
+/* GENERATED — do not edit. Source: config/theme_tokens.json */
+/* Regenerate: dart run tool/gen_theme_tokens.dart */
+/* Guard: bash scripts/check-theme-tokens.sh */
+:root {
+  --color-paper: #F7F4ED;
+  --color-paper-deep: #EFE9DA;
+  --color-cream: #FCFAF5;
+  --color-ink: #1B1A17;
+  --color-ink-surface: #2A2823;
+  --color-ink-muted: #6B665D;
+  --color-rule: #E8E2D3;
+  --color-olive: #3F4A2A;
+  --color-olive-mid: #5E6A45;
+  --color-olive-soft: #B5B89D;
+  --color-oxblood: #9A3B2F;
+  --color-seal-green: #2E5339;
+  --color-ochre: #7E5612;
+  --color-indigo-ink: #2A3656;
+  --color-kraft: #E4D9BD;
+  --color-stone: #A8A39A;
+  --color-olive-deep: #34401F;
+  --color-rule-strong: #C9C1AB;
+  --color-amount-negative: #6E3A1F;
+}

@@ -13,6 +13,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/utils/pdf_brand_fonts.dart';
 import '../domain/document_type.dart';
 
 /// Snapshot des données nécessaires pour rendre une quittance.
@@ -58,13 +59,14 @@ class ReceiptPdfData {
   final String? notes;
 }
 
-/// Rend le PDF d'une quittance (A4 portrait, Helvetica StandardFonts).
+/// Rend le PDF d'une quittance (A4 portrait, EB Garamond embarquée — cf.
+/// [PdfBrandFonts] pour la justification et le sous-ensemblage du glyphset).
 Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await PdfBrandFonts.theme());
 
   final title = d.documentType == DocumentType.quittance
       ? 'QUITTANCE DE LOYER'
-      : 'RECU DE PAIEMENT';
+      : 'REÇU DE PAIEMENT';
 
   final isQuittance = d.documentType == DocumentType.quittance;
 
@@ -151,7 +153,7 @@ Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
 
                 // 5. Period
                 _section(
-                  label: 'Periode concernee :',
+                  label: 'Période concernée :',
                   value:
                       'du ${FrenchDate.format(d.periodStart)} au ${FrenchDate.format(d.periodEnd)}',
                 ),
@@ -167,7 +169,7 @@ Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
 
                 // 6. Financial
                 pw.Text(
-                  'Detail du paiement :',
+                  'Détail du paiement :',
                   style: pw.TextStyle(
                     fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
@@ -186,7 +188,7 @@ Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
                 pw.Divider(thickness: 0.5, color: PdfColors.grey600),
                 pw.SizedBox(height: 4),
                 _row(
-                  label: 'Total recu',
+                  label: 'Total reçu',
                   value: MoneyFormat.formatEurosFromCents(d.totalCents),
                   bold: true,
                   fontSize: 11,
@@ -206,21 +208,21 @@ Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
                 // 7. Legal
                 if (isQuittance)
                   pw.Text(
-                    'Je soussigne(e) ${d.landlordFullName}, reconnais avoir recu '
-                    'de ${d.tenantFullName} la somme indiquee ci-dessus, pour '
-                    'quittance et solde de tout compte pour la periode susvisee.',
+                    'Je soussigné(e) ${d.landlordFullName}, reconnais avoir reçu '
+                    'de ${d.tenantFullName} la somme indiquée ci-dessus, pour '
+                    'quittance et solde de tout compte pour la période susvisée.',
                     style: const pw.TextStyle(fontSize: 10),
                   )
                 else ...[
                   pw.Text(
-                    'Je soussigne(e) ${d.landlordFullName}, reconnais avoir recu '
-                    'de ${d.tenantFullName} la somme indiquee ci-dessus.',
+                    'Je soussigné(e) ${d.landlordFullName}, reconnais avoir reçu '
+                    'de ${d.tenantFullName} la somme indiquée ci-dessus.',
                     style: const pw.TextStyle(fontSize: 10),
                   ),
                   pw.SizedBox(height: 6),
                   pw.Text(
-                    'Ce recu ne libere pas le locataire du solde du pour la '
-                    'periode concernee.',
+                    'Ce reçu ne libère pas le locataire du solde dû pour la '
+                    'période concernée.',
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
@@ -273,9 +275,9 @@ Future<Uint8List> renderReceiptPdf(ReceiptPdfData d) async {
                   pw.SizedBox(height: 4),
                   pw.Center(
                     child: pw.Text(
-                      'Ref. BAI-'
+                      'Réf. BAI-'
                       '${d.receiptId.substring(0, d.receiptId.length < 8 ? d.receiptId.length : 8).toUpperCase()}'
-                      '  -  Emis par Baillan.  -  Loi du 6 juillet 1989',
+                      '  -  Émis par Baillan.  -  Loi du 6 juillet 1989',
                       style: const pw.TextStyle(
                         fontSize: 8,
                         color: PdfColor.fromInt(0xFF999999),
@@ -344,17 +346,17 @@ pw.Widget _row({
 
 const _monthsFr = [
   'janvier',
-  'fevrier',
+  'février',
   'mars',
   'avril',
   'mai',
   'juin',
   'juillet',
-  'aout',
+  'août',
   'septembre',
   'octobre',
   'novembre',
-  'decembre',
+  'décembre',
 ];
 
 String _monthYearFr(DateTime d) => '${_monthsFr[d.month - 1]} ${d.year}';

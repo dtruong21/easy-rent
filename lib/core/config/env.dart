@@ -1,8 +1,21 @@
 /// Variables d'environnement Baillan.
 ///
-/// Post FEAT-019 (migration Firebase) : on conserve uniquement
-/// `APP_ENV` pour distinguer prod / dev (le projet Firebase reste le même,
-/// la séparation se fait via `(default)` vs `dev` Firestore database).
+/// Post FEAT-019 (migration Firebase) : on conserve uniquement `APP_ENV`
+/// pour distinguer prod / dev.
+///
+/// ⚠️ `APP_ENV` pilote des comportements applicatifs (SEO `noindex`, URLs
+/// publiques, bandeaux de dev) ET, depuis l'**ADR 0003**, la **base Firestore**
+/// utilisée : prod → `(default)`, staging déployé → base nommée `dev`
+/// (isolation des données). Le **projet Firebase** (`easy-rent-54cd4`), l'**Auth**
+/// et le **Storage** restent partagés entre prod et staging.
+///
+/// Le routage de la base ne se fait PAS via `Env.isProd` en dur dans le code
+/// applicatif : il est centralisé dans `firestoreProvider`
+/// ([lib/core/config/firestore_provider.dart]). Ne jamais appeler
+/// `FirebaseFirestore.instance` directement dans un repo/provider.
+///
+/// L'émulateur local reste l'environnement le plus isolé (Firestore + Auth +
+/// Functions locaux) — voir [Env.useFirebaseEmulator] et `docs/ENVIRONMENTS.md`.
 ///
 /// Valeurs Firebase (apiKey, projectId, etc.) sont dans
 /// `lib/firebase_options.dart` (publiques par design).
@@ -13,7 +26,7 @@
 /// ```
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
 
 class Env {
   const Env._();
@@ -62,6 +75,37 @@ class Env {
   /// local inexistant (app cassée). C'est un toggle de dev pur.
   static bool get useFirebaseEmulator => kDebugMode && _useEmulatorFlag;
 
+  static const bool _mobileStagingFlag = bool.fromEnvironment(
+    'MOBILE_STAGING',
+    defaultValue: false,
+  );
+
+  /// Build de test mobile (Firebase Test Lab) sur la base `staging`.
+  ///
+  /// Double garde, comme [useFirebaseEmulator] : `kReleaseMode` garantit qu'un
+  /// build publié sur les stores ne vise JAMAIS staging, même si le
+  /// dart-define fuit dans la commande de release.
+  static bool get useMobileStaging => !kReleaseMode && _mobileStagingFlag;
+
+  static const String _testAutoLoginEmail = String.fromEnvironment(
+    'TEST_AUTO_LOGIN_EMAIL',
+  );
+  static const String _testAutoLoginPassword = String.fromEnvironment(
+    'TEST_AUTO_LOGIN_PASSWORD',
+  );
+
+  /// Compte de test staging-only pour la connexion automatique du build Test
+  /// Lab (Robo ne sait pas remplir un formulaire Flutter). `null` hors build
+  /// de test ou si l'un des deux champs est vide. Fourni au build par
+  /// `dart-defines.testlab.json` (gitignoré) — jamais commité.
+  static ({String email, String password})? get testAutoLoginCredentials {
+    if (!useMobileStaging) return null;
+    if (_testAutoLoginEmail.isEmpty || _testAutoLoginPassword.isEmpty) {
+      return null;
+    }
+    return (email: _testAutoLoginEmail, password: _testAutoLoginPassword);
+  }
+
   /// Hôte des émulateurs Firebase. Défaut `127.0.0.1` (PAS `localhost`) :
   /// sur le web, Chromium résout `localhost` en IPv6 `::1`, or les émulateurs
   /// firebase-tools n'écoutent que sur l'IPv4 `127.0.0.1` — l'app tombait alors
@@ -74,8 +118,79 @@ class Env {
     defaultValue: '127.0.0.1',
   );
 
-  /// Ports par défaut des émulateurs — alignés sur `firebase.json` (défauts
-  /// firebase-tools) et sur `tool/seed/seed_tiers.mjs`.
-  static const int firestoreEmulatorPort = 8080;
-  static const int authEmulatorPort = 9099;
+  /// Ports des émulateurs — défauts firebase-tools (alignés sur
+  /// `tool/seed/seed_tiers.mjs`). Surchargeables par dart-define quand un autre
+  /// projet local occupe déjà les ports par défaut.
+  static const int firestoreEmulatorPort = int.fromEnvironment(
+    'FIRESTORE_EMULATOR_PORT',
+    defaultValue: 8080,
+  );
+  static const int authEmulatorPort = int.fromEnvironment(
+    'AUTH_EMULATOR_PORT',
+    defaultValue: 9099,
+  );
+  static const int functionsEmulatorPort = int.fromEnvironment(
+    'FUNCTIONS_EMULATOR_PORT',
+    defaultValue: 5001,
+  );
+  static const int storageEmulatorPort = int.fromEnvironment(
+    'STORAGE_EMULATOR_PORT',
+    defaultValue: 9199,
+  );
+
+  /// `true` si le checkout Stripe / les CTA « S'abonner » à Baillan Pro
+  /// sont activés. **Défaut `false`** : MVP freemium web (~1 mois de test,
+  /// juillet 2026) — le fondateur n'a pas encore de micro-entreprise pour
+  /// encaisser via Stripe.
+  ///
+  /// Ce flag NE supprime AUCUN code paid-plan (checkout, gestion
+  /// d'abonnement, repos Stripe/RevenueCat) : il gate uniquement l'UI qui
+  /// mène au paiement (`ProPricingPage`, upsell `/profile`). La page `/pro`
+  /// reste atteignable à `false` mais affiche un état « bientôt disponible »
+  /// + capture d'intérêt (`paid_plan_interest`) au lieu du bouton Stripe —
+  /// jamais d'impasse.
+  ///
+  /// **Politique par environnement** (pilotée par `.github/workflows/deploy.yml`,
+  /// sortie `subscriptions_enabled` de `determine-env`) :
+  /// - **staging** (`develop` → app.staging.baillan.com) : `true` — le parcours
+  ///   d'abonnement reste ouvert pour poursuivre le développement.
+  /// - **production** (`main` → baillan.com) : `false` — fermé pendant la beta
+  ///   v1 freemium, ouverture prévue ~2026-08-25.
+  ///
+  /// Le `defaultValue: false` ci-dessous est le **mode d'échec sûr** : un build
+  /// sans dart-define (tests, build local, CI amputée de la sortie) reste
+  /// fermé. La prod ne peut donc pas s'ouvrir par oubli, seulement par choix
+  /// explicite.
+  ///
+  /// **Ouverture du Pro en prod** : passer la ligne `subscriptions_enabled=false`
+  /// de la branche prod de `deploy.yml` à `true`. Aucun changement de code Dart.
+  static const bool subscriptionsEnabled = bool.fromEnvironment(
+    'SUBSCRIPTIONS_ENABLED',
+    defaultValue: false,
+  );
+
+  /// FEAT-044e — achat intégré (RevenueCat) dans les apps iOS/Android. Coupé
+  /// par défaut : sans `--dart-define=IAP_ENABLED=true`, une app store garde
+  /// le comportement actuel (aucun achat, aucune incitation). Sans effet sur
+  /// le web (Stripe, cf. [subscriptionsEnabled]). Ne pas l'activer avant le
+  /// lot 3 (écran d'achat).
+  static const bool iapEnabled = bool.fromEnvironment(
+    'IAP_ENABLED',
+    defaultValue: false,
+  );
+
+  /// Clé SDK RevenueCat iOS (`appl_…`) — publique par nature (clé client).
+  static const String revenueCatAppleApiKey = String.fromEnvironment(
+    'REVENUECAT_APPLE_API_KEY',
+  );
+
+  /// Clé SDK RevenueCat Android (`goog_…`) — publique par nature.
+  static const String revenueCatGoogleApiKey = String.fromEnvironment(
+    'REVENUECAT_GOOGLE_API_KEY',
+  );
+
+  /// FEAT-060 — identifiant numérique de l'app dans l'App Store (App Store
+  /// Connect → Informations sur l'app → Apple ID). Requis pour « Noter
+  /// l'app » sur iOS ; vide → bouton masqué sur iOS.
+  static const String appStoreId = String.fromEnvironment('APP_STORE_ID');
 }

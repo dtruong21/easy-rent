@@ -95,7 +95,8 @@ class FakeDocumentsRepository implements DocumentsRepository {
   Future<String> createSignedUrl(
     String storagePath, {
     int expiresInSeconds = 300,
-  }) async => 'https://supabase.co/storage/v1/sign/$storagePath?token=abc';
+  }) async =>
+      'https://firebasestorage.googleapis.com/v0/b/app/o/$storagePath?token=abc';
 
   @override
   Future<DocumentsQuota> quotaForCurrentLandlord() async =>
@@ -194,7 +195,7 @@ void main() {
     test('createSignedUrl retourne une URL non vide', () async {
       final url = await repo.createSignedUrl('prod/uid/doc.pdf');
       expect(url, isNotEmpty);
-      expect(url, contains('supabase.co'));
+      expect(url, contains('firebasestorage.googleapis.com'));
     });
 
     test('quotaForCurrentLandlord retourne le quota configuré', () async {
@@ -205,7 +206,7 @@ void main() {
 
     // NIT-4 review : rollback Storage si INSERT DB échoue.
     // Le FakeDocumentsRepository simule ce chemin via [uploadShouldFail].
-    // Dans SupabaseDocumentsRepository (ligne 158), le catch sur INSERT appelle
+    // Dans FirestoreDocumentsRepository, le catch sur la création appelle
     // _removeStorageObject avant de rethrow — ce test vérifie que le contrat
     // "aucun document ajouté en cas d'erreur upload" est respecté.
     test('upload échoué ne persiste pas de document', () async {

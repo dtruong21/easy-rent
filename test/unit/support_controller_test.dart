@@ -32,6 +32,15 @@ class _FakeSupportRepository implements SupportRepository {
     final err = submitError;
     if (err != null) throw err;
   }
+
+  @override
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
+  }) async {}
 }
 
 SupportController _makeController(_FakeSupportRepository repo) {

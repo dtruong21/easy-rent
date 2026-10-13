@@ -8,7 +8,7 @@ final _log = Logger('PaymentDetailProvider');
 
 /// Provider qui charge un paiement par son [id].
 ///
-/// Lance [PaymentNotFoundException] si la RLS retourne 0 ligne
+/// Lance [PaymentNotFoundException] si les Firestore Rules ne renvoient aucun document
 /// (paiement archivé, non possédé, ou id inconnu).
 final paymentDetailProvider = FutureProvider.family<Payment, String>((
   ref,

@@ -1,6 +1,7 @@
 /// Tests widget pour la modal de limite de scénarios atteinte (BAILLAN-M1).
 library;
 
+import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
 import 'package:easyrent/features/auth/domain/session_state.dart';
@@ -106,6 +107,10 @@ Widget _buildPage({
         path: '/',
         builder: (context, state) => const Scaffold(body: Text('Landing')),
       ),
+      GoRoute(
+        path: '/pro',
+        builder: (context, state) => const Scaffold(body: Text('Pro')),
+      ),
     ],
   );
 
@@ -190,8 +195,11 @@ void main() {
 
   group('ScenarioLimitReachedModal — tier free', () {
     testWidgets(
-      '3 scénarios déjà sauvegardés + tentative de save → modal M\'avertir CTA',
+      '3 scénarios déjà sauvegardés + tentative de save → modal Passer à Pro CTA',
       (tester) async {
+        // Depuis FEAT-044e (75fcbd3), le CTA free renvoie directement vers le
+        // checkout Stripe (`/pro`, `scenario_limit_upgrade_cta`) — plus de
+        // capture d'intérêt via PaidPlanInterestRepository sur cette modal.
         final paidPlanRepo = _FakePaidPlanInterestRepo();
         await tester.pumpWidget(
           _buildPage(
@@ -214,15 +222,21 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.byKey(const Key('scenario_limit_notify_cta')),
+          find.byKey(const Key('scenario_limit_upgrade_cta')),
           findsOneWidget,
         );
+        // Web : le CTA d'upgrade reste, donc la fermeture garde « Plus tard ».
+        expect(find.text('Plus tard'), findsOneWidget);
 
-        await tester.tap(find.byKey(const Key('scenario_limit_notify_cta')));
+        await tester.tap(find.byKey(const Key('scenario_limit_upgrade_cta')));
         await tester.pumpAndSettle();
 
-        expect(paidPlanRepo.capturedFeatures, isNotNull);
-        expect(paidPlanRepo.capturedFeatures, isNotEmpty);
+        // Modal fermée + navigation vers /pro (checkout Stripe).
+        expect(
+          find.byKey(const Key('scenario_limit_reached_modal')),
+          findsNothing,
+        );
+        expect(find.text('Pro'), findsOneWidget);
       },
     );
   });
@@ -245,6 +259,120 @@ void main() {
         find.byKey(const Key('scenario_limit_reached_modal')),
         findsNothing,
       );
+    });
+  });
+
+  group('ScenarioLimitReachedModal — app store (iOS/Android)', () {
+    setUp(() => debugIsStoreAppOverride = true);
+    tearDown(() => debugIsStoreAppOverride = false);
+
+    Future<void> triggerLimit(
+      WidgetTester tester, {
+      required SubscriptionTier tier,
+      required List<InvestmentScenario> scenarios,
+    }) async {
+      await tester.pumpWidget(
+        _buildPage(
+          tier: tier,
+          scenarios: scenarios,
+          paidPlanRepo: _FakePaidPlanInterestRepo(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _fillMinimalForm(tester);
+      await tester.ensureVisible(find.byKey(const Key('save_scenario_button')));
+      await tester.tap(find.byKey(const Key('save_scenario_button')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'tier free → modal sans CTA vers /pro, avec bouton de fermeture',
+      (tester) async {
+        await triggerLimit(
+          tester,
+          tier: SubscriptionTier.free,
+          scenarios: [_scenario('s1'), _scenario('s2'), _scenario('s3')],
+        );
+
+        expect(
+          find.byKey(const Key('scenario_limit_reached_modal')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('scenario_limit_upgrade_cta')),
+          findsNothing,
+        );
+        expect(find.text('Passer à Pro'), findsNothing);
+        // La modale garde son message et sa fermeture — libellé neutre : sans
+        // CTA d'upgrade, « Plus tard » renverrait à un achat indisponible.
+        expect(find.text('Limite atteinte'), findsOneWidget);
+        expect(find.text('Plus tard'), findsNothing);
+        expect(find.text('Fermer'), findsOneWidget);
+
+        await tester.tap(find.text('Fermer'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('scenario_limit_reached_modal')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('achat intégré actif → CTA vers /pro présent', (tester) async {
+      debugInAppPurchaseEnabledOverride = true;
+      addTearDown(() => debugInAppPurchaseEnabledOverride = null);
+
+      await triggerLimit(
+        tester,
+        tier: SubscriptionTier.free,
+        scenarios: [_scenario('s1'), _scenario('s2'), _scenario('s3')],
+      );
+
+      expect(
+        find.byKey(const Key('scenario_limit_reached_modal')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('scenario_limit_upgrade_cta')),
+        findsOneWidget,
+      );
+      expect(find.text('Passer à Pro'), findsOneWidget);
+    });
+
+    testWidgets('tier paid Pro (15/15) → aucun CTA « Passer à Max »', (
+      tester,
+    ) async {
+      await triggerLimit(
+        tester,
+        tier: SubscriptionTier.paid,
+        scenarios: [for (var i = 0; i < 15; i++) _scenario('s$i')],
+      );
+
+      expect(
+        find.byKey(const Key('scenario_limit_reached_modal')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('scenario_limit_upgrade_cta')), findsNothing);
+      expect(find.textContaining('Passer à'), findsNothing);
+      expect(find.text('Plus tard'), findsNothing);
+      expect(find.text('Fermer'), findsOneWidget);
+    });
+
+    testWidgets('tier anonymous → CTA « Créer un compte » inchangé', (
+      tester,
+    ) async {
+      await triggerLimit(
+        tester,
+        tier: SubscriptionTier.anonymous,
+        scenarios: [_scenario('s1')],
+      );
+
+      expect(
+        find.byKey(const Key('scenario_limit_signup_cta')),
+        findsOneWidget,
+      );
+      // Le CTA d'inscription reste : « Plus tard » garde son sens.
+      expect(find.text('Plus tard'), findsOneWidget);
     });
   });
 }

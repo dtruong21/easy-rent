@@ -40,6 +40,12 @@ class _MockWebShareService implements WebShareService {
   bool canShareFiles() => _canShare;
 
   @override
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  }) async => false;
+
+  @override
   Future<void> sharePdf({
     required String title,
     required String text,
@@ -60,6 +66,14 @@ class _MockWebShareService implements WebShareService {
     if (_fetchException != null) throw _fetchException!;
     return _fetchResult ?? [];
   }
+
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {}
 }
 
 // ---------------------------------------------------------------------------

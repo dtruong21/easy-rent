@@ -1,10 +1,12 @@
 /// Tests widget pour [LandingPage] (BAILLAN-M1).
 library;
 
+import 'package:easyrent/core/app_info/app_info_provider.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/landing/presentation/landing_page.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,7 +104,9 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> updatePassword(String newPassword) async {}
 }
 
-Widget _buildApp(_FakeAuthRepository repo) {
+/// [appInfo] permet de simuler la version lue par `PackageInfo` ; `null` =
+/// provider laissé en chargement (cas où la version n'est pas encore connue).
+Widget _buildApp(_FakeAuthRepository repo, {PackageInfo? appInfo}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -127,7 +131,11 @@ Widget _buildApp(_FakeAuthRepository repo) {
   );
 
   return ProviderScope(
-    overrides: [authRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      authRepositoryProvider.overrideWithValue(repo),
+      if (appInfo != null)
+        appInfoProvider.overrideWith((ref) => Future.value(appInfo)),
+    ],
     child: MaterialApp.router(
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -237,5 +245,60 @@ void main() {
 
       expect(find.text('Login'), findsOneWidget);
     });
+  });
+
+  // ------------------------------------------------------------------
+  // Version + environnement en pied de page de garde.
+  // `Env.isProd` est une const de compilation : en test APP_ENV vaut son
+  // défaut `dev`, donc on est toujours dans le cas NON-prod (celui qui
+  // compte — c'est là que la pastille doit apparaître).
+  // ------------------------------------------------------------------
+  group('LandingPage — version & environnement', () {
+    testWidgets('hors prod : pastille d\'environnement visible', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildApp(_FakeAuthRepository()));
+      await tester.pumpAndSettle();
+
+      final badge = find.byKey(const Key('landing_env_badge'));
+      await tester.ensureVisible(badge);
+      expect(badge, findsOneWidget);
+      expect(find.text('DEV/STAGING'), findsOneWidget);
+    });
+
+    testWidgets('affiche la version quand PackageInfo est disponible', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          _FakeAuthRepository(),
+          appInfo: PackageInfo(
+            appName: 'Baillan',
+            packageName: 'com.dakistudio.baillan',
+            version: '1.0.0',
+            buildNumber: '310',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final version = find.byKey(const Key('landing_app_version'));
+      await tester.ensureVisible(version);
+      expect(version, findsOneWidget);
+      expect(find.text('v1.0.0 (build 310)'), findsOneWidget);
+    });
+
+    testWidgets(
+      'version indisponible : pas de placeholder, la pastille reste',
+      (tester) async {
+        // Provider laissé en chargement → on n'affiche pas de texte vide,
+        // ce qui éviterait un saut de mise en page sur la 1re vue.
+        await tester.pumpWidget(_buildApp(_FakeAuthRepository()));
+        await tester.pump();
+
+        expect(find.byKey(const Key('landing_app_version')), findsNothing);
+        expect(find.byKey(const Key('landing_env_badge')), findsOneWidget);
+      },
+    );
   });
 }

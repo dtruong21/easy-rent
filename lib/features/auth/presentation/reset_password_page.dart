@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/ui/theme/app_icon_size.dart';
+
 import '../../../core/i18n/l10n_extensions.dart';
 import '../data/auth_repository.dart';
 import 'widgets/reset_password_form.dart';
@@ -11,10 +13,10 @@ import 'widgets/reset_password_form.dart';
 /// Accessible via le lien envoyé par email Firebase :
 ///   `https://.../reset-password?mode=resetPassword&oobCode=<code>`
 ///
-/// Contrairement à Supabase, Firebase ne crée pas de session "recovery"
-/// quand l'utilisateur clique le lien — il fournit juste un `oobCode`
-/// (one-time code) qu'on valide via [verifyPasswordResetCode] avant de
-/// poser le nouveau password via [confirmPasswordReset].
+/// Firebase ne crée pas de session "recovery" quand l'utilisateur clique le
+/// lien — il fournit juste un `oobCode` (one-time code) qu'on valide via
+/// [verifyPasswordResetCode] avant de poser le nouveau password via
+/// [confirmPasswordReset].
 class ResetPasswordPage extends ConsumerStatefulWidget {
   const ResetPasswordPage({super.key});
 
@@ -95,7 +97,11 @@ class _InvalidLinkView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.link_off_outlined, size: 56, color: theme.colorScheme.error),
+        Icon(
+          Icons.link_off_outlined,
+          size: AppIconSize.hero,
+          color: theme.colorScheme.error,
+        ),
         const SizedBox(height: 24),
         Text(
           l10n.authInvalidLinkTitle,

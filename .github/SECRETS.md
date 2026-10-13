@@ -6,11 +6,6 @@
 
 | Nom | Valeur | Où la trouver |
 |---|---|---|
-| `SUPABASE_URL` | `https://<ref>.supabase.co` | Supabase Dashboard → Project Settings → API |
-| `SUPABASE_ANON_KEY` | `sb_publishable_*` | Idem (publishable key) |
-| `SUPABASE_PROJECT_REF` | `<ref>` (alphanumérique) | Supabase Dashboard URL ou Settings → General |
-| `SUPABASE_ACCESS_TOKEN` | `sbp_*` | https://supabase.com/dashboard/account/tokens (personal token) |
-| `SUPABASE_DB_PASSWORD` | mot de passe DB | Supabase Dashboard → Database → Settings |
 | `FIREBASE_PROJECT_ID` | `<project-id>` | Firebase Console → Project Settings |
 | `FIREBASE_SERVICE_ACCOUNT` | JSON complet | Firebase Console → Project Settings → Service Accounts → Generate new private key |
 
@@ -54,14 +49,16 @@ anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 Et ajoute le secret `ANTHROPIC_API_KEY` (depuis https://console.anthropic.com/settings/keys). Mais c'est plus cher.
 
-## Secrets côté Supabase (Edge Functions)
+## Secrets côté Cloud Functions
 
-À configurer via `supabase secrets set` — **JAMAIS dans GitHub Actions secrets** :
+À configurer via Cloud Secret Manager — **JAMAIS dans GitHub Actions secrets** :
 
 ```bash
-supabase secrets set RESEND_API_KEY=re_xxxxx
-supabase secrets set FROM_EMAIL=quittances@tondomaine.fr
+firebase functions:secrets:set <SECRET_NAME>
 ```
+
+En local, les Functions lisent un `.env` non versionné (voir
+[`docs/SECURITY.md`](../docs/SECURITY.md)).
 
 ## Comment configurer les environnements GitHub
 

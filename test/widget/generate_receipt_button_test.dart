@@ -107,6 +107,42 @@ Widget _buildWidget({required ReceiptsRepository repo}) {
   );
 }
 
+/// Deux boutons "Générer une quittance" (deux paiements distincts) montés
+/// côte à côte, comme dans une liste de paiements réelle. Sert à prouver que
+/// l'état de génération est bien isolé par paiement : cliquer sur une ligne ne
+/// doit ni allumer le spinner des autres lignes ni ouvrir plusieurs dialogues.
+Widget _buildTwoButtons({required ReceiptsRepository repo}) {
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, _) => Scaffold(
+          body: Column(
+            children: const [
+              GenerateReceiptButton(paymentId: 'pay-1', leaseId: 'lease-1'),
+              GenerateReceiptButton(paymentId: 'pay-2', leaseId: 'lease-1'),
+            ],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, _) => const Scaffold(body: Text('Profile Page')),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [receiptsRepositoryProvider.overrideWithValue(repo)],
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      locale: const Locale('fr'),
+      supportedLocales: supportedLocales,
+    ),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -199,6 +235,54 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('GenerateReceiptButton — isolation par paiement (bugs multi-lignes)', () {
+    testWidgets(
+      'clic sur une ligne → spinner UNIQUEMENT sur cette ligne, pas les autres',
+      (tester) async {
+        // Génération bloquée : le bouton cliqué reste en submitting le temps
+        // de l'assertion.
+        final completer = Completer<ReceiptGenerationResult>();
+        final repo = _ControlledRepo(() => completer.future);
+
+        await tester.pumpWidget(_buildTwoButtons(repo: repo));
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('btn_generate_receipt_pay-1')));
+        await tester.pump();
+
+        // Un seul spinner, celui de pay-1 — pas un par ligne.
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        // pay-2 garde son icône au repos.
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('btn_generate_receipt_pay-2')),
+            matching: find.byIcon(Icons.receipt_long_outlined),
+          ),
+          findsOneWidget,
+        );
+
+        completer.complete(_makeResult());
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'succès avec plusieurs boutons montés → un SEUL dialog preview',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildTwoButtons(repo: _FakeReceiptsRepo(result: _makeResult())),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('btn_generate_receipt_pay-1')));
+        await tester.pumpAndSettle();
+
+        // Un seul dialogue, pas un empilement (sinon N clics pour fermer).
+        expect(find.byKey(const Key('dialog_receipt_preview')), findsOneWidget);
+      },
+    );
   });
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/finance/expense_recurrence.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/utils/money_format.dart';
@@ -144,6 +145,8 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
           periodStart: periodStart,
           periodEnd: periodEnd,
           periodYear: (periodStart ?? expenseDate).year,
+          recurrence: formState.currentRecurrence,
+          recurrenceEndDate: formState.currentRecurrenceEndDate,
           documentId: documentId,
           notes: notes.isEmpty ? null : notes,
         );
@@ -244,6 +247,8 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
               initialCategoryOverridden: initial?.categoryOverridden ?? false,
               initialPeriodStart: initial?.periodStart,
               initialPeriodEnd: initial?.periodEnd,
+              initialRecurrence: initial?.recurrence ?? ExpenseRecurrence.none,
+              initialRecurrenceEndDate: initial?.recurrenceEndDate,
               initialNotes: initial?.notes,
               initialDocumentId: initial?.documentId,
               enabled: !isSubmitting,

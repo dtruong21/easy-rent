@@ -17,7 +17,7 @@ Ce document décrit le système d'agents qui développe EasyRent de la discovery
                               ↓
 ┌──────────────────────────────────────────────────────────────────┐
 │                    PHASE 3 — IMPLEMENTATION                       │
-│  supabase-dev (DB+RLS) │ flutter-dev (UI) │ pdf-emailer (docs)  │
+│  flutter-dev (UI)  │  pdf-emailer (docs)  │  backend Firebase   │
 └──────────────────────────────────────────────────────────────────┘
                               ↓
 ┌──────────────────────────────────────────────────────────────────┐
@@ -27,7 +27,7 @@ Ce document décrit le système d'agents qui développe EasyRent de la discovery
                               ↓
 ┌──────────────────────────────────────────────────────────────────┐
 │                      PHASE 5 — DELIVERY                           │
-│              deployer (Firebase Hosting + Supabase)              │
+│         deployer (Hosting + Functions + rules/indexes)           │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -38,17 +38,16 @@ Ce document décrit le système d'agents qui développe EasyRent de la discovery
 | `feature-scout` | Trouve features manquantes en scannant code/docs | haiku | Discovery |
 | `seo-specialist` | SEO/découvrabilité d'un PWA Flutter Web : crawlabilité, meta/OG/JSON-LD, robots/sitemap, perf | sonnet | Growth |
 | `product-owner` | Écrit user stories + critères d'acceptation | sonnet | Discovery |
-| `architect` | Conçoit schéma DB, RLS, structure code | **opus** | Design |
-| `supabase-dev` | Migrations Postgres, RLS, Edge Functions | sonnet | Implementation |
+| `architect` | Conçoit le modèle Firestore, les rules, la structure code | **opus** | Design |
 | `flutter-dev` | Code Flutter Web (Riverpod, go_router) | sonnet | Implementation |
 | `pdf-emailer` | Génération PDF quittances + envoi emails | sonnet | Implementation |
-| `qa-tester` | Tests widget/unit/RLS + QA manuelle | sonnet | Quality |
+| `qa-tester` | Tests widget/unit/rules + QA manuelle | sonnet | Quality |
 | `code-reviewer` | Revue qualité, conventions, smells | **opus** | Quality |
-| `security-auditor` | RLS coverage, RGPD, secrets, RGPD | **opus** | Quality |
+| `security-auditor` | Firestore Rules coverage, RGPD, secrets | **opus** | Quality |
 | `bug-hunter` | Scan proactif du codebase pour bugs/dette | **opus** | Quality |
 | `state-keeper` | Maintient le cache d'état projet (docs/state/) | haiku | Maintenance |
 | `ticket-triage` | Lit les issues GitHub, valide, route vers le bon pipeline | haiku | Ticketing |
-| `deployer` | Firebase + Supabase deploy, GitHub Actions | haiku | Delivery |
+| `deployer` | Deploy Firebase (Hosting/Functions/rules), GitHub Actions | haiku | Delivery |
 
 ## Slash commands d'orchestration
 
@@ -143,7 +142,7 @@ Certaines tâches transverses tournent en **workflow** (orchestration détermini
 
 ## Garde-fous critiques (ne jamais désactiver)
 
-1. **RLS obligatoire** sur toutes les tables Supabase (enforced par `supabase-dev` et `security-auditor`)
+1. **Firestore Rules obligatoires** sur toutes les collections (enforced par `security-auditor`)
 2. **Pas de deploy prod sans confirmation utilisateur explicite** (enforced par `deployer` et `/deliver`)
 3. **PR obligatoire** vers `main`, jamais de push direct (enforced par GitHub branch protection)
 4. **Security audit obligatoire** avant chaque deploy (enforced par `/build-feature` et `/deliver`)
@@ -160,11 +159,11 @@ Au lieu de re-scanner le codebase à chaque session, les agents lisent un **snap
 ```
 docs/state/
 ├── INDEX.md          ← Point d'entrée (à lire en premier)
-├── SCHEMA.md         ← Tables Postgres + policies RLS (compact)
+├── schema/           ← Collections Firestore + rules (par domaine)
 ├── ROUTES.md         ← Routes Flutter actuelles
 ├── FEATURES.md       ← Features implémentées et statut
 ├── DEPENDENCIES.md   ← Packages et versions
-└── FUNCTIONS.md      ← Edge Functions déployées
+└── functions/        ← Cloud Functions déployées (par domaine)
 ```
 
 ### Économie typique
@@ -173,7 +172,7 @@ docs/state/
 |---|---|---|---|
 | Architecte qui lit toutes les migrations | ~5k tokens | ~300 tokens (lit SCHEMA.md) | **94%** |
 | Reviewer qui cherche les routes existantes | ~3k tokens | ~200 tokens | **93%** |
-| Auditeur sécu qui vérifie RLS coverage | ~8k tokens | ~400 tokens | **95%** |
+| Auditeur sécu qui vérifie la couverture des rules | ~8k tokens | ~400 tokens | **95%** |
 | Session démarrée (CLAUDE.md auto-chargé) | ~3k tokens | ~800 tokens | **73%** |
 
 ### Cycle de vie du cache
@@ -190,7 +189,7 @@ Tous les agents ont reçu l'instruction : **lis `docs/state/` AVANT de grep le c
 ### Modèles optimisés par coût
 
 - **Opus** réservé aux décisions critiques (architect, code-reviewer, security-auditor, bug-hunter)
-- **Sonnet** pour le développement (flutter-dev, supabase-dev, pdf-emailer, qa-tester, product-owner)
+- **Sonnet** pour le développement (flutter-dev, pdf-emailer, qa-tester, product-owner)
 - **Haiku** pour les tâches mécaniques (feature-scout, deployer, state-keeper)
 
 ### Cache de prompt Anthropic (5 min TTL)

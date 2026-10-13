@@ -9,6 +9,7 @@
 ///   obligatoires vides).
 library;
 
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/features/expenses/domain/expense_category.dart';
 import 'package:easyrent/features/expenses/domain/expense_nature.dart';
@@ -33,6 +34,8 @@ Widget _buildExpenseForm({
   bool initialCategoryOverridden = false,
   DateTime? initialPeriodStart,
   DateTime? initialPeriodEnd,
+  ExpenseRecurrence initialRecurrence = ExpenseRecurrence.none,
+  DateTime? initialRecurrenceEndDate,
   String? initialNotes,
   String? initialDocumentId,
   bool enabled = true,
@@ -60,6 +63,8 @@ Widget _buildExpenseForm({
             initialCategoryOverridden: initialCategoryOverridden,
             initialPeriodStart: initialPeriodStart,
             initialPeriodEnd: initialPeriodEnd,
+            initialRecurrence: initialRecurrence,
+            initialRecurrenceEndDate: initialRecurrenceEndDate,
             initialNotes: initialNotes,
             initialDocumentId: initialDocumentId,
             enabled: enabled,
@@ -518,5 +523,95 @@ void main() {
         amountCtrl.dispose();
       },
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // Périodicité (FEAT-041d)
+  // -------------------------------------------------------------------------
+
+  group('ExpenseForm — périodicité', () {
+    testWidgets('champ périodicité présent, ponctuelle par défaut : ni date '
+        'de fin ni explication tant qu\'aucun rythme n\'est choisi', (
+      tester,
+    ) async {
+      final amountCtrl = TextEditingController();
+      final wk = GlobalKey<ExpenseFormWidgetState>();
+      await tester.pumpWidget(
+        _buildExpenseForm(amountCtrl: amountCtrl, formKey: wk),
+      );
+
+      expect(find.byKey(const Key('field_recurrence')), findsOneWidget);
+      expect(wk.currentState?.currentRecurrence, ExpenseRecurrence.none);
+      expect(find.byKey(const Key('recurrence_explanation')), findsNothing);
+      expect(find.byKey(const Key('field_recurrence_end_date')), findsNothing);
+      amountCtrl.dispose();
+    });
+
+    testWidgets('choisir un rythme révèle la date de fin (optionnelle) et '
+        'l\'explication des deux règles', (tester) async {
+      final amountCtrl = TextEditingController();
+      final wk = GlobalKey<ExpenseFormWidgetState>();
+      await tester.pumpWidget(
+        _buildExpenseForm(
+          amountCtrl: amountCtrl,
+          initialRecurrence: ExpenseRecurrence.quarterly,
+          formKey: wk,
+        ),
+      );
+
+      expect(find.byKey(const Key('recurrence_explanation')), findsOneWidget);
+      expect(
+        find.byKey(const Key('field_recurrence_end_date')),
+        findsOneWidget,
+      );
+      expect(find.text('Sans fin prévue'), findsOneWidget);
+      amountCtrl.dispose();
+    });
+
+    testWidgets('revenir à « ponctuelle » efface la date de fin retenue', (
+      tester,
+    ) async {
+      final amountCtrl = TextEditingController();
+      final wk = GlobalKey<ExpenseFormWidgetState>();
+      await tester.pumpWidget(
+        _buildExpenseForm(
+          amountCtrl: amountCtrl,
+          initialRecurrence: ExpenseRecurrence.monthly,
+          initialRecurrenceEndDate: DateTime(2027, 12, 31),
+          formKey: wk,
+        ),
+      );
+
+      expect(wk.currentState?.currentRecurrenceEndDate, DateTime(2027, 12, 31));
+
+      await tester.tap(find.byKey(const Key('field_recurrence')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ponctuelle (une seule fois)').last);
+      await tester.pumpAndSettle();
+
+      expect(wk.currentState?.currentRecurrence, ExpenseRecurrence.none);
+      expect(wk.currentState?.currentRecurrenceEndDate, isNull);
+      expect(find.byKey(const Key('field_recurrence_end_date')), findsNothing);
+      amountCtrl.dispose();
+    });
+
+    testWidgets('fin de récurrence antérieure à la date de la dépense → '
+        'validateAll échoue', (tester) async {
+      final amountCtrl = TextEditingController(text: '150');
+      final wk = GlobalKey<ExpenseFormWidgetState>();
+      await tester.pumpWidget(
+        _buildExpenseForm(
+          amountCtrl: amountCtrl,
+          initialNature: ExpenseNature.works,
+          initialExpenseDate: DateTime(2026, 6, 1),
+          initialRecurrence: ExpenseRecurrence.quarterly,
+          initialRecurrenceEndDate: DateTime(2026, 1, 1),
+          formKey: wk,
+        ),
+      );
+
+      expect(wk.currentState?.validateAll(), isFalse);
+      amountCtrl.dispose();
+    });
   });
 }

@@ -2,7 +2,7 @@
 
 Géré par `product-owner` et `feature-scout`. Détails dans `docs/backlog/<id>-<slug>.md`.
 
-> Dernière mise à jour : 2026-07-08 (FEAT-049 SEO livré + FEAT-050 site marketing cadré ; voir section Croissance/SEO)
+> Dernière mise à jour : 2026-09-15 (nettoyage : FEAT-047 export RGPD livré PR #180, FEAT-046 purge quittances = seul reste de l'audit FEAT-045 ; issue #135 fermée obsolète ; cf. aussi priorisation 2026-09-05 plus bas)
 
 ## En cours
 
@@ -37,7 +37,7 @@ FEAT-001 (auth)
 
 - ✅ Navigation principale (drawer + routes)
 - ✅ FEAT-008 — Partager quittance par email (Web Share API native) → `docs/plans/FEAT-008-email-quittance.md`
-- ✅ FEAT-009 — Upload & stockage de documents (Supabase Storage) → `docs/plans/FEAT-009-documents-storage.md`
+- ✅ FEAT-009 — Upload & stockage de documents (Firebase Storage) → `docs/plans/FEAT-009-documents-storage.md`
 - ✅ FEAT-010 — Dashboard + polish PWA + déploiement prod → [`backlog/010-dashboard-pwa-prod-setup.md`](backlog/010-dashboard-pwa-prod-setup.md)
 
 ### Stories détaillées (P0 — à implémenter)
@@ -47,45 +47,43 @@ FEAT-001 (auth)
 | 6 | FEAT-006 | Enregistrer un paiement de loyer | FEAT-005 | ✅ Done |
 | 7 | FEAT-007 | Générer une quittance PDF de loyer (loi 6 juillet 1989) | FEAT-006 | ✅ Done |
 | 8 | FEAT-008 | Partager une quittance par email (Web Share API native) | FEAT-007 | ✅ Done (pivot 2026-06-22) |
-| 9 | FEAT-009 | Upload & stockage de documents (Supabase Storage) | FEAT-005 | ✅ Done |
+| 9 | FEAT-009 | Upload & stockage de documents (Firebase Storage) | FEAT-005 | ✅ Done |
 | 10 | FEAT-010 | Dashboard + PWA polish + Prod setup | FEAT-009 | ✅ Done |
 | 11 | FEAT-011 | Auth email + password (pivot FEAT-001) | — | ✅ Done |
 
 **Post-MVP (FEAT-012+)** :
 - FEAT-012 : Password change endpoint + profil utilisateur
-- FEAT-013 : Email rappels automatiques de paiement (cron Edge Function)
+- FEAT-013 : Email rappels automatiques de paiement (Cloud Function planifiée)
 - FEAT-014 : Export comptable (CSV / FEC)
 
 ## Dette technique / risques identifiés (scout 2026-05-27)
 
 - ✅ ~~`test/` absent~~ → résolu : scaffold `test/unit` + `test/widget` + étape `build_runner` ajoutée à la CI.
-- ✅ ~~Pas de suite de tests RLS~~ → entamé : `supabase/tests/rls_landlords.sql` (à étendre par table au fil de FEAT-002+).
+- ✅ ~~Pas de tests de règles~~ → couvert : `functions/rules-tests/` (émulateur Firestore, `npm run test:rules`), cross-user enforced.
 - **Aucun bucket Storage** configuré → bloque FEAT-009. À provisionner avant.
-- **Aucune Edge Function** (`supabase/functions/` vide) → bloque FEAT-008 (Resend). Choisir le domaine email vérifié avant.
+- ✅ ~~**Aucune Edge Function** → bloque FEAT-008 (Resend)~~ → obsolète : FEAT-008 livré via Web Share API (partage natif), aucun backend email requis. Le backend serverless est aujourd'hui **Cloud Functions** (`functions/src/`).
 - **Pas de `seed.sql`** → données de dev locales manuelles pour l'instant.
 
 ### Setup infra déploiement — staging OK, prod à finir
 - ✅ ~~`firebase.json` / `.firebaserc`~~ → posés (`build/web` + rewrites SPA pour GoRouter).
-- ✅ ~~Secrets staging~~ : `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` → posés sur env `staging`.
-- ✅ ~~Provisionnement schéma `dev` pour QA staging~~ → fait via Supabase CLI (`supabase db push`).
+- ✅ ~~Secrets staging~~ → `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` posés sur env `staging`.
+- ✅ ~~Séparation dev/staging~~ → via `APP_ENV` (build `--dart-define`) ; voir [`ENVIRONMENTS.md`](ENVIRONMENTS.md). Plus de schéma Postgres.
 - ✅ ~~Service worker piège-cache sur staging~~ → désactivé via `--pwa-strategy=none` dans `deploy.yml` quand env=staging.
 - 🔧 **Environnement GitHub `production` à créer** (seul `staging` existe).
-- 🔧 **Secrets prod manquants** : dupliquer `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `FIREBASE_SERVICE_ACCOUNT` / `FIREBASE_PROJECT_ID` sur env `production`. Plus ajouter `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` (utilisés par le job `apply-supabase-migrations` qui ne tourne que depuis `main`).
-- 🔧 **Stratégie d'apply migrations à automatiser** : actuellement migrations posées sur dev via CLI manuelle. À terme : soit étendre `deploy.yml` pour appliquer aussi depuis `develop`, soit garder l'approche "1 fois par release depuis `main`". À trancher pendant FEAT-002.
+- ✅ ~~Secrets prod~~ → posés sur env `production` : `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_PROJECT_ID` (les seuls requis par `deploy.yml`). Prod live sur `baillan.com`.
+- 🔧 **Déploiement rules/indexes/functions à automatiser** : `deploy.yml` ne déploie que le Hosting ; les Firestore Rules, indexes et Cloud Functions se déploient encore **manuellement** (`firebase deploy --only 'firestore:(default)'` ou `firestore:staging` — jamais `firestore:rules` sans base — / `--only functions`). À terme : étendre `deploy.yml`. Post FEAT-019, plus aucune migration SQL.
 
 ### Gates AVANT mise en PROD (issus de l'audit sécu FEAT-001)
-- ✅ ~~Redirect Allow-List Supabase~~ → configurée (Site URL + 3 variantes de redirect URLs pour staging, à ajouter pour prod plus tard).
+- ✅ ~~Redirect Allow-List~~ → remplacé par les **Authorized domains** Firebase Auth (Console → Authentication → Settings) : `baillan.com`, `app.staging.baillan.com`, domaines `.web.app`, `localhost`.
 - 🔧 **Compléter `/privacy`** : identité du responsable de traitement, DPO, base légale définitive de la persistance de session (placeholder actuellement).
-- 🔧 **Seuils de rate-limit OTP** Supabase à vérifier en Studio.
-- 🔧 **Reproduire URL Configuration Supabase pour le canal `live`** quand on déploiera en prod (Site URL + Redirect Allow-List).
 
 ### Items résolus par FEAT-002
-- ✅ ~~FK `landlords.id … ON DELETE CASCADE`~~ → remplacé par `ON DELETE NO ACTION` (rétention 5 ans garantie). L'effacement RGPD passera par Edge Function dédiée (P1 ci-dessous).
+- ✅ ~~FK `landlords.id … ON DELETE CASCADE`~~ → remplacé par `ON DELETE NO ACTION` (rétention 5 ans garantie). L'effacement RGPD passe par une Cloud Function dédiée (P1 ci-dessous).
 - ✅ ~~Restriction colonne `deleted_at`~~ → trigger `prevent_protected_columns_change` (BEFORE INSERT OR UPDATE) sur 4 tables × 2 schémas ; soft-delete passe par RPC `soft_delete_*` SECURITY DEFINER.
 
 ### Dette tracée par FEAT-002 (P1)
 - **Hardening flag de session GUC** : `app.allow_deleted_at_change` est aujourd'hui safe (PostgREST n'expose pas `set_config`) mais reste un footgun architectural. Remplacer par un mécanisme intransférable (ex: `pg_trigger_depth()` test, ou wrapping en fonction SECURITY DEFINER de niveau supérieur). Cf section "⚠️ Patterns sensibles" dans `docs/SECURITY.md`.
-- **RGPD self-service** (P1) : export des données + droit à l'effacement (Edge Function qui anonymise plutôt qu'efface, conforme rétention 5 ans + RPC `soft_delete_*` cascade enfants).
+- **RGPD self-service** (P1) : export des données + droit à l'effacement (Cloud Function qui anonymise plutôt qu'efface, conforme rétention 5 ans ; le soft-delete en cascade passe par le callable `softDeleteEntity`). Effacement de compte déjà livré via `deleteAccount` (FEAT-045).
 - **`soft_delete_landlord` ne cascade pas vers properties/tenants/leases** : aujourd'hui un landlord soft-deleted laisse ses enfants visibles (deleted_at=NULL). Conforme RGPD rétention, mais incohérent UX si restauration future. À documenter ou à ajuster en P1.
 
 ## Post-MVP immédiat (P1 — prochaine itération)
@@ -103,8 +101,35 @@ FEAT-001 (auth)
 | FEAT-029 | Charges copropriété exceptionnelles + régularisation annuelle des charges | [`backlog/029-charges-regularisation.md`](backlog/029-charges-regularisation.md) | 📋 Cadré (2026-07-03) — scope V1 réduit (bail nu, doc `documents` réutilisé), décisions ouvertes avant chiffrage, risque `firestore.rules`/`functions/` signalé |
 | FEAT-041 | Dépenses — entité first-class (CRUD + catégorisation + justificatif + alimentation régularisation) | [`backlog/041-depenses.md`](backlog/041-depenses.md) | 📋 Cadré (2026-07-05) — absorbe FEAT-033 (archivage régularisation) ; V1.1 = rentabilité sur dépenses réelles (FEAT-017) ; 7 décisions produit ouvertes avant chiffrage |
 | FEAT-046 | Purge différée des quittances archivées (RGPD art. 5.1.e) — cron quotidien qui hard-delete les `receipts` avec `retentionUntil <= now` (stampées par `deleteAccount`, FEAT-045). Honore la promesse « puis supprimées à l'échéance » de la privacy policy v1.2. Effort S (pattern `cleanupExpiredAnon` + index composite `retentionUntil`) | — | 📋 Suivi audit FEAT-045 (L1, 2026-07-07) — horizon 5 ans, non urgent |
-| FEAT-047 | Export des données (RGPD art. 15/20 — droit d'accès + portabilité) : callable `exportAccountData` (JSON/CSV de toutes les collections du landlord) + bouton Profil. Gap relevé par l'audit FEAT-045 (docs/LEGAL.md promettait déjà `GET /export`) | — | 📋 Suivi audit FEAT-045 (2026-07-07) |
+| FEAT-047 | Export des données (RGPD art. 15/20 — droit d'accès + portabilité) : callable `exportAccountData` (JSON/CSV de toutes les collections du landlord) + bouton Profil. Gap relevé par l'audit FEAT-045 (docs/LEGAL.md promettait déjà `GET /export`) | — | ✅ Livré 2026-09-12 (PR #180) — callable + repository + contrôleur + tuile Profil |
 | FEAT-053 | Catégories N/A déclarées par le plan (readiness) — permettre à un plan de déclarer une catégorie hors-sujet (front-matter type `readiness: {accessibility: n/a}`), pour que `/feature-ready` redistribue son poids au lieu de la noter. Corrige deux biais mesurés sur FEAT-052 : ✅ accessibilité **non mérité** (le script grep le plan ; un plan qui *cite* l'a11y s'auto-valide) et ❌ « tests widget » sur une feature sans UI. Effort S (le mécanisme de redistribution existe déjà : `Category.skipped`) | — | 📋 Suivi FEAT-052 (2026-07-17) — à faire seulement si le score prouve son utilité ; sinon le rapport reste advisory et ses limites sont documentées |
+| FEAT-054 | Isolation réelle prod/staging — Firestore, Auth, Storage, Functions (staging partage aujourd'hui tout le plan de données de la prod, cf. `docs/ENVIRONMENTS.md`) | [`backlog/054-firestore-prod-staging-isolation.md`](backlog/054-firestore-prod-staging-isolation.md) | 📋 Cadré (2026-07-23) — priorité proposée **P1** : prérequis silencieux de FEAT-031 (secrets email partagés) et risque RGPD/paiement croissant maintenant que le palier payant (FEAT-044) est en prod ; arbitrage technique (base Firestore nommée vs second projet) délégué à l'ADR `docs/adr/0003-firestore-prod-staging-isolation.md` (architecte, en cours) |
+
+## Priorisation transverse (2026-09-05) — 4 sujets soumis par le propriétaire
+
+| Rang | Sujet | ID | Story | Statut |
+|---|---|---|---|---|
+| 1 | Fix issue #138 (Cloud Functions aveugles à `APP_ENV`, S1) | — (bug fix, pas de FEAT-ID, cf. convention `docs/state/CHANGELOG.md`) | issue GitHub #138 | 🔴 OPEN — fail-secure `APP_ENV` + refus/`sk_test_` forcé dans `createCheckoutSession` ; bloquant dur du rang 2 |
+| 2 | Activation commerciale des paid plans (lever `SUBSCRIPTIONS_ENABLED`) | FEAT-057 | [`backlog/057-activation-commerciale-paid-plans.md`](backlog/057-activation-commerciale-paid-plans.md) | 📋 Cadré 2026-09-05 — **bloqué par #138**, indépendant des sujets 3/4 |
+| 3 | Site vitrine `www.baillan.com` | FEAT-050 | [`backlog/050-marketing-site-seo.md`](backlog/050-marketing-site-seo.md) | 📋 Cadré 2026-07-08 (paniers d'architectes) — ⚠️ doc rédigé sous l'hypothèse `baillan.fr` (domaine non confirmé à l'époque) ; domaine réel confirmé = **`baillan.com`** (2 « l »), à corriger dans le doc avant lancement du chantier (find/replace, pas de changement de décision d'architecture) |
+| 4 | Migration prod → `app.baillan.com` | — (= FEAT-050e) | voir FEAT-050 §6 | Non autonome : dernier ticket de FEAT-050, pas un sujet indépendant (le domaine racine ne peut être « libéré » que si le site vitrine qui doit l'occuper est prêt) |
+
+Séquencement : #138 d'abord (seul sujet dont le coût d'inaction est
+irréversible — un test du paywall depuis staging crée aujourd'hui une vraie
+transaction Stripe live), puis FEAT-057 qu'il débloque. FEAT-050 est
+parallélisable : le fix #138 touche `functions/src/`, le site vitrine un
+stack séparé, aucun fichier partagé. Le rang 4 suit obligatoirement le rang
+3 — libérer la racine avant que le site vitrine soit prêt coûterait un churn
+Auth/PWA pour rien.
+
+Décisions en attente du propriétaire : (a) fix court terme de #138
+(`APP_ENV` fail-secure, 1-2 j) ou jalon 3 de FEAT-054 complet (`dbForRequest`
++ secrets Stripe par environnement, 4-6 j) ; (b) moment de la bascule
+`sk_test_` → `sk_live_`, qui engage de l'argent réel ; (c) ordre relatif des
+rangs 2 et 3 si un seul flux de travail à la fois.
+
+Détail des critères d'acceptation : [`backlog/057-activation-commerciale-paid-plans.md`](backlog/057-activation-commerciale-paid-plans.md)
+pour le rang 2, issue GitHub #138 pour le rang 1.
 
 ## Croissance — SEO & acquisition
 

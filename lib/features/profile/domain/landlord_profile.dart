@@ -11,7 +11,7 @@ part 'landlord_profile.g.dart';
 /// pertinentes pour le profil (exclut `deleted_at` qui ne doit jamais être
 /// manipulé côté client).
 ///
-/// [email] et [id] sont immutables : ils viennent de l'auth Supabase et ne
+/// [email] et [id] sont immutables : ils viennent de Firebase Auth et ne
 /// sont jamais modifiables depuis l'UI.
 ///
 /// [fullName] et [address] sont requis pour générer des quittances (loi
@@ -19,11 +19,24 @@ part 'landlord_profile.g.dart';
 @freezed
 class LandlordProfile with _$LandlordProfile {
   const factory LandlordProfile({
-    /// Identifiant Supabase Auth (auth.uid()), immutable.
+    /// Identifiant Firebase Auth (uid), immutable.
     required String id,
 
     /// Adresse email du bailleur, immutable (identifiant d'authentification).
-    required String email,
+    ///
+    /// **Nullable à dessein.** Ce champ était `required String`, ce qui faisait
+    /// échouer `fromJson` — et donc l'écran Informations personnelles entier,
+    /// sur un message d'erreur sans issue — dès qu'un doc `landlords` portait
+    /// `email: null`. C'est arrivé en recette : un compte issu du parcours
+    /// « essai sans compte » gardait l'email vide du doc anonyme, faute d'être
+    /// renseigné à l'upgrade (corrigé côté serveur dans
+    /// `finalizeAnonymousUpgrade`).
+    ///
+    /// La source tarie, ce champ reste nullable comme filet : un document
+    /// ancien, importé ou réparé à la main ne doit jamais pouvoir rendre l'écran
+    /// inaccessible. La vraie source de vérité de l'email est Firebase Auth —
+    /// l'UI y retombe quand la copie Firestore manque.
+    String? email,
 
     /// Nom complet du bailleur — requis pour les quittances (loi 1989 art. 21).
     @JsonKey(name: 'full_name') String? fullName,

@@ -113,4 +113,58 @@ void main() {
       },
     );
   });
+
+  group('FirestoreSupportRepository.submitFeedback', () {
+    test(
+      'écrit un avis conforme aux rules (kind, rating, platform, sujet)',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final auth = MockFirebaseAuth(
+          signedIn: true,
+          mockUser: MockUser(
+            uid: _uid,
+            email: _email,
+            isAnonymous: false,
+            isEmailVerified: true,
+          ),
+        );
+        final repo = FirestoreSupportRepository(firestore, auth);
+
+        await repo.submitFeedback(
+          rating: 4,
+          comment: '',
+          appVersion: '1.0.0+42',
+          appEnv: 'dev',
+          platform: 'web',
+        );
+
+        final docs =
+            (await firestore.collection('support_requests').get()).docs;
+        expect(docs, hasLength(1));
+        final data = docs.single.data();
+        expect(data['landlordId'], _uid);
+        expect(data['email'], _email);
+        expect(data['kind'], 'feedback');
+        expect(data['rating'], 4);
+        expect(data['platform'], 'web');
+        expect(data['subject'], 'Avis — 4/5');
+        expect(data['message'], '');
+        expect(data['status'], 'new');
+        expect(data['createdAt'], isA<Timestamp>());
+        expect(data.keys.toSet(), {
+          'landlordId',
+          'email',
+          'subject',
+          'message',
+          'appVersion',
+          'appEnv',
+          'status',
+          'createdAt',
+          'kind',
+          'rating',
+          'platform',
+        });
+      },
+    );
+  });
 }

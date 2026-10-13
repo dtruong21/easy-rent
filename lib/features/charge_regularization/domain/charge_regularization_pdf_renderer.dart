@@ -7,7 +7,8 @@
 // document n'est PAS archivé comme `document`/`receipt` Firestore en V1 —
 // il est généré à la volée à partir de données saisies et partagé
 // directement (Web Share), voir commentaire détaillé dans
-// `application/charge_regularization_share_controller.dart`.
+// `application/charge_statement_finalize_controller.dart` (flow de
+// partage général).
 
 import 'dart:typed_data';
 
@@ -16,7 +17,9 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/utils/pdf_brand_fonts.dart';
 import 'charge_regularization_balance.dart';
+import 'charge_statement.dart';
 
 /// Snapshot des données nécessaires pour rendre l'avis de régularisation.
 class ChargeRegularizationPdfData {
@@ -35,14 +38,34 @@ class ChargeRegularizationPdfData {
   final String propertyAddress;
   final ChargeRegularizationBalance balance;
   final DateTime generatedAt;
+
+  /// Construit les données PDF à partir d'un décompte figé (FEAT-033) — le
+  /// PDF re-rendu est identique à celui émis lors de la finalisation, car
+  /// entièrement dérivé des champs immuables de [s] (aucune source externe,
+  /// aucune re-synchronisation).
+  factory ChargeRegularizationPdfData.fromStatement(ChargeStatement s) {
+    return ChargeRegularizationPdfData(
+      landlordFullName: s.landlordFullName,
+      landlordAddress: s.landlordAddress,
+      tenantFullName: s.tenantFullName,
+      propertyAddress: s.propertyAddress,
+      balance: ChargeRegularizationBalance(
+        periodStart: s.periodStart,
+        periodEnd: s.periodEnd,
+        provisionsCollectedCents: s.provisionsCollectedCents,
+        actualExpensesCents: s.actualExpensesCents,
+      ),
+      generatedAt: s.createdAt,
+    );
+  }
 }
 
-/// Rend le PDF de l'avis de régularisation (A4 portrait, Helvetica
-/// StandardFonts — cohérent avec les quittances).
+/// Rend le PDF de l'avis de régularisation (A4 portrait, EB Garamond
+/// embarquée — cohérent avec les quittances, cf. [PdfBrandFonts]).
 Future<Uint8List> renderChargeRegularizationPdf(
   ChargeRegularizationPdfData d,
 ) async {
-  final doc = pw.Document();
+  final doc = pw.Document(theme: await PdfBrandFonts.theme());
   final balance = d.balance;
 
   doc.addPage(
@@ -97,7 +120,7 @@ Future<Uint8List> renderChargeRegularizationPdf(
                 // 2. Title
                 pw.Center(
                   child: pw.Text(
-                    'AVIS DE REGULARISATION DES CHARGES',
+                    'AVIS DE RÉGULARISATION DES CHARGES',
                     style: pw.TextStyle(
                       fontSize: 16,
                       fontWeight: pw.FontWeight.bold,
@@ -107,7 +130,7 @@ Future<Uint8List> renderChargeRegularizationPdf(
                 pw.SizedBox(height: 8),
                 pw.Center(
                   child: pw.Text(
-                    'Periode du ${FrenchDate.format(balance.periodStart)} '
+                    'Période du ${FrenchDate.format(balance.periodStart)} '
                     'au ${FrenchDate.format(balance.periodEnd)}',
                     style: const pw.TextStyle(
                       fontSize: 12,
@@ -129,7 +152,7 @@ Future<Uint8List> renderChargeRegularizationPdf(
 
                 // 5. Period
                 _section(
-                  label: 'Periode de reference :',
+                  label: 'Période de référence :',
                   value:
                       'du ${FrenchDate.format(balance.periodStart)} au '
                       '${FrenchDate.format(balance.periodEnd)}',
@@ -140,7 +163,7 @@ Future<Uint8List> renderChargeRegularizationPdf(
 
                 // 6. Financial detail
                 pw.Text(
-                  'Decompte :',
+                  'Décompte :',
                   style: pw.TextStyle(
                     fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
@@ -148,13 +171,13 @@ Future<Uint8List> renderChargeRegularizationPdf(
                 ),
                 pw.SizedBox(height: 8),
                 _row(
-                  label: 'Total des provisions encaissees',
+                  label: 'Total des provisions encaissées',
                   value: MoneyFormat.formatEurosFromCents(
                     balance.provisionsCollectedCents,
                   ),
                 ),
                 _row(
-                  label: 'Total des depenses reelles justifiees',
+                  label: 'Total des dépenses réelles justifiées',
                   value: MoneyFormat.formatEurosFromCents(
                     balance.actualExpensesCents,
                   ),
@@ -177,11 +200,11 @@ Future<Uint8List> renderChargeRegularizationPdf(
                 // 7. Legal
                 pw.Text(
                   'Ce document constitue le justificatif de la '
-                  'regularisation annuelle des charges recuperables, '
-                  'etabli conformement a l\'article 23 de la loi n 89-462 '
-                  'du 6 juillet 1989 et au decret n 87-713 du 26 aout '
-                  '1987. Seules les charges de nature recuperable ont '
-                  'ete prises en compte dans ce decompte.',
+                  'régularisation annuelle des charges récupérables, '
+                  'établi conformément à l\'article 23 de la loi n 89-462 '
+                  'du 6 juillet 1989 et au décret n 87-713 du 26 août '
+                  '1987. Seules les charges de nature récupérable ont '
+                  'été prises en compte dans ce décompte.',
                   style: const pw.TextStyle(fontSize: 9),
                 ),
                 pw.SizedBox(height: 24),
@@ -229,7 +252,7 @@ Future<Uint8List> renderChargeRegularizationPdf(
                   pw.SizedBox(height: 4),
                   pw.Center(
                     child: pw.Text(
-                      'Emis par Baillan.  -  Loi du 6 juillet 1989, art. 23',
+                      'Émis par Baillan.  -  Loi du 6 juillet 1989, art. 23',
                       style: const pw.TextStyle(
                         fontSize: 8,
                         color: PdfColor.fromInt(0xFF999999),

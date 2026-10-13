@@ -3,6 +3,9 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/documents/application/upload_documents_controller.dart';
 import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
@@ -19,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakeRepo implements DocumentsRepository {
   bool shouldFail = false;
+  FirebaseFunctionsException? functionsException;
   int uploadCallCount = 0;
 
   @override
@@ -32,6 +36,7 @@ class _FakeRepo implements DocumentsRepository {
     void Function(double progress)? onProgress,
   }) async {
     uploadCallCount++;
+    if (functionsException != null) throw functionsException!;
     if (shouldFail) throw Exception('upload failed');
     return Document(
       id: 'doc-$uploadCallCount',
@@ -81,9 +86,24 @@ class _FakeRepo implements DocumentsRepository {
 // Helper
 // ---------------------------------------------------------------------------
 
-ProviderContainer _makeContainer(_FakeRepo repo) {
+ProviderContainer _makeContainer(
+  _FakeRepo repo, {
+  SubscriptionTier tier = SubscriptionTier.free,
+  String? planLevel,
+}) {
   return ProviderContainer(
-    overrides: [documentsRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      documentsRepositoryProvider.overrideWithValue(repo),
+      // FEAT-056 : le plafond de taille par fichier est désormais
+      // différencié par palier — `UploadDocumentsController` lit
+      // `quotaLimitProvider(PlanQuota.documentMaxBytes)`, qui dérive de
+      // `landlordTierProvider`.
+      landlordTierProvider.overrideWith(
+        (ref) => Stream.value(
+          LandlordTierSnapshot(tier: tier, planLevel: planLevel),
+        ),
+      ),
+    ],
   );
 }
 
@@ -118,6 +138,7 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      await container.read(landlordTierProvider.future);
       await container
           .read(uploadDocumentsControllerProvider.notifier)
           .uploadFiles(
@@ -141,6 +162,7 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      await container.read(landlordTierProvider.future);
       await container
           .read(uploadDocumentsControllerProvider.notifier)
           .uploadFiles(
@@ -163,6 +185,7 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      await container.read(landlordTierProvider.future);
       await container
           .read(uploadDocumentsControllerProvider.notifier)
           .uploadFiles(
@@ -184,6 +207,7 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      await container.read(landlordTierProvider.future);
       await container
           .read(uploadDocumentsControllerProvider.notifier)
           .uploadFiles(
@@ -209,6 +233,7 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      await container.read(landlordTierProvider.future);
       await container
           .read(uploadDocumentsControllerProvider.notifier)
           .uploadFiles(
@@ -225,12 +250,103 @@ void main() {
     });
   });
 
+  group(
+    'UploadDocumentsController — plafond différencié par palier (FEAT-056)',
+    () {
+      test(
+        'compte Max → fichier de 20 Mo accepté (sous le plafond 25 Mio)',
+        () async {
+          final repo = _FakeRepo();
+          final container = _makeContainer(
+            repo,
+            tier: SubscriptionTier.paid,
+            planLevel: 'max',
+          );
+          addTearDown(container.dispose);
+
+          await container.read(landlordTierProvider.future);
+          await container
+              .read(uploadDocumentsControllerProvider.notifier)
+              .uploadFiles(
+                leaseId: 'lease-1',
+                pickedFiles: [_file(size: 20 * 1024 * 1024)],
+                defaultCategory: DocumentCategory.autre,
+              );
+
+          final completed =
+              container.read(uploadDocumentsControllerProvider)
+                  as UploadCompleted;
+          expect(completed.successCount, 1);
+          expect(completed.failureCount, 0);
+        },
+      );
+
+      test('compte free → fichier de 20 Mo refusé (plafond 10 Mio)', () async {
+        final repo = _FakeRepo();
+        final container = _makeContainer(repo);
+        addTearDown(container.dispose);
+
+        await container.read(landlordTierProvider.future);
+        await container
+            .read(uploadDocumentsControllerProvider.notifier)
+            .uploadFiles(
+              leaseId: 'lease-1',
+              pickedFiles: [_file(size: 20 * 1024 * 1024)],
+              defaultCategory: DocumentCategory.autre,
+            );
+
+        final completed =
+            container.read(uploadDocumentsControllerProvider)
+                as UploadCompleted;
+        expect(completed.failureCount, 1);
+        expect(repo.uploadCallCount, 0);
+      });
+
+      test(
+        'refus serveur file_too_large (course) → FileError propage limitBytes/upgradeTo, pas connectionError',
+        () async {
+          final repo = _FakeRepo()
+            ..functionsException = FirebaseFunctionsException(
+              code: 'resource-exhausted',
+              message: 'file_too_large',
+              details: {
+                'limitBytes': 26214400,
+                'sizeBytes': 30000000,
+                'upgradeTo': 'ultra',
+              },
+            );
+          final container = _makeContainer(repo);
+          addTearDown(container.dispose);
+
+          await container.read(landlordTierProvider.future);
+          await container
+              .read(uploadDocumentsControllerProvider.notifier)
+              .uploadFiles(
+                leaseId: 'lease-1',
+                pickedFiles: [_file(size: 9 * 1024 * 1024)],
+                defaultCategory: DocumentCategory.autre,
+              );
+
+          final completed =
+              container.read(uploadDocumentsControllerProvider)
+                  as UploadCompleted;
+          expect(completed.failureCount, 1);
+          final error = completed.files.first as FileError;
+          expect(error.reason, UploadFileErrorReason.fileTooLarge);
+          expect(error.serverLimitBytes, 26214400);
+          expect(error.serverUpgradeToLevelId, 'ultra');
+        },
+      );
+    },
+  );
+
   group('UploadDocumentsController.reset', () {
     test('reset → idle', () async {
       final repo = _FakeRepo();
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      await container.read(landlordTierProvider.future);
       await container
           .read(uploadDocumentsControllerProvider.notifier)
           .uploadFiles(

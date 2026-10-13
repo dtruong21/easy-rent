@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/theme/app_radii.dart';
+import '../../../../core/ui/theme/property_color.dart';
 import '../../../../core/utils/french_date.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../core/utils/property_address.dart';
 import '../../../leases/application/lease_detail_provider.dart';
 import '../../../properties/application/property_detail_provider.dart';
+import '../../../properties/presentation/widgets/property_color_dot.dart';
 import '../../../tenants/application/tenant_detail_provider.dart';
 import '../../application/lease_receipts_provider.dart';
 import '../../domain/receipt.dart';
@@ -54,10 +57,23 @@ class LeaseContextBanner extends ConsumerWidget {
               leaseId: leaseId,
               propertyId: propertyId,
               tenantId: tenantId,
+              propertyColorKey: property != null
+                  ? PropertyColorKey.resolve(
+                      entityId: property.id,
+                      stored: property.colorKey,
+                    )
+                  : null,
               propertyName:
                   property?.name ??
                   context.l10n.receiptsBannerPropertyLoadingPlaceholder,
-              propertyAddress: property?.address ?? '',
+              // Adresse COMPLÈTE : `address` ne porte en pratique que la rue,
+              // le code postal et la ville vivant dans des champs séparés
+              // (cf. property_address.dart).
+              propertyAddress: composePropertyAddress(
+                address: property?.address,
+                postalCode: property?.postalCode,
+                city: property?.city,
+              ),
               tenantName: '${tenant?.firstName ?? ''} ${tenant?.lastName ?? ''}'
                   .trim(),
               rentCents: lease.rentAmountCents,
@@ -116,11 +132,13 @@ class _BannerContent extends StatelessWidget {
     this.endDate,
     required this.totalReceipts,
     required this.sentReceipts,
+    this.propertyColorKey,
   });
 
   final String leaseId;
   final String? propertyId;
   final String? tenantId;
+  final PropertyColorKey? propertyColorKey;
   final String propertyName;
   final String propertyAddress;
   final String tenantName;
@@ -149,20 +167,28 @@ class _BannerContent extends StatelessWidget {
         // Ligne 1 : bien + locataire (cliquables).
         Row(
           children: [
+            if (propertyColorKey != null) ...[
+              PropertyColorDot(colorKey: propertyColorKey!),
+              const SizedBox(width: 8),
+            ],
             if (propertyId != null)
-              GestureDetector(
-                onTap: () => context.push('/properties/$propertyId'),
-                child: Text(
-                  propertyAddress.isNotEmpty
-                      ? '$propertyName · $propertyAddress'
-                      : propertyName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                    color: theme.colorScheme.primary,
+              // Flexible : sans contrainte de largeur, l'ellipsis ne s'applique
+              // pas et une adresse longue débordait (mobile, 2026-09-28).
+              Flexible(
+                child: GestureDetector(
+                  onTap: () => context.push('/properties/$propertyId'),
+                  child: Text(
+                    propertyAddress.isNotEmpty
+                        ? '$propertyName · $propertyAddress'
+                        : propertyName,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      color: theme.colorScheme.primary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               )
             else

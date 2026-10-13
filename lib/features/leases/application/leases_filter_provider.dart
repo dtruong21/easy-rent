@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../domain/lease.dart';
 import '../domain/lease_filter.dart';
 import '../domain/lease_list_item.dart';
+import '../domain/lease_renewal.dart';
 import '../domain/lease_status.dart';
 import 'leases_list_provider.dart';
 
@@ -23,34 +23,43 @@ final filteredLeasesProvider = Provider<AsyncValue<List<LeaseListItem>>>((ref) {
   final filter = ref.watch(leaseFilterProvider);
 
   return asyncLeases.whenData((leases) {
-    if (filter == LeaseFilter.all) return leases;
-
     final now = DateTime.now();
-    return leases.where((item) {
-      final lease = item.lease;
-      // Priorité d'affichage (FEAT-028) : late > renewable > active. Un bail
-      // en retard ne doit apparaître ni dans `active` ni dans `renewable` —
-      // sinon il serait démultiplié entre plusieurs onglets de filtre.
-      return switch (filter) {
-        LeaseFilter.all => true,
-        LeaseFilter.active =>
-          lease.status == LeaseStatus.active &&
-              !item.isLate &&
-              !_isRenewable(lease, now),
-        LeaseFilter.renewable =>
-          lease.status == LeaseStatus.active &&
-              !item.isLate &&
-              _isRenewable(lease, now),
-        LeaseFilter.late => lease.status == LeaseStatus.active && item.isLate,
-        LeaseFilter.terminated => lease.status == LeaseStatus.terminated,
-      };
-    }).toList();
+    return leases
+        .where((item) => leaseMatchesFilter(item, filter, now))
+        .toList();
   });
 });
 
-/// Retourne `true` si le bail est actif et sa date de fin est dans moins de 60 jours.
-bool _isRenewable(Lease lease, DateTime now) {
-  final end = lease.endDate;
-  if (end == null) return false;
-  return end.difference(now).inDays < 60;
+/// Vrai si [item] correspond à [filter]. « Actifs » = tous les baux en cours,
+/// y compris en retard ou à renouveler (comme « Loués » côté biens et « Avec
+/// bail » côté locataires) ; « À renouveler » et « En retard » en sont des
+/// sous-ensembles. Entre ces deux-là, priorité late > renewable (FEAT-028),
+/// alignée sur la pastille de statut des cartes.
+bool leaseMatchesFilter(LeaseListItem item, LeaseFilter filter, DateTime now) {
+  final lease = item.lease;
+  return switch (filter) {
+    LeaseFilter.all => true,
+    LeaseFilter.active => lease.status == LeaseStatus.active,
+    LeaseFilter.renewable =>
+      lease.status == LeaseStatus.active &&
+          !item.isLate &&
+          isLeaseRenewable(lease, now),
+    LeaseFilter.late => lease.status == LeaseStatus.active && item.isLate,
+    LeaseFilter.terminated => lease.status == LeaseStatus.terminated,
+  };
 }
+
+/// Nombre d'éléments par filtre (compteurs des puces).
+Map<LeaseFilter, int> leaseFilterCounts(
+  List<LeaseListItem> items,
+  DateTime now,
+) => {
+  for (final f in LeaseFilter.values)
+    f: items.where((i) => leaseMatchesFilter(i, f, now)).length,
+};
+
+/// Compteurs des puces — `null` tant que la liste n'est pas chargée.
+final leaseFilterCountsProvider = Provider<Map<LeaseFilter, int>?>((ref) {
+  final items = ref.watch(leasesListProvider).valueOrNull;
+  return items == null ? null : leaseFilterCounts(items, DateTime.now());
+});

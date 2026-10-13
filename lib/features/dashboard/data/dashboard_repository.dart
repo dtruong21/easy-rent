@@ -3,32 +3,40 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../../../core/firestore_helpers.dart';
 import '../../leases/domain/lease.dart';
 import '../../leases/domain/lease_lateness.dart';
 import '../../payments/domain/payment.dart';
 import '../domain/activity_item.dart';
 import '../domain/dashboard_kpi.dart';
-import '../domain/monthly_amount.dart';
+import '../domain/onboarding_progress.dart';
 
 final _log = Logger('DashboardRepository');
 
 /// Repository dashboard — toutes les méthodes sont des SELECT (lecture seule).
 ///
-/// Contrairement à Supabase RLS où le filtre `landlord_id = auth.uid()` était
-/// implicite, ici on doit le passer explicitement dans chaque `where()`. Le
-/// rules Firestore les enforce, mais sans le filtre client la query throw.
+/// Le filtre d'ownership `landlordId == auth.uid` doit être passé
+/// explicitement dans chaque `where()` : les Firestore Rules l'exigent (elles
+/// ne sont pas un filtre), donc sans ce `where()` côté client la query throw.
 abstract interface class DashboardRepository {
   Future<LoyersMoisKpi> fetchLoyersMois();
   Future<RetardsKpi> fetchRetards();
-  Future<RenouvellementsKpi> fetchRenouvellements();
   Future<DocsPendingKpi> fetchDocsPending();
 
-  /// Montants mensuels encaissé/dû sur les [months] derniers mois
+  /// Loyers encaissés mois par mois sur les [months] derniers mois
   /// (fenêtre glissante : mois courant inclus, donc `now-(months-1) → now`).
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months);
+  ///
+  /// Alimente le graphique « Cash-flow mensuel » du dashboard
+  /// (`monthlyCashflowProvider`, dashboard_provider.dart) — les dépenses non
+  /// récupérables du même intervalle sont chargées séparément via
+  /// `ExpensesRepository` puis combinées côté application (voir doc de tête
+  /// de `MonthlyCollectedRent`).
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(int months);
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5});
-  Future<bool> isLandlordOnboarding();
+
+  /// Progression d'onboarding dérivée (5 signaux + id d'un bail). Lecture seule.
+  Future<OnboardingProgress> fetchOnboardingProgress();
 }
 
 class FirestoreDashboardRepository implements DashboardRepository {
@@ -161,24 +169,6 @@ class FirestoreDashboardRepository implements DashboardRepository {
   }
 
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async {
-    final uid = _uid;
-    final today = DateTime.now();
-    final in30Days = today.add(const Duration(days: 30));
-
-    final qs = await _firestore
-        .collection('leases')
-        .where('landlordId', isEqualTo: uid)
-        .where('deletedAt', isNull: true)
-        .where('status', isEqualTo: 'active')
-        .where('endDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
-        .where('endDate', isLessThanOrEqualTo: Timestamp.fromDate(in30Days))
-        .get();
-    _log.fine('fetchRenouvellements: count=${qs.docs.length}');
-    return RenouvellementsKpi(count: qs.docs.length);
-  }
-
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async {
     final qs = await _firestore
         .collection('documents')
@@ -191,71 +181,50 @@ class FirestoreDashboardRepository implements DashboardRepository {
   }
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async {
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async {
     assert(months > 0, 'months doit être strictement positif');
     final uid = _uid;
     final now = DateTime.now();
     final startMonth = DateTime(now.year, now.month - (months - 1), 1);
     final nextMonth = DateTime(now.year, now.month + 1, 1);
 
-    final (paymentsQs, leasesQs) = await (
-      _firestore
-          .collection('payments')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .where(
-            'paidAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startMonth),
-          )
-          .where('paidAt', isLessThan: Timestamp.fromDate(nextMonth))
-          .get(),
-      _firestore
-          .collection('leases')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .where('status', isEqualTo: 'active')
-          .get(),
-    ).wait;
+    final paymentsQs = await _firestore
+        .collection('payments')
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isNull: true)
+        .where('paidAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startMonth))
+        .where('paidAt', isLessThan: Timestamp.fromDate(nextMonth))
+        .get();
 
-    final encaissedByMonth = <String, int>{};
+    final collectedByMonth = <String, int>{};
+    final paymentsCountByMonth = <String, int>{};
     for (final d in paymentsQs.docs) {
       final paidAt = d.data()['paidAt'];
       if (paidAt is! Timestamp) continue;
       final dt = paidAt.toDate();
-      final key =
-          '${dt.year.toString().padLeft(4, '0')}-'
-          '${dt.month.toString().padLeft(2, '0')}';
+      final key = _monthKey(dt.year, dt.month);
       final rent = (d.data()['rentAmountCents'] as num?)?.toInt() ?? 0;
       final charges = (d.data()['chargesAmountCents'] as num?)?.toInt() ?? 0;
-      encaissedByMonth[key] = (encaissedByMonth[key] ?? 0) + rent + charges;
+      collectedByMonth[key] = (collectedByMonth[key] ?? 0) + rent + charges;
+      paymentsCountByMonth[key] = (paymentsCountByMonth[key] ?? 0) + 1;
     }
 
-    final result = <MonthlyAmount>[];
+    final result = <MonthlyCollectedRent>[];
     for (var i = months - 1; i >= 0; i--) {
       final month = DateTime(now.year, now.month - i, 1);
-      final monthKey =
-          '${month.year.toString().padLeft(4, '0')}-'
-          '${month.month.toString().padLeft(2, '0')}';
-
-      int due = 0;
-      for (final d in leasesQs.docs) {
-        final startDate = d.data()['startDate'];
-        if (startDate is! Timestamp) continue;
-        if (startDate.toDate().isAfter(month)) continue;
-        final rent = (d.data()['rentAmountCents'] as num?)?.toInt() ?? 0;
-        final charges = (d.data()['chargesAmountCents'] as num?)?.toInt() ?? 0;
-        due += rent + charges;
-      }
+      final monthKey = _monthKey(month.year, month.month);
       result.add(
-        MonthlyAmount(
+        MonthlyCollectedRent(
           year: month.year,
           month: month.month,
-          encaissedCents: encaissedByMonth[monthKey] ?? 0,
-          dueCents: due,
+          collectedCents: collectedByMonth[monthKey] ?? 0,
+          hasPayments: (paymentsCountByMonth[monthKey] ?? 0) > 0,
         ),
       );
     }
-    _log.fine('fetchLastMonthsAmounts($months): ${result.length} mois');
+    _log.fine('fetchLastMonthsCollectedRent($months): ${result.length} mois');
     return result;
   }
 
@@ -383,31 +352,39 @@ class FirestoreDashboardRepository implements DashboardRepository {
   }
 
   @override
-  Future<bool> isLandlordOnboarding() async {
+  Future<OnboardingProgress> fetchOnboardingProgress() async {
     final uid = _uid;
+
+    Query<Map<String, dynamic>> owned(String col) => _firestore
+        .collection(col)
+        .where('landlordId', isEqualTo: uid)
+        .where('deletedAt', isNull: true)
+        .limit(1);
+
     final results = await Future.wait([
+      owned('properties').get(),
+      owned('tenants').get(),
+      owned('leases').get(),
+      owned('payments').get(),
+      // receipts : collection immuable read-only (pas de deletedAt) ; un
+      // receipt compte même s'il est ensuite isVoided — l'aha, c'est de
+      // l'avoir généré.
       _firestore
-          .collection('properties')
+          .collection('receipts')
           .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-      _firestore
-          .collection('tenants')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
-          .limit(1)
-          .get(),
-      _firestore
-          .collection('leases')
-          .where('landlordId', isEqualTo: uid)
-          .where('deletedAt', isNull: true)
           .limit(1)
           .get(),
     ]);
-    final isEmpty = results.every((qs) => qs.docs.isEmpty);
-    _log.fine('isLandlordOnboarding=$isEmpty');
-    return isEmpty;
+
+    final leaseDocs = results[2].docs;
+    return OnboardingProgress(
+      hasProperty: results[0].docs.isNotEmpty,
+      hasTenant: results[1].docs.isNotEmpty,
+      hasLease: leaseDocs.isNotEmpty,
+      hasPayment: results[3].docs.isNotEmpty,
+      hasReceipt: results[4].docs.isNotEmpty,
+      firstLeaseId: leaseDocs.isNotEmpty ? leaseDocs.first.id : null,
+    );
   }
 
   static DateTime _activityDate(ActivityItem item) => item.when(
@@ -419,7 +396,11 @@ class FirestoreDashboardRepository implements DashboardRepository {
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
   (ref) => FirestoreDashboardRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
   ),
 );
+
+/// Clé `"YYYY-MM"` utilisée pour indexer des montants par mois calendaire.
+String _monthKey(int year, int month) =>
+    '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';

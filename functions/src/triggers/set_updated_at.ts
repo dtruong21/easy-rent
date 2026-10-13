@@ -12,7 +12,7 @@
  * une nouvelle valeur, l'écart est ≥ 1 ms et on no-op.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {onDocumentUpdated} from "firebase-functions/v2/firestore";
 
@@ -46,7 +46,7 @@ export function makeSetUpdatedAt(collection: string) {
 
       try {
         await change.after.ref.update({
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         });
       } catch (err) {
         logger.warn(`setUpdatedAt(${collection}) failed`, {

@@ -23,6 +23,7 @@ extension SupportSubmitErrorL10n on SupportSubmitError {
       SupportSubmitError.messageTooLong => l10n.supportFormMessageTooLongError(
         kSupportMessageMaxLength,
       ),
+      SupportSubmitError.ratingRequired => l10n.feedbackRatingRequiredError,
       SupportSubmitError.sendFailed => l10n.supportFormSendFailedError,
     };
   }

@@ -63,6 +63,11 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
     int? loanDurationMonths,
     DateTime? loanStartDate,
     int? loanMonthlyPaymentOverrideCents,
+    // Couleur d'identité — modifiable UNIQUEMENT en édition (`initial` non
+    // null). Ignoré en création : le bien affiche immédiatement une couleur
+    // automatique via le repli déterministe de `PropertyColorKey.resolve`,
+    // sans qu'aucune valeur n'ait besoin d'être envoyée au serveur.
+    String? colorKey,
   }) async {
     state = const PropertyFormState.submitting();
 
@@ -136,6 +141,7 @@ class PropertyFormController extends StateNotifier<PropertyFormState> {
           loanDurationMonths: loanDurationMonths,
           loanStartDate: loanStartDate,
           loanMonthlyPaymentOverrideCents: loanMonthlyPaymentOverrideCents,
+          colorKey: colorKey ?? initial.colorKey,
         );
         result = await repo.update(updated);
         _log.info('property updated id=${result.id}');

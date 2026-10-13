@@ -37,6 +37,8 @@ extension ValidationErrorL10n on ValidationError {
         l10n.validationPeriodRequiredForRecoverable,
       ValidationError.periodEndBeforeStart =>
         l10n.validationPeriodEndBeforeStart,
+      ValidationError.recurrenceEndBeforeExpenseDate =>
+        l10n.validationRecurrenceEndBeforeExpenseDate,
       ValidationError.expenseNotesTooLong => l10n.validationExpenseNotesTooLong,
 
       ValidationError.propertyRequired => l10n.validationPropertyRequired,

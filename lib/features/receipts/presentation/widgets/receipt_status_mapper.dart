@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/ui/cards/status_pill_tone.dart';
-import '../../../../core/utils/french_date.dart';
 import '../../domain/receipt.dart';
 
 /// Résultat du mapping quittance → données de pill.
@@ -60,11 +60,12 @@ ReceiptStatusPillData receiptStatusPill(BuildContext context, Receipt r) {
   );
 }
 
-/// Libellé de période mensuelle court (ex: "Mars 2026").
-///
-/// Capitalise le premier caractère du mois retourné par [FrenchDate.frenchMonthYear].
-String receiptPeriodMonthYear(Receipt r) {
-  final raw = FrenchDate.frenchMonthYear(r.periodStart);
+/// Libellé de période mensuelle court, dans la langue de l'app
+/// ([localeName], ex. `context.l10n.localeName`) : « Mars 2026 » en français,
+/// « March 2026 » en anglais. Premier caractère en majuscule (le français
+/// écrit les mois en minuscules).
+String receiptPeriodMonthYear(Receipt r, String localeName) {
+  final raw = DateFormat.yMMMM(localeName).format(r.periodStart.toLocal());
   if (raw.isEmpty) return raw;
   return raw[0].toUpperCase() + raw.substring(1);
 }

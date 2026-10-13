@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/finance/expense_recurrence.dart';
 import '../data/expenses_repository.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
@@ -44,6 +45,8 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
     DateTime? periodStart,
     DateTime? periodEnd,
     int? periodYear,
+    ExpenseRecurrence recurrence = ExpenseRecurrence.none,
+    DateTime? recurrenceEndDate,
     String? documentId,
     String? notes,
   }) async {
@@ -65,6 +68,8 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
           periodStart: periodStart,
           periodEnd: periodEnd,
           periodYear: periodYear,
+          recurrence: recurrence,
+          recurrenceEndDate: recurrenceEndDate,
           documentId: documentId,
           notes: notes,
         );
@@ -81,6 +86,8 @@ class ExpenseFormController extends StateNotifier<ExpenseFormState> {
           periodStart: periodStart,
           periodEnd: periodEnd,
           periodYear: periodYear ?? initial.periodYear,
+          recurrence: recurrence,
+          recurrenceEndDate: recurrenceEndDate,
           documentId: documentId ?? initial.documentId,
           notes: notes,
         );

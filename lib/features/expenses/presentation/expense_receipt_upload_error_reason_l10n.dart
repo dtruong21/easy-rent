@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
+import '../../../core/utils/byte_format.dart';
+import '../../documents/application/upload_documents_controller.dart'
+    show kMaxFileSizeBytes;
 import '../domain/expense_receipt_upload_error_reason.dart';
 
 /// Traduit un [ExpenseReceiptUploadErrorReason] en message localisé
@@ -12,11 +15,16 @@ import '../domain/expense_receipt_upload_error_reason.dart';
 /// (`lib/features/documents/presentation/upload_file_error_reason_l10n.dart`).
 extension ExpenseReceiptUploadErrorReasonL10n
     on ExpenseReceiptUploadErrorReason {
-  String message(BuildContext context) {
+  /// [maxFileSizeBytes] (FEAT-056) : plafond résolu côté client
+  /// (`quotaLimitProvider(PlanQuota.documentMaxBytes)`) — utilisé pour
+  /// [fileTooLarge], repli sur [kMaxFileSizeBytes] si non fourni.
+  String message(BuildContext context, {int? maxFileSizeBytes}) {
     final l10n = context.l10n;
     return switch (this) {
       ExpenseReceiptUploadErrorReason.fileTooLarge =>
-        l10n.expensesReceiptErrorFileTooLarge,
+        l10n.expensesReceiptErrorFileTooLarge(
+          ByteFormat.format(maxFileSizeBytes ?? kMaxFileSizeBytes),
+        ),
       ExpenseReceiptUploadErrorReason.unsupportedFormat =>
         l10n.expensesReceiptErrorUnsupportedFormat,
       ExpenseReceiptUploadErrorReason.storageError =>

@@ -1,3 +1,4 @@
+import 'package:easyrent/core/config/auth_providers.dart';
 import 'package:easyrent/features/auth/data/apple_auth_exception.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/presentation/login_page.dart';
@@ -146,6 +147,11 @@ Widget _buildLoginPage({required _FakeAuthRepository repo}) {
 
 void main() {
   group('LoginForm — bouton Apple et CTA contextuel', () {
+    // Apple est masqué en v1 (auth_providers.dart) : ces scénarios couvrent
+    // le parcours en sommeil, prêt pour sa réactivation après la v1.
+    setUp(() => debugAppleSignInOfferedOverride = true);
+    tearDown(() => debugAppleSignInOfferedOverride = null);
+
     testWidgets('AppleSignInButton actif par défaut (pas de gate)', (
       tester,
     ) async {

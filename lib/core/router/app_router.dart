@@ -10,9 +10,14 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
+import '../../features/etat_des_lieux/presentation/etat_des_lieux_form_page.dart';
+import '../../features/etat_des_lieux/presentation/etat_des_lieux_list_page.dart';
 import '../../features/expenses/presentation/expense_form_page.dart';
 import '../../features/expenses/presentation/property_expenses_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
+import '../../features/paid_plan/presentation/pro_cancel_page.dart';
+import '../../features/paid_plan/presentation/pro_pricing_page.dart';
+import '../../features/paid_plan/presentation/pro_success_page.dart';
 import '../../features/privacy/presentation/legal_page.dart';
 import '../../features/privacy/presentation/privacy_page.dart';
 import '../../features/privacy/presentation/terms_page.dart';
@@ -30,8 +35,10 @@ import '../../features/profile/presentation/profile_details_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/receipts/presentation/lease_receipts_page.dart';
 import '../../features/support/presentation/faq_page.dart';
+import '../../features/support/presentation/feedback_page.dart';
 import '../../features/support/presentation/support_page.dart';
 import '../../features/tenants/presentation/tenant_detail_page.dart';
+import '../../features/simulator/presentation/scenario_comparison_page.dart';
 import '../../features/simulator/presentation/simulator_page.dart';
 import '../../features/tenants/presentation/tenant_form_page.dart';
 import '../../features/tenants/presentation/tenants_list_page.dart';
@@ -216,6 +223,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // -----------------------------------------------------------------------
+      // Baillan Pro — checkout flow (FEAT-044)
+      // Hors shell : fullyAuth requis (le guard global redirige les autres).
+      // -----------------------------------------------------------------------
+      GoRoute(
+        path: '/pro',
+        pageBuilder: (context, state) => appPage(
+          key: state.pageKey,
+          child: const ProPricingPage(),
+          transition: AppTransition.standard,
+        ),
+        routes: [
+          GoRoute(
+            path: 'success',
+            pageBuilder: (context, state) => appPage(
+              key: state.pageKey,
+              child: const ProSuccessPage(),
+              transition: AppTransition.fade,
+            ),
+          ),
+          GoRoute(
+            path: 'cancel',
+            pageBuilder: (context, state) => appPage(
+              key: state.pageKey,
+              child: const ProCancelPage(),
+              transition: AppTransition.fade,
+            ),
+          ),
+        ],
+      ),
+
+      // -----------------------------------------------------------------------
       // Simulateur d'investissement (FEAT-018)
       // Hors shell (FEAT-026 — docs/UX_NAVIGATION.md §3.4) : accessible aux
       // anonymes (essai 14j) qui n'ont pas accès aux branches métier ; pour un
@@ -229,6 +267,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: const SimulatorPage(),
           transition: AppTransition.standard,
         ),
+      ),
+      // Comparaison de scénarios (FEAT-055, Pro).
+      // ⚠ Doit être déclaré AVANT `/simulator/:id`, sinon go_router matcherait
+      // `:id = "compare"` et l'écran de comparaison serait inatteignable.
+      GoRoute(
+        path: '/simulator/compare',
+        pageBuilder: (context, state) {
+          final raw = state.uri.queryParameters['ids'] ?? '';
+          final ids = raw
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .take(3)
+              .toList(growable: false);
+          return appPage(
+            key: state.pageKey,
+            child: ScenarioComparisonPage(ids: ids),
+            transition: AppTransition.standard,
+          );
+        },
       ),
       GoRoute(
         path: '/simulator/:id',
@@ -427,7 +486,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'new',
                     pageBuilder: (context, state) => appPage(
                       key: state.pageKey,
-                      child: const LeaseFormPage(),
+                      // Présélection depuis une fiche / carte : bien ou
+                      // locataire en query (`?propertyId=` / `?tenantId=`),
+                      // ou bien dans `extra` (carte de rentabilité). Ignorés
+                      // jusqu'ici — recette iOS, #197.
+                      child: LeaseFormPage(
+                        initialPropertyId:
+                            state.uri.queryParameters['propertyId'] ??
+                            _extraString(state.extra, 'propertyId'),
+                        initialTenantId: state.uri.queryParameters['tenantId'],
+                      ),
                       transition: AppTransition.standard,
                     ),
                   ),
@@ -486,6 +554,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                           transition: AppTransition.standard,
                         ),
                       ),
+                      GoRoute(
+                        path: 'etat-des-lieux',
+                        pageBuilder: (context, state) => appPage(
+                          key: state.pageKey,
+                          child: EtatDesLieuxListPage(
+                            leaseId: state.pathParameters['id']!,
+                          ),
+                          transition: AppTransition.standard,
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: 'new',
+                            pageBuilder: (context, state) => appPage(
+                              key: state.pageKey,
+                              child: EtatDesLieuxFormPage(
+                                leaseId: state.pathParameters['id']!,
+                              ),
+                              transition: AppTransition.standard,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -529,6 +619,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   GoRoute(
+                    path: 'feedback',
+                    pageBuilder: (context, state) => appPage(
+                      key: state.pageKey,
+                      child: const FeedbackPage(),
+                      transition: AppTransition.standard,
+                    ),
+                  ),
+                  GoRoute(
                     path: 'delete-account',
                     pageBuilder: (context, state) => appPage(
                       key: state.pageKey,
@@ -553,4 +651,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 /// du provider).
 class _RouterRefreshNotifier extends ChangeNotifier {
   void refresh() => notifyListeners();
+}
+
+/// Valeur texte [key] d'un `extra` de route de type `Map`, sinon `null`.
+String? _extraString(Object? extra, String key) {
+  if (extra is Map) {
+    final value = extra[key];
+    if (value is String && value.isNotEmpty) return value;
+  }
+  return null;
 }

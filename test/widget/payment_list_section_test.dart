@@ -5,6 +5,7 @@
 library;
 
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -34,6 +35,11 @@ class _FakeLeaseRepo implements LeaseRepository {
 
   @override
   Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
 
   @override
   Future<Lease> create({
@@ -175,6 +181,7 @@ Widget _buildSection({required Lease lease, required List<Payment> payments}) {
     ],
     child: MaterialApp.router(
       routerConfig: router,
+      theme: AppTheme.light,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       locale: const Locale('fr'),
       supportedLocales: supportedLocales,
@@ -201,8 +208,10 @@ void main() {
       final lease = _makeLease();
       await tester.pumpWidget(_buildSection(lease: lease, payments: []));
       await tester.pumpAndSettle();
-      // Hint "Aucun paiement" visible
-      expect(find.textContaining('Aucun paiement'), findsOneWidget);
+      // Hint "Aucun paiement enregistré. Cliquez sur..." visible (l'indicateur
+      // de ponctualité ne rend rien — SizedBox.shrink() — pour le cas vide,
+      // donc pas de risque de collision avec le hint ci-dessous).
+      expect(find.textContaining('Cliquez sur'), findsOneWidget);
     });
 
     // -----------------------------------------------------------------------
@@ -218,6 +227,38 @@ void main() {
       await tester.pumpWidget(_buildSection(lease: lease, payments: payments));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('payment_tile_pay-1')), findsOneWidget);
+    });
+
+    // -----------------------------------------------------------------------
+    // #197 (recette iOS) : actions libellées, pas d'icônes muettes.
+    testWidgets('ligne de paiement : « Quittance » libellé, Modifier / '
+        'Archiver dans le menu ⋮', (tester) async {
+      final lease = _makeLease();
+      final payments = [
+        _makePayment(
+          id: 'pay-1',
+          periodStart: DateTime(2024, 1, 1),
+          periodEnd: DateTime(2024, 1, 31),
+        ),
+      ];
+      await tester.pumpWidget(_buildSection(lease: lease, payments: payments));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('btn_generate_receipt_pay-1')),
+          matching: find.text('Quittance'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('payment_menu_pay-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Archiver'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('btn_edit_payment_pay-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('edit payment pay-1'), findsOneWidget);
     });
 
     // -----------------------------------------------------------------------

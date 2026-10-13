@@ -4,6 +4,8 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import '../data/payment_repository.dart';
 import '../../dashboard/application/dashboard_provider.dart';
+import '../../leases/application/lease_detail_provider.dart';
+import '../../leases/application/leases_list_provider.dart';
 import '../domain/payment.dart';
 import '../domain/payment_form_state.dart';
 import '../domain/payment_method.dart';
@@ -88,6 +90,14 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       // Invalider la liste pour afficher le nouveau/modifié paiement.
       _ref.invalidate(leasePaymentsProvider(leaseId));
       _ref.invalidate(dashboardProvider);
+      // Le statut « en retard » d'un bail est DÉRIVÉ de ses paiements
+      // (`isLeaseLate()`, calculé dans `lease_repository`). Sans ces deux
+      // invalidations, encaisser un paiement laissait le bail affiché « en
+      // retard » jusqu'à un rechargement complet de la page, alors que le
+      // dashboard — lui invalidé — était déjà à jour. Incohérence signalée en
+      // recette le 2026-08-12.
+      _ref.invalidate(leasesListProvider);
+      _ref.invalidate(leaseDetailProvider(leaseId));
 
       state = PaymentFormState.success(payment: result);
     } on FirebaseFunctionsException catch (e, st) {
@@ -121,6 +131,10 @@ class PaymentFormController extends StateNotifier<PaymentFormState> {
       _ref.invalidate(leasePaymentsProvider(leaseId));
       _ref.invalidate(paymentDetailProvider(paymentId));
       _ref.invalidate(dashboardProvider);
+      // Archiver un paiement peut REMETTRE le bail en retard — même dérivation
+      // que dans `submit`, donc mêmes invalidations, dans l'autre sens.
+      _ref.invalidate(leasesListProvider);
+      _ref.invalidate(leaseDetailProvider(leaseId));
       // Archive n'a pas de payload — on retombe sur idle.
       state = const PaymentFormState.idle();
     } on FirebaseFunctionsException catch (e, st) {

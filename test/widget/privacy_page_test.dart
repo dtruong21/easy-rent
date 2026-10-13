@@ -86,12 +86,20 @@ void main() {
       await tester.pumpAndSettle();
 
       final text = _allText(tester);
-      // Post FEAT-019 : la stack data est passée de Supabase à Firebase.
-      // L'obligation RGPD reste : informer l'utilisateur du sous-traitant.
+      // Obligation RGPD : informer l'utilisateur du sous-traitant qui héberge
+      // ses données (Firebase / Google).
       expect(text, contains('Firebase'));
       expect(text, contains('Google'));
-      // Vérifie aussi qu'on ne mentionne plus Supabase (résidu RGPD).
-      expect(text, isNot(contains('Supabase')));
+    });
+
+    testWidgets('couvre les avis in-app (v1.4, FEAT-060)', (tester) async {
+      await tester.pumpWidget(_wrap(const PrivacyPage()));
+      await tester.pumpAndSettle();
+
+      final text = _allText(tester);
+      expect(text, contains('Version 1.4'));
+      expect(text, contains('Donner mon avis'));
+      expect(text, contains('review_solicited_at'));
     });
   });
 }

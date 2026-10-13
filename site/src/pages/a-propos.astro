@@ -1,0 +1,55 @@
+---
+// site/src/pages/a-propos.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { appUrl } from '../lib/urls';
+---
+<BaseLayout
+  title="À propos — Baillan, la gestion locative pour bailleurs"
+  description="Pourquoi Baillan existe, ce que l'outil fait, et qui le développe."
+>
+  <article class="prose">
+    <h1>À propos</h1>
+
+    <h2>Le problème</h2>
+    <p>
+      La plupart des bailleurs particuliers gèrent leurs locations dans un
+      tableur, et le reste dans leur tête. Ça marche jusqu'au jour où il faut
+      retrouver une quittance, justifier une régularisation de charges, ou
+      simplement savoir si un bien rapporte vraiment.
+    </p>
+
+    <h2>Le parti pris</h2>
+    <p>
+      Baillan ne cherche pas à remplacer un gestionnaire de patrimoine. L'outil
+      fait quelques choses et les fait correctement : des quittances qui portent
+      les mentions imposées par la loi du 6 juillet 1989, un suivi des loyers qui
+      dit qui doit quoi, une régularisation des charges qui suit le décret
+      87-713, et un calcul de rentabilité qui déduit le crédit au lieu de
+      l'ignorer.
+    </p>
+
+    <h2>Qui développe</h2>
+    <p>
+      Baillan est développé par Daki Studio, un studio indépendant. Le produit est conçu et écrit par
+      une seule personne, ce qui explique le rythme et le périmètre : peu de
+      fonctionnalités, mais chacune terminée. Les retours arrivent directement
+      chez la personne qui écrit le code.
+    </p>
+
+    <h2>Vos données</h2>
+    <p>
+      Vos données de gestion vous appartiennent. Vous pouvez les exporter et
+      supprimer votre compte à tout moment, depuis l'application. La{' '}
+      <a href={`${appUrl}/privacy`}>politique de confidentialité</a>{' '}
+      détaille ce qui est collecté et pourquoi.
+    </p>
+  </article>
+</BaseLayout>
+
+<style>
+  .prose { max-width: 42rem; padding: 3rem 0; }
+  .prose h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin: 0 0 2rem; }
+  .prose h2 { font-size: 1.15rem; margin: 2.25rem 0 .5rem; }
+  .prose p { color: var(--color-ink-muted); }
+  .prose a { color: var(--color-olive); }
+</style>

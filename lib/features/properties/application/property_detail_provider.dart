@@ -8,7 +8,7 @@ final _log = Logger('PropertyDetailNotifier');
 
 /// Notifier qui charge un bien par son [id].
 ///
-/// Lance [PropertyNotFoundException] si la RLS retourne 0 ligne
+/// Lance [PropertyNotFoundException] si les Firestore Rules ne renvoient aucun document
 /// (bien archivé, non possédé, ou id inconnu — pas de fuite d'information).
 class PropertyDetailNotifier extends FamilyAsyncNotifier<Property, String> {
   @override
@@ -17,7 +17,7 @@ class PropertyDetailNotifier extends FamilyAsyncNotifier<Property, String> {
     return ref.read(propertyRepositoryProvider).getById(arg);
   }
 
-  /// Recharge la fiche depuis Supabase.
+  /// Recharge la fiche depuis Firestore.
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(

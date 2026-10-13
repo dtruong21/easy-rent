@@ -88,6 +88,10 @@ enum ValidationError {
   /// Fin de période antérieure ou égale au début (dépense).
   periodEndBeforeStart,
 
+  /// Fin de récurrence antérieure à la date de la dépense, qui en est la
+  /// première échéance (FEAT-041d).
+  recurrenceEndBeforeExpenseDate,
+
   /// Notes de dépense au-delà de 2000 caractères. Texte identique réutilisé
   /// par `ScenarioFormValidators.validateNotes` (simulateur, même plafond).
   expenseNotesTooLong,

@@ -1,6 +1,8 @@
 # FEAT-051 — Baillan Pro : annonces réutilisables & diffusion multi-portails
 
 > Statut : **📋 Discovery cadrée** (2026-07-16) · Priorité : P1 Growth / monétisation · Aucun développement lancé.
+>
+> **Repositionnement palier (2026-07-31)** : FEAT-056 (grille à 3 paliers Pro/Max/Ultra) a retranché l'accès aux annonces du palier **Pro** vers le palier **Max**. Le reste de cette discovery (portée, décisions produit, hors périmètre) reste valable tel quel — partout où « Pro » apparaît ci-dessous comme palier d'accès, lire « Max ». Détail : `docs/backlog/056-abonnements-pro-max-ultra.md`.
 
 ## Problème et promesse
 

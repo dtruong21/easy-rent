@@ -1,4 +1,5 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/tenants/domain/tenant.dart';
@@ -47,6 +48,7 @@ TenantListItem _makeItem({
   currentPropertyName: propertyName,
   activeLeasePeriodLabel: activeLeaseId != null ? 'Depuis 01/01/2024' : null,
   activeLeaseRentCents: activeLeaseId != null ? 80000 : null,
+  currentPropertyId: activeLeaseId != null ? 'p-$id' : null,
 );
 
 Widget _buildCardView(List<TenantListItem> items) {
@@ -197,6 +199,41 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Actif'), findsOneWidget);
+    });
+  });
+
+  group('TenantsCardView — couleur d\'identité du bien (FEAT-057)', () {
+    testWidgets(
+      'locataire avec bail actif → liseré de couleur d\'identité non nul',
+      (tester) async {
+        final items = [
+          _makeItem(
+            id: 'ta',
+            firstName: 'Marc',
+            lastName: 'Actif',
+            activeLeaseId: 'l1',
+            propertyName: 'Appartement Test',
+          ),
+        ];
+
+        await tester.pumpWidget(_buildCardView(items));
+        await tester.pumpAndSettle();
+
+        final card = tester.widget<SummaryCard>(find.byType(SummaryCard));
+        expect(card.accentColor, isNotNull);
+      },
+    );
+
+    testWidgets('locataire sans bail → liseré neutre (accentColor null)', (
+      tester,
+    ) async {
+      final items = [_makeItem(id: 'ts', firstName: 'Lucie', lastName: 'Sans')];
+
+      await tester.pumpWidget(_buildCardView(items));
+      await tester.pumpAndSettle();
+
+      final card = tester.widget<SummaryCard>(find.byType(SummaryCard));
+      expect(card.accentColor, isNull);
     });
   });
 }

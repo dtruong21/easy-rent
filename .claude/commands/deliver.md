@@ -18,7 +18,7 @@ $ARGUMENTS (défaut: staging)
 2. Vérifie l'état git : pas de fichiers non commités sur la branche
 3. Pour **prod** : DEMANDE confirmation explicite à l'utilisateur en montrant :
    - La liste des commits qui vont être déployés
-   - La liste des migrations qui vont être appliquées
+   - Les changements de rules/indexes qui vont être appliqués
    - Le résumé du release note proposé
 
 ## Exécution

@@ -810,6 +810,9 @@ class _FinancementSection extends StatelessWidget {
     DateTime? current,
     ValueChanged<DateTime?> onChanged,
   ) async {
+    // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+    // saisi et rouvre le clavier (recette iOS, #197).
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: current ?? DateTime.now(),
@@ -1078,6 +1081,9 @@ class _LoanSubSection extends StatelessWidget {
   final VoidCallback onLoanPaymentOverrideTouched;
 
   Future<void> _pickDate(BuildContext context) async {
+    // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+    // saisi et rouvre le clavier (recette iOS, #197).
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: loanStartDate ?? DateTime.now(),

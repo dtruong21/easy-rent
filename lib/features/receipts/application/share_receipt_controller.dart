@@ -198,11 +198,15 @@ class ShareReceiptController extends StateNotifier<ShareReceiptState> {
   }
 }
 
-/// Provider autoDispose du contrôleur de partage de quittance.
+/// Provider autoDispose du contrôleur de partage de quittance, **keyé par
+/// `receiptId`**.
 ///
 /// [autoDispose] garantit un state propre entre deux utilisations du bouton.
-final shareReceiptControllerProvider =
-    StateNotifierProvider.autoDispose<
-      ShareReceiptController,
-      ShareReceiptState
-    >((ref) => ShareReceiptController(ref));
+/// La clé `family` isole l'état par quittance : sans elle, un provider global
+/// unique était partagé par tous les `ShareReceiptButton` de la liste (un par
+/// quittance), si bien qu'un partage allumait le spinner sur TOUS les boutons
+/// et déclenchait le feedback du `ref.listen` sur chaque bouton monté.
+final shareReceiptControllerProvider = StateNotifierProvider.autoDispose
+    .family<ShareReceiptController, ShareReceiptState, String>(
+      (ref, _) => ShareReceiptController(ref),
+    );

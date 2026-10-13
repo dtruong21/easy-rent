@@ -31,6 +31,44 @@ Widget _brancheFactice(String label) => Scaffold(
   ),
 );
 
+/// Branche avec FAB (comme les listes Biens / Baux / Locataires) et un bouton
+/// qui affiche une SnackBar depuis la page — pour vérifier qu'elle ne
+/// recouvre pas le FAB (#197).
+Widget _brancheAvecFab(String label) => Scaffold(
+  floatingActionButton: FloatingActionButton.extended(
+    key: Key('fab_$label'),
+    onPressed: () {},
+    icon: const Icon(Icons.add),
+    label: Text('Ajouter $label'),
+  ),
+  body: Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          key: Key('field_$label'),
+          decoration: InputDecoration(labelText: label),
+        ),
+        Builder(
+          builder: (context) => TextButton(
+            key: Key('btn_snack_$label'),
+            onPressed: () => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Enregistré'))),
+            child: const Text('Afficher une SnackBar'),
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+
+/// Sous-page poussée à l'intérieur d'une branche (ex. `/baux/detail`) — sert
+/// à prouver le mécanisme générique de reset (`initialLocation: true`), par
+/// opposition à `_brancheFactice` qui ne quitte jamais la racine.
+Widget _sousPageFactice(String label) =>
+    Scaffold(key: Key('souspage_$label'), body: Text('sous-page $label'));
+
 GoRouter _buildTestRouter() {
   return GoRouter(
     initialLocation: '/accueil',
@@ -59,7 +97,7 @@ GoRouter _buildTestRouter() {
             routes: [
               GoRoute(
                 path: '/locataires',
-                builder: (context, state) => _brancheFactice('locataires'),
+                builder: (context, state) => _brancheAvecFab('locataires'),
               ),
             ],
           ),
@@ -68,6 +106,12 @@ GoRouter _buildTestRouter() {
               GoRoute(
                 path: '/baux',
                 builder: (context, state) => _brancheFactice('baux'),
+                routes: [
+                  GoRoute(
+                    path: 'detail',
+                    builder: (context, state) => _sousPageFactice('baux'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -368,9 +412,14 @@ void main() {
     });
   });
 
-  group('AdaptiveNavigationScaffold — préservation d\'état par branche', () {
+  group('AdaptiveNavigationScaffold — retour à la racine au changement '
+      'd\'onglet (décision produit du 2026-08-11)', () {
     testWidgets(
-      'changer de branche PUIS revenir préserve la saisie (indexedStack)',
+      'racine jamais quittée : changer de branche PUIS revenir réutilise '
+      'la même page (rien à réinitialiser — nuance mécanique de '
+      'GoRouter/Navigator par clé de page, PAS une politique de '
+      'préservation de branche ; cf. le test suivant pour la sous-route, '
+      'seule concernée par le reset)',
       (tester) async {
         await _setViewportWidth(tester, 400);
         await _pumpApp(tester, _buildTestRouter());
@@ -392,31 +441,109 @@ void main() {
         expect(find.text('valeur-persistee'), findsOneWidget);
       },
     );
+
+    testWidgets('sous-route poussée dans une branche → abandonnée après un '
+        'aller-retour d\'onglet (goBranch(initialLocation: true) '
+        'systématique, plus une exception Profil)', (tester) async {
+      await _setViewportWidth(tester, 400);
+      final router = _buildTestRouter();
+      await _pumpApp(tester, router);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Baux'));
+      await tester.pumpAndSettle();
+      router.push('/baux/detail');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('souspage_baux')), findsOneWidget);
+
+      await tester.tap(find.text('Accueil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Baux'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('souspage_baux')), findsNothing);
+      expect(find.byKey(const Key('field_baux')), findsOneWidget);
+    });
   });
 
   group('AdaptiveNavigationScaffold — re-tap onglet courant', () {
+    testWidgets('re-tap sur l\'onglet déjà actif (racine) → reste à la racine '
+        '(cas particulier de la règle générale — pas une branche de code à '
+        'part depuis le 2026-08-11)', (tester) async {
+      await _setViewportWidth(tester, 400);
+      final router = _buildTestRouter();
+      await _pumpApp(tester, router);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/accueil',
+      );
+
+      await tester.tap(find.text('Accueil'));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.uri.toString(),
+        '/accueil',
+      );
+    });
+
     testWidgets(
-      're-tap sur l\'onglet déjà actif → goBranch avec initialLocation '
-      '(retour racine de branche)',
+      're-tap sur l\'onglet déjà actif alors qu\'une sous-route est ouverte '
+      '→ retour à la racine de CET onglet (même mécanisme que le '
+      'changement de branche, pas un idiome « pop to root » distinct)',
       (tester) async {
         await _setViewportWidth(tester, 400);
         final router = _buildTestRouter();
         await _pumpApp(tester, router);
         await tester.pumpAndSettle();
 
-        expect(
-          router.routerDelegate.currentConfiguration.uri.toString(),
-          '/accueil',
-        );
+        await tester.tap(find.text('Baux'));
+        await tester.pumpAndSettle();
+        router.push('/baux/detail');
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('souspage_baux')), findsOneWidget);
 
-        await tester.tap(find.text('Accueil'));
+        // Re-tap « Baux » alors qu'on y est déjà (currentIndex == index).
+        await tester.tap(find.text('Baux'));
         await tester.pumpAndSettle();
 
-        expect(
-          router.routerDelegate.currentConfiguration.uri.toString(),
-          '/accueil',
-        );
+        expect(find.byKey(const Key('souspage_baux')), findsNothing);
+        expect(find.byKey(const Key('field_baux')), findsOneWidget);
       },
     );
+  });
+
+  // #197 (recette iOS) : les SnackBars recouvraient le FAB des listes. La page
+  // de branche est un Scaffold IMBRIQUÉ dans celui du shell ; sans messager
+  // propre aux branches, la SnackBar s'affichait dans le Scaffold du shell, qui
+  // ignore le FAB de la page.
+  group('SnackBar au-dessus du FAB de la page', () {
+    for (final width in [400.0, 1200.0]) {
+      testWidgets('largeur $width : la SnackBar ne recouvre pas le FAB', (
+        tester,
+      ) async {
+        await _setViewportWidth(tester, width);
+        final router = _buildTestRouter();
+        await _pumpApp(tester, router);
+        router.go('/locataires');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('btn_snack_locataires')));
+        await tester.pumpAndSettle();
+
+        final snack = tester.getRect(find.byType(SnackBar));
+        final fab = tester.getRect(find.byKey(const Key('fab_locataires')));
+        // SnackBar fixe : le Scaffold remonte le FAB au-dessus ; flottante :
+        // la SnackBar se place au-dessus du FAB. Dans les deux cas, aucun
+        // chevauchement.
+        expect(
+          snack.overlaps(fab),
+          isFalse,
+          reason: 'SnackBar $snack recouvre le FAB $fab',
+        );
+      });
+    }
   });
 }

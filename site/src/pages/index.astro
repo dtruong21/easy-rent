@@ -1,0 +1,498 @@
+---
+// site/src/pages/index.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { appUrl } from '../lib/urls';
+import { ideaFormUrl } from '../lib/links';
+import { jsonLdString } from '../lib/jsonld';
+
+// Données structurées : uniquement ce que la page affiche déjà. Pas de note,
+// d'avis ni de prix inventé. `offers` décrit le palier gratuit annoncé dans le
+// hero (« Gratuit jusqu'à 2 biens »). `operatingSystem: Web` : c'est une
+// application web (PWA) ; les apps iOS/Android sont en préparation (FAQ).
+// Daki Studio n'est pas une entité juridique : simple nom d'auteur, aucune
+// donnée légale (SIREN, adresse…) — à enrichir à la création de la structure.
+const siteUrl = new URL('/', Astro.site).href;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${siteUrl}#website`,
+      name: 'Baillan',
+      url: siteUrl,
+      inLanguage: 'fr-FR',
+      publisher: { '@id': `${siteUrl}#author` },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      '@id': `${siteUrl}#application`,
+      name: 'Baillan',
+      url: siteUrl,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'fr',
+      description:
+        'Gestion locative pour bailleurs particuliers : quittances conformes, suivi des loyers, charges et rentabilité.',
+      featureList: [
+        'Quittances de loyer conformes à la loi n° 89-462 du 6 juillet 1989',
+        'Suivi des loyers et des retards',
+        'Régularisation des charges récupérables (décret n° 87-713)',
+        'Simulateur de rentabilité avec cash-flow réel',
+      ],
+      offers: {
+        '@type': 'Offer',
+        name: "Gratuit jusqu'à 2 biens",
+        price: '0',
+        priceCurrency: 'EUR',
+      },
+      author: { '@id': `${siteUrl}#author` },
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${siteUrl}#author`,
+      name: 'Daki Studio',
+    },
+  ],
+};
+---
+<BaseLayout
+  title="Baillan — Gestion locative et quittances de loyer"
+  description="Quittances conformes à la loi de 1989, suivi des loyers et des retards, régularisation des charges et rentabilité réelle. Pour les bailleurs particuliers."
+  fullBleed
+>
+  <script type="application/ld+json" slot="head" set:html={jsonLdString(jsonLd)} />
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-text">
+        <h1>La gestion locative, enfin sans tableur</h1>
+        <p class="lede">
+          Baillan tient vos baux, suit vos loyers et produit des quittances
+          conformes à la loi de 1989. Pour les bailleurs qui gèrent eux-mêmes un
+          ou quelques biens.
+        </p>
+        <p class="actions">
+          <a class="btn" href={`${appUrl}/signup`}>Commencer gratuitement</a>
+          <a class="text-link" href={`${appUrl}/simulator`}>Essayer le simulateur de rentabilité</a>
+        </p>
+        <p class="fine">Gratuit jusqu'à 2 biens.</p>
+      </div>
+
+      <figure class="receipt-figure">
+        <article class="receipt" aria-labelledby="receipt-title">
+          <header class="r-head">
+            <p id="receipt-title" class="r-title">Quittance de loyer</p>
+            <p class="r-period">Septembre 2026</p>
+          </header>
+          <dl class="r-parties">
+            <div><dt>Bailleur</dt><dd>Claire Martin, 18 rue Oberkampf, 75011 Paris</dd></div>
+            <div><dt>Locataire</dt><dd>Julien Roux</dd></div>
+            <div><dt>Logement</dt><dd>12 rue des Lilas, 75011 Paris</dd></div>
+          </dl>
+          <table class="r-amounts">
+            <tbody>
+              <tr><th scope="row">Loyer hors charges</th><td>750,00 €</td></tr>
+              <tr><th scope="row">Provisions pour charges</th><td>50,00 €</td></tr>
+              <tr class="r-total"><th scope="row">Total reçu</th><td>800,00 €</td></tr>
+            </tbody>
+          </table>
+          <p class="r-body">
+            Je soussignée Claire Martin déclare avoir reçu de Julien Roux la somme
+            de huit cents euros au titre du loyer et des charges du 1er au
+            30 septembre 2026, et lui en donne quittance, sous réserve de tous mes droits.
+          </p>
+          <div class="r-sign">
+            <p class="r-place">Fait à Paris, le 5 septembre 2026<span class="r-signature">C. Martin</span></p>
+            <p class="stamp" aria-hidden="true"><span class="stamp-word">Payé</span><span class="stamp-date">5 sept. 2026</span></p>
+          </div>
+          <p class="r-legal">Établie conformément à l'article 21 de la loi n° 89-462 du 6 juillet 1989.</p>
+        </article>
+        <figcaption>Exemple de quittance, produite par Baillan dès qu'un loyer est encaissé.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="yield">
+    <div class="wrap yield-grid">
+      <div class="yield-text">
+        <h2>Le vrai rendement, pas le brut flatteur</h2>
+        <p>
+          La plupart des outils s'arrêtent au rendement brut. Le simulateur de
+          Baillan déduit la mensualité de crédit et les dépenses, et vous donne le
+          cash-flow réel, mois par mois.
+        </p>
+        <a class="text-link" href={`${appUrl}/simulator`}>Faire le calcul pour votre bien</a>
+      </div>
+
+      <div class="statement">
+        <p class="st-case">Un bien acheté 118 000 €, dont 83 000 € empruntés, loué 850 € par mois.</p>
+        <dl class="st-lines">
+          <div class="st-gross"><dt>Rendement brut, là où s'arrêtent les autres outils</dt><dd>8,00 %</dd></div>
+          <div><dt>Loyer net annuel</dt><dd>9 690 €</dd></div>
+          <div><dt>Mensualité de crédit</dt><dd>502,12 €</dd></div>
+          <div><dt>Rendement net</dt><dd>7,60 %</dd></div>
+          <div class="st-result"><dt>Cash-flow mensuel</dt><dd>+347,88 €</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="wrap">
+      <h2>Ce que Baillan fait à votre place</h2>
+      <dl class="feat-list">
+        <div>
+          <dt>Quittances conformes</dt>
+          <dd>
+            Les mentions imposées par la loi sont générées avec le document. Vous
+            obtenez un PDF prêt à envoyer, pas un modèle à compléter.
+            <cite>Loi n° 89-462 du 6 juillet 1989</cite>
+          </dd>
+        </div>
+        <div>
+          <dt>Loyers et retards</dt>
+          <dd>
+            Chaque encaissement met à jour le bail. Vous savez qui a payé, qui doit
+            encore, et depuis combien de temps.
+          </dd>
+        </div>
+        <div>
+          <dt>Charges récupérables</dt>
+          <dd>
+            La régularisation annuelle n'impute au locataire que les charges
+            réellement récupérables.
+            <cite>Décret n° 87-713 du 26 août 1987</cite>
+          </dd>
+        </div>
+        <div>
+          <dt>Rentabilité réelle</dt>
+          <dd>
+            Le cash-flow déduit les dépenses réelles et la mensualité de crédit. Vous
+            voyez ce que le bien rapporte, pas seulement ce qu'il encaisse.
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="steps">
+    <div class="wrap">
+      <h2>Trois étapes pour démarrer</h2>
+      <ol class="steps-list">
+        <li><b>Ajoutez un bien</b><span>Adresse, loyer et crédit, en une minute.</span></li>
+        <li><b>Enregistrez le bail</b><span>Locataire, loyer, charges et jour de paiement.</span></li>
+        <li><b>Encaissez</b><span>Chaque paiement produit sa quittance et met à jour votre cash-flow.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="author" aria-labelledby="author-title">
+    <div class="wrap author-grid">
+      <h2 id="author-title">Un mot de l'auteur</h2>
+      <div class="letter">
+        <p>
+          Baillan est né d'un constat simple : la plupart des bailleurs
+          particuliers gèrent leurs locations dans un tableur, et le reste dans
+          leur tête. Ça tient, jusqu'au jour où il faut retrouver une quittance
+          ou justifier une régularisation de charges.
+        </p>
+        <p>
+          Je conçois et j'écris Baillan seul, au sein de Daki Studio. D'où le
+          parti pris : peu de fonctionnalités, mais chacune terminée, et
+          conforme au droit du bail.
+        </p>
+        <p>
+          Les retours que vous envoyez arrivent directement chez moi et
+          orientent la suite.
+        </p>
+        <p class="letter-sign">
+          <span class="letter-name">Daki Studio</span>
+          <span class="letter-role">Studio indépendant, auteur de Baillan</span>
+        </p>
+        <a class="text-link" href="/a-propos">En savoir plus sur Baillan</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap closing-grid">
+      <div>
+        <h2>Pensé pour les bailleurs particuliers</h2>
+        <p>
+          De un à quelques biens. Pour arrêter le tableur sans passer à une usine à
+          gaz : l'essentiel de la gestion locative, fait correctement.
+        </p>
+        <a class="btn" href={`${appUrl}/signup`}>Commencer gratuitement</a>
+      </div>
+      <div class="idea">
+        <h2>Baillan se construit avec vous</h2>
+        <p>
+          Une idée, un manque, une gêne ? Écrivez-le : chaque message est lu.
+        </p>
+        <a class="text-link" href={ideaFormUrl} target="_blank" rel="noopener">Proposer une idée</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .wrap {
+    max-width: 70rem;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 5vw, 4rem);
+  }
+
+  /* Boutons et liens d'action --------------------------------------------- */
+  .btn {
+    display: inline-block;
+    background: var(--color-olive); color: var(--color-cream);
+    padding: .85rem 1.4rem; border-radius: 6px;
+    font-weight: 600; text-decoration: none;
+  }
+  .btn:hover { background: var(--color-olive-deep); }
+  .text-link {
+    color: var(--color-olive); font-weight: 600;
+    text-decoration: underline; text-decoration-thickness: 1px;
+    text-underline-offset: .25em;
+  }
+  .text-link:hover { color: var(--color-olive-deep); text-decoration-thickness: 2px; }
+
+  /* Hero : texte à gauche, la quittance à droite -------------------------- */
+  .hero {
+    background: var(--color-paper);
+    border-bottom: 1px solid var(--color-rule);
+    padding: clamp(2.5rem, 6vw, 5rem) 0 clamp(3rem, 7vw, 5.5rem);
+  }
+  .hero-grid {
+    display: grid; gap: clamp(2.5rem, 5vw, 4.5rem);
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  h1 {
+    font-size: clamp(2.6rem, 5.6vw, 4.4rem);
+    line-height: 1.02;
+    margin: 0 0 1.5rem;
+    max-width: 12ch;
+  }
+  .lede {
+    font-size: 1.15rem; line-height: 1.6;
+    color: var(--color-ink-surface);
+    max-width: 38ch; margin: 0 0 2rem;
+  }
+  .actions {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 1rem 1.5rem; margin: 0 0 1rem;
+  }
+  .fine { margin: 0; font-size: .9rem; color: var(--color-ink-muted); }
+
+  .receipt-figure { margin: 0; }
+  .receipt {
+    position: relative;
+    background: var(--color-cream);
+    border: 1px solid var(--color-rule-strong);
+    border-radius: 3px;
+    padding: clamp(1.4rem, 3vw, 2.2rem);
+    box-shadow: 0 1px 0 var(--color-rule), 0 18px 40px -24px rgb(27 26 23 / 45%);
+    transform: rotate(1.2deg);
+    font-size: .9rem;
+  }
+  .r-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 1rem; flex-wrap: wrap;
+    border-bottom: 2px solid var(--color-ink);
+    padding-bottom: .6rem; margin-bottom: 1rem;
+  }
+  .r-title { font-family: var(--font-display); font-weight: 500; font-size: 1.6rem; line-height: 1.1; margin: 0; }
+  .r-period { margin: 0; font-family: var(--font-display); font-style: italic; font-size: 1.15rem; }
+  .r-parties { margin: 0 0 1rem; display: grid; gap: .35rem; }
+  .r-parties div { display: grid; grid-template-columns: 6.5rem 1fr; gap: .75rem; }
+  .r-parties dt { color: var(--color-ink-muted); }
+  .r-parties dd { margin: 0; }
+  .r-amounts { width: 100%; border-collapse: collapse; margin: 0 0 1rem; }
+  .r-amounts th { text-align: left; font-weight: 400; padding: .4rem 0; }
+  .r-amounts td {
+    text-align: right; padding: .4rem 0;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .r-amounts tr + tr th, .r-amounts tr + tr td { border-top: 1px solid var(--color-rule); }
+  .r-total th, .r-total td { font-weight: 700; border-top: 1px solid var(--color-ink) !important; }
+  .r-body {
+    font-family: var(--font-display); font-style: italic;
+    font-size: 1.02rem; line-height: 1.55; margin: 0 0 .9rem;
+  }
+  .r-legal { margin: 0; font-size: .75rem; color: var(--color-ink-muted); }
+  .receipt-figure figcaption {
+    margin-top: 1.4rem; font-size: .85rem; color: var(--color-ink-muted);
+  }
+
+  /* Signature et tampon « Payé » — le tampon est le seul moment animé. */
+  .r-sign {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; margin: 0 0 1rem;
+  }
+  .r-place { margin: 0; color: var(--color-ink-muted); }
+  .r-signature {
+    display: block; margin-top: .15rem;
+    font-family: var(--font-display); font-style: italic;
+    font-size: 1.5rem; line-height: 1.1; color: var(--color-indigo-ink);
+  }
+  .stamp {
+    flex: none; margin: 0 .4rem 0 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: .4rem 1rem .45rem;
+    border: 3px double var(--color-seal-green);
+    border-radius: 8px;
+    color: var(--color-seal-green);
+    transform: rotate(-8deg);
+    mix-blend-mode: multiply;
+    opacity: .9;
+  }
+  .stamp-word {
+    font-family: var(--font-display); font-weight: 500;
+    font-size: 2rem; line-height: 1; letter-spacing: .06em;
+  }
+  .stamp-date { font-size: .72rem; font-weight: 700; letter-spacing: .02em; margin-top: .15rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    .stamp { animation: stamp-in .45s cubic-bezier(.2, .9, .3, 1.25) .8s both; }
+  }
+  @keyframes stamp-in {
+    from { opacity: 0; transform: rotate(-8deg) scale(1.8); }
+    to { opacity: .9; transform: rotate(-8deg) scale(1); }
+  }
+
+  /* Rendement : un relevé de comptes -------------------------------------- */
+  .yield { padding: var(--space-section) 0; }
+  .yield-grid {
+    display: grid; gap: clamp(2rem, 5vw, 4.5rem);
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+  .yield h2, .features h2, .steps h2, .closing h2 {
+    font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+    margin: 0 0 1rem;
+  }
+  .yield-text p { color: var(--color-ink-surface); max-width: 40ch; margin: 0 0 1.4rem; }
+  .statement {
+    border-top: 2px solid var(--color-ink);
+    border-bottom: 2px solid var(--color-ink);
+    padding: 1rem 0 .4rem;
+  }
+  .st-case { margin: 0 0 .8rem; font-family: var(--font-display); font-style: italic; font-size: 1.1rem; }
+  .st-lines { margin: 0; }
+  .st-lines div {
+    display: flex; align-items: baseline; gap: .75rem;
+    padding: .6rem 0;
+    border-top: 1px solid var(--color-rule);
+  }
+  .st-lines dt { flex: 1; }
+  .st-lines dd {
+    margin: 0; font-weight: 600;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .st-gross dt, .st-gross dd { color: var(--color-ink-muted); }
+  .st-gross dd { font-weight: 400; text-decoration: line-through; text-decoration-color: var(--color-oxblood); }
+  .st-result { border-top: 1px solid var(--color-ink) !important; }
+  .st-result dt { font-weight: 600; }
+  .st-result dd {
+    font-family: var(--font-display); font-weight: 500;
+    font-size: 2rem; line-height: 1; color: var(--color-seal-green);
+  }
+
+  /* Fonctionnalités : une liste, pas des cartes --------------------------- */
+  .features {
+    padding: var(--space-section) 0;
+    border-top: 1px solid var(--color-rule);
+  }
+  .feat-list {
+    margin: 1.5rem 0 0;
+    display: grid; gap: 0 clamp(2rem, 5vw, 4rem);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .feat-list div { padding: 1.3rem 0; border-top: 1px solid var(--color-rule-strong); }
+  .feat-list dt { font-family: var(--font-display); font-size: 1.45rem; margin-bottom: .4rem; }
+  .feat-list dd { margin: 0; color: var(--color-ink-surface); max-width: 44ch; }
+  .feat-list cite {
+    display: block; margin-top: .6rem;
+    font-style: normal; font-size: .82rem; color: var(--color-ink-muted);
+  }
+
+  /* Étapes : une vraie séquence ------------------------------------------- */
+  .steps {
+    padding: var(--space-section) 0;
+    background: var(--color-paper);
+    border-top: 1px solid var(--color-rule);
+  }
+  .steps-list {
+    list-style: none; counter-reset: step;
+    margin: 1.5rem 0 0; padding: 0;
+    display: grid; gap: 2rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .steps-list li { counter-increment: step; display: flex; flex-direction: column; gap: .35rem; }
+  .steps-list li::before {
+    content: counter(step);
+    font-family: var(--font-display); font-size: 3.2rem; line-height: 1;
+    color: var(--color-olive-mid);
+    margin-bottom: .3rem;
+  }
+  .steps-list b { font-size: 1.05rem; }
+  .steps-list span { color: var(--color-ink-surface); max-width: 30ch; }
+
+  /* Mot de l'auteur : une lettre signée, en écho à la quittance ----------- */
+  .author {
+    padding: var(--space-section) 0;
+    border-top: 1px solid var(--color-rule);
+  }
+  .author-grid {
+    display: grid; gap: clamp(1.5rem, 5vw, 4.5rem);
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+  .author h2 { font-size: clamp(1.8rem, 3.4vw, 2.5rem); margin: 0; }
+  .letter { max-width: 36rem; }
+  .letter p {
+    font-family: var(--font-display);
+    font-size: 1.22rem; line-height: 1.65;
+    margin: 0 0 1.1rem;
+  }
+  .letter .letter-sign { margin: 1.8rem 0 1.6rem; line-height: 1.3; }
+  .letter-name {
+    display: block;
+    font-style: italic; font-size: 1.8rem;
+    color: var(--color-indigo-ink);
+  }
+  .letter-role {
+    display: block; margin-top: .3rem;
+    font-family: var(--font-text); font-size: .88rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* Clôture : bande kraft --------------------------------------------------- */
+  .closing {
+    padding: var(--space-section) 0;
+    background: var(--color-kraft);
+  }
+  .closing-grid {
+    display: grid; gap: clamp(2rem, 5vw, 4rem);
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .closing p { max-width: 42ch; margin: 0 0 1.5rem; line-height: 1.6; }
+  .idea { border-left: 1px solid var(--color-rule-strong); padding-left: clamp(1.5rem, 4vw, 3rem); }
+  .idea h2 { font-size: clamp(1.4rem, 2.6vw, 1.8rem); }
+
+  /* Mobile ------------------------------------------------------------------ */
+  @media (max-width: 52rem) {
+    .hero-grid, .yield-grid, .author-grid, .closing-grid { grid-template-columns: 1fr; }
+    h1 { max-width: 14ch; }
+    .receipt { transform: none; }
+    .feat-list, .steps-list { grid-template-columns: 1fr; }
+    .steps-list { gap: 1.5rem; }
+    .idea { border-left: 0; padding-left: 0; border-top: 1px solid var(--color-rule-strong); padding-top: 2rem; }
+  }
+  @media (max-width: 26rem) {
+    .r-parties div { grid-template-columns: 1fr; gap: 0; }
+    .stamp { margin-right: .9rem; padding: .3rem .7rem .35rem; }
+    .stamp-word { font-size: 1.6rem; }
+  }
+</style>

@@ -50,6 +50,10 @@ ChargeRegularizationPdfData _makeData({
 // ---------------------------------------------------------------------------
 
 void main() {
+  // Le renderer charge la police EB Garamond embarquée via `rootBundle`
+  // (cf. `PdfBrandFonts`) — nécessite le binding Flutter Test initialisé.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('renderChargeRegularizationPdf — génère un document valide', () {
     test('retourne des bytes non vides (cas nominal, solde positif)', () async {
       final bytes = await renderChargeRegularizationPdf(_makeData());

@@ -1,0 +1,48 @@
+---
+// site/src/pages/supprimer-mon-compte.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { appUrl } from '../lib/urls';
+---
+<BaseLayout
+  title="Supprimer mon compte — Baillan"
+  description="Comment supprimer définitivement votre compte Baillan et les données associées."
+>
+  <article class="prose">
+    <h1>Supprimer mon compte</h1>
+    <p>
+      La suppression est définitive : le compte, les biens, les baux et les
+      documents associés sont effacés immédiatement. Seules les quittances de
+      loyer émises sont conservées 5 ans à titre de preuve (loi du 6 juillet
+      1989), sous forme archivée et inaccessible, puis supprimées à
+      l'échéance. Cette action ne peut pas être annulée.
+    </p>
+    <h2>Comment faire</h2>
+    <ol>
+      <li>Ouvrez l'application et connectez-vous.</li>
+      <li>Allez dans Profil, puis « Supprimer mon compte ».</li>
+      <li>
+        Confirmez votre identité (mot de passe, ou reconnexion Google/Apple),
+        puis validez. La suppression est immédiate.
+      </li>
+    </ol>
+    <p>
+      <a class="btn" href={`${appUrl}/delete-account`}>Aller à la suppression</a>
+    </p>
+    <h2>Si vous avez essayé sans créer de compte</h2>
+    <p>
+      Un essai sans inscription crée un compte anonyme. Il se supprime depuis
+      cette même page de suppression, depuis l'appareil utilisé pour l'essai.
+    </p>
+  </article>
+</BaseLayout>
+
+<style>
+  .prose { max-width: 42rem; padding: 3rem 0; }
+  .prose h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin: 0 0 1.5rem; }
+  .prose h2 { font-size: 1.15rem; margin: 2.25rem 0 .5rem; }
+  .prose p, .prose li { color: var(--color-ink-muted); }
+  .btn {
+    display: inline-block; background: var(--color-olive); color: var(--color-cream);
+    padding: .8rem 1.4rem; border-radius: 7px; font-weight: 650; text-decoration: none;
+  }
+</style>
