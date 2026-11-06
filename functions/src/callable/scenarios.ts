@@ -49,6 +49,9 @@ const SCHEMA_VERSION = 1;
 /** Durée d'emprunt par défaut, miroir du défaut Dart (20 ans). */
 const DEFAULT_LOAN_DURATION_MONTHS = 240;
 
+/** FEAT-061 — tranches marginales proposées (miroir de `kTmiChoices`). */
+const TMI_CHOICES: ReadonlySet<number> = new Set([0, 11, 30, 41, 45]);
+
 /** Paramètres financiers d'un scénario (tous en centimes, sauf indication). */
 export interface ScenarioInputs {
   readonly name: string;
@@ -65,6 +68,29 @@ export interface ScenarioInputs {
   readonly propertyTaxAnnualCents: number;
   readonly insurancePnoAnnualCents: number;
   readonly condoFeesNonRecoverableCents: number;
+  readonly isFurnished: boolean;
+  readonly furnitureCents: number;
+  readonly tmiPercent: number;
+  readonly landSharePercent: number;
+}
+
+function parseTmi(value: unknown): number {
+  const tmi = optionalInt(value, "tmiPercent", {min: 0}) ?? 30;
+  if (!TMI_CHOICES.has(tmi)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "tmiPercent must be 0, 11, 30, 41 or 45",
+    );
+  }
+  return tmi;
+}
+
+function parseIsFurnished(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value !== "boolean") {
+    throw new HttpsError("invalid-argument", "isFurnished must be a boolean");
+  }
+  return value;
 }
 
 /**
@@ -128,6 +154,15 @@ export function parseScenarioInputs(
         "condoFeesNonRecoverableCents",
         {min: 0},
       ) ?? 0,
+    isFurnished: parseIsFurnished(data.isFurnished),
+    furnitureCents:
+      optionalInt(data.furnitureCents, "furnitureCents", {min: 0}) ?? 0,
+    tmiPercent: parseTmi(data.tmiPercent),
+    landSharePercent:
+      optionalInt(data.landSharePercent, "landSharePercent", {
+        min: 0,
+        max: 50,
+      }) ?? 15,
   };
 }
 
@@ -159,6 +194,10 @@ export function buildScenarioDocument(args: {
     propertyTaxAnnualCents: inputs.propertyTaxAnnualCents,
     insurancePnoAnnualCents: inputs.insurancePnoAnnualCents,
     condoFeesNonRecoverableCents: inputs.condoFeesNonRecoverableCents,
+    isFurnished: inputs.isFurnished,
+    furnitureCents: inputs.furnitureCents,
+    tmiPercent: inputs.tmiPercent,
+    landSharePercent: inputs.landSharePercent,
   };
   return {
     id,

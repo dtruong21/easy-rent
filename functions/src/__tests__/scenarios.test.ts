@@ -179,3 +179,44 @@ describe("★ plafond de scénarios — enforcement serveur (PR-2b)", () => {
     expect(errorCodeFor("scenarios")).toBe("scenario_limit_reached");
   });
 });
+
+describe("FEAT-061 — champs LMNP", () => {
+  it("absents → défauts", () => {
+    const i = parseScenarioInputs({...minimal});
+    expect(i.isFurnished).toBe(false);
+    expect(i.furnitureCents).toBe(0);
+    expect(i.tmiPercent).toBe(30);
+    expect(i.landSharePercent).toBe(15);
+  });
+
+  it("fournis → repris, en racine et dans scenarioJson", () => {
+    const lmnp = {
+      isFurnished: true,
+      furnitureCents: 700_000,
+      tmiPercent: 41,
+      landSharePercent: 20,
+    };
+    const doc = buildScenarioDocument({
+      id: "s",
+      landlordId: "l",
+      inputs: parseScenarioInputs({...minimal, ...lmnp}),
+      now: "TS",
+    });
+    const json = doc.scenarioJson as Record<string, unknown>;
+    for (const [k, v] of Object.entries(lmnp)) {
+      expect(doc[k]).toBe(v);
+      expect(json[k]).toBe(v);
+    }
+  });
+
+  it.each([
+    {tmiPercent: 25},
+    {landSharePercent: 51},
+    {landSharePercent: -1},
+    {furnitureCents: -1},
+    {isFurnished: "oui"},
+  ])("%j → invalid-argument", (bad) => {
+    expect(thrownBy(() => parseScenarioInputs({...minimal, ...bad})).code)
+      .toBe("invalid-argument");
+  });
+});
