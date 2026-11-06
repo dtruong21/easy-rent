@@ -4807,6 +4807,43 @@
   "@simulatorFieldCondoFeesHelper": {
     "description": "Helper text under the condo fees field listing examples. ALUR refers to the French 'loi ALUR' mandatory works reserve fund for co-ownerships, kept untranslated as a legal reference."
   },
+  "simulatorLmnpFurnishedLabel": "Furnished rental (LMNP)",
+  "@simulatorLmnpFurnishedLabel": {
+    "description": "Label of the switch marking the property as a furnished rental (LMNP) in the investment simulator."
+  },
+  "simulatorLmnpFurnishedHelper": "Long-term furnished rental: compares micro-BIC and actual regime",
+  "@simulatorLmnpFurnishedHelper": {
+    "description": "Helper under the furnished (LMNP) switch."
+  },
+  "simulatorLmnpFurnitureLabel": "Furniture (€)",
+  "@simulatorLmnpFurnitureLabel": {
+    "description": "Label of the furniture amount field (LMNP)."
+  },
+  "simulatorLmnpTmiLabel": "Marginal tax rate",
+  "@simulatorLmnpTmiLabel": {
+    "description": "Label of the marginal tax rate (TMI) dropdown."
+  },
+  "simulatorLmnpTmiOption": "{rate}%",
+  "@simulatorLmnpTmiOption": {
+    "description": "Option of the marginal tax rate dropdown; rate is a percentage integer.",
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "simulatorLmnpAdvancedTitle": "Advanced settings",
+  "@simulatorLmnpAdvancedTitle": {
+    "description": "Title of the collapsible advanced settings block of the LMNP inputs."
+  },
+  "simulatorLmnpLandShareLabel": "Land share of the price (%)",
+  "@simulatorLmnpLandShareLabel": {
+    "description": "Label of the land share field (percentage of the purchase price)."
+  },
+  "simulatorLmnpLandShareError": "Between 0 and 50%",
+  "@simulatorLmnpLandShareError": {
+    "description": "Validation error for the land share field outside 0-50%. Also used as ValidationError.scenarioLandShareInvalid message."
+  },
   "simulatorSectionNotes": "Notes",
   "@simulatorSectionNotes": {
     "description": "ExpansionTile section title (collapsed by default) grouping the free-form notes field in the scenario form."

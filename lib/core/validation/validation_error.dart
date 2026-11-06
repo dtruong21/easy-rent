@@ -342,4 +342,7 @@ enum ValidationError {
 
   /// Durée d'emprunt au-delà de 360 mois (simulateur).
   scenarioLoanDurationTooLong,
+
+  /// Part du terrain LMNP hors 0–50 % (simulateur).
+  scenarioLandShareInvalid,
 }

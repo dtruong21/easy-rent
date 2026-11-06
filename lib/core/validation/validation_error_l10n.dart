@@ -147,6 +147,8 @@ extension ValidationErrorL10n on ValidationError {
         l10n.validationScenarioLoanDurationTooShort,
       ValidationError.scenarioLoanDurationTooLong =>
         l10n.validationScenarioLoanDurationTooLong,
+      ValidationError.scenarioLandShareInvalid =>
+        l10n.simulatorLmnpLandShareError,
     };
   }
 }

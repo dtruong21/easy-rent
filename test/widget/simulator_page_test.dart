@@ -4,6 +4,7 @@
 library;
 
 import 'package:easyrent/core/config/store_billing.dart';
+import 'package:easyrent/features/auth/application/anon_expiry_renewer.dart';
 import 'package:easyrent/features/auth/application/auth_session_provider.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
@@ -41,6 +42,7 @@ final _fakeScenario = InvestmentScenario(
 class _FakeRepo implements InvestmentScenarioRepository {
   final List<InvestmentScenario> scenarios;
   InvestmentScenario? created;
+  Map<String, Object?>? createdLmnp;
   InvestmentScenario? updated;
   String? deleted;
 
@@ -79,6 +81,12 @@ class _FakeRepo implements InvestmentScenarioRepository {
     int landSharePercent = 15,
     String? notes,
   }) async {
+    createdLmnp = {
+      'isFurnished': isFurnished,
+      'furnitureCents': furnitureCents,
+      'tmiPercent': tmiPercent,
+      'landSharePercent': landSharePercent,
+    };
     created = InvestmentScenario(
       id: 'new-id',
       landlordId: 'lld-1',
@@ -178,6 +186,7 @@ Widget _buildPage({
       landlordTierProvider.overrideWith(
         (ref) => Stream.value(LandlordTierSnapshot(tier: tier)),
       ),
+      anonExpiryRenewerProvider.overrideWith(_NoopRenewer.new),
       if (authRepository != null)
         authRepositoryProvider.overrideWithValue(authRepository),
     ],
@@ -188,6 +197,12 @@ Widget _buildPage({
       locale: const Locale('fr'),
     ),
   );
+}
+
+/// Renewer neutre : la sauvegarde appelle `renewIfNeeded` (Firebase requis).
+class _NoopRenewer extends AnonExpiryRenewer {
+  @override
+  Future<void> renewIfNeeded() async {}
 }
 
 /// Notifier factice pour la liste de scénarios.
@@ -872,6 +887,142 @@ void main() {
 
       expect(find.byKey(anonHintKey, skipOffstage: false), findsOneWidget);
       expect(find.byKey(sectionKey, skipOffstage: false), findsNothing);
+    });
+  });
+
+  group('SimulatorPage — LMNP (FEAT-061)', () {
+    const switchKey = Key('lmnp_furnished_switch');
+    const furnitureKey = Key('lmnp_furniture_field');
+    const tmiKey = Key('lmnp_tmi_dropdown');
+    const landKey = Key('lmnp_land_share_field');
+
+    Future<void> fillRequired(WidgetTester tester) async {
+      await tester.enterText(
+        find.byKey(const Key('field_purchase_price')),
+        '200000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('field_monthly_rent')),
+        '800',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    Future<void> enableSwitch(WidgetTester tester) async {
+      await tester.ensureVisible(find.byKey(switchKey));
+      await tester.tap(find.byKey(switchKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('interrupteur off : sous-champs absents ; on : présents', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildPage());
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<SwitchListTile>(find.byKey(switchKey)).value,
+        isFalse,
+      );
+      expect(find.byKey(furnitureKey), findsNothing);
+      expect(find.byKey(tmiKey), findsNothing);
+      expect(find.byKey(landKey, skipOffstage: false), findsNothing);
+
+      await enableSwitch(tester);
+      expect(find.byKey(furnitureKey), findsOneWidget);
+      expect(find.byKey(tmiKey), findsOneWidget);
+      expect(find.byKey(landKey, skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('sauvegarde transmet les valeurs LMNP', (tester) async {
+      final repo = _FakeRepo();
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+      await fillRequired(tester);
+      await enableSwitch(tester);
+
+      await tester.enterText(find.byKey(furnitureKey), '7000');
+      await tester.ensureVisible(find.byKey(tmiKey));
+      await tester.tap(find.byKey(tmiKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('41 %').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Réglages avancés'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(landKey), '20');
+
+      final saveBtn = find.byKey(const Key('save_scenario_button'));
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('save_scenario_name_field')),
+        'Meublé',
+      );
+      await tester.tap(find.byKey(const Key('save_scenario_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repo.createdLmnp, {
+        'isFurnished': true,
+        'furnitureCents': 700000,
+        'tmiPercent': 41,
+        'landSharePercent': 20,
+      });
+    });
+
+    testWidgets('charger un scénario meublé pré-remplit les 4 champs', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(
+        scenarios: [
+          _fakeScenario.copyWith(
+            isFurnished: true,
+            furnitureCents: 500000,
+            tmiPercent: 11,
+            landSharePercent: 25,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Scénario existant'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<SwitchListTile>(find.byKey(switchKey)).value,
+        isTrue,
+      );
+      String text(Key k) => tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byKey(k, skipOffstage: false),
+              matching: find.byType(TextField, skipOffstage: false),
+            ),
+          )
+          .controller!
+          .text;
+      expect(text(furnitureKey), '5000,00');
+      expect(text(landKey), '25');
+      expect(find.text('11 %'), findsOneWidget);
+    });
+
+    testWidgets('terrain 60 → erreur, pas de sauvegarde', (tester) async {
+      final repo = _FakeRepo();
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+      await fillRequired(tester);
+      await enableSwitch(tester);
+      await tester.tap(find.text('Réglages avancés'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(landKey), '60');
+
+      final saveBtn = find.byKey(const Key('save_scenario_button'));
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Entre 0 et 50 %'), findsOneWidget);
+      expect(find.byKey(const Key('save_scenario_name_field')), findsNothing);
+      expect(repo.created, isNull);
     });
   });
 }
