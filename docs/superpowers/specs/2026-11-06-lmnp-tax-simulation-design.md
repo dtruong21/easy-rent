@@ -25,13 +25,13 @@ Aide à la décision d'achat, **pas** une aide à la déclaration.
 
 | Champ (Firestore) | Type | Défaut | Rôle |
 |---|---|---|---|
-| `is_furnished` | bool | `false` | Active la section fiscale |
-| `furniture_cents` | int ≥ 0 | 0 | Mobilier, amorti sur 7 ans |
-| `tmi_percent` | int ∈ {0, 11, 30, 41, 45} | 30 | Tranche marginale d'imposition |
-| `land_share_percent` | int 0–50 | 15 | Part du terrain dans le prix (non amortissable) |
+| `isFurnished` | bool | `false` | Active la section fiscale |
+| `furnitureCents` | int ≥ 0 | 0 | Mobilier, amorti sur 7 ans |
+| `tmiPercent` | int ∈ {0, 11, 30, 41, 45} | 30 | Tranche marginale d'imposition |
+| `landSharePercent` | int 0–50 | 15 | Part du terrain dans le prix (non amortissable) |
 
 Les scénarios existants n'ont pas ces champs : valeurs par défaut à la lecture
-(`@Default`), donc aucun scénario existant ne voit de section fiscale.
+(`@Default` ; clés JSON du modèle en snake_case, `firestoreDocToSnakeJson` convertit), donc aucun scénario existant ne voit de section fiscale.
 
 Écriture : la **création** passe par la callable `createScenario`, qui valide
 chaque champ (`functions/src/callable/scenarios.ts`) → les 4 champs y sont
