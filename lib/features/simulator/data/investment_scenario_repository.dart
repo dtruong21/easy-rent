@@ -29,6 +29,10 @@ abstract interface class InvestmentScenarioRepository {
     int propertyTaxAnnualCents,
     int insurancePnoAnnualCents,
     int condoFeesNonRecoverableCents,
+    bool isFurnished,
+    int furnitureCents,
+    int tmiPercent,
+    int landSharePercent,
     String? notes,
   });
 
@@ -109,6 +113,10 @@ class FirestoreInvestmentScenarioRepository
     int propertyTaxAnnualCents = 0,
     int insurancePnoAnnualCents = 0,
     int condoFeesNonRecoverableCents = 0,
+    bool isFurnished = false,
+    int furnitureCents = 0,
+    int tmiPercent = 30,
+    int landSharePercent = 15,
     String? notes,
   }) async {
     _log.info('create(name=$name)');
@@ -138,6 +146,10 @@ class FirestoreInvestmentScenarioRepository
       'propertyTaxAnnualCents': propertyTaxAnnualCents,
       'insurancePnoAnnualCents': insurancePnoAnnualCents,
       'condoFeesNonRecoverableCents': condoFeesNonRecoverableCents,
+      'isFurnished': isFurnished,
+      'furnitureCents': furnitureCents,
+      'tmiPercent': tmiPercent,
+      'landSharePercent': landSharePercent,
       'notes': notes?.trim(),
     });
     final scenarioId = (res.data as Map?)?['scenarioId'] as String?;
@@ -165,6 +177,10 @@ class FirestoreInvestmentScenarioRepository
       'propertyTaxAnnualCents': scenario.propertyTaxAnnualCents,
       'insurancePnoAnnualCents': scenario.insurancePnoAnnualCents,
       'condoFeesNonRecoverableCents': scenario.condoFeesNonRecoverableCents,
+      'isFurnished': scenario.isFurnished,
+      'furnitureCents': scenario.furnitureCents,
+      'tmiPercent': scenario.tmiPercent,
+      'landSharePercent': scenario.landSharePercent,
       'scenarioJson': <String, dynamic>{
         'purchasePriceCents': scenario.purchasePriceCents,
         'notaryFeesCents': scenario.notaryFeesCents,
@@ -178,6 +194,10 @@ class FirestoreInvestmentScenarioRepository
         'propertyTaxAnnualCents': scenario.propertyTaxAnnualCents,
         'insurancePnoAnnualCents': scenario.insurancePnoAnnualCents,
         'condoFeesNonRecoverableCents': scenario.condoFeesNonRecoverableCents,
+        'isFurnished': scenario.isFurnished,
+        'furnitureCents': scenario.furnitureCents,
+        'tmiPercent': scenario.tmiPercent,
+        'landSharePercent': scenario.landSharePercent,
       },
       'updatedAt': FieldValue.serverTimestamp(),
     };
