@@ -933,6 +933,35 @@ void main() {
       expect(find.byKey(landKey, skipOffstage: false), findsOneWidget);
     });
 
+    testWidgets(
+      'carte Fiscalité LMNP : absente interrupteur off, présente on',
+      (tester) async {
+        await tester.pumpWidget(_buildPage());
+        await tester.pumpAndSettle();
+        await fillRequired(tester);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('lmnp_locked'), skipOffstage: false),
+          findsNothing,
+        );
+
+        await enableSwitch(tester);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('lmnp_locked'), skipOffstage: false),
+          findsOneWidget,
+        );
+
+        await tester.ensureVisible(find.byKey(switchKey));
+        await tester.tap(find.byKey(switchKey));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('lmnp_locked'), skipOffstage: false),
+          findsNothing,
+        );
+      },
+    );
+
     testWidgets('sauvegarde transmet les valeurs LMNP', (tester) async {
       final repo = _FakeRepo();
       await tester.pumpWidget(_buildPage(repo: repo));

@@ -26,6 +26,7 @@ import '../domain/investment_scenario.dart';
 import '../domain/lmnp_tax_rules.dart';
 import '../domain/scenario_results.dart';
 import 'widgets/coming_soon_paid_plan_section.dart';
+import 'widgets/lmnp_tax_card.dart';
 import 'widgets/save_scenario_dialog.dart';
 import 'widgets/saved_scenarios_row.dart';
 import 'widgets/scenario_form_validators.dart';
@@ -621,6 +622,20 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                             // Résultats KPI.
                             if (_results != null)
                               ScenarioResultsCard(results: _results!),
+                            if (_results != null && _isFurnished)
+                              Builder(
+                                builder: (context) {
+                                  final s = _buildScenarioFromForm();
+                                  return s == null
+                                      ? const SizedBox.shrink()
+                                      : Padding(
+                                          padding: EdgeInsets.only(
+                                            top: spacing.lg,
+                                          ),
+                                          child: LmnpTaxCard(scenario: s),
+                                        );
+                                },
+                              ),
                             if (_results == null) _EmptyResultsHint(),
 
                             SizedBox(height: spacing.lg),

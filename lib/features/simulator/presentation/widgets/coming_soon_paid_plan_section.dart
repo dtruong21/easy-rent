@@ -11,7 +11,6 @@ import '../../../paid_plan/application/paid_plan_interest_controller.dart';
 const List<String> _paidPlanFeatureIds = [
   'comparateur',
   'sensibilite_taux',
-  'fiscal_lmnp',
   'export_pdf',
 ];
 
@@ -22,7 +21,6 @@ List<String> _paidPlanFeatureLabels(BuildContext context) {
   return [
     l10n.simulatorPaidPlanFeatureComparator,
     l10n.simulatorPaidPlanFeatureRateSensitivity,
-    l10n.simulatorPaidPlanFeatureTaxSimulation,
     l10n.simulatorPaidPlanFeatureExportPdf,
   ];
 }
