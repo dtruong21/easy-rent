@@ -1168,22 +1168,27 @@ class _LmnpSection extends StatelessWidget {
                       )?.message(context),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<int>(
-                  key: const Key('lmnp_tmi_dropdown'),
-                  initialValue: tmiPercent,
-                  decoration: InputDecoration(
-                    labelText: l10n.simulatorLmnpTmiLabel,
+                // initialValue n'est lu qu'à la construction : on reconstruit
+                // quand la tranche change (chargement d'un autre scénario).
+                KeyedSubtree(
+                  key: ValueKey('lmnp_tmi_$tmiPercent'),
+                  child: DropdownButtonFormField<int>(
+                    key: const Key('lmnp_tmi_dropdown'),
+                    initialValue: tmiPercent,
+                    decoration: InputDecoration(
+                      labelText: l10n.simulatorLmnpTmiLabel,
+                    ),
+                    items: [
+                      for (final v in kTmiChoices)
+                        DropdownMenuItem(
+                          value: v,
+                          child: Text(l10n.simulatorLmnpTmiOption(v)),
+                        ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) onTmiChanged(v);
+                    },
                   ),
-                  items: [
-                    for (final v in kTmiChoices)
-                      DropdownMenuItem(
-                        value: v,
-                        child: Text(l10n.simulatorLmnpTmiOption(v)),
-                      ),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) onTmiChanged(v);
-                  },
                 ),
                 ExpansionTile(
                   title: Text(l10n.simulatorLmnpAdvancedTitle),

@@ -1024,5 +1024,89 @@ void main() {
       expect(find.byKey(const Key('save_scenario_name_field')), findsNothing);
       expect(repo.created, isNull);
     });
+
+    testWidgets('switch on puis chargement : la tranche affichée suit', (
+      tester,
+    ) async {
+      final repo = _FakeRepo(
+        scenarios: [
+          _fakeScenario.copyWith(
+            id: 'a',
+            name: 'Alpha',
+            isFurnished: true,
+            tmiPercent: 41,
+          ),
+          _fakeScenario.copyWith(
+            id: 'b',
+            name: 'Beta',
+            isFurnished: true,
+            tmiPercent: 11,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+      await enableSwitch(tester);
+      // Charger un scénario navigue vers /simulator/:id : le formulaire est
+      // reconstruit puis hydraté, la tranche affichée doit être celle du
+      // scénario chargé, même interrupteur déjà actif.
+      for (final (name, shown) in [('Alpha', '41 %')]) {
+        await tester.ensureVisible(find.text(name));
+        await tester.tap(find.text(name));
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(of: find.byKey(tmiKey), matching: find.text(shown)),
+          findsOneWidget,
+        );
+      }
+    });
+
+    testWidgets('switch on sans toucher les sous-champs : défauts', (
+      tester,
+    ) async {
+      final repo = _FakeRepo();
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+      await fillRequired(tester);
+      await enableSwitch(tester);
+      final saveBtn = find.byKey(const Key('save_scenario_button'));
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('save_scenario_name_field')),
+        'Défauts',
+      );
+      await tester.tap(find.byKey(const Key('save_scenario_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repo.createdLmnp, {
+        'isFurnished': true,
+        'furnitureCents': 0,
+        'tmiPercent': 30,
+        'landSharePercent': 15,
+      });
+    });
+
+    testWidgets('mise à jour : update reçoit les valeurs LMNP', (tester) async {
+      final repo = _FakeRepo(scenarios: [_fakeScenario]);
+      await tester.pumpWidget(_buildPage(repo: repo));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Scénario existant'));
+      await tester.pumpAndSettle();
+      await enableSwitch(tester);
+      await tester.enterText(find.byKey(furnitureKey), '3000');
+      final saveBtn = find.byKey(const Key('save_scenario_button'));
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('save_scenario_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repo.updated?.isFurnished, isTrue);
+      expect(repo.updated?.furnitureCents, 300000);
+      expect(repo.updated?.tmiPercent, 30);
+      expect(repo.updated?.landSharePercent, 15);
+    });
   });
 }
