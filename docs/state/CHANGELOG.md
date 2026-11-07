@@ -30,7 +30,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-13)
+## Changements (2026-08-03 → 2026-11-06)
+
+### FIX : avertissements « avant impôt » sans taux de prélèvements sociaux (2026-11-06)
+- La rentabilité d'un bien et le résultat du simulateur citaient « prélèvements sociaux (17,2 %) ». Depuis la LFSS 2026, le taux sur les revenus de location meublée (LMNP) est de 18,6 %, et il change avec chaque budget : le chiffre est retiré des deux phrases (FR/EN), qui gardent leur sens. Aucun calcul d'impôt n'existe dans l'app.
 
 ### FIX : résiliation Stripe fiable — abonnements retrouvés par le client Stripe du compte (2026-10-13, #207)
 - Cause : résiliation et suppression de compte cherchaient l'abonnement par Stripe Search (metadata `rc_app_user_id`), à **cohérence différée** et lue sur 20 résultats sans pagination. Juste après un paiement, la recherche ne voyait rien : « aucun abonnement web » à la résiliation, et un compte supprimé restait prélevé. La suppression ne visait en plus que les comptes déjà marqués « web » par le webhook RevenueCat.
