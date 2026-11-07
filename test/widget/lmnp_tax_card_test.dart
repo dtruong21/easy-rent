@@ -79,6 +79,27 @@ String _eur(int cents) => MoneyFormat.formatEurosFromCents(cents);
 void main() {
   tearDown(() => debugIsStoreAppOverride = null);
 
+  testWidgets('visiteur sans compte (snapshot null) : carte verrouillée', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          landlordTierProvider.overrideWith((ref) => Stream.value(null)),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: supportedLocales,
+          locale: const Locale('fr'),
+          home: Scaffold(body: LmnpTaxCard(scenario: _caseA())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lmnp_locked')), findsOneWidget);
+    expect(find.byKey(const Key('lmnp_micro_total')), findsNothing);
+  });
+
   testWidgets('tier en chargement : ni carte verrouillée ni carte Pro', (
     tester,
   ) async {

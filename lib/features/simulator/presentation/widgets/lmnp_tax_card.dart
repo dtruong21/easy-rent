@@ -26,7 +26,7 @@ class LmnpTaxCard extends ConsumerWidget {
     final tierAsync = ref.watch(landlordTierProvider);
     // Tier pas encore résolu : rien, pour ne pas montrer le cadenas à un Pro.
     if (!tierAsync.hasValue) return const SizedBox.shrink();
-    final isPro = tierAsync.value!.plan.atLeast(PlanLevel.pro);
+    final isPro = tierAsync.value?.plan.atLeast(PlanLevel.pro) ?? false;
     final title = Text(
       l10n.simulatorLmnpCardTitle,
       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
