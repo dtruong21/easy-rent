@@ -870,4 +870,47 @@ void main() {
       expect(find.byKey(sectionKey, skipOffstage: false), findsNothing);
     });
   });
+
+  // go_router donne la même clé de page à `/simulator/A` et `/simulator/B` :
+  // la page est réutilisée, donc passer d'un scénario enregistré à un autre
+  // doit recharger le formulaire sans attendre une nouvelle page.
+  group('SimulatorPage — passage d\'un scénario enregistré à un autre', () {
+    String priceText(WidgetTester tester) {
+      final editable = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('field_purchase_price')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      return editable.controller.text;
+    }
+
+    testWidgets('/simulator/A puis /simulator/B → le formulaire montre B', (
+      tester,
+    ) async {
+      final other = _fakeScenario.copyWith(
+        id: 'scenario-def',
+        name: 'Autre scénario',
+        purchasePriceCents: 15000000,
+      );
+      final repo = _FakeRepo(scenarios: [_fakeScenario, other]);
+      await tester.pumpWidget(
+        _buildPage(repo: repo, initialLocation: '/simulator/scenario-abc'),
+      );
+      await tester.pumpAndSettle();
+      final priceA = priceText(tester);
+      expect(priceA, isNotEmpty);
+
+      GoRouter.of(
+        tester.element(find.byType(SimulatorPage)),
+      ).go('/simulator/scenario-def');
+      await tester.pumpAndSettle();
+
+      expect(priceText(tester), isNot(priceA));
+      expect(
+        priceText(tester).replaceAll(RegExp(r'\D'), ''),
+        startsWith('150000'),
+      );
+    });
+  });
 }

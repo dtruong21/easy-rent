@@ -30,7 +30,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-13)
+## Changements (2026-08-03 → 2026-11-07)
+
+### FIX : le simulateur recharge le scénario enregistré choisi (2026-11-07)
+- Sur `/simulator/:id`, choisir un autre scénario enregistré ne changeait rien : go_router donne la même clé de page à toutes les adresses `/simulator/:id`, la page était réutilisée et ne chargeait un scénario qu'à sa création. Le formulaire restait sur le premier scénario, et « Mettre à jour » aurait écrasé ce premier scénario. `SimulatorPage.didUpdateWidget` recharge désormais quand l'identifiant change. Test de non-régression dans `simulator_page_test.dart`.
 
 ### FIX : résiliation Stripe fiable — abonnements retrouvés par le client Stripe du compte (2026-10-13, #207)
 - Cause : résiliation et suppression de compte cherchaient l'abonnement par Stripe Search (metadata `rc_app_user_id`), à **cohérence différée** et lue sur 20 résultats sans pagination. Juste après un paiement, la recherche ne voyait rien : « aucun abonnement web » à la résiliation, et un compte supprimé restait prélevé. La suppression ne visait en plus que les comptes déjà marqués « web » par le webhook RevenueCat.
