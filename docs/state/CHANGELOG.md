@@ -36,7 +36,7 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 - Pour un bien meublé (LMNP longue durée), la carte « Fiscalité LMNP » compare le micro-BIC et le régime réel sur 10 ans : impôt, prélèvements sociaux, cash-flow après impôt, régime le plus favorable. Calcul pur dans `lmnp_tax_simulation.dart`, règles dans `lmnp_tax_rules.dart` (table « Règles 2026 »).
 - 4 nouveaux champs de scénario : `isFurnished` (défaut false), `furnitureCents` (≥ 0), `tmiPercent` ∈ {0, 11, 30, 41, 45} (défaut 30), `landSharePercent` 0–50 (défaut 15). Les scénarios existants n'ont pas de section fiscale.
 - Carte réservée à Pro ; verrouillée (teaser + bouton vers `/pro`) pour l'offre gratuite. La ligne « Simulation fiscale LMNP/LMP » disparaît de la section « bientôt disponible ». Apps store : pas de bouton d'achat si l'achat intégré est coupé.
-- ⚠️ **Redéploiement manuel des Functions requis** : `createScenario` valide et stocke les 4 champs.
+- ⚠️ **Redéploiement manuel des Functions requis** : `createScenario` valide et stocke les 4 champs. À déployer AVANT (ou en même temps que) la nouvelle app sur tout hosting, staging compris : un callable plus ancien ignore silencieusement `isFurnished`, `furnitureCents`, `tmiPercent`, `landSharePercent`. Le nouveau callable est rétrocompatible, le déployer d'abord est sans risque.
 - ⚠️ Valeurs 2026 (abattements, plafonds, taux 18,6 %, durées d'amortissement) à confirmer sur Légifrance / BOFiP ; la table est à mettre à jour après le vote de la loi de finances 2027.
 
 ### FIX : résiliation Stripe fiable — abonnements retrouvés par le client Stripe du compte (2026-10-13, #207)

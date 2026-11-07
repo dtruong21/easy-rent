@@ -77,7 +77,7 @@ n'indexe pas les loyers aujourd'hui).
 
 **Réel**, année n :
 - charges = taxe foncière + PNO + copropriété non récupérable + intérêts
-  d'emprunt de l'année n (échéancier déjà calculé par le simulateur) + frais de
+  d'emprunt et assurance emprunteur de l'année n (échéancier déjà calculé par le simulateur) + frais de
   notaire en année 1 ;
 - résultat avant amortissement = recettes − charges − déficit reporté
   (déficits de moins de 10 ans, les plus anciens d'abord) ; s'il est négatif,

@@ -44,7 +44,13 @@ class LmnpTaxRules {
   final int deficitCarryYears;
 }
 
-/// Loi de finances 2026 (promulguée en février 2026) + LFSS 2026.
+/// Règles applicables aux revenus 2026. Prélèvements sociaux 18,6 % : LFSS 2026
+/// (loi n° 2025-1403 du 30 décembre 2025, art. 12 — hausse de la CSG sur les
+/// revenus du patrimoine, dont les BIC de location meublée non professionnelle ;
+/// les revenus fonciers restent à 17,2 %). Plafond micro-BIC 83 600 € :
+/// revalorisation triennale applicable aux recettes 2026 à 2028 (art. 50-0
+/// CGI). Valeurs relevées sur des sources secondaires : à confirmer sur
+/// Légifrance / BOFiP.
 const LmnpTaxRules lmnpRules2026 = LmnpTaxRules(
   label: 'Règles 2026',
   microAbatementPercent: 50,

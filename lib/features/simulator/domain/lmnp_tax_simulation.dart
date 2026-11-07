@@ -117,6 +117,11 @@ LmnpTaxSimulation simulateLmnpTax(
       deficits.add((year: y, amount: -result));
       amortCarry += dotation;
     } else {
+      // ponytail: déficits antérieurs imputés avant l'amortissement ; l'art. 39 C
+      // plafonne l'amortissement au résultat de l'année avant imputation des
+      // déficits. L'imposable de chaque année est identique ; seul le stock
+      // reporté diffère, ce qui ne compte qu'après l'expiration d'un déficit
+      // (année 12+). À revoir si l'horizon dépasse 10 ans.
       for (var i = 0; i < deficits.length && result > 0; i++) {
         final used = math.min(deficits[i].amount, result);
         deficits[i] = (

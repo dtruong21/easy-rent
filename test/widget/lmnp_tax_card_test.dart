@@ -1,6 +1,8 @@
 /// Tests widget de [LmnpTaxCard] (FEAT-061) : carte Pro, variante verrouillée.
 library;
 
+import 'dart:async';
+
 import 'package:easyrent/core/config/store_billing.dart';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/utils/money_format.dart';
@@ -76,6 +78,27 @@ String _eur(int cents) => MoneyFormat.formatEurosFromCents(cents);
 
 void main() {
   tearDown(() => debugIsStoreAppOverride = null);
+
+  testWidgets('tier en chargement : ni carte verrouillée ni carte Pro', (
+    tester,
+  ) async {
+    final ctrl = StreamController<LandlordTierSnapshot>();
+    addTearDown(ctrl.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [landlordTierProvider.overrideWith((ref) => ctrl.stream)],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: supportedLocales,
+          locale: const Locale('fr'),
+          home: Scaffold(body: LmnpTaxCard(scenario: _caseA())),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('lmnp_locked')), findsNothing);
+    expect(find.byKey(const Key('lmnp_micro_total')), findsNothing);
+  });
 
   group('LmnpTaxCard — Pro', () {
     testWidgets('totaux micro / réel, badge, règles, tableau annuel', (
