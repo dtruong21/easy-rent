@@ -30,7 +30,14 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-10-13)
+## Changements (2026-08-03 → 2026-11-07)
+
+### FEAT-061 : simulation fiscale LMNP dans le simulateur (2026-11-07)
+- Pour un bien meublé (LMNP longue durée), la carte « Fiscalité LMNP » compare le micro-BIC et le régime réel sur 10 ans : impôt, prélèvements sociaux, cash-flow après impôt, régime le plus favorable. Calcul pur dans `lmnp_tax_simulation.dart`, règles dans `lmnp_tax_rules.dart` (table « Règles 2026 »).
+- 4 nouveaux champs de scénario : `isFurnished` (défaut false), `furnitureCents` (≥ 0), `tmiPercent` ∈ {0, 11, 30, 41, 45} (défaut 30), `landSharePercent` 0–50 (défaut 15). Les scénarios existants n'ont pas de section fiscale.
+- Carte réservée à Pro ; verrouillée (teaser + bouton vers `/pro`) pour l'offre gratuite. La ligne « Simulation fiscale LMNP/LMP » disparaît de la section « bientôt disponible ». Apps store : pas de bouton d'achat si l'achat intégré est coupé.
+- ⚠️ **Redéploiement manuel des Functions requis** : `createScenario` valide et stocke les 4 champs.
+- ⚠️ Valeurs 2026 (abattements, plafonds, taux 18,6 %, durées d'amortissement) à confirmer sur Légifrance / BOFiP ; la table est à mettre à jour après le vote de la loi de finances 2027.
 
 ### FIX : résiliation Stripe fiable — abonnements retrouvés par le client Stripe du compte (2026-10-13, #207)
 - Cause : résiliation et suppression de compte cherchaient l'abonnement par Stripe Search (metadata `rc_app_user_id`), à **cohérence différée** et lue sur 20 résultats sans pagination. Juste après un paiement, la recherche ne voyait rien : « aucun abonnement web » à la résiliation, et un compte supprimé restait prélevé. La suppression ne visait en plus que les comptes déjà marqués « web » par le webhook RevenueCat.

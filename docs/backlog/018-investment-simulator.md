@@ -12,7 +12,7 @@ Le simulateur est **entièrement découplé des biens existants** : il s'agit d'
 Hypothèses retenues (assumptions PO) :
 - Les scénarios sauvegardés sont liés au compte `landlord_id` (RLS standard).
 - Un scénario = un bien hypothétique + un financement + des paramètres d'exploitation.
-- La fiscalité détaillée (abattement micro vs régime réel) est **hors scope v1** : on affiche uniquement les indicateurs bruts/nets avant impôt.
+- La fiscalité détaillée (abattement micro vs régime réel) est **hors scope v1** : on affiche uniquement les indicateurs bruts/nets avant impôt. → **Réalisée en FEAT-061** (LMNP longue durée, Pro) : [spec](../superpowers/specs/2026-11-06-lmnp-tax-simulation-design.md).
 - La valeur future du bien est un calcul de revalorisation annuelle paramétrable (%, non une API externe).
 - La comparaison de scénarios est limitée à **3 scénarios** affichés côte à côte (table ou colonnes).
 
@@ -209,7 +209,7 @@ plus_value_brute = valeur_terme - coût_acquisition_total
 
 ## Out of scope
 
-- Simulation fiscalité détaillée (micro-foncier 30 %, micro-BIC 50 %, régime réel) — P2
+- Simulation fiscalité détaillée (micro-foncier 30 %, micro-BIC 50 %, régime réel) — **FEAT-061 pour le LMNP longue durée** (micro-BIC vs réel, [spec](../superpowers/specs/2026-11-06-lmnp-tax-simulation-design.md)) ; micro-foncier et autres régimes restent P2
 - Intégration API prix marché m² par ville (DVF, SeLoger) — P2
 - Stress test automatique (hausse de taux, vacance prolongée) — P2
 - Export PDF de la projection — P2

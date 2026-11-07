@@ -67,3 +67,4 @@ Statut : ✅ done | 🟢 ready | 🚧 wip | 📋 planned | 💡 idea. Historique
 | FEAT-058 | Onboarding progressif jusqu'à la 1re quittance | ✅ done | dashboard | feat/onboarding-to-first-receipt |
 | FEAT-059 | Cartes de liste « chiffre clé » + puces de filtre (biens, baux, locataires, quittances) | ✅ done | properties, leases, tenants, receipts | feat/list-summary-cards, docs/superpowers/specs/2026-09-29-mobile-list-cards-design.md |
 | FEAT-060 | Avis in-app + notation stores (fenêtre native après 15 j + 1 bien, « Noter l'app », carte web « Votre avis compte ») | ✅ done | account, dashboard | branche `feat/060-feedback-reviews`, docs/superpowers/specs/2026-10-09-feedback-store-reviews-design.md |
+| FEAT-061 | Simulation fiscale LMNP dans le simulateur (micro-BIC vs réel, 10 ans, Pro) | 🚧 wip | simulator | branche `feat/lmnp-tax-simulation` — implémenté, non mergé ni déployé · docs/superpowers/specs/2026-11-06-lmnp-tax-simulation-design.md |
