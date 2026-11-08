@@ -30,7 +30,10 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-11-06)
+## Changements (2026-08-03 → 2026-11-07)
+
+### FIX : le simulateur recharge le scénario enregistré choisi (2026-11-07)
+- Sur `/simulator/:id`, choisir un autre scénario enregistré ne changeait rien : go_router donne la même clé de page à toutes les adresses `/simulator/:id`, la page était réutilisée et ne chargeait un scénario qu'à sa création. Le formulaire restait sur le premier scénario, et « Mettre à jour » aurait écrasé ce premier scénario. `SimulatorPage.didUpdateWidget` recharge désormais quand l'identifiant change. Test de non-régression dans `simulator_page_test.dart`.
 
 ### FIX : avertissements « avant impôt » sans taux de prélèvements sociaux (2026-11-06)
 - La rentabilité d'un bien et le résultat du simulateur citaient « prélèvements sociaux (17,2 %) ». Depuis la LFSS 2026, le taux sur les revenus de location meublée (LMNP) est de 18,6 %, et il change avec chaque budget : le chiffre est retiré des deux phrases (FR/EN), qui gardent leur sens. Aucun calcul d'impôt n'existe dans l'app.
