@@ -1869,7 +1869,7 @@
       }
     }
   },
-  "propertiesProfitabilityDisclaimer": "Indicative estimate before tax — does not account for the tax regime or social security contributions (17.2%)",
+  "propertiesProfitabilityDisclaimer": "Indicative estimate before tax — does not account for the tax regime or social security contributions",
   "@propertiesProfitabilityDisclaimer": {
     "description": "Legal/financial disclaimer shown at the bottom of the profitability card."
   },
@@ -4940,9 +4940,9 @@
   "@simulatorResultsTitle": {
     "description": "Title of the KPI results card (ScenarioResultsCard) shown once the scenario has enough data to compute results."
   },
-  "simulatorResultsTaxDisclaimer": "Cash flow shown before tax — does not account for the tax regime or social security contributions (17.2%).",
+  "simulatorResultsTaxDisclaimer": "Cash flow shown before tax — does not account for the tax regime or social security contributions.",
   "@simulatorResultsTaxDisclaimer": {
-    "description": "Disclaimer tile under the KPI grid in the results card, clarifying the cash-flow figure is pre-tax. The 17.2% is a fixed constant (French social security contribution rate on rental income), not interpolated."
+    "description": "Disclaimer tile under the KPI grid in the results card, clarifying the cash-flow figure is pre-tax. No rate is shown on purpose: the social security contribution rate differs between furnished and unfurnished rentals and changes with each budget."
   },
   "simulatorKpiMonthlyPaymentLabel": "Total monthly payment",
   "@simulatorKpiMonthlyPaymentLabel": {

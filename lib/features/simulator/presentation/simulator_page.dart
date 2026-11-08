@@ -137,6 +137,20 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     }
   }
 
+  /// go_router donne la même clé de page à `/simulator/A` et `/simulator/B` :
+  /// passer d'un scénario enregistré à un autre réutilise cet état au lieu
+  /// d'en créer un nouveau. Sans ce rechargement, le formulaire restait sur
+  /// le premier scénario (et l'enregistrement aurait écrasé A avec ses
+  /// propres valeurs en croyant modifier B).
+  @override
+  void didUpdateWidget(covariant SimulatorPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.scenarioId != null &&
+        widget.scenarioId != oldWidget.scenarioId) {
+      _loadScenario();
+    }
+  }
+
   List<TextEditingController> get _allControllers => [
     _purchasePriceCtrl,
     _notaryFeesCtrl,

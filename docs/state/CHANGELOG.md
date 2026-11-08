@@ -30,14 +30,20 @@ fin (il avait atteint ~11k tokens avant l'archivage du 2026-07-30).
 3. **Ne jamais réécrire une archive** : elle est figée. On n'y corrige qu'une
    erreur factuelle avérée.
 
-## Changements (2026-08-03 → 2026-11-07)
+## Changements (2026-08-03 → 2026-11-08)
 
 ### FEAT-061 : simulation fiscale LMNP dans le simulateur (2026-11-07)
 - Pour un bien meublé (LMNP longue durée), la carte « Fiscalité LMNP » compare le micro-BIC et le régime réel sur 10 ans : impôt, prélèvements sociaux, cash-flow après impôt, régime le plus favorable. Calcul pur dans `lmnp_tax_simulation.dart`, règles dans `lmnp_tax_rules.dart` (table « Règles 2026 »).
 - 4 nouveaux champs de scénario : `isFurnished` (défaut false), `furnitureCents` (≥ 0), `tmiPercent` ∈ {0, 11, 30, 41, 45} (défaut 30), `landSharePercent` 0–50 (défaut 15). Les scénarios existants n'ont pas de section fiscale.
 - Carte réservée à Pro ; verrouillée (teaser + bouton vers `/pro`) pour l'offre gratuite. La ligne « Simulation fiscale LMNP/LMP » disparaît de la section « bientôt disponible ». Apps store : pas de bouton d'achat si l'achat intégré est coupé.
 - ⚠️ **Redéploiement manuel des Functions requis** : `createScenario` valide et stocke les 4 champs. À déployer AVANT (ou en même temps que) la nouvelle app sur tout hosting, staging compris : un callable plus ancien ignore silencieusement `isFurnished`, `furnitureCents`, `tmiPercent`, `landSharePercent`. Le nouveau callable est rétrocompatible, le déployer d'abord est sans risque.
-- ⚠️ Valeurs 2026 (abattements, plafonds, taux 18,6 %, durées d'amortissement) à confirmer sur Légifrance / BOFiP ; la table est à mettre à jour après le vote de la loi de finances 2027.
+- Valeurs 2026 vérifiées le 2026-11-08 sur les sites officiels : 18,6 % en meublé (impots.gouv.fr) ; plafond micro-BIC 83 600 €, abattement 50 % minimum 305 €, seuil LMP 23 000 € (economie.gouv.fr). Durées d'amortissement (30 / 15 / 7 ans) : usages courants, non fixées par la loi. La table est à mettre à jour après le vote de la loi de finances 2027.
+
+### FIX : le simulateur recharge le scénario enregistré choisi (2026-11-07)
+- Sur `/simulator/:id`, choisir un autre scénario enregistré ne changeait rien : go_router donne la même clé de page à toutes les adresses `/simulator/:id`, la page était réutilisée et ne chargeait un scénario qu'à sa création. Le formulaire restait sur le premier scénario, et « Mettre à jour » aurait écrasé ce premier scénario. `SimulatorPage.didUpdateWidget` recharge désormais quand l'identifiant change. Test de non-régression dans `simulator_page_test.dart`.
+
+### FIX : avertissements « avant impôt » sans taux de prélèvements sociaux (2026-11-06)
+- La rentabilité d'un bien et le résultat du simulateur citaient « prélèvements sociaux (17,2 %) ». Depuis la LFSS 2026, le taux sur les revenus de location meublée (LMNP) est de 18,6 %, et il change avec chaque budget : le chiffre est retiré des deux phrases (FR/EN), qui gardent leur sens. Aucun calcul d'impôt n'existe dans l'app.
 
 ### FIX : résiliation Stripe fiable — abonnements retrouvés par le client Stripe du compte (2026-10-13, #207)
 - Cause : résiliation et suppression de compte cherchaient l'abonnement par Stripe Search (metadata `rc_app_user_id`), à **cohérence différée** et lue sur 20 résultats sans pagination. Juste après un paiement, la recherche ne voyait rien : « aucun abonnement web » à la résiliation, et un compte supprimé restait prélevé. La suppression ne visait en plus que les comptes déjà marqués « web » par le webhook RevenueCat.
