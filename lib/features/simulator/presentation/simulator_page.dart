@@ -23,8 +23,10 @@ import '../../auth/presentation/widgets/quit_demo_dialog.dart';
 import '../application/scenario_limit_controller.dart';
 import '../data/investment_scenario_repository.dart';
 import '../domain/investment_scenario.dart';
+import '../domain/lmnp_tax_rules.dart';
 import '../domain/scenario_results.dart';
 import 'widgets/coming_soon_paid_plan_section.dart';
+import 'widgets/lmnp_tax_card.dart';
 import 'widgets/save_scenario_dialog.dart';
 import 'widgets/saved_scenarios_row.dart';
 import 'widgets/scenario_form_validators.dart';
@@ -94,6 +96,12 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
   final _insurancePnoCtrl = TextEditingController();
   final _condoFeesCtrl = TextEditingController();
 
+  // ── LMNP (FEAT-061) ──────────────────────────────────────────────────────
+  bool _isFurnished = false;
+  final _furnitureCtrl = TextEditingController();
+  int _tmiPercent = 30;
+  final _landShareCtrl = TextEditingController(text: '15');
+
   // ── Notes ────────────────────────────────────────────────────────────────
   final _notesCtrl = TextEditingController();
 
@@ -155,6 +163,8 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     _propertyTaxCtrl,
     _insurancePnoCtrl,
     _condoFeesCtrl,
+    _furnitureCtrl,
+    _landShareCtrl,
   ];
 
   @override
@@ -292,6 +302,12 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
     _condoFeesCtrl.text = s.condoFeesNonRecoverableCents > 0
         ? MoneyFormat.centsToInput(s.condoFeesNonRecoverableCents)
         : '';
+    _isFurnished = s.isFurnished;
+    _furnitureCtrl.text = s.furnitureCents > 0
+        ? MoneyFormat.centsToInput(s.furnitureCents)
+        : '';
+    _tmiPercent = kTmiChoices.contains(s.tmiPercent) ? s.tmiPercent : 30;
+    _landShareCtrl.text = s.landSharePercent.toString();
     _notesCtrl.text = s.notes ?? '';
   }
 
@@ -348,6 +364,13 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
           MoneyFormat.eurosToCents(_insurancePnoCtrl.text) ?? 0,
       condoFeesNonRecoverableCents:
           MoneyFormat.eurosToCents(_condoFeesCtrl.text) ?? 0,
+      isFurnished: _isFurnished,
+      furnitureCents: MoneyFormat.eurosToCents(_furnitureCtrl.text) ?? 0,
+      tmiPercent: _tmiPercent,
+      landSharePercent: (int.tryParse(_landShareCtrl.text.trim()) ?? 15).clamp(
+        0,
+        50,
+      ),
       createdAt: _loadedScenario?.createdAt ?? DateTime.now(),
       updatedAt: _loadedScenario?.updatedAt ?? DateTime.now(),
     );
@@ -404,6 +427,10 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
           propertyTaxAnnualCents: preview.propertyTaxAnnualCents,
           insurancePnoAnnualCents: preview.insurancePnoAnnualCents,
           condoFeesNonRecoverableCents: preview.condoFeesNonRecoverableCents,
+          isFurnished: preview.isFurnished,
+          furnitureCents: preview.furnitureCents,
+          tmiPercent: preview.tmiPercent,
+          landSharePercent: preview.landSharePercent,
           notes: _notesCtrl.text.trim().isNotEmpty
               ? _notesCtrl.text.trim()
               : null,
@@ -425,6 +452,10 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
           propertyTaxAnnualCents: preview.propertyTaxAnnualCents,
           insurancePnoAnnualCents: preview.insurancePnoAnnualCents,
           condoFeesNonRecoverableCents: preview.condoFeesNonRecoverableCents,
+          isFurnished: preview.isFurnished,
+          furnitureCents: preview.furnitureCents,
+          tmiPercent: preview.tmiPercent,
+          landSharePercent: preview.landSharePercent,
           notes: _notesCtrl.text.trim().isNotEmpty
               ? _notesCtrl.text.trim()
               : null,
@@ -586,6 +617,18 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                               propertyTaxCtrl: _propertyTaxCtrl,
                               insurancePnoCtrl: _insurancePnoCtrl,
                               condoFeesCtrl: _condoFeesCtrl,
+                              isFurnished: _isFurnished,
+                              onIsFurnishedChanged: (v) {
+                                setState(() => _isFurnished = v);
+                                _onFieldChanged();
+                              },
+                              furnitureCtrl: _furnitureCtrl,
+                              tmiPercent: _tmiPercent,
+                              onTmiChanged: (v) {
+                                setState(() => _tmiPercent = v);
+                                _onFieldChanged();
+                              },
+                              landShareCtrl: _landShareCtrl,
                               notesCtrl: _notesCtrl,
                             ),
                             SizedBox(height: spacing.lg),
@@ -593,6 +636,20 @@ class _SimulatorPageState extends ConsumerState<SimulatorPage> {
                             // Résultats KPI.
                             if (_results != null)
                               ScenarioResultsCard(results: _results!),
+                            if (_results != null && _isFurnished)
+                              Builder(
+                                builder: (context) {
+                                  final s = _buildScenarioFromForm();
+                                  return s == null
+                                      ? const SizedBox.shrink()
+                                      : Padding(
+                                          padding: EdgeInsets.only(
+                                            top: spacing.lg,
+                                          ),
+                                          child: LmnpTaxCard(scenario: s),
+                                        );
+                                },
+                              ),
                             if (_results == null) _EmptyResultsHint(),
 
                             SizedBox(height: spacing.lg),
@@ -758,6 +815,12 @@ class _ScenarioForm extends StatelessWidget {
     required this.propertyTaxCtrl,
     required this.insurancePnoCtrl,
     required this.condoFeesCtrl,
+    required this.isFurnished,
+    required this.onIsFurnishedChanged,
+    required this.furnitureCtrl,
+    required this.tmiPercent,
+    required this.onTmiChanged,
+    required this.landShareCtrl,
     required this.notesCtrl,
   });
 
@@ -775,6 +838,12 @@ class _ScenarioForm extends StatelessWidget {
   final TextEditingController propertyTaxCtrl;
   final TextEditingController insurancePnoCtrl;
   final TextEditingController condoFeesCtrl;
+  final bool isFurnished;
+  final ValueChanged<bool> onIsFurnishedChanged;
+  final TextEditingController furnitureCtrl;
+  final int tmiPercent;
+  final ValueChanged<int> onTmiChanged;
+  final TextEditingController landShareCtrl;
   final TextEditingController notesCtrl;
 
   @override
@@ -811,6 +880,17 @@ class _ScenarioForm extends StatelessWidget {
             propertyTaxCtrl: propertyTaxCtrl,
             insurancePnoCtrl: insurancePnoCtrl,
             condoFeesCtrl: condoFeesCtrl,
+          ),
+          const SizedBox(height: 8),
+
+          // LMNP (FEAT-061).
+          _LmnpSection(
+            isFurnished: isFurnished,
+            onIsFurnishedChanged: onIsFurnishedChanged,
+            furnitureCtrl: furnitureCtrl,
+            tmiPercent: tmiPercent,
+            onTmiChanged: onTmiChanged,
+            landShareCtrl: landShareCtrl,
           ),
           const SizedBox(height: 8),
 
@@ -1068,6 +1148,99 @@ class _ChargesSection extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _LmnpSection extends StatelessWidget {
+  const _LmnpSection({
+    required this.isFurnished,
+    required this.onIsFurnishedChanged,
+    required this.furnitureCtrl,
+    required this.tmiPercent,
+    required this.onTmiChanged,
+    required this.landShareCtrl,
+  });
+
+  final bool isFurnished;
+  final ValueChanged<bool> onIsFurnishedChanged;
+  final TextEditingController furnitureCtrl;
+  final int tmiPercent;
+  final ValueChanged<int> onTmiChanged;
+  final TextEditingController landShareCtrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      children: [
+        SwitchListTile(
+          key: const Key('lmnp_furnished_switch'),
+          title: Text(l10n.simulatorLmnpFurnishedLabel),
+          subtitle: Text(l10n.simulatorLmnpFurnishedHelper),
+          value: isFurnished,
+          onChanged: onIsFurnishedChanged,
+        ),
+        if (isFurnished)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              children: [
+                _EuroField(
+                  key: const Key('lmnp_furniture_field'),
+                  controller: furnitureCtrl,
+                  label: l10n.simulatorLmnpFurnitureLabel,
+                  validator: (v) =>
+                      ScenarioFormValidators.validateOptionalPositiveAmount(
+                        v,
+                      )?.message(context),
+                ),
+                const SizedBox(height: 12),
+                // initialValue n'est lu qu'à la construction : on reconstruit
+                // quand la tranche change (chargement d'un autre scénario).
+                KeyedSubtree(
+                  key: ValueKey('lmnp_tmi_$tmiPercent'),
+                  child: DropdownButtonFormField<int>(
+                    key: const Key('lmnp_tmi_dropdown'),
+                    initialValue: tmiPercent,
+                    decoration: InputDecoration(
+                      labelText: l10n.simulatorLmnpTmiLabel,
+                    ),
+                    items: [
+                      for (final v in kTmiChoices)
+                        DropdownMenuItem(
+                          value: v,
+                          child: Text(l10n.simulatorLmnpTmiOption(v)),
+                        ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) onTmiChanged(v);
+                    },
+                  ),
+                ),
+                ExpansionTile(
+                  title: Text(l10n.simulatorLmnpAdvancedTitle),
+                  maintainState: true,
+                  children: [
+                    TextFormField(
+                      key: const Key('lmnp_land_share_field'),
+                      controller: landShareCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.simulatorLmnpLandShareLabel,
+                        suffixText: '%',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) =>
+                          ScenarioFormValidators.validateLandShare(
+                            v,
+                          )?.message(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

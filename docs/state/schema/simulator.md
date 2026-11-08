@@ -32,4 +32,13 @@ Simulateur immobilier. Accessible anonymes + comptes. **CRÉATION : callable-exc
 
 **Triggers** : setUpdatedAt.
 
+**Champs LMNP** (FEAT-061) — posés en racine **et** dans `scenarioJson` ; absents des scénarios anciens (défauts à la lecture) :
+
+| Champ | Type | Défaut | Bornes |
+|---|---|---|---|
+| `isFurnished` | bool | `false` | — (active la section fiscale) |
+| `furnitureCents` | int | 0 | ≥ 0 (centimes, amorti 7 ans) |
+| `tmiPercent` | int | 30 | ∈ {0, 11, 30, 41, 45} |
+| `landSharePercent` | int | 15 | 0–50 |
+
 **Quotas de scénarios** (FEAT-056) : anonymous=1 · free=3 · pro=15 · max=30 · ultra=null (illimité). Source canonique `config/entitlements.json`, appliqué par la callable `createScenario` (count live, pas de compteur dénormalisé).

@@ -53,6 +53,10 @@ class _FakeScenarioRepo implements InvestmentScenarioRepository {
     int propertyTaxAnnualCents = 0,
     int insurancePnoAnnualCents = 0,
     int condoFeesNonRecoverableCents = 0,
+    bool isFurnished = false,
+    int furnitureCents = 0,
+    int tmiPercent = 30,
+    int landSharePercent = 15,
     String? notes,
   }) async {
     throw StateError('create should not be reached when limit is hit');

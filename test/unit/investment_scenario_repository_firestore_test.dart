@@ -63,6 +63,10 @@ const _scenarioFinancialKeys = <String>[
   'propertyTaxAnnualCents',
   'insurancePnoAnnualCents',
   'condoFeesNonRecoverableCents',
+  'isFurnished',
+  'furnitureCents',
+  'tmiPercent',
+  'landSharePercent',
 ];
 
 /// [FirebaseFunctions] qui enregistre les callables invoquées — et simule,
@@ -255,6 +259,23 @@ void main() {
       expect(json['propertyTaxAnnualCents'], 90000);
     });
 
+    test('create() transmet les 4 clés LMNP à la callable', () async {
+      await repo.create(
+        name: 'Meublé',
+        purchasePriceCents: 10000000,
+        monthlyRentHcCents: 50000,
+        isFurnished: true,
+        furnitureCents: 700000,
+        tmiPercent: 41,
+        landSharePercent: 20,
+      );
+      final p = functions.invocations.single.params! as Map;
+      expect(p['isFurnished'], true);
+      expect(p['furnitureCents'], 700000);
+      expect(p['tmiPercent'], 41);
+      expect(p['landSharePercent'], 20);
+    });
+
     test('trim le nom avant écriture', () async {
       final created = await repo.create(
         name: '   Duplex Nantes   ',
@@ -332,6 +353,38 @@ void main() {
   });
 
   group('FirestoreInvestmentScenarioRepository — update()', () {
+    test('écrit les champs LMNP à la racine et dans scenarioJson', () async {
+      final created = await createSample();
+      final updated = await repo.update(
+        created.copyWith(
+          isFurnished: true,
+          furnitureCents: 700000,
+          tmiPercent: 41,
+          landSharePercent: 20,
+        ),
+      );
+      expect(updated.isFurnished, isTrue);
+      expect(updated.furnitureCents, 700000);
+      expect(updated.tmiPercent, 41);
+      expect(updated.landSharePercent, 20);
+
+      final data =
+          (await firestore
+                  .collection('investment_scenarios')
+                  .doc(created.id)
+                  .get())
+              .data()!;
+      final json = data['scenarioJson'] as Map<String, dynamic>;
+      for (final m in [data, json]) {
+        expect(m['isFurnished'], true);
+        expect(m['furnitureCents'], 700000);
+        expect(m['tmiPercent'], 41);
+        expect(m['landSharePercent'], 20);
+      }
+      final again = await repo.getById(created.id);
+      expect(again.tmiPercent, 41);
+    });
+
     test('met à jour le doc et re-hydrate le modèle', () async {
       final created = await createSample();
 

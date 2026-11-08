@@ -4807,6 +4807,123 @@
   "@simulatorFieldCondoFeesHelper": {
     "description": "Helper text under the condo fees field listing examples. ALUR refers to the French 'loi ALUR' mandatory works reserve fund for co-ownerships, kept untranslated as a legal reference."
   },
+  "simulatorLmnpFurnishedLabel": "Furnished rental (LMNP)",
+  "@simulatorLmnpFurnishedLabel": {
+    "description": "Label of the switch marking the property as a furnished rental (LMNP) in the investment simulator."
+  },
+  "simulatorLmnpFurnishedHelper": "Long-term furnished rental: compares micro-BIC and actual regime",
+  "@simulatorLmnpFurnishedHelper": {
+    "description": "Helper under the furnished (LMNP) switch."
+  },
+  "simulatorLmnpFurnitureLabel": "Furniture (€)",
+  "@simulatorLmnpFurnitureLabel": {
+    "description": "Label of the furniture amount field (LMNP)."
+  },
+  "simulatorLmnpTmiLabel": "Marginal tax rate",
+  "@simulatorLmnpTmiLabel": {
+    "description": "Label of the marginal tax rate (TMI) dropdown."
+  },
+  "simulatorLmnpTmiOption": "{rate}%",
+  "@simulatorLmnpTmiOption": {
+    "description": "Option of the marginal tax rate dropdown; rate is a percentage integer.",
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "simulatorLmnpAdvancedTitle": "Advanced settings",
+  "@simulatorLmnpAdvancedTitle": {
+    "description": "Title of the collapsible advanced settings block of the LMNP inputs."
+  },
+  "simulatorLmnpLandShareLabel": "Land share of the price (%)",
+  "@simulatorLmnpLandShareLabel": {
+    "description": "Label of the land share field (percentage of the purchase price)."
+  },
+  "simulatorLmnpLandShareError": "Between 0 and 50%",
+  "@simulatorLmnpLandShareError": {
+    "description": "Validation error for the land share field outside 0-50%. Also used as ValidationError.scenarioLandShareInvalid message."
+  },
+  "simulatorLmnpCardTitle": "LMNP taxation",
+  "@simulatorLmnpCardTitle": {
+    "description": "Title of the LMNP tax results card in the investment simulator."
+  },
+  "simulatorLmnpMicroTitle": "Micro-BIC",
+  "@simulatorLmnpMicroTitle": {
+    "description": "Column title of the micro-BIC regime in the LMNP tax card."
+  },
+  "simulatorLmnpReelTitle": "Actual regime",
+  "@simulatorLmnpReelTitle": {
+    "description": "Column title of the actual (r\u00e9el) regime in the LMNP tax card."
+  },
+  "simulatorLmnpYear1Tax": "Tax + social charges (year 1)",
+  "@simulatorLmnpYear1Tax": {
+    "description": "Label of the year-1 income tax plus social charges amount in the LMNP tax card."
+  },
+  "simulatorLmnpTotalTax": "10-year total",
+  "@simulatorLmnpTotalTax": {
+    "description": "Label of the 10-year total tax amount in the LMNP tax card."
+  },
+  "simulatorLmnpCashflowAfterTax": "Cash flow after tax (10 years)",
+  "@simulatorLmnpCashflowAfterTax": {
+    "description": "Label of the cumulated 10-year cash flow after tax in the LMNP tax card."
+  },
+  "simulatorLmnpBestBadge": "Most favourable",
+  "@simulatorLmnpBestBadge": {
+    "description": "Badge on the regime with the lowest 10-year tax in the LMNP tax card."
+  },
+  "simulatorLmnpYearlyToggle": "Year-by-year detail",
+  "@simulatorLmnpYearlyToggle": {
+    "description": "Title of the expandable yearly table in the LMNP tax card."
+  },
+  "simulatorLmnpMicroUnavailable": "Not available: rent above €83,600 a year",
+  "@simulatorLmnpMicroUnavailable": {
+    "description": "Shown instead of micro-BIC figures when annual rent exceeds the micro-BIC ceiling."
+  },
+  "simulatorLmnpWarningLmp": "Above €23,000 of rent a year, professional landlord status (LMP) may apply; it is not simulated.",
+  "@simulatorLmnpWarningLmp": {
+    "description": "Warning shown when annual rent exceeds the LMP threshold."
+  },
+  "simulatorLmnpWarningResale": "On resale, deducted depreciation is added back to the capital gain (2025 Finance Act).",
+  "@simulatorLmnpWarningResale": {
+    "description": "Always-shown warning about depreciation recapture on resale."
+  },
+  "simulatorLmnpWarningReform": "Calculated with 2026 rules; a depreciation reform is under discussion for 2027.",
+  "@simulatorLmnpWarningReform": {
+    "description": "Always-shown warning about the possible 2027 depreciation reform."
+  },
+  "simulatorLmnpDisclaimer": "Indicative estimate, not financial or tax advice.",
+  "@simulatorLmnpDisclaimer": {
+    "description": "Disclaimer at the bottom of the LMNP tax card."
+  },
+  "simulatorLmnpLockedBody": "Compare micro-BIC and the actual regime over 10 years with the Pro plan.",
+  "@simulatorLmnpLockedBody": {
+    "description": "Body of the locked LMNP tax card shown to non-Pro users."
+  },
+  "simulatorLmnpUpgradeButton": "Upgrade to Pro",
+  "@simulatorLmnpUpgradeButton": {
+    "description": "Button of the locked LMNP tax card leading to the Pro pricing page."
+  },
+  "simulatorLmnpColYear": "Year",
+  "@simulatorLmnpColYear": {
+    "description": "Column header of the yearly detail table in the LMNP tax card."
+  },
+  "simulatorLmnpColTaxable": "Taxable",
+  "@simulatorLmnpColTaxable": {
+    "description": "Column header of the yearly detail table in the LMNP tax card."
+  },
+  "simulatorLmnpColIncomeTax": "Income tax",
+  "@simulatorLmnpColIncomeTax": {
+    "description": "Column header of the yearly detail table in the LMNP tax card."
+  },
+  "simulatorLmnpColSocial": "Social charges",
+  "@simulatorLmnpColSocial": {
+    "description": "Column header of the yearly detail table in the LMNP tax card."
+  },
+  "simulatorLmnpColCashflow": "Cash flow",
+  "@simulatorLmnpColCashflow": {
+    "description": "Column header of the yearly detail table in the LMNP tax card."
+  },
   "simulatorSectionNotes": "Notes",
   "@simulatorSectionNotes": {
     "description": "ExpansionTile section title (collapsed by default) grouping the free-form notes field in the scenario form."
@@ -4972,10 +5089,6 @@
   "simulatorPaidPlanFeatureRateSensitivity": "Interest rate sensitivity analysis",
   "@simulatorPaidPlanFeatureRateSensitivity": {
     "description": "Upcoming Pro-plan feature label, listed in the 'Coming soon' section on the simulator page."
-  },
-  "simulatorPaidPlanFeatureTaxSimulation": "LMNP/LMP tax simulation",
-  "@simulatorPaidPlanFeatureTaxSimulation": {
-    "description": "Upcoming Pro-plan feature label, listed in the 'Coming soon' section on the simulator page. LMNP/LMP are French furnished-rental tax statuses, kept untranslated as domain-specific acronyms."
   },
   "simulatorPaidPlanFeatureExportPdf": "Professional PDF export",
   "@simulatorPaidPlanFeatureExportPdf": {
