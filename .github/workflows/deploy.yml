@@ -59,7 +59,7 @@ jobs:
             echo "env_name=production" >> $GITHUB_OUTPUT
             echo "app_env=prod" >> $GITHUB_OUTPUT
             echo "hosting_target=prod" >> $GITHUB_OUTPUT
-            echo "public_url=https://baillan.com" >> $GITHUB_OUTPUT
+            echo "public_url=https://app.baillan.com" >> $GITHUB_OUTPUT
             # PROD : abonnement Pro FERMÉ pendant la beta v1 (ouverture ~2026-08-25).
             echo "subscriptions_enabled=false" >> $GITHUB_OUTPUT
             # Rules + indexes sur la base de PROD uniquement, plus les rules

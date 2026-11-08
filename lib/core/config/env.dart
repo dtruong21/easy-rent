@@ -49,7 +49,7 @@ class Env {
   /// (vérification, reset password) et les connexions Google/Apple échouent.
   static const String publicAppUrl = String.fromEnvironment(
     'APP_PUBLIC_URL',
-    defaultValue: 'https://baillan.com',
+    defaultValue: 'https://app.baillan.com',
   );
 
   /// `true` si on tourne en environnement de prod.
@@ -154,7 +154,7 @@ class Env {
   /// sortie `subscriptions_enabled` de `determine-env`) :
   /// - **staging** (`develop` → app.staging.baillan.com) : `true` — le parcours
   ///   d'abonnement reste ouvert pour poursuivre le développement.
-  /// - **production** (`main` → baillan.com) : `false` — fermé pendant la beta
+  /// - **production** (`main` → app.baillan.com) : `false` — fermé pendant la beta
   ///   v1 freemium, ouverture prévue ~2026-08-25.
   ///
   /// Le `defaultValue: false` ci-dessous est le **mode d'échec sûr** : un build
