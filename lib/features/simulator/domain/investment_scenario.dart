@@ -60,6 +60,19 @@ class InvestmentScenario with _$InvestmentScenario {
     @Default(0)
     int condoFeesNonRecoverableCents,
 
+    /// FEAT-061 — bien loué meublé (LMNP longue durée) : active la simulation
+    /// fiscale. Défaut false : les scénarios existants n'en ont pas.
+    @JsonKey(name: 'is_furnished') @Default(false) bool isFurnished,
+
+    /// FEAT-061 — mobilier (centimes), amorti sur 7 ans au réel.
+    @JsonKey(name: 'furniture_cents') @Default(0) int furnitureCents,
+
+    /// FEAT-061 — tranche marginale d'imposition (%), parmi `kTmiChoices`.
+    @JsonKey(name: 'tmi_percent') @Default(30) int tmiPercent,
+
+    /// FEAT-061 — part du terrain dans le prix (%), non amortissable.
+    @JsonKey(name: 'land_share_percent') @Default(15) int landSharePercent,
+
     /// Notes libres (max 2000 caractères, optionnel).
     String? notes,
 

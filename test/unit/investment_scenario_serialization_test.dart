@@ -202,4 +202,33 @@ void main() {
       expect(modified.loanRateBps, original.loanRateBps);
     });
   });
+
+  group('champs LMNP (FEAT-061)', () {
+    test('JSON sans les 4 clés → défauts', () {
+      final s = InvestmentScenario.fromJson(_jsonMinimal());
+      expect(s.isFurnished, isFalse);
+      expect(s.furnitureCents, 0);
+      expect(s.tmiPercent, 30);
+      expect(s.landSharePercent, 15);
+    });
+
+    test('round-trip avec valeurs explicites, toJson en snake_case', () {
+      final s = InvestmentScenario.fromJson({
+        ..._jsonMinimal(),
+        'is_furnished': true,
+        'furniture_cents': 700000,
+        'tmi_percent': 41,
+        'land_share_percent': 20,
+      });
+      expect(s.isFurnished, isTrue);
+      expect(s.furnitureCents, 700000);
+      expect(s.tmiPercent, 41);
+      expect(s.landSharePercent, 20);
+      final j = s.toJson();
+      expect(j['is_furnished'], true);
+      expect(j['furniture_cents'], 700000);
+      expect(j['tmi_percent'], 41);
+      expect(j['land_share_percent'], 20);
+    });
+  });
 }

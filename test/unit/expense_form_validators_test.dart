@@ -3,6 +3,7 @@
 library;
 
 import 'package:easyrent/core/utils/expense_form_validators.dart';
+import 'package:easyrent/core/validation/validation_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -133,6 +134,62 @@ void main() {
     test('texte > 2000 caractères → refusé', () {
       final tooLong = 'a' * 2001;
       expect(ExpenseFormValidators.validateNotes(tooLong), isNotNull);
+    });
+  });
+
+  group('ExpenseFormValidators.validateRecurrenceEndDate', () {
+    test('null → null (récurrence sans fin prévue, cas nominal)', () {
+      expect(
+        ExpenseFormValidators.validateRecurrenceEndDate(
+          null,
+          DateTime(2026, 1, 1),
+        ),
+        isNull,
+      );
+    });
+
+    test('fin postérieure à la date de la dépense → null', () {
+      expect(
+        ExpenseFormValidators.validateRecurrenceEndDate(
+          DateTime(2027, 12, 31),
+          DateTime(2026, 1, 1),
+        ),
+        isNull,
+      );
+    });
+
+    test(
+      'fin égale à la date de la dépense → accepté (une seule échéance)',
+      () {
+        expect(
+          ExpenseFormValidators.validateRecurrenceEndDate(
+            DateTime(2026, 1, 1),
+            DateTime(2026, 1, 1),
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test('fin antérieure à la date de la dépense → refusé (la récurrence '
+        'n\'aurait aucune échéance)', () {
+      expect(
+        ExpenseFormValidators.validateRecurrenceEndDate(
+          DateTime(2025, 12, 31),
+          DateTime(2026, 1, 1),
+        ),
+        ValidationError.recurrenceEndBeforeExpenseDate,
+      );
+    });
+
+    test('date hors bornes → dateOutOfRange', () {
+      expect(
+        ExpenseFormValidators.validateRecurrenceEndDate(
+          DateTime(1800, 1, 1),
+          DateTime(1700, 1, 1),
+        ),
+        ValidationError.dateOutOfRange,
+      );
     });
   });
 }

@@ -1,7 +1,7 @@
 /// Tests du contrat [PaymentRepository] via un fake in-memory.
 ///
-/// NOTE : [SupabasePaymentRepository] utilise [Db.from()] qui dépend de
-/// [Supabase.instance.client] — non initialisé en test unitaire.
+/// NOTE : [FirestorePaymentRepository] utilise [FirebaseFirestore] qui dépend de
+/// [FirebaseFirestore.instance] — non initialisé en test unitaire.
 /// On teste donc le contrat de l'interface + les invariants du fake.
 /// La vérification du payload SQL (absence de `id`/timestamps,
 /// présence de `landlord_id`, appel RPC `soft_delete_payment`) est

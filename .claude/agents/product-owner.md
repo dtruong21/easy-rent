@@ -36,7 +36,7 @@ En tant que **<role>**, je veux **<action>** afin de **<bénéfice>**.
 <Ce qui N'EST PAS dans cette feature pour éviter le scope creep>
 
 ## Dependencies
-- Tables Supabase : <liste>
+- Collections Firestore : <liste>
 - Features bloquantes : <liste>
 
 ## Legal / compliance notes

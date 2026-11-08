@@ -340,6 +340,9 @@ class _BirthDateField extends StatelessWidget {
               onTap: enabled
                   ? () async {
                       onTouched();
+                      // Sans ça, la fermeture du sélecteur rend le focus au dernier champ
+                      // saisi et rouvre le clavier (recette iOS, #197).
+                      FocusManager.instance.primaryFocus?.unfocus();
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: initialDate.isBefore(maxDate)

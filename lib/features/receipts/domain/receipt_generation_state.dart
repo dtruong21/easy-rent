@@ -7,10 +7,10 @@ part 'receipt_generation_state.freezed.dart';
 /// État UI du flow de génération d'une quittance.
 ///
 /// - [idle] : bouton prêt à l'action.
-/// - [submitting] : appel Edge Function en cours, bouton désactivé.
+/// - [submitting] : appel Cloud Function en cours, bouton désactivé.
 /// - [success] : quittance générée — contient le résultat + URL signée.
 /// - [error] : échec, message en français affiché via SnackBar.
-/// - [profileIncomplete] : Edge Function a retourné 422 `profile_incomplete`.
+/// - [profileIncomplete] : Cloud Function a retourné 422 `profile_incomplete`.
 ///   L'UI doit afficher [ProfileIncompleteDialog] avec la liste des champs manquants.
 @freezed
 sealed class ReceiptGenerationState with _$ReceiptGenerationState {
@@ -25,7 +25,7 @@ sealed class ReceiptGenerationState with _$ReceiptGenerationState {
     required ReceiptGenerationResult result,
   }) = _Success;
 
-  /// Erreur retournée par l'Edge Function ou réseau.
+  /// Erreur retournée par la Cloud Function ou réseau.
   const factory ReceiptGenerationState.error({required String message}) =
       _Error;
 

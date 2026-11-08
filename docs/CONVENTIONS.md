@@ -12,22 +12,45 @@
 - Widgets : < 200 lignes, sinon extract
 - Secrets : `--dart-define`, jamais en dur
 
-## Supabase
+## Firestore
 
-- Migrations versionnées : `supabase/migrations/<YYYYMMDDHHMMSS>_<desc>.sql`
-- **RLS activée sur toutes les tables**
-- Policy template :
-  ```sql
-  CREATE POLICY "landlord_owns_<table>"
-  ON <table> FOR ALL
-  USING (landlord_id = auth.uid())
-  WITH CHECK (landlord_id = auth.uid());
-  ```
-- Tous les FK ont un index
-- Toutes les tables ont `created_at timestamptz default now()` + `updated_at`
-- Soft-delete (`deleted_at`) plutôt que DELETE pour les entités à rétention légale
-- Storage : buckets privés, paths préfixés par `auth.uid()`
-- Edge Functions : Deno + TypeScript, validation Zod, vérif JWT
+> Pivot FEAT-019 (2026-06-30) : migration du backend vers Firestore. État détaillé et
+> faisant autorité : [`docs/state/schema/`](state/schema/README.md).
+
+- Champs en **camelCase**. Montants en **centimes** (`*Cents`, int). Dates =
+  `timestamp`. IDs = UUID string, sauf `landlords` / `paid_plan_interest` dont
+  le docId **est** l'UID Firebase Auth.
+- **Règles obligatoires sur toutes les collections**, deny-by-default +
+  allowlist. Helpers de `firestore.rules` : `isOwner`, `isActive`,
+  `preservesImmutables`, `isFullyAuthed`, `isAnonymous`, `isSignedIn`.
+- **`allow list: if isOwner(resource.data.landlordId)`** sur les collections
+  multi-tenant → toute query **doit** porter `where('landlordId','==',uid)`.
+  Les règles ne sont pas des filtres : sans le `where`, la query échoue.
+- **Soft-delete** : `deletedAt` timestamp\|null, jamais de hard-delete client
+  (`delete` interdit dans les rules). La suppression passe par le callable
+  `softDeleteEntity`. `receipts` est exclu (rétention légale 5 ans).
+- **Immutables** côté client : `landlordId`, `createdAt`, `deletedAt` —
+  protégés par `preservesImmutables()`.
+- Toute query filtrant `deletedAt` a son **index composite** déclaré dans
+  `firestore.indexes.json` (28 à ce jour).
+- **Cloud Functions** : Node 22 + TypeScript, dans `functions/src/`
+  (`callable/`, `triggers/`, `scheduled/`, `http/`). Les écritures sensibles
+  (`leases`, `payments`, `documents`, `expenses`) sont **exclusives aux CF** —
+  le client n'écrit pas directement.
+- **Storage** : buckets privés, signed URLs 5 min, paths préfixés par l'UID.
+
+## Cloud Storage (CLI)
+
+- **`gcloud storage`, jamais `gsutil`.** Google retire `gsutil` du bundle
+  `gcloud` par défaut à partir de **mars 2027** ; il faudra alors l'installer
+  séparément via PyPI et configurer son auth à part (le standalone ne partage
+  pas les credentials `gcloud`).
+- Équivalents usuels : `gsutil cp` → `gcloud storage cp`, `gsutil rsync` →
+  `gcloud storage rsync`, `gsutil ls` → `gcloud storage ls`.
+- S'applique aux scripts de backup/migration de buckets (le bucket Firebase
+  Storage du projet `easy-rent-54cd4` est un bucket GCS).
+- Le déploiement courant n'utilise **ni `gcloud` ni `gsutil`** : `firebase-tools`
+  passe par l'API REST. Cette règle vaut pour tout script ajouté plus tard.
 
 ## Navigation & UX (FEAT-026)
 
@@ -56,23 +79,35 @@
 
 ## Git
 
-- Branche : `feat/<slug>`, `fix/<slug>`, `chore/<slug>`
+> Modèle complet (releases, hotfixes, back-merge) :
+> [`docs/GITFLOW.md`](GITFLOW.md).
+
+- Branche : `feat/<slug>`, `fix/<slug>`, `chore/<slug>`, `docs/<slug>` —
+  toujours **depuis `develop`**
 - Commits conventionnels : `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`
-- PR vers `main` obligatoire, squash merge
-- Branch protection : `main` ne reçoit pas de push direct
+- **PR vers `develop`** (pas `main`), squash merge. `develop` déploie sur
+  staging ; la promotion `develop` → `main` déploie en prod.
+- Hotfix critique uniquement : branche depuis `main`, puis back-merge `develop`
+- Branch protection : ni `main` ni `develop` ne reçoivent de push direct
 
 ## Structure dossiers
 
 ```
 EasyRent/
-├── lib/                       # Code Flutter
-├── test/                      # Tests Dart
-├── integration_test/          # Tests E2E
+├── lib/                       # Code Flutter (core/, features/, l10n/)
+├── test/                      # Tests Dart (unit/, widget/, integration/, core/, l10n/)
 ├── web/                       # Assets PWA
-├── supabase/
-│   ├── migrations/
-│   ├── functions/
-│   └── tests/
+├── android/ ios/              # Apps natives (FEAT-024)
+├── assets/                    # Fonts, images
+├── tool/                      # Scripts Dart (branding/, release/, seed/)
+├── functions/                 # Cloud Functions Node 22 + TS
+│   ├── src/                   # callable/ triggers/ scheduled/ http/ utils/
+│   ├── rules-tests/           # Tests règles Firestore (émulateur)
+│   └── scripts/
+├── firestore.rules            # Règles (deny-by-default)
+├── firestore.indexes.json     # 28 index composites
+├── storage.rules
+├── firebase.json
 ├── docs/
 │   ├── ROADMAP.md
 │   ├── BACKLOG.md
@@ -100,7 +135,12 @@ EasyRent/
 
 - Unit : `test/unit/...`
 - Widget : `test/widget/...`
-- Integration : `integration_test/`
-- RLS : `supabase/tests/rls_<table>.sql`
+- Integration : `test/integration/...`
+- Cloud Functions : `functions/src/__tests__/` (vitest) → `npm test` dans `functions/`
+- Règles Firestore + Storage : `functions/rules-tests/firestore_rules.test.ts` et
+  `functions/rules-tests/storage_rules.test.ts` → `npm run test:rules` (lance les
+  émulateurs Firestore **et** Storage, projet `demo-easyrent`).
+  **Toujours tester le cross-user** : un landlord ne doit jamais lire/écrire
+  les documents d'un autre (cf. DoD dans `CLAUDE.md`).
 - Toujours tester le chemin malheureux (inputs invalides, erreurs réseau, états vides)
 - Locale française dans les tests (dates, devise)

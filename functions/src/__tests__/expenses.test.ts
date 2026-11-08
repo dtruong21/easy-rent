@@ -8,10 +8,12 @@ import {
   deriveExpenseCategory,
   deriveExpensePeriodYear,
   NATURE_DEFAULT_CATEGORY,
+  resolveExpenseRecurrence,
   updateExpense,
 } from "../callable/expenses";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // ----------------------------------------------------------------------------
 // Mock `firebase-admin` — cf. helpers/fake_firestore.ts pour la justification
@@ -33,7 +35,7 @@ let fakeDb: FakeFirestore;
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }
@@ -190,6 +192,93 @@ describe("deriveExpensePeriodYear", () => {
 });
 
 // ============================================================================
+// resolveExpenseRecurrence — récurrence virtuelle (FEAT-041d)
+// ============================================================================
+describe("resolveExpenseRecurrence", () => {
+  const expenseDate = Timestamp.fromDate(new Date("2026-03-15T00:00:00Z"));
+
+  it("absence de recurrence → 'none' (dépenses créées avant FEAT-041d)", () => {
+    expect(
+      resolveExpenseRecurrence({
+        recurrence: null,
+        recurrenceEndDate: null,
+        expenseDate,
+      }),
+    ).toEqual({recurrence: "none", recurrenceEndDate: null});
+  });
+
+  it("refuse une périodicité inconnue", () => {
+    expect(() =>
+      resolveExpenseRecurrence({
+        recurrence: "weekly",
+        recurrenceEndDate: null,
+        expenseDate,
+      }),
+    ).toThrowError(HttpsError);
+  });
+
+  it("normalise à null la date de fin d'une dépense ponctuelle", () => {
+    expect(
+      resolveExpenseRecurrence({
+        recurrence: "none",
+        recurrenceEndDate: Timestamp.fromDate(
+          new Date("2027-01-01T00:00:00Z"),
+        ),
+        expenseDate,
+      }),
+    ).toEqual({recurrence: "none", recurrenceEndDate: null});
+  });
+
+  it("accepte une récurrence sans date de fin (cas nominal)", () => {
+    expect(
+      resolveExpenseRecurrence({
+        recurrence: "quarterly",
+        recurrenceEndDate: null,
+        expenseDate,
+      }),
+    ).toEqual({recurrence: "quarterly", recurrenceEndDate: null});
+  });
+
+  it("accepte une fin postérieure ou égale à la première échéance", () => {
+    const end = Timestamp.fromDate(new Date("2027-03-15T00:00:00Z"));
+    expect(
+      resolveExpenseRecurrence({
+        recurrence: "yearly",
+        recurrenceEndDate: end,
+        expenseDate,
+      }).recurrenceEndDate,
+    ).toEqual(end);
+
+    expect(
+      resolveExpenseRecurrence({
+        recurrence: "yearly",
+        recurrenceEndDate: expenseDate,
+        expenseDate,
+      }).recurrenceEndDate,
+    ).toEqual(expenseDate);
+  });
+
+  it("refuse une fin antérieure à la première échéance", () => {
+    try {
+      resolveExpenseRecurrence({
+        recurrence: "monthly",
+        recurrenceEndDate: Timestamp.fromDate(
+          new Date("2026-01-01T00:00:00Z"),
+        ),
+        expenseDate,
+      });
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(HttpsError);
+      expect((err as HttpsError).code).toBe("invalid-argument");
+      expect((err as HttpsError).message).toContain(
+        "recurrence_end_before_expense_date",
+      );
+    }
+  });
+});
+
+// ============================================================================
 // createExpense
 // ============================================================================
 describe("createExpense", () => {
@@ -257,6 +346,66 @@ describe("createExpense", () => {
     expect(stored?.landlordId).toBe(LANDLORD_A);
     expect(stored?.propertyId).toBe("prop-1");
     expect(stored?.deletedAt).toBeNull();
+  });
+
+  it("stocke recurrence='none' + recurrenceEndDate=null par défaut (une " +
+    "dépense reste ponctuelle si rien n'est demandé)", async () => {
+    seedProperty("prop-1", LANDLORD_A);
+
+    const result = await createExpense.run(makeRequest(LANDLORD_A, baseInput));
+
+    const stored = fakeDb.peek(`expenses/${result.expenseId}`);
+    expect(stored?.recurrence).toBe("none");
+    expect(stored?.recurrenceEndDate).toBeNull();
+  });
+
+  it("stocke la périodicité et sa date de fin — SANS générer la moindre " +
+    "écriture supplémentaire (récurrence virtuelle)", async () => {
+    seedProperty("prop-1", LANDLORD_A);
+
+    const result = await createExpense.run(
+      makeRequest(LANDLORD_A, {
+        ...baseInput,
+        recurrence: "quarterly",
+        recurrenceEndDate: "2027-03-15T00:00:00Z",
+      }),
+    );
+
+    const stored = fakeDb.peek(`expenses/${result.expenseId}`);
+    expect(stored?.recurrence).toBe("quarterly");
+    expect(stored?.recurrenceEndDate).toEqual(
+      Timestamp.fromDate(new Date("2027-03-15T00:00:00Z")),
+    );
+    // Une seule dépense en base : les échéances suivantes n'existent pas,
+    // elles sont déroulées au calcul côté client.
+    expect(fakeDb.peek(`expenses/${result.expenseId}`)).toBeDefined();
+  });
+
+  it("refuse une fin de récurrence antérieure à la date de la dépense", async () => {
+    seedProperty("prop-1", LANDLORD_A);
+
+    await expect(
+      createExpense.run(
+        makeRequest(LANDLORD_A, {
+          ...baseInput,
+          recurrence: "monthly",
+          recurrenceEndDate: "2026-01-01T00:00:00Z", // avant expenseDate
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "invalid-argument",
+      message: "recurrence_end_before_expense_date",
+    });
+  });
+
+  it("refuse une périodicité inconnue", async () => {
+    seedProperty("prop-1", LANDLORD_A);
+
+    await expect(
+      createExpense.run(
+        makeRequest(LANDLORD_A, {...baseInput, recurrence: "weekly"}),
+      ),
+    ).rejects.toMatchObject({code: "invalid-argument"});
   });
 
   it("refuse la création si le bien appartient à un autre landlord (ownership KO)", async () => {
@@ -820,5 +969,91 @@ describe("updateExpense", () => {
       makeRequest(LANDLORD_A, {id: "exp-1", patch: {notes: "maj"}}),
     );
     expect(fakeDb.peek("expenses/exp-1")?.propertyName).toBe("Nouveau nom");
+  });
+
+  // --------------------------------------------------------------------------
+  // Périodicité (FEAT-041d)
+  // --------------------------------------------------------------------------
+
+  it("accepte le passage d'une dépense ponctuelle à trimestrielle", async () => {
+    seedExpense("exp-1");
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {
+        id: "exp-1",
+        patch: {
+          recurrence: "quarterly",
+          recurrenceEndDate: "2027-12-31T00:00:00Z",
+        },
+      }),
+    );
+
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.recurrence).toBe("quarterly");
+    expect(stored?.recurrenceEndDate).toEqual(
+      Timestamp.fromDate(new Date("2027-12-31T00:00:00Z")),
+    );
+  });
+
+  it("repasser en 'none' efface la date de fin (normalisation)", async () => {
+    seedExpense("exp-1", {
+      recurrence: "monthly",
+      recurrenceEndDate: Timestamp.fromDate(new Date("2027-12-31T00:00:00Z")),
+    });
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {id: "exp-1", patch: {recurrence: "none"}}),
+    );
+
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.recurrence).toBe("none");
+    expect(stored?.recurrenceEndDate).toBeNull();
+  });
+
+  it("refuse une périodicité inconnue", async () => {
+    seedExpense("exp-1");
+
+    await expect(
+      updateExpense.run(
+        makeRequest(LANDLORD_A, {
+          id: "exp-1",
+          patch: {recurrence: "weekly"},
+        }),
+      ),
+    ).rejects.toMatchObject({code: "invalid-argument"});
+  });
+
+  it("refuse de déplacer expenseDate APRÈS la fin de récurrence déjà " +
+    "enregistrée (la récurrence n'aurait plus aucune échéance)", async () => {
+    seedExpense("exp-1", {
+      recurrence: "quarterly",
+      recurrenceEndDate: Timestamp.fromDate(new Date("2026-06-30T00:00:00Z")),
+    });
+
+    await expect(
+      updateExpense.run(
+        makeRequest(LANDLORD_A, {
+          id: "exp-1",
+          patch: {expenseDate: "2026-09-01T00:00:00Z"},
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "invalid-argument",
+      message: "recurrence_end_before_expense_date",
+    });
+  });
+
+  it("laisse intacte la périodicité d'un document legacy quand le patch ne " +
+    "la mentionne pas", async () => {
+    // Document créé avant FEAT-041d : aucun champ `recurrence` en base.
+    seedExpense("exp-1");
+
+    await updateExpense.run(
+      makeRequest(LANDLORD_A, {id: "exp-1", patch: {amountCents: 12345}}),
+    );
+
+    const stored = fakeDb.peek("expenses/exp-1");
+    expect(stored?.amountCents).toBe(12345);
+    expect(stored?.recurrence).toBeUndefined();
   });
 });

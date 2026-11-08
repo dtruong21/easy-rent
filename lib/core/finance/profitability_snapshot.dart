@@ -4,6 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../features/properties/domain/property.dart';
 import 'profitability.dart';
+import 'real_expense_charges.dart';
 
 part 'profitability_snapshot.freezed.dart';
 part 'profitability_snapshot.g.dart';
@@ -33,6 +34,16 @@ class ProfitabilitySnapshot with _$ProfitabilitySnapshot {
 
     /// Mensualité du prêt (centimes) — null si pas de prêt renseigné.
     int? loanMonthlyPaymentCents,
+
+    /// Nombre de charges (sur 3 : taxe foncière, assurance PNO, charges
+    /// copro non récupérables) dont [monthlyCashflowBeforeTaxCents] utilise
+    /// la moyenne réelle des dépenses saisies plutôt que le montant déclaré
+    /// sur le bien. `0` = cash flow purement prévisionnel (comportement
+    /// historique) ; `3` = entièrement basé sur le réel. Permet à l'UI
+    /// d'expliciter en une phrase la provenance du chiffre affiché — voir
+    /// `computeMonthlyCashflowBeforeTaxCents` (profitability.dart) pour la
+    /// règle de bascule.
+    @Default(0) int cashflowRealChargesCount,
   }) = _ProfitabilitySnapshot;
 
   factory ProfitabilitySnapshot.fromJson(Map<String, dynamic> json) =>
@@ -43,6 +54,12 @@ class ProfitabilitySnapshot with _$ProfitabilitySnapshot {
 ///
 /// [property] : bien immobilier avec ses données financières FEAT-017.
 /// [monthlyRentHcCents] : loyer hors charges du bail actif, ou null si vacant.
+/// [realCharges] : dépenses réelles non récupérables du bien, déjà
+/// regroupées par nature de charge (FEAT cash flow réel) — voir
+/// `computeMonthlyCashflowBeforeTaxCents` pour la règle de bascule
+/// réel/prévisionnel. N'affecte QUE le cash flow : les rendements brut et
+/// net gardent leur définition historique (charges déclarées uniquement).
+/// [now] est injectable pour les tests.
 ///
 /// Retourne un snapshot avec [isComputable] = false si :
 /// - pas de bail actif ([monthlyRentHcCents] == null)
@@ -50,6 +67,8 @@ class ProfitabilitySnapshot with _$ProfitabilitySnapshot {
 ProfitabilitySnapshot computeSnapshotForProperty({
   required Property property,
   required int? monthlyRentHcCents,
+  PropertyRealCharges realCharges = PropertyRealCharges.empty,
+  DateTime? now,
 }) {
   // Cas : bien vacant (aucun bail actif).
   if (monthlyRentHcCents == null) {
@@ -83,6 +102,8 @@ ProfitabilitySnapshot computeSnapshotForProperty({
     loanPayment = null;
   }
 
+  final effectiveNow = now ?? DateTime.now();
+
   return ProfitabilitySnapshot(
     isComputable: missing.isEmpty,
     missingFields: missing,
@@ -91,6 +112,9 @@ ProfitabilitySnapshot computeSnapshotForProperty({
       purchasePriceCents: property.purchasePriceCents,
       notaryFeesCents: property.notaryFeesCents,
     ),
+    // Rendement net inchangé : uniquement les charges DÉCLARÉES sur le
+    // bien, jamais les dépenses réelles — seul le cash flow en dessous
+    // intègre le réel (cf. doc de tête de fonction).
     yieldNetPercent: computeYieldNetPercent(
       annualRentHcCents: annualRent,
       purchasePriceCents: property.purchasePriceCents,
@@ -105,7 +129,16 @@ ProfitabilitySnapshot computeSnapshotForProperty({
       propertyTaxAnnualCents: property.propertyTaxAnnualCents,
       insurancePnoAnnualCents: property.insurancePnoAnnualCents,
       condoFeesNonRecoverableCents: property.condoFeesNonRecoverableCents,
+      realCharges: realCharges,
+      now: effectiveNow,
     ),
     loanMonthlyPaymentCents: loanPayment,
+    cashflowRealChargesCount: countRealCashflowCharges(
+      propertyTaxAnnualCents: property.propertyTaxAnnualCents,
+      insurancePnoAnnualCents: property.insurancePnoAnnualCents,
+      condoFeesNonRecoverableCents: property.condoFeesNonRecoverableCents,
+      realCharges: realCharges,
+      now: effectiveNow,
+    ),
   );
 }

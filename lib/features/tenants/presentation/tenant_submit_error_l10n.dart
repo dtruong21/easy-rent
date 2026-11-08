@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../domain/tenant_submit_error.dart';
 
@@ -13,7 +14,10 @@ extension TenantSubmitErrorL10n on TenantSubmitError {
     final l10n = context.l10n;
     return switch (this) {
       TenantSubmitError.hasActiveLeases => l10n.tenantsErrorHasActiveLeases,
-      TenantSubmitError.limitReached => l10n.tenantsErrorLimitReached,
+      TenantSubmitError.limitReached =>
+        canOfferUpgrade
+            ? l10n.tenantsErrorLimitReached
+            : l10n.tenantsErrorLimitReachedStore,
       TenantSubmitError.permissionDenied => l10n.tenantsErrorPermissionDenied,
       TenantSubmitError.serviceUnavailable =>
         l10n.tenantsErrorServiceUnavailable,

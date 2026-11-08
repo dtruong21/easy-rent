@@ -1,0 +1,21 @@
+name: purchases_flutter_web_noop
+description: "Implémentation web vide de purchases_flutter : le web ne charge jamais le SDK RevenueCat (FEAT-044e)."
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+
+flutter:
+  plugin:
+    implements: purchases_flutter
+    platforms:
+      web:
+        pluginClass: PurchasesFlutterWebNoop
+        fileName: purchases_flutter_web_noop.dart

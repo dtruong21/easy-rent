@@ -48,8 +48,16 @@ class WebShareServiceImpl implements WebShareService {
           ),
         ],
         fileNameOverrides: [filename],
+        title: title,
         subject: title,
-        text: text,
+        // iOS : un texte joint au PDF devient un 2ᵉ élément de partage
+        // (« Plain Text and 1 Document ») — « Enregistrer dans Fichiers »
+        // créait un fichier texte parasite à côté du PDF, et la feuille de
+        // partage perdait le titre et l'aperçu du PDF (recette iOS 27,
+        // #197). On ne partage donc que le PDF, avec son titre et son sujet
+        // d'email. Android garde le texte : il y part en corps de message
+        // (EXTRA_TEXT), sans fichier en plus.
+        text: Platform.isIOS ? null : text,
         // iPad : le share sheet est un popover qui exige une ancre, sinon
         // crash UIKit. Ancre neutre en attendant un vrai anchoring (iPad
         // hors cible V1) ; ignoré sur iPhone/Android.
@@ -67,6 +75,54 @@ class WebShareServiceImpl implements WebShareService {
 
   /// Best-effort, comme l'impl web : ne doit jamais faire échouer le flux
   /// de partage appelant.
+  @override
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  }) async {
+    // Desktop / tests : l'appelant garde son repli `launchUrl` (URL `data:`).
+    if (!_isMobile) return false;
+    // Mobile : le repli `data:` ne marche PAS — sur iOS `launchUrl` d'une URL
+    // `data:` n'ouvre rien et ne rend jamais la main (recette simulateur
+    // 2026-09-28 : quittance et état des lieux impossibles à consulter). On
+    // présente le PDF dans la feuille de partage système : aperçu natif
+    // (Quick Look sur iOS), « Enregistrer dans Fichiers », Mail, impression.
+    // Une fermeture sans cible reste un succès : le document a été présenté.
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile.fromData(
+            Uint8List.fromList(pdfBytes),
+            mimeType: 'application/pdf',
+          ),
+        ],
+        fileNameOverrides: [filename],
+        // Ancre iPad, cf. [sharePdf].
+        sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+      ),
+    );
+    return true;
+  }
+
+  @override
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  }) async {
+    if (!_isMobile) return; // desktop / tests : no-op sûr
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(Uint8List.fromList(bytes), mimeType: mimeType)],
+        fileNameOverrides: [filename],
+        title: shareTitle,
+        subject: shareTitle,
+        sharePositionOrigin: const Rect.fromLTWH(0, 0, 1, 1),
+      ),
+    );
+  }
+
   @override
   Future<bool> copyToClipboard(String text) async {
     if (!_isMobile) {

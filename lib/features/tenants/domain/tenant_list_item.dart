@@ -19,6 +19,9 @@ class TenantListItem {
     this.currentPropertyName,
     this.activeLeasePeriodLabel,
     this.activeLeaseRentCents,
+    this.activeLeaseChargesCents,
+    this.currentPropertyId,
+    this.currentPropertyColorKey,
   });
 
   /// Le locataire complet (tous les champs scalaires).
@@ -38,6 +41,23 @@ class TenantListItem {
 
   /// Loyer du bail actif en centimes, ou `null` si sans bail.
   final int? activeLeaseRentCents;
+
+  /// Charges mensuelles du bail actif en centimes, ou `null` si sans bail.
+  /// Avec [activeLeaseRentCents] : chiffre clé « CC / mois » des cartes.
+  final int? activeLeaseChargesCents;
+
+  /// Identifiant du bien occupé, ou `null` si sans bail.
+  ///
+  /// Nécessaire au repli déterministe de `PropertyColorKey.resolve` quand
+  /// [currentPropertyColorKey] est absent.
+  final String? currentPropertyId;
+
+  /// Clé de palette [PropertyColorKey] du bien occupé (`properties.colorKey`
+  /// brut, potentiellement `null`), ou `null` si sans bail — cf.
+  /// `lib/core/ui/theme/property_color.dart`. Résolue via une lecture
+  /// groupée de `properties`, jamais une requête par locataire (cf.
+  /// `TenantRepository.listWithActiveLeases`).
+  final String? currentPropertyColorKey;
 
   /// Construit un [TenantListItem] depuis le JSON brut de PostgREST.
   ///
@@ -76,10 +96,12 @@ class TenantListItem {
     String? propertyName;
     String? periodLabel;
     int? rentCents;
+    int? chargesCents;
 
     if (activeLease != null) {
       leaseId = activeLease['id'] as String?;
       rentCents = activeLease['rent_amount_cents'] as int?;
+      chargesCents = activeLease['charges_amount_cents'] as int?;
 
       final property = activeLease['property'] as Map<String, dynamic>?;
       if (property != null) {
@@ -105,6 +127,7 @@ class TenantListItem {
       currentPropertyName: propertyName,
       activeLeasePeriodLabel: periodLabel,
       activeLeaseRentCents: rentCents,
+      activeLeaseChargesCents: chargesCents,
     );
   }
 }

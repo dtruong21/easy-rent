@@ -14,10 +14,10 @@ part 'lease.g.dart';
 ///
 /// Mappé directement sur la table `leases` (public + dev).
 /// Les colonnes `created_at`, `updated_at` et `deleted_at` sont gérées par
-/// les triggers Supabase — ne jamais les inclure dans un payload INSERT/UPDATE.
+/// les triggers Cloud Functions — ne jamais les inclure dans un payload de création/mise à jour.
 ///
 /// [landlordId] : FK vers `landlords.id`. Ne pas l'envoyer dans un INSERT
-/// depuis le client — la RLS (`leases_insert_own`) vérifie `= auth.uid()`.
+/// depuis le client — les Firestore Rules vérifient `landlordId == request.auth.uid`.
 ///
 /// Les dates [startDate] et [endDate] sont des `DateTime` côté Dart mais
 /// sérialisées en `YYYY-MM-DD` côté Postgres (`date`). Les helpers

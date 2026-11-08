@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../../core/config/store_billing.dart';
 import '../../../core/i18n/l10n_extensions.dart';
 import '../domain/lease_submit_error.dart';
 
@@ -21,7 +22,10 @@ extension LeaseSubmitErrorL10n on LeaseSubmitError {
       LeaseSubmitError.permissionDenied => l10n.leasesErrorPermissionDenied,
       LeaseSubmitError.invalidState => l10n.leasesErrorInvalidState,
       LeaseSubmitError.serviceUnavailable => l10n.leasesErrorServiceUnavailable,
-      LeaseSubmitError.limitReached => l10n.leasesErrorLimitReached,
+      LeaseSubmitError.limitReached =>
+        canOfferUpgrade
+            ? l10n.leasesErrorLimitReached
+            : l10n.leasesErrorLimitReachedStore,
       LeaseSubmitError.saveFailed => l10n.leasesErrorSaveFailed,
       LeaseSubmitError.unknown => l10n.commonErrorGeneric,
     };

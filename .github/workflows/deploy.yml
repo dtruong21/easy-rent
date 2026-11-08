@@ -26,7 +26,23 @@ jobs:
     outputs:
       env_name: ${{ steps.set.outputs.env_name }}
       app_env: ${{ steps.set.outputs.app_env }}
-      firebase_channel: ${{ steps.set.outputs.firebase_channel }}
+      # Cible Hosting multi-site (.firebaserc) : `prod` = site easy-rent-54cd4
+      # (baillan.com), `stage` = site baillan-stage (app.staging.baillan.com).
+      hosting_target: ${{ steps.set.outputs.hosting_target }}
+      public_url: ${{ steps.set.outputs.public_url }}
+      # Abonnement Pro (checkout Stripe) : OUVERT en staging pour continuer le
+      # développement, FERMÉ en production tant que la beta v1 freemium tourne
+      # (Stripe attend les infos de la micro-entreprise). Cf. Env.subscriptionsEnabled.
+      # Le défaut côté Dart est `false` : si cette sortie disparaissait, la prod
+      # resterait bloquée (mode d'échec sûr).
+      subscriptions_enabled: ${{ steps.set.outputs.subscriptions_enabled }}
+      # Cibles `firebase deploy --only` de CET environnement, base Firestore
+      # COMPRISE (ADR 0003). Le ciblage par base est ce qui empêche un push sur
+      # `develop` de pousser des rules en production : `firestore:staging` ne
+      # touche que la base `staging`, `firestore:(default)` que la prod.
+      # ⚠️ Ne JAMAIS remplacer par `firestore` tout court — sans filtre, la CLI
+      # déploie sur les DEUX bases déclarées dans firebase.json.
+      deploy_targets: ${{ steps.set.outputs.deploy_targets }}
     steps:
       - id: set
         run: |
@@ -42,11 +58,26 @@ jobs:
           if [ "$OVERRIDE" = "prod" ] || ([ "$OVERRIDE" = "auto" ] && [ "$BRANCH" = "main" ]); then
             echo "env_name=production" >> $GITHUB_OUTPUT
             echo "app_env=prod" >> $GITHUB_OUTPUT
-            echo "firebase_channel=live" >> $GITHUB_OUTPUT
+            echo "hosting_target=prod" >> $GITHUB_OUTPUT
+            echo "public_url=https://baillan.com" >> $GITHUB_OUTPUT
+            # PROD : abonnement Pro FERMÉ pendant la beta v1 (ouverture ~2026-08-25).
+            echo "subscriptions_enabled=false" >> $GITHUB_OUTPUT
+            # Rules + indexes sur la base de PROD uniquement, plus les rules
+            # Storage : le bucket est unique (partagé avec staging), donc il ne
+            # se déploie que depuis `main` — jamais depuis `develop`.
+            echo 'deploy_targets=hosting:prod,hosting:marketing,firestore:(default),storage' >> $GITHUB_OUTPUT
           else
             echo "env_name=staging" >> $GITHUB_OUTPUT
             echo "app_env=dev" >> $GITHUB_OUTPUT
-            echo "firebase_channel=staging" >> $GITHUB_OUTPUT
+            echo "hosting_target=stage" >> $GITHUB_OUTPUT
+            echo "public_url=https://app.staging.baillan.com" >> $GITHUB_OUTPUT
+            # STAGING : abonnement Pro OUVERT pour poursuivre le développement.
+            echo "subscriptions_enabled=true" >> $GITHUB_OUTPUT
+            # Rules + indexes sur la base `staging` UNIQUEMENT. Ni `storage`
+            # (bucket partagé) ni `functions` (déploiement unique servant aussi
+            # la prod) — les ajouter ici ferait fuir du code non relu en prod à
+            # chaque push sur `develop`. Cf. ADR 0003, « Limitations assumées ».
+            echo "deploy_targets=hosting:stage,hosting:marketing-stage,firestore:staging" >> $GITHUB_OUTPUT
           fi
 
   build-and-deploy:
@@ -65,15 +96,49 @@ jobs:
           # défaut casserait les deux.
           fetch-depth: 0
 
+      # `flutter-version` ÉPINGLÉE, comme dans `ci.yml` — ne pas retirer.
+      #
+      # Incident du 2026-08-13 : ce workflow ne l'épinglait pas et suivait donc
+      # le canal `stable`. Une nouvelle version de Flutter est sortie dans la
+      # nuit ; son SDK analyse la syntaxe « raccourci point » et produit un
+      # nœud d'AST que l'`analyzer` résolu pour ce projet ne sait pas visiter :
+      #   Exception: Missing implementation of visitDotShorthandPropertyAccess
+      # `build_runner` plantait, l'étape restait bloquée six heures, et le
+      # groupe de concurrence retenait tous les déploiements derrière elle.
+      #
+      # Le symptôme trompait : `ci.yml`, LUI épinglé, restait vert sur le même
+      # commit. On cherche donc un défaut de code qui n'existe pas — alors que
+      # la seule différence entre les deux workflows était cette ligne.
+      #
+      # Toute montée de version doit se faire ICI ET dans `ci.yml`, ensemble :
+      # deux workflows sur des SDK différents, c'est un vert qui ne prouve rien
+      # sur ce qui sera réellement déployé.
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.6
           cache: true
 
       - name: Install deps
         run: flutter pub get
 
+      # `timeout-minutes` ajouté le 2026-08-13 après un incident : cette étape
+      # s'est bloquée ici pendant SIX heures, jusqu'à la limite globale de
+      # GitHub Actions, avant d'être annulée — puis le déploiement suivant a
+      # repris exactement le même blocage. Pendant ce temps le groupe de
+      # concurrence retenait tous les déploiements en file, et rien ne
+      # signalait quoi que ce soit : le workflow paraissait simplement « en
+      # cours ».
+      #
+      # Ce n'était PAS un défaut de code — le job `analyze-test` de `ci.yml`
+      # exécutait la commande identique, sur le même commit, en une dizaine de
+      # minutes. Incident d'infrastructure, donc, mais sans borne il coûte une
+      # nuit entière et masque l'état réel de staging.
+      #
+      # 15 min laisse une marge confortable (l'exécution nominale tient en
+      # quelques minutes) tout en transformant un blocage en échec explicite.
       - name: Generate code (freezed / json_serializable)
+        timeout-minutes: 15
         run: dart run build_runner build --delete-conflicting-outputs
 
       # Dérive la version depuis git (tags + nb de commits) — voir
@@ -120,24 +185,85 @@ jobs:
           flutter build web --release \
             --pwa-strategy=none \
             --dart-define=APP_ENV=${{ needs.determine-env.outputs.app_env }} \
+            --dart-define=SUBSCRIPTIONS_ENABLED=${{ needs.determine-env.outputs.subscriptions_enabled }} \
             --build-name=${{ steps.ver.outputs.name }} \
             --build-number=${{ steps.ver.outputs.code }}
 
-      # SEO (FEAT-049) — noindex sur STAGING uniquement. firebase.json est
-      # partagé entre le channel live (prod) et les channels de preview, donc un
-      # header X-Robots-Tag par-canal est impossible : on patche l'artefact
-      # build/web juste avant le deploy sur les builds dev. robots.txt devient
-      # tout-bloquant, le sitemap est retiré, et la <meta robots> passe en
-      # noindex. La PROD (main → app_env=prod) saute cette étape et conserve
-      # "index, follow" + le sitemap — asymétrie de risque volontaire (sûr même
-      # si l'étape est un jour oubliée).
+      # SEO (FEAT-049/FEAT-050) — l'app Flutter n'est plus indexable nulle
+      # part, prod comme staging : `web/robots.txt` (source) est en Disallow
+      # global et `web/index.html` a pour défaut `noindex, nofollow` — les
+      # deux facts que ce step ré-appliquait ci-dessous sont donc déjà vrais
+      # AVANT même que ce step ne tourne, quel que soit l'environnement. La
+      # PROD ne "saute" plus rien : elle sert exactement le même noindex que
+      # staging, ce qui élimine l'asymétrie de risque qu'il y avait avant
+      # FEAT-050 (quand le défaut prod était "index, follow" et que seule
+      # staging le corrigeait ici).
+      # Ce step est donc redondant en pratique (`cp`/`rm -f`/`sed` n'ont plus
+      # rien à changer) et ne reste que comme filet de sécurité idempotent :
+      # si un futur diff réintroduit par erreur un défaut "index, follow"
+      # dans `web/index.html`, ce step continue de forcer le noindex sur les
+      # builds staging (mais pas sur prod, qui n'a plus ce filet — la vraie
+      # garantie prod est le défaut de `web/index.html` lui-même).
+      # firebase.json est par ailleurs partagé entre le channel live et les
+      # channels de preview, donc un header X-Robots-Tag par-canal reste
+      # impossible : `web/robots.staging.txt` documente ce cas côté fichier
+      # servi, même si son contenu (Disallow global) est désormais identique
+      # à celui de `web/robots.txt`.
       - name: Staging — noindex (robots + sitemap + meta)
         if: needs.determine-env.outputs.app_env == 'dev'
         run: |
           cp web/robots.staging.txt build/web/robots.txt
           rm -f build/web/sitemap.xml
           sed -i 's/content="index, follow"/content="noindex, nofollow"/' build/web/index.html
-          echo "Staging noindex appliqué : robots.txt=Disallow, sitemap retiré, meta robots=noindex."
+          echo "Staging noindex vérifié : robots.txt=Disallow, sitemap absent, meta robots=noindex."
+
+      # `site/package.json` (FEAT-050, vitrine Astro) déclare
+      # `engines.node: ">=22.12.0"`. Sans ce step, le job hérite du Node par
+      # défaut du runner `ubuntu-latest` — non garanti, non documenté, et ce
+      # job n'avait jamais utilisé Node avant ce diff. `node-version: "22"`
+      # (majeure seule, comme les jobs Node de `ci.yml`) plutôt qu'un patch
+      # exact : n'importe quelle 22.x que `actions/setup-node` installe est
+      # déjà >= 22.12.0, donc pas besoin de la faire suivre manuellement comme
+      # `flutter-version` ci-dessus. Ne jamais descendre sous "22" — Astro 7
+      # exige >= 22.12.0, "20" échouerait au premier `npm ci --prefix site`.
+      # Ce step (et « Build marketing site » ci-dessous) est dans le même job
+      # séquentiel que le déploiement Hosting/Firestore/Storage de prod : un
+      # échec ici bloque tout le déploiement de l'app Flutter avec lui, alors
+      # que les deux étaient découplés avant ce diff. Accepté sciemment (cf.
+      # task-3-report.md) : le site marketing partage le même `deploy_targets`
+      # et la même release que l'app.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Build marketing site
+        # SITE_ENV=staging fait basculer site/src/pages/robots.txt.ts (Task 7,
+        # FEAT-050) en Disallow global sur `develop`. La cible d'hébergement
+        # `marketing-stage` sert déjà `X-Robots-Tag: noindex, nofollow` sur
+        # tout (firebase.json) ; ce robots.txt est une deuxième ceinture pour
+        # qu'un explorateur ne perde même pas son temps à récupérer les pages.
+        # Vide sur `main` (prod) : la vitrine reste indexable.
+        env:
+          SITE_ENV: ${{ needs.determine-env.outputs.app_env == 'dev' && 'staging' || '' }}
+        run: npm ci --prefix site && npm run build --prefix site
+
+      # Garde-fou (Task 5, FEAT-050) : l'URL du formulaire Tally d'idées ne
+      # doit plus être le placeholder `https://tally.so/` (racine, sans
+      # formulaire) une fois en PRODUCTION. Le même SITE_ENV que le build
+      # ci-dessus est repassé ici : staging tolère le placeholder, prod
+      # l'exige renseigné (site/src/lib/links.ts). Volontairement APRÈS le
+      # build (pas avant) — ce n'est pas un pré-requis de compilation, juste
+      # un refus explicite de déployer un lien mort en prod plutôt qu'un
+      # échec silencieux du script check-vitrine-idea-url.sh découvert plus
+      # tard. Câblé ici et PAS dans le job `site` de ci.yml : ce dernier
+      # tourne sur chaque PR en mode prod et bloquerait toute PR tant que
+      # l'URL Tally réelle n'existe pas.
+      - name: Check idea form URL (prod enforces, staging tolerates)
+        env:
+          SITE_ENV: ${{ needs.determine-env.outputs.app_env == 'dev' && 'staging' || '' }}
+        run: bash scripts/check-vitrine-idea-url.sh
 
       # Déploiement Firebase Hosting via firebase-tools CLI direct.
       #
@@ -163,12 +289,12 @@ jobs:
       #
       # À retirer / simplifier dès que firebase-tools patche son retry —
       # suivre https://github.com/firebase/firebase-tools/issues
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase (hosting + Firestore rules/indexes)
         id: firebase_deploy
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
+          DEPLOY_TARGETS: ${{ needs.determine-env.outputs.deploy_targets }}
         run: |
           set +e
           # Service account credentials (Google Application Default Credentials).
@@ -178,19 +304,26 @@ jobs:
 
           OUT="$RUNNER_TEMP/firebase-deploy.log"
 
-          # Channel "live" = production (commande différente).
-          if [ "$FIREBASE_CHANNEL" = "live" ]; then
-            npx -y firebase-tools@latest deploy --only hosting \
-              --project "$FIREBASE_PROJECT_ID" \
-              --non-interactive 2>&1 | tee "$OUT"
-            EXIT=${PIPESTATUS[0]}
-          else
-            npx -y firebase-tools@latest hosting:channel:deploy "$FIREBASE_CHANNEL" \
-              --expires 7d \
-              --project "$FIREBASE_PROJECT_ID" \
-              --non-interactive 2>&1 | tee "$OUT"
-            EXIT=${PIPESTATUS[0]}
+          # Multi-site : les DEUX environnements déploient sur le canal `live`
+          # de LEUR site (cible .firebaserc), plus de preview channel. Un
+          # preview channel ne peut pas porter de domaine personnalisé — c'est
+          # ce qui imposait le site dédié `baillan-stage` pour app.staging.baillan.com.
+          #
+          # $DEPLOY_TARGETS embarque AUSSI la base Firestore de l'environnement
+          # (`firestore:staging` ou `firestore:(default)`) : avant, rules et
+          # indexes n'étaient poussés qu'à la main, donc l'app pouvait tourner
+          # sur des rules plus vieilles que le code déployé à côté.
+          # Garde-fou : si la sortie deploy_targets manquait, on n'improvise pas
+          # un `deploy` sans filtre (qui viserait les deux bases) — on échoue.
+          if [ -z "$DEPLOY_TARGETS" ]; then
+            echo "::error::deploy_targets vide — refus de déployer sans filtre --only (risque de pousser sur la base de prod)."
+            exit 1
           fi
+
+          npx -y firebase-tools@latest deploy --only "$DEPLOY_TARGETS" \
+            --project "$FIREBASE_PROJECT_ID" \
+            --non-interactive 2>&1 | tee "$OUT"
+          EXIT=${PIPESTATUS[0]}
 
           # Cleanup credentials immédiatement (defense in depth).
           rm -f "$SA_FILE"
@@ -200,56 +333,48 @@ jobs:
           fi
 
           # Exit non-zero : on regarde si c'est le retry race connu.
-          if grep -qF "is the current active version" "$OUT"; then
-            echo "::warning::Firebase retry-race detected (FAILED_PRECONDITION 'current active version'). Content WAS deployed — the first POST succeeded server-side; only the retry POST failed. Treating job as success."
+          #
+          # ⚠️ Ce bypass ne doit couvrir QUE la race Hosting. Depuis qu'on
+          # déploie aussi firestore/storage dans la MÊME commande, un échec de
+          # rules serait masqué si la race Hosting survenait en même temps — on
+          # publierait alors une CI verte avec des rules non déployées, soit
+          # exactement le mode de panne silencieux que ce workflow doit éliminer.
+          # On n'accepte donc le bypass que si TOUTES les erreurs du log sont
+          # cette race (et jamais s'il n'y en a aucune de reconnue).
+          ERR_TOTAL=$(grep -c "Error:" "$OUT" || true)
+          ERR_RACE=$(grep "Error:" "$OUT" | grep -c "is the current active version" || true)
+          if [ "${ERR_TOTAL:-0}" -gt 0 ] && [ "${ERR_TOTAL:-0}" -eq "${ERR_RACE:-0}" ]; then
+            echo "::warning::Firebase retry-race detected (FAILED_PRECONDITION 'current active version'), and it is the ONLY error in the log. Content WAS deployed — the first POST succeeded server-side; only the retry POST failed. Treating job as success."
             exit 0
+          fi
+
+          if [ "${ERR_RACE:-0}" -gt 0 ]; then
+            echo "::error::Retry-race Hosting détectée MAIS d'autres erreurs sont présentes ($ERR_TOTAL erreurs, dont $ERR_RACE races) — probable échec du déploiement firestore/storage. On échoue volontairement plutôt que de masquer des rules non déployées."
+            exit $EXIT
           fi
 
           # Toute autre erreur propage.
           echo "::error::Firebase deploy failed for an UNKNOWN reason (not the retry race). See log above."
           exit $EXIT
 
-      # Loggue l'URL du channel après un deploy réussi (ou toléré). La CLI
-      # firebase-tools n'imprime PAS l'URL du channel quand le POST /releases
-      # errore (retry race), donc on la récupère via channel:list — l'URL du
-      # channel est stable dans le temps (hash aléatoire assigné à la
-      # création, jamais rechangé). Le CLI channel:list ne fait qu'un GET
-      # inoffensif, aucun risque même si le déploiement principal a hoqueté.
-      - name: Log Firebase channel URL
+      # Multi-site : chaque environnement a une URL FIXE (domaine personnalisé
+      # attaché au canal live de son site). Plus besoin d'interroger
+      # `hosting:channel:list` pour récupérer une URL de preview à hash
+      # aléatoire — l'ancien code de résolution a donc été supprimé.
+      - name: Log deploy URL
         if: always() && steps.firebase_deploy.outcome != 'skipped'
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_CHANNEL: ${{ needs.determine-env.outputs.firebase_channel }}
           FIREBASE_ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+          HOSTING_TARGET: ${{ needs.determine-env.outputs.hosting_target }}
+          PUBLIC_URL: ${{ needs.determine-env.outputs.public_url }}
         run: |
-          set +e
-          SA_FILE="$RUNNER_TEMP/firebase-sa-url.json"
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
-          export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
-
-          if [ "$FIREBASE_CHANNEL" = "live" ]; then
-            URL="https://$FIREBASE_PROJECT_ID.web.app"
-          else
-            URL=$(npx -y firebase-tools@latest hosting:channel:list \
-              --project "$FIREBASE_PROJECT_ID" --json 2>/dev/null \
-              | jq -r --arg ch "$FIREBASE_CHANNEL" '.result.channels[] | select(.name | endswith("/channels/" + $ch)) | .url' \
-              | head -n1)
-          fi
-
-          rm -f "$SA_FILE"
-
-          if [ -n "$URL" ] && [ "$URL" != "null" ]; then
-            echo "::notice title=Deploy URL::$FIREBASE_ENV_NAME → $URL"
-            {
-              echo "## Deploy — $FIREBASE_ENV_NAME"
-              echo ""
-              echo "**Channel** : \`$FIREBASE_CHANNEL\`"
-              echo "**URL** : $URL"
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::warning::Could not resolve channel URL for $FIREBASE_CHANNEL — check Firebase Console."
-          fi
+          echo "::notice title=Deploy URL::$FIREBASE_ENV_NAME → $PUBLIC_URL"
+          {
+            echo "## Deploy — $FIREBASE_ENV_NAME"
+            echo ""
+            echo "**Cible Hosting** : \`$HOSTING_TARGET\`"
+            echo "**URL** : $PUBLIC_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Marque la release APRÈS un deploy prod réussi : crée le tag annoté
       # vX.Y.Z (codename gravé) + la GitHub Release. C'est la SEULE écriture git

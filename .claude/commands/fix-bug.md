@@ -27,8 +27,9 @@ $ARGUMENTS
 ### 2. Décision
 - Détermine l'agent compétent :
   - Bug UI/state → `flutter-dev`
-  - Bug DB/RLS/migration → `supabase-dev`
-  - Bug PDF/email → `pdf-emailer`
+  - Bug Firestore (rules, indexes, Cloud Functions) → traite-le directement dans
+    `firestore.rules`, `firestore.indexes.json` ou `functions/src/`
+  - Bug PDF/partage → `pdf-emailer`
 - S'il y a impact data model → invoque d'abord `architect` pour valider l'approche
 
 ### 3. Fix
@@ -38,7 +39,7 @@ $ARGUMENTS
 ### 4. Qualité (obligatoire)
 - `qa-tester` : valider que le bug est corrigé ET que rien n'a régressé
 - `code-reviewer` : valider la qualité du fix
-- `security-auditor` : si le bug touchait à la sécurité (RLS, auth, secrets)
+- `security-auditor` : si le bug touchait à la sécurité (Firestore Rules, auth, secrets)
 
 ### 5. PR + lien à l'issue (si applicable)
 - Push la branche

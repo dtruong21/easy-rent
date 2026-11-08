@@ -4,6 +4,7 @@ library;
 import 'package:easyrent/core/theme/app_theme.dart';
 import 'package:easyrent/core/ui/cards/entity_card.dart';
 import 'package:easyrent/core/ui/cards/entity_card_density.dart';
+import 'package:easyrent/core/ui/theme/property_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -162,6 +163,79 @@ void main() {
         ),
       );
       expect(find.text('Dark mode'), findsOneWidget);
+    });
+  });
+
+  group('EntityCard — accentColorKey (fond teinté à la couleur du bien)', () {
+    testWidgets('sans accentColorKey → fond inchangé (surfaceContainerLow)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(EntityCard(header: const Text('Neutre'))));
+      final decoration =
+          tester
+                  .widget<AnimatedContainer>(find.byType(AnimatedContainer))
+                  .decoration
+              as BoxDecoration;
+      expect(decoration.color, AppTheme.light.colorScheme.surfaceContainerLow);
+    });
+
+    testWidgets(
+      'accentColorKey fourni → fond = resolveCardBackground(base) exact '
+      '(pas la couleur brute)',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            EntityCard(
+              accentColorKey: PropertyColorKey.cobalt,
+              header: const Text('Teinté'),
+            ),
+          ),
+        );
+        final context = tester.element(find.byType(EntityCard));
+        final colorScheme = Theme.of(context).colorScheme;
+        final expected = PropertyColorKey.cobalt.resolveCardBackground(
+          context,
+          colorScheme.surfaceContainerLow,
+        );
+        final decoration =
+            tester
+                    .widget<AnimatedContainer>(find.byType(AnimatedContainer))
+                    .decoration
+                as BoxDecoration;
+        expect(decoration.color, expected);
+        // Ni la couleur brute de l'accent, ni le fond neutre par défaut.
+        expect(
+          decoration.color,
+          isNot(PropertyColorKey.cobalt.resolveColor(context)),
+        );
+        expect(decoration.color, isNot(colorScheme.surfaceContainerLow));
+      },
+    );
+
+    testWidgets('accentColorKey fourni → toujours cohérent en dark mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          EntityCard(
+            accentColorKey: PropertyColorKey.moutarde,
+            header: const Text('Teinté sombre'),
+          ),
+          brightness: Brightness.dark,
+        ),
+      );
+      final context = tester.element(find.byType(EntityCard));
+      final colorScheme = Theme.of(context).colorScheme;
+      final expected = PropertyColorKey.moutarde.resolveCardBackground(
+        context,
+        colorScheme.surfaceContainerLow,
+      );
+      final decoration =
+          tester
+                  .widget<AnimatedContainer>(find.byType(AnimatedContainer))
+                  .decoration
+              as BoxDecoration;
+      expect(decoration.color, expected);
     });
   });
 }

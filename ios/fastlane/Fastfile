@@ -10,8 +10,11 @@
 
 default_platform(:ios)
 
-# CWD = ios/ ; racine Flutter un cran au-dessus.
-PROJECT_ROOT = File.expand_path("..", Dir.pwd)
+# Racine du projet Flutter, calculée depuis l'emplacement de ce fichier
+# (ios/fastlane/) : Fastlane évalue le Fastfile avec le CWD = ios/fastlane,
+# donc `Dir.pwd` ne désigne PAS ios/.
+PROJECT_ROOT = File.expand_path("../..", __dir__)
+require File.join(PROJECT_ROOT, "tool/release/release_defines")
 
 platform :ios do
   # Clé API App Store Connect (.p8) — requiert le compte payant.
@@ -26,8 +29,10 @@ platform :ios do
 
   desc "Build l'IPA release (nécessite ios/ExportOptions.plist + signing)"
   lane :build do |options|
+    # Réglages de prod obligatoires (dart-defines.prod.json) — échec sinon.
     args = ["build", "ipa", "--release",
-            "--export-options-plist=ios/ExportOptions.plist"]
+            "--export-options-plist=ios/ExportOptions.plist",
+            *ReleaseDefines.flutter_args!(PROJECT_ROOT, :ios)]
     args << "--build-name=#{options[:build_name]}" if options[:build_name]
     args << "--build-number=#{options[:build_number]}" if options[:build_number]
     Dir.chdir(PROJECT_ROOT) { sh("flutter", *args) }

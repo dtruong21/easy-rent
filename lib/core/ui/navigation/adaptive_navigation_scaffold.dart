@@ -93,11 +93,45 @@ List<_Destination> _destinations(BuildContext context) {
   ];
 }
 
-/// Bascule vers la branche [index]. Re-tap de l'onglet déjà actif → retour à
-/// la racine de la branche (`initialLocation: true`), idiome Material
-/// standard (« pop to root »).
+/// Bascule vers la branche [index] et la ramène systématiquement à sa racine
+/// (`initialLocation: true`) — que ce soit un changement de branche ou un
+/// re-tap de l'onglet déjà actif.
+///
+/// Règle générale (décision produit du 2026-08-11, cf.
+/// `docs/UX_NAVIGATION.md` §5.1) : un tap sur un onglet du shell est un
+/// raccourci vers la racine de cette section, pas une reprise de « là où on
+/// s'était arrêté ». Avant cette date, seule la branche Profil se comportait
+/// ainsi (exception assumée) et Biens/Locataires/Baux préservaient leur pile
+/// via `indexedStack`. Signalé comme un bug par l'utilisateur : après un
+/// détour par un autre onglet, retomber sur une sous-page (ex. « Informations
+/// personnelles ») plutôt que sur la racine de l'onglet visé désoriente,
+/// quelle que soit la branche.
 void _onDestinationSelected(StatefulNavigationShell shell, int index) {
-  shell.goBranch(index, initialLocation: index == shell.currentIndex);
+  if (shell.currentIndex == index) {
+    shell.goBranch(index, initialLocation: true);
+    return;
+  }
+  // Réinitialise D'ABORD la branche qu'on QUITTE, PENDANT qu'elle est
+  // encore la branche active (onstage), puis seulement APRÈS bascule vers
+  // [index] au frame suivant. Nécessaire dans cet ordre précis :
+  // `StatefulNavigationShellState` ne persiste l'état "propre" d'une
+  // branche (matchList sans la sous-route abandonnée) que lorsqu'elle est
+  // `currentIndex` AU MOMENT du rebuild. Faire les deux `goBranch` dans le
+  // même tick ne persiste PAS le reset de la branche quittée (la 2de
+  // navigation écrase l'état avant que le rebuild de la 1re ne l'ait
+  // enregistré) : la branche cible rouvrait alors avec sa sous-page
+  // périmée, le temps de la transition de pop Navigator (~300ms, largement
+  // le temps qu'un œil humain la lise) — le flash remonté en recette.
+  //
+  // Ce séquencement réduit ce délai à 1-2 frames (~16-32ms, un pop
+  // Navigator reste intrinsèquement animé sur au moins une frame — voir
+  // shell_branch_state_test.dart, test « pas de flash… ») mais ne
+  // l'annule pas à zéro frame : le pipeline de rendu Flutter ne peut pas
+  // peindre l'état "après" avant qu'au moins un build n'ait tourné.
+  shell.goBranch(shell.currentIndex, initialLocation: true);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    shell.goBranch(index, initialLocation: true);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +146,7 @@ class _NarrowLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: _BranchMessenger(navigationShell: navigationShell),
       bottomNavigationBar: SafeArea(
         child: NavigationBar(
           key: const Key('adaptive_nav_bar'),
@@ -131,6 +165,24 @@ class _NarrowLayout extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Messager de SnackBars propre aux branches du shell.
+///
+/// Les pages de branche (listes Biens / Baux / Locataires…) sont des
+/// `Scaffold` IMBRIQUÉS dans celui du shell. Un `ScaffoldMessenger` n'affiche
+/// une SnackBar que dans ses Scaffolds racines : sans ce messager, c'était le
+/// Scaffold du shell, qui ignore le FAB de la page — la SnackBar le
+/// recouvrait (recette iOS, #197). Avec lui, la page devient racine : la
+/// SnackBar se place au-dessus de son FAB.
+class _BranchMessenger extends StatelessWidget {
+  const _BranchMessenger({required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaffoldMessenger(child: navigationShell);
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +236,7 @@ class _WideLayout extends ConsumerWidget {
               ],
             ),
             const VerticalDivider(width: 1, thickness: 1),
-            Expanded(child: navigationShell),
+            Expanded(child: _BranchMessenger(navigationShell: navigationShell)),
           ],
         ),
       ),

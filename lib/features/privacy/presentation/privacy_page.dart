@@ -7,11 +7,12 @@ import '../../../core/ui/app_bar/app_app_bar.dart';
 /// Accessible sans login (route `/privacy` publique).
 /// Référencée depuis [LoginPage] et [ProfilePage].
 ///
-/// Dernière mise à jour : juillet 2026 (v1.3 — précisions sur les données de
-/// tiers (locataires) et le devoir d'information du bailleur, + rapport
-/// d'incident Crashlytics mobile en opt-in ; v1.2 — suppression de compte
-/// in-app et rétention des quittances, FEAT-045 ; v1.1 — collecte demandes de
-/// support, FEAT-025)
+/// Dernière mise à jour : octobre 2026 (v1.4 — avis in-app et date de la
+/// dernière sollicitation de notation stockée sur l'appareil, FEAT-060 ;
+/// v1.3 — précisions sur les données de tiers (locataires) et le devoir
+/// d'information du bailleur, + rapport d'incident Crashlytics mobile en
+/// opt-in ; v1.2 — suppression de compte in-app et rétention des quittances,
+/// FEAT-045 ; v1.1 — collecte demandes de support, FEAT-025)
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
 
@@ -51,7 +52,7 @@ class _PrivacyContent extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Version 1.3 — Dernière mise à jour : juillet 2026',
+          'Version 1.4 — Dernière mise à jour : octobre 2026',
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 24),
@@ -102,6 +103,11 @@ class _PrivacyContent extends StatelessWidget {
               'email, un identifiant technique de compte, la version de '
               'l\'application et l\'environnement — utilisés uniquement pour '
               'traiter votre demande.\n\n'
+              '• Avis : note de 1 à 5, commentaire facultatif, plateforme '
+              '(web, iOS ou Android), version de l\'application, adresse '
+              'email et identifiant technique de compte, recueillis via le '
+              'formulaire « Donner mon avis » — utilisés pour améliorer le '
+              'service.\n\n'
               '• Rapport d\'incident (applications mobiles iOS/Android '
               'uniquement) : en cas de plantage, et UNIQUEMENT si vous avez '
               'activé cette option — désactivée par défaut, dans Profil → '
@@ -124,7 +130,10 @@ class _PrivacyContent extends StatelessWidget {
               'à accéder à son espace de gestion locative (art. 6.1.f).\n\n'
               'Le traitement des demandes de support (formulaire « Nous '
               'contacter ») est fondé sur l\'intérêt légitime à répondre aux '
-              'utilisateurs du service (art. 6.1.f).',
+              'utilisateurs du service (art. 6.1.f).\n\n'
+              'Le traitement des avis (formulaire « Donner mon avis ») est '
+              'fondé sur l\'intérêt légitime à améliorer le service '
+              '(art. 6.1.f).',
         ),
 
         // 4. Sous-traitants
@@ -183,13 +192,15 @@ class _PrivacyContent extends StatelessWidget {
               '• Demandes de support : conservées le temps du traitement de la '
               'demande, puis au plus 12 mois après le dernier échange (suivi '
               'qualité), avant suppression.\n\n'
+              '• Avis : mêmes règles de conservation que les demandes de '
+              'support (ci-dessus) ; ils sont supprimés avec le compte.\n\n'
               '• Suppression de compte : la suppression (accessible dans '
               'l\'application via Profil → « Supprimer mon compte », ou via la '
               'page publique /delete-account) efface immédiatement et '
               'définitivement l\'ensemble des données du compte — biens, '
               'locataires, baux, paiements, documents et fichiers stockés, '
-              'dépenses, simulations, demandes de support, profil et compte '
-              'de connexion (y compris la révocation du jeton « Se connecter '
+              'dépenses, simulations, demandes de support et avis, profil et '
+              'compte de connexion (y compris la révocation du jeton « Se connecter '
               'avec Apple »). Seules les quittances de loyer émises sont '
               'conservées 5 ans à titre de preuve (loi n° 89-462 du 6 juillet '
               '1989 ; art. 2224 du Code civil), sous forme archivée '
@@ -230,6 +241,11 @@ class _PrivacyContent extends StatelessWidget {
               'de la connexion.\n\n'
               '• Préférences d\'interface (thème, dismiss du prompt d\'installation) — '
               'stockées en localStorage, non transmises à des tiers.\n\n'
+              '• Date de la dernière sollicitation d\'avis '
+              '(`review_solicited_at`) — stockée uniquement sur votre appareil '
+              '(localStorage sur le web, préférences de l\'application sur '
+              'mobile), non transmise, afin de ne pas vous solliciter plus '
+              'd\'une fois tous les 120 jours.\n\n'
               'Aucun outil d\'analytics comportemental ou publicitaire (Google '
               'Analytics, Mixpanel, etc.) n\'est intégré. Le seul outil tiers de '
               'diagnostic est Firebase Crashlytics, limité aux applications '

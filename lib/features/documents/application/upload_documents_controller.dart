@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 
+import '../../auth/data/landlord_tier_repository.dart';
+import '../../auth/domain/plan_matrix.g.dart';
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
 import '../domain/document_category.dart';
@@ -16,7 +19,12 @@ import 'lease_documents_provider.dart';
 
 final _log = Logger('UploadDocumentsController');
 
-/// Taille maximale autorisée par fichier (10 Mo).
+/// Taille maximale de repli (10 Mo) — utilisée uniquement si le plafond par
+/// palier (FEAT-056, `PlanQuota.documentMaxBytes`) n'a pas pu être résolu
+/// (provider non encore chargé). La vraie limite, **différenciée par
+/// palier** (10 Mio gratuit/Pro, 25 Mio Max, 50 Mio Ultra), vient de la table
+/// de droits générée (`plan_matrix.g.dart`) — ne jamais comparer une taille
+/// à cette constante directement, passer par `quotaLimitProvider`.
 const int kMaxFileSizeBytes = 10 * 1024 * 1024;
 
 /// Nombre maximum de fichiers par batch.
@@ -72,10 +80,16 @@ class UploadDocumentsController extends StateNotifier<UploadDocumentsState> {
       return;
     }
 
+    // FEAT-056 : plafond de taille différencié par palier — jamais la
+    // constante de repli directement (cf. sa doc).
+    final maxFileSizeBytes =
+        _ref.read(quotaLimitProvider(PlanQuota.documentMaxBytes)) ??
+        kMaxFileSizeBytes;
+
     // --- Validation préalable ---
     final initial = <UploadFileStatus>[];
     for (final f in pickedFiles) {
-      if (f.sizeBytes > kMaxFileSizeBytes) {
+      if (f.sizeBytes > maxFileSizeBytes) {
         initial.add(
           UploadFileStatus.error(
             filename: f.filename,
@@ -137,6 +151,39 @@ class UploadDocumentsController extends StateNotifier<UploadDocumentsState> {
           filename: f.filename,
           document: uploaded,
         );
+      } on FirebaseFunctionsException catch (e, st) {
+        // FEAT-056 : `createDocument` refuse désormais aussi en
+        // `resource-exhausted`/`file_too_large` (race avec un plafond client
+        // périmé — build ancienne, ou palier rétrogradé entre le pré-check et
+        // l'upload). Le serveur fournit `details.limitBytes`/`upgradeTo` :
+        // on les propage plutôt que de re-deviner la grille côté client.
+        final details = e.details;
+        final isFileTooLarge =
+            e.code == 'resource-exhausted' &&
+            (e.message?.contains('file_too_large') ?? false);
+        if (isFileTooLarge) {
+          _log.info('server file_too_large uploading ${f.filename}: $details');
+          current[i] = UploadFileStatus.error(
+            filename: f.filename,
+            reason: UploadFileErrorReason.fileTooLarge,
+            serverLimitBytes: details is Map
+                ? details['limitBytes'] as int?
+                : null,
+            serverUpgradeToLevelId: details is Map
+                ? details['upgradeTo'] as String?
+                : null,
+          );
+        } else {
+          _log.warning(
+            'FirebaseFunctionsException uploading ${f.filename}',
+            e,
+            st,
+          );
+          current[i] = UploadFileStatus.error(
+            filename: f.filename,
+            reason: UploadFileErrorReason.connectionError,
+          );
+        }
       } on FirebaseException catch (e, st) {
         _log.warning('FirebaseException uploading ${f.filename}', e, st);
         current[i] = UploadFileStatus.error(

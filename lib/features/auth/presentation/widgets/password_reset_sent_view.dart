@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
+import '../../../../core/ui/theme/app_icon_size.dart';
 
 /// Écran affiché après l'envoi du lien de réinitialisation.
 class PasswordResetSentView extends StatelessWidget {
@@ -17,7 +18,7 @@ class PasswordResetSentView extends StatelessWidget {
       children: [
         Icon(
           Icons.mark_email_read_outlined,
-          size: 56,
+          size: AppIconSize.hero,
           color: theme.colorScheme.primary,
         ),
         const SizedBox(height: 24),

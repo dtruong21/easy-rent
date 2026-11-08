@@ -1,3 +1,4 @@
+import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
 import 'package:easyrent/features/leases/application/leases_filter_provider.dart';
@@ -9,7 +10,6 @@ import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/leases/presentation/widgets/leases_filter_bar.dart';
-import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +28,11 @@ ThemeData _appTheme() => ThemeData(
 class _FakeRepo implements LeaseRepository {
   @override
   Future<List<LeaseListItem>> listForDisplay({DateTime? now}) async => [];
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
 
   @override
   Future<Lease> getById(String id) async => throw UnimplementedError();
@@ -130,8 +135,31 @@ Widget _buildMobile(ProviderContainer container) {
 
 void main() {
   group('LeasesFilterBar', () {
-    testWidgets('desktop — SegmentedButton visible avec 5 segments '
-        '(FEAT-028 ajoute « En retard »)', (tester) async {
+    testWidgets(
+      'desktop — puces de filtre visibles (5, FEAT-028 ajoute « En retard »)',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(_buildDesktop(container));
+        await tester.pumpAndSettle();
+
+        for (final f in LeaseFilter.values) {
+          expect(find.byKey(Key('filter_chip_$f')), findsOneWidget);
+        }
+        expect(find.textContaining('Tous'), findsOneWidget);
+        expect(find.textContaining('Actifs'), findsOneWidget);
+        expect(find.textContaining('À renouveler'), findsOneWidget);
+        expect(find.textContaining('En retard'), findsOneWidget);
+        expect(find.textContaining('Terminés'), findsOneWidget);
+      },
+    );
+
+    testWidgets('desktop — tap puce "En retard" → état provider = late', (
+      tester,
+    ) async {
       final container = ProviderContainer(
         overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
       );
@@ -140,35 +168,16 @@ void main() {
       await tester.pumpWidget(_buildDesktop(container));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SegmentedButton<LeaseFilter>), findsOneWidget);
-      expect(find.text('Tous'), findsOneWidget);
-      expect(find.text('Actifs'), findsOneWidget);
-      expect(find.text('À renouveler'), findsOneWidget);
-      expect(find.text('En retard'), findsOneWidget);
-      expect(find.text('Terminés'), findsOneWidget);
+      final chip = find.byKey(Key('filter_chip_${LeaseFilter.late}'));
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+
+      expect(container.read(leaseFilterProvider), LeaseFilter.late);
     });
 
-    testWidgets(
-      'desktop — sélection segment "En retard" → état provider = late',
-      (tester) async {
-        final container = ProviderContainer(
-          overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
-        );
-        addTearDown(container.dispose);
-
-        await tester.pumpWidget(_buildDesktop(container));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('En retard'));
-        await tester.pumpAndSettle();
-
-        expect(container.read(leaseFilterProvider), LeaseFilter.late);
-      },
-    );
-
-    testWidgets('mobile — DropdownButton visible (pas SegmentedButton)', (
-      tester,
-    ) async {
+    testWidgets('mobile — puces de filtre visibles', (tester) async {
       final container = ProviderContainer(
         overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
       );
@@ -177,30 +186,32 @@ void main() {
       await tester.pumpWidget(_buildMobile(container));
       await tester.pumpAndSettle();
 
-      expect(find.byType(DropdownButton<LeaseFilter>), findsOneWidget);
-      expect(find.byType(SegmentedButton<LeaseFilter>), findsNothing);
+      for (final f in LeaseFilter.values) {
+        expect(find.byKey(Key('filter_chip_$f')), findsOneWidget);
+      }
     });
 
-    testWidgets(
-      'desktop — sélection segment "Terminés" → état provider = terminated',
-      (tester) async {
-        final container = ProviderContainer(
-          overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
-        );
-        addTearDown(container.dispose);
+    testWidgets('desktop — tap puce "Terminés" → état provider = terminated', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [leaseRepositoryProvider.overrideWithValue(_FakeRepo())],
+      );
+      addTearDown(container.dispose);
 
-        await tester.pumpWidget(_buildDesktop(container));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildDesktop(container));
+      await tester.pumpAndSettle();
 
-        // Vérifier l'état initial
-        expect(container.read(leaseFilterProvider), LeaseFilter.all);
+      // Vérifier l'état initial
+      expect(container.read(leaseFilterProvider), LeaseFilter.all);
 
-        // Taper sur "Terminés"
-        await tester.tap(find.text('Terminés'));
-        await tester.pumpAndSettle();
+      final chip = find.byKey(Key('filter_chip_${LeaseFilter.terminated}'));
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
 
-        expect(container.read(leaseFilterProvider), LeaseFilter.terminated);
-      },
-    );
+      expect(container.read(leaseFilterProvider), LeaseFilter.terminated);
+    });
   });
 }

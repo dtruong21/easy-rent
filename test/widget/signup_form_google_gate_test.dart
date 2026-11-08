@@ -1,3 +1,7 @@
+import 'package:easyrent/core/config/auth_providers.dart';
+import 'package:easyrent/features/auth/presentation/widgets/apple_sign_in_button.dart';
+import 'package:easyrent/features/auth/presentation/widgets/or_divider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/auth/data/google_auth_exception.dart';
 import 'package:easyrent/features/auth/presentation/signup_page.dart';
@@ -228,5 +232,40 @@ void main() {
         );
       },
     );
+  });
+
+  // Fournisseurs proposés en v1 (décision du 2026-10-03) : Google sur web et
+  // Android, email seul sur iOS (règle App Store 4.8 tant qu'Apple manque),
+  // Apple masqué partout.
+  group('SignupForm — fournisseurs de connexion v1', () {
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      debugGoogleSignInOfferedOverride = null;
+      debugAppleSignInOfferedOverride = null;
+    });
+
+    testWidgets('Android : Google proposé, Apple masqué', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GoogleSignInButton), findsOneWidget);
+      expect(find.byType(AppleSignInButton), findsNothing);
+      expect(find.byType(OrDivider), findsOneWidget);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('iOS : email seul — ni Google, ni Apple, ni séparateur', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      await tester.pumpWidget(_buildSignupPage(repo: _FakeAuthRepository()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GoogleSignInButton), findsNothing);
+      expect(find.byType(AppleSignInButton), findsNothing);
+      expect(find.byType(OrDivider), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
+    });
   });
 }

@@ -12,7 +12,7 @@ cd easy-rent && git checkout develop
 
 ## 2. Prérequis à installer (NE sont PAS dans Git)
 - **Flutter 3.41.2** — ⚠️ version **épinglée** dans `.github/workflows/ci.yml` ; matcher cette version en local pour éviter les divergences (assertion `ListTile`/`DecoratedBox` sur Flutter plus récent).
-- **Node.js 20** — pour les Cloud Functions.
+- **Node.js 22** — pour les Cloud Functions.
 - **firebase-tools** : `npm i -g firebase-tools` (ou `npx -y firebase-tools@latest`).
 - (optionnel) **gh** CLI pour les PRs.
 
@@ -37,14 +37,15 @@ flutter test
 ```
 
 ## 6. Déploiement (⚠️ UN SEUL projet Firebase = easy-rent-54cd4)
-- **Staging (frontend)** : AUTOMATIQUE au push/merge sur `develop` → channel hosting `staging` (workflow `Deploy`).
-- **Backend** (functions + rules + indexes) : **MANUEL** (le pipeline ne déploie que le hosting). Comme dev/prod partagent le projet, ceci touche aussi la prod :
+- **Staging (frontend)** : AUTOMATIQUE au push/merge sur `develop` → site hosting `baillan-stage`, canal `live` (workflow `Deploy`).
+- **Rules + indexes** : automatiques par la CI, base ciblée (`develop` → `firestore:staging`, `main` → `firestore:(default)`). Jamais `firestore:rules` / `firestore:indexes` sans base : la commande pousserait sur les deux.
+- **Functions** : **MANUEL**, et partagées prod + staging — un déploiement touche aussi la prod :
   ```bash
-  firebase deploy --only functions,firestore:rules,firestore:indexes --project easy-rent-54cd4
+  firebase deploy --only functions --project easy-rent-54cd4
   ```
   ⏳ Les index composites Firestore se construisent en asynchrone (console → Firestore → Indexes : attendre « Enabled »).
-- **PROD** : merger `develop` → `main` (déclenche `Deploy` sur le channel `live`) **+** deploy backend manuel. Décision explicite requise.
-  - Prod : `https://easy-rent-54cd4.web.app` · Staging : channel `staging` (URL via `firebase hosting:channel:list`).
+- **PROD** : merger `develop` → `main` (déclenche `Deploy` sur le site `prod`, canal `live`) **+** deploy backend manuel. Décision explicite requise.
+  - Prod : `https://baillan.com` · Staging : `https://app.staging.baillan.com` (deux **sites** du même projet ; données isolées depuis l'ADR 0003 : base Firestore `staging`). La vitrine staging est `https://stage.baillan.com`.
 - Détails : `docs/ENVIRONMENTS.md`, `docs/GITFLOW.md`.
 
 ## 7. En attente / prochaines étapes

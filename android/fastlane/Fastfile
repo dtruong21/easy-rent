@@ -11,9 +11,11 @@
 
 default_platform(:android)
 
-# Fastlane s'exécute avec le CWD = android/ ; la racine du projet Flutter est
-# donc un cran au-dessus. Chemins absolus → sans ambiguïté quel que soit le CWD.
-PROJECT_ROOT = File.expand_path("..", Dir.pwd)
+# Racine du projet Flutter, calculée depuis l'emplacement de ce fichier
+# (android/fastlane/) : Fastlane évalue le Fastfile avec le CWD = android/fastlane,
+# donc `Dir.pwd` ne désigne PAS android/.
+PROJECT_ROOT = File.expand_path("../..", __dir__)
+require File.join(PROJECT_ROOT, "tool/release/release_defines")
 AAB_PATH = File.join(
   PROJECT_ROOT, "build/app/outputs/bundle/release/app-release.aab"
 )
@@ -21,7 +23,9 @@ AAB_PATH = File.join(
 platform :android do
   desc "Build l'AAB release signé (clé upload via android/key.properties)"
   lane :build do |options|
-    args = ["build", "appbundle", "--release"]
+    # Réglages de prod obligatoires (dart-defines.prod.json) — échec sinon.
+    args = ["build", "appbundle", "--release",
+            *ReleaseDefines.flutter_args!(PROJECT_ROOT, :android)]
     args << "--build-name=#{options[:build_name]}" if options[:build_name]
     args << "--build-number=#{options[:build_number]}" if options[:build_number]
     Dir.chdir(PROJECT_ROOT) { sh("flutter", *args) }

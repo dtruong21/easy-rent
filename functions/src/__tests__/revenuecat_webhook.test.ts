@@ -1,15 +1,22 @@
+import {Timestamp} from "firebase-admin/firestore";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 
+import {levelForRcEntitlement, rcEntitlementIdFor} from "../entitlements/plan";
 import {
   applyRevenueCatEvent,
   decideEntitlement,
+  handleRevenueCatEvent,
   isAuthorizedWebhook,
-  PRO_ENTITLEMENT_ID,
   storeOf,
   type RcEvent,
 } from "../http/revenuecat_webhook";
+import {SANDBOX_ALLOWLIST_DOC} from "../utils/sandbox_allowlist";
 
-import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
 
 vi.mock("firebase-admin", async () => {
   const {makeFakeAdminModule} = await import("./helpers/fake_firestore");
@@ -18,9 +25,22 @@ vi.mock("firebase-admin", async () => {
 
 let fakeDb: FakeFirestore;
 
+/**
+ * Entitlement RevenueCat du palier `pro`, ÉPINGLÉ ICI EN DUR.
+ *
+ * Un seul `l` — typo historique **load-bearing** : c'est la clé effective des
+ * abonnés existants. La renommer (dashboard RC ou table) ferait passer tous
+ * leurs events par `levelForRcEntitlement() → null → ignored` : plus aucune
+ * expiration ni renouvellement appliqué, silencieusement. Le test
+ * « la table connaît cet entitlement » ci-dessous est le garde-fou : il casse
+ * bruyamment si quelqu'un « corrige » la faute de frappe.
+ */
+const PRO_RC_ENTITLEMENT_ID = "Bailan Pro";
+
 const UID = "landlord-pro";
 const NOW = Date.UTC(2026, 5, 15); // 2026-06-15
 const IN_30D = NOW + 30 * 24 * 3600 * 1000;
+const IN_60D = NOW + 60 * 24 * 3600 * 1000;
 const AGO_1D = NOW - 24 * 3600 * 1000;
 
 function seedFullLandlord(extra: Record<string, unknown> = {}) {
@@ -39,8 +59,9 @@ function evt(overrides: Partial<RcEvent> = {}): RcEvent {
     type: "INITIAL_PURCHASE",
     app_user_id: UID,
     product_id: "pro_monthly",
-    entitlement_ids: [PRO_ENTITLEMENT_ID],
+    entitlement_ids: [PRO_RC_ENTITLEMENT_ID],
     store: "APP_STORE",
+    environment: "PRODUCTION",
     expiration_at_ms: IN_30D,
     event_timestamp_ms: NOW,
     ...overrides,
@@ -135,7 +156,7 @@ describe("applyRevenueCatEvent", () => {
     expect(doc?.proStore).toBe("app_store");
     expect(doc?.proProductId).toBe("pro_monthly");
     expect(doc?.proWillRenew).toBe(true);
-    expect(doc?.proExpiresAt).toEqual(new Date(IN_30D));
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_30D));
     expect(doc?.proSince).toBeInstanceOf(Date); // serverTimestamp résolu
     expect(doc?.proLastEventAtMs).toBe(NOW);
   });
@@ -239,5 +260,637 @@ describe("applyRevenueCatEvent", () => {
     expect(after2?.subscriptionTier).toBe("paid");
     expect(after2?.proExpiresAt).toEqual(after1.proExpiresAt);
     expect(after2?.proLastEventAtMs).toBe(NOW);
+  });
+});
+
+// ============================================================================
+// FEAT-056 — multi-paliers. Les cas ci-dessus (palier unique) restent la
+// référence de non-régression : un abonné actuel ne doit rien voir changer.
+// ============================================================================
+
+describe("résolution d'entitlement (W5)", () => {
+  it("la table connaît l'entitlement historique — et lui seul", () => {
+    // Garde-fou R4 : si ce test casse, quelqu'un a « corrigé » la typo
+    // « Bailan » → tous les events des abonnés existants seraient ignorés.
+    expect(levelForRcEntitlement(PRO_RC_ENTITLEMENT_ID)).toBe("pro");
+    expect(rcEntitlementIdFor("pro")).toBe(PRO_RC_ENTITLEMENT_ID);
+    expect(levelForRcEntitlement("Baillan Pro")).toBeNull();
+    expect(levelForRcEntitlement("rc_test_entitlement")).toBeNull();
+  });
+
+  it("un entitlement inconnu n'accorde RIEN, même mélangé au nôtre", async () => {
+    // L'event porte un entitlement étranger EN PLUS du nôtre : seul le palier
+    // connu est touché, l'inconnu n'est jamais deviné ni normalisé.
+    seedFullLandlord();
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({entitlement_ids: ["rc_test_entitlement", PRO_RC_ENTITLEMENT_ID]}),
+      NOW,
+    );
+    expect(outcome).toBe("applied");
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.planLevel).toBe("pro");
+    expect(Object.keys(doc?.entitlements as object)).toEqual(["pro"]);
+  });
+
+  it("un event portant UNIQUEMENT un entitlement inconnu → ignoré", async () => {
+    seedFullLandlord({subscriptionTier: "paid", proEntitlementActive: true});
+    // ⚠️ Ce décor doit rester une chaîne qui n'existera JAMAIS dans
+    // `config/entitlements.json`. Il valait « Baillan Ultra » tant qu'Ultra
+    // n'avait pas d'entitlement RevenueCat ; le jour où on lui en a attribué
+    // un, le test s'est mis à échouer alors que le comportement visé — un
+    // entitlement étranger ne révoque rien — n'avait pas bougé.
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({
+        type: "EXPIRATION",
+        entitlement_ids: ["not-a-baillan-entitlement"],
+      }),
+      NOW,
+    );
+    expect(outcome).toBe("ignored");
+    // L'abonné garde son accès : un entitlement étranger ne révoque rien.
+    expect(fakeDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+  });
+});
+
+describe("map d'état par palier", () => {
+  /** État brut tel que stocké dans `landlords/{uid}.entitlements.<level>`. */
+  function state(over: Record<string, unknown> = {}) {
+    return {
+      active: true,
+      expiresAt: new Date(IN_30D),
+      willRenew: true,
+      productId: "p",
+      store: "web",
+      lastEventAtMs: NOW,
+      ...over,
+    };
+  }
+
+  it("un event matérialise la map et pose planLevel", async () => {
+    seedFullLandlord();
+    await applyRevenueCatEvent(fakeDb, evt(), NOW);
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.planLevel).toBe("pro");
+    const states = doc?.entitlements as Record<string, Record<string, unknown>>;
+    expect(states.pro).toMatchObject({
+      active: true,
+      willRenew: true,
+      productId: "pro_monthly",
+      store: "app_store",
+      lastEventAtMs: NOW,
+    });
+    expect(states.pro?.expiresAt).toEqual(Timestamp.fromMillis(IN_30D));
+  });
+
+  it("EXPIRATION du dernier palier → free, planLevel null, proSince gardé", async () => {
+    seedFullLandlord({
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      planLevel: "pro",
+      proSince: new Date(AGO_1D),
+      entitlements: {pro: state({lastEventAtMs: AGO_1D})},
+    });
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "EXPIRATION", expiration_at_ms: AGO_1D}),
+      NOW,
+    );
+    expect(outcome).toBe("applied");
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.subscriptionTier).toBe("free");
+    expect(doc?.planLevel).toBeNull();
+    expect(doc?.proEntitlementActive).toBe(false);
+    expect(doc?.proSince).toEqual(new Date(AGO_1D)); // W6
+  });
+
+  it("🔴 EXPIRATION Pro sur un compte ULTRA actif → reste ultra (W1)", async () => {
+    // Chevauchement de downgrade différé : l'event ne mentionne que Pro. S'il
+    // touchait l'état global, on verrouillerait un client qui a payé Ultra
+    // jusqu'à la fin de sa période.
+    seedFullLandlord({
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      planLevel: "ultra",
+      entitlements: {
+        pro: state({lastEventAtMs: AGO_1D}),
+        ultra: state({expiresAt: new Date(IN_60D), lastEventAtMs: AGO_1D}),
+      },
+    });
+
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "EXPIRATION", expiration_at_ms: AGO_1D}),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.subscriptionTier).toBe("paid");
+    expect(doc?.planLevel).toBe("ultra"); // W3 : max(rang) parmi les actifs
+    const states = doc?.entitlements as Record<string, Record<string, unknown>>;
+    expect(states.pro?.active).toBe(false); // seul Pro a bougé
+    expect(states.ultra?.active).toBe(true);
+    // Les champs pro* reflètent le palier EFFECTIF, pas l'event reçu.
+    expect(doc?.proExpiresAt).toEqual(Timestamp.fromMillis(IN_60D));
+    expect(doc?.proEntitlementActive).toBe(true);
+  });
+
+  it("🔴 arrivée DÉSORDONNÉE sur deux paliers → garde d'ordre par palier (W2)", async () => {
+    // Ultra acheté à T2 (déjà appliqué), puis l'EXPIRATION de Pro datée T1
+    // arrive en retard. Une garde d'ordre GLOBALE la jetterait comme stale
+    // alors qu'elle concerne un autre palier — et Pro resterait actif à tort.
+    const T0 = NOW - 3 * 3600 * 1000;
+    const T1 = NOW - 2 * 3600 * 1000;
+    const T2 = NOW - 1 * 3600 * 1000;
+    seedFullLandlord({
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      planLevel: "ultra",
+      proLastEventAtMs: T2,
+      entitlements: {
+        pro: state({lastEventAtMs: T0}),
+        ultra: state({expiresAt: new Date(IN_60D), lastEventAtMs: T2}),
+      },
+    });
+
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({
+        type: "EXPIRATION",
+        expiration_at_ms: AGO_1D,
+        event_timestamp_ms: T1,
+      }),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.planLevel).toBe("ultra");
+    const states = doc?.entitlements as Record<string, Record<string, unknown>>;
+    expect(states.pro?.active).toBe(false);
+    expect(states.ultra?.active).toBe(true);
+    // Le repère global ne recule jamais.
+    expect(doc?.proLastEventAtMs).toBe(T2);
+  });
+
+  it("event stale SUR SON PALIER → aucune écriture", async () => {
+    seedFullLandlord({
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      planLevel: "pro",
+      entitlements: {pro: state({lastEventAtMs: NOW})},
+    });
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "EXPIRATION", event_timestamp_ms: AGO_1D}),
+      NOW,
+    );
+    expect(outcome).toBe("stale");
+    expect(fakeDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+  });
+
+  it("un palier actif mais ÉCHU ne compte pas dans la dérivation", async () => {
+    seedFullLandlord({
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      planLevel: "ultra",
+      entitlements: {
+        // Ultra jamais nettoyé par le cron : marqué actif, mais échu.
+        ultra: state({expiresAt: new Date(AGO_1D), lastEventAtMs: AGO_1D}),
+      },
+    });
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "RENEWAL", expiration_at_ms: IN_30D}),
+      NOW,
+    );
+    expect(outcome).toBe("applied");
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.planLevel).toBe("pro"); // ultra échu → ignoré
+    expect(doc?.subscriptionTier).toBe("paid");
+  });
+});
+
+describe("🔴 compte legacy (aucune map `entitlements`)", () => {
+  it("un RENEWAL matérialise la map sans rétrograder l'abonné", async () => {
+    // Cas le plus fréquent en production : doc payant d'avant FEAT-056.
+    seedFullLandlord({
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      proWillRenew: true,
+      proExpiresAt: new Date(IN_30D),
+      proStore: "web",
+      proProductId: "pro_monthly",
+      proSince: new Date(AGO_1D),
+      proLastEventAtMs: AGO_1D,
+    });
+
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "RENEWAL", expiration_at_ms: IN_60D}),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.subscriptionTier).toBe("paid"); // jamais de rétrogradation
+    expect(doc?.planLevel).toBe("pro"); // grandfathering (I3)
+    const states = doc?.entitlements as Record<string, Record<string, unknown>>;
+    expect(states.pro?.active).toBe(true);
+    expect(states.pro?.expiresAt).toEqual(Timestamp.fromMillis(IN_60D));
+    expect(doc?.proSince).toEqual(new Date(AGO_1D)); // W6
+  });
+
+  it("la garde d'ordre globale tient tant que la map n'existe pas", async () => {
+    // Sans repli sur `proLastEventAtMs`, un event ancien serait ré-appliqué
+    // (le palier n'ayant encore aucun `lastEventAtMs` propre) et pourrait
+    // ressusciter un abonnement expiré.
+    seedFullLandlord({
+      subscriptionTier: "free",
+      proEntitlementActive: false,
+      proLastEventAtMs: NOW,
+    });
+    const outcome = await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "RENEWAL", event_timestamp_ms: AGO_1D}),
+      NOW,
+    );
+    expect(outcome).toBe("stale");
+    expect(fakeDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("un compte legacy NON payant ne se voit rien matérialiser à tort", async () => {
+    seedFullLandlord({subscriptionTier: "free", proEntitlementActive: false});
+    await applyRevenueCatEvent(
+      fakeDb,
+      evt({type: "EXPIRATION", expiration_at_ms: AGO_1D}),
+      NOW,
+    );
+    const doc = fakeDb.peek(`landlords/${UID}`);
+    expect(doc?.subscriptionTier).toBe("free");
+    expect(doc?.planLevel).toBeNull();
+  });
+});
+
+// OWASP-01 — le mode test ne peut JAMAIS accorder un palier en prod.
+//
+// Une seule Cloud Function et un seul webhook RevenueCat servent prod
+// (`(default)`) ET staging (base `staging`, Stripe en mode test, app publique).
+// La base cible est donc choisie par l'`environment` de l'event — jamais par
+// « quelle base porte le doc », qui laissait un compte prod payer avec la carte
+// de test publique et se voir accorder un palier payant en prod. Aucun repli
+// sur l'autre base : un event SANDBOX sur un compte prod ne touche RIEN.
+describe("handleRevenueCatEvent — routage par environnement (OWASP-01)", () => {
+  let prodDb: FakeFirestore;
+  let stagingDb: FakeFirestore;
+
+  beforeEach(() => {
+    prodDb = new FakeFirestore();
+    stagingDb = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db = prodDb;
+    fakeStagingFirestoreHolder.db = stagingDb;
+  });
+
+  function seedIn(db: FakeFirestore) {
+    db.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      isAnonymous: false,
+      subscriptionTier: "free",
+      deletedAt: null,
+    });
+  }
+
+  it("SANDBOX + doc seulement en prod → no_landlord, RIEN écrit en prod", async () => {
+    seedIn(prodDb);
+    const before = structuredClone(prodDb.peek(`landlords/${UID}`));
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("no_landlord");
+    expect(prodDb.peek(`landlords/${UID}`)).toEqual(before);
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(stagingDb.peek(`landlords/${UID}`)).toBeUndefined();
+  });
+
+  it("SANDBOX + doc en staging → staging mis à jour, prod intacte", async () => {
+    seedIn(stagingDb);
+    seedIn(prodDb);
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(prodDb.peek(`landlords/${UID}`)?.proEntitlementActive).toBeUndefined();
+  });
+
+  it("PRODUCTION + doc en prod → prod mis à jour (comportement inchangé)", async () => {
+    seedIn(prodDb);
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "PRODUCTION"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("applied");
+    const doc = prodDb.peek(`landlords/${UID}`);
+    expect(doc?.subscriptionTier).toBe("paid");
+    expect(doc?.proEntitlementActive).toBe(true);
+    expect(doc?.proStore).toBe("app_store");
+  });
+
+  it("PRODUCTION + doc seulement en staging → no_landlord, RIEN écrit en staging", async () => {
+    seedIn(stagingDb);
+    const before = structuredClone(stagingDb.peek(`landlords/${UID}`));
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "PRODUCTION"}),
+      NOW,
+    );
+
+    expect(outcome).toBe("no_landlord");
+    expect(stagingDb.peek(`landlords/${UID}`)).toEqual(before);
+    expect(prodDb.peek(`landlords/${UID}`)).toBeUndefined();
+  });
+
+  it("environnement absent → ignoré, aucune base modifiée", async () => {
+    seedIn(prodDb);
+    seedIn(stagingDb);
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: undefined}),
+      NOW,
+    );
+
+    expect(outcome).toBe("ignored");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it.each(["", "sandbox", "production", "Sandbox", "STAGING", "TEST"])(
+    "environnement inconnu %j → ignoré, aucune base modifiée",
+    async (environment) => {
+      seedIn(prodDb);
+      seedIn(stagingDb);
+
+      const outcome = await handleRevenueCatEvent(evt({environment}), NOW);
+
+      expect(outcome).toBe("ignored");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    },
+  );
+
+  it("environnement non-chaîne (nombre, objet) → ignoré", async () => {
+    seedIn(prodDb);
+    for (const bad of [1, {a: 1}, ["SANDBOX"]]) {
+      const outcome = await handleRevenueCatEvent(
+        evt({environment: bad as unknown as string}),
+        NOW,
+      );
+      expect(outcome).toBe("ignored");
+    }
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("event TEST → ignoré quel que soit l'environnement (inchangé)", async () => {
+    seedIn(prodDb);
+    seedIn(stagingDb);
+    for (const environment of ["SANDBOX", "PRODUCTION", undefined]) {
+      expect(
+        await handleRevenueCatEvent(evt({type: "TEST", environment}), NOW),
+      ).toBe("ignored");
+    }
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("scénario OWASP-01 : compte prod + achat Stripe test (SANDBOX) → jamais payant en prod", async () => {
+    // Le même uid vit en prod ET en staging (Auth partagée : le compte prod
+    // s'est connecté sur le staging public). Avant le correctif, le routage
+    // « base qui porte le doc, prod d'abord » écrivait le palier en PROD.
+    seedIn(prodDb);
+    seedIn(stagingDb);
+
+    for (const type of ["INITIAL_PURCHASE", "RENEWAL", "PRODUCT_CHANGE"]) {
+      await handleRevenueCatEvent(
+        evt({type, environment: "SANDBOX", event_timestamp_ms: NOW}),
+        NOW,
+      );
+    }
+
+    const prod = prodDb.peek(`landlords/${UID}`);
+    expect(prod?.subscriptionTier).toBe("free");
+    expect(prod?.proEntitlementActive).toBeUndefined();
+    expect(prod?.entitlements).toBeUndefined();
+    expect(prod?.planLevel).toBeUndefined();
+  });
+});
+
+// FEAT-044e (#209) — App Review / testeurs Google achètent en SANDBOX sur
+// l'app de PROD. Un achat App Store / Google Play d'un uid de la liste blanche
+// reçoit ce droit en prod ; tout le reste (autres uids, achats Stripe test du
+// web staging) reste routé vers staging (OWASP-01 inchangé).
+describe("handleRevenueCatEvent — liste blanche sandbox (FEAT-044e)", () => {
+  let prodDb: FakeFirestore;
+  let stagingDb: FakeFirestore;
+
+  beforeEach(() => {
+    prodDb = new FakeFirestore();
+    stagingDb = new FakeFirestore("staging");
+    fakeAdminFirestoreHolder.db = prodDb;
+    fakeStagingFirestoreHolder.db = stagingDb;
+    for (const db of [prodDb, stagingDb]) {
+      db.seed(`landlords/${UID}`, {
+        id: UID,
+        landlordId: UID,
+        isAnonymous: false,
+        subscriptionTier: "free",
+        deletedAt: null,
+      });
+    }
+  });
+
+  const listed = () => Promise.resolve(new Set([UID]) as ReadonlySet<string>);
+  const empty = () => Promise.resolve(new Set<string>() as ReadonlySet<string>);
+  const failing = () => Promise.reject(new Error("unavailable"));
+
+  it("SANDBOX + uid listé → droit appliqué en PROD, staging intact", async () => {
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+      listed,
+    );
+
+    expect(outcome).toBe("applied");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX + uid non listé → staging (comportement inchangé)", async () => {
+    await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, empty);
+
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX + liste illisible → erreur (500, RevenueCat retente), aucune base modifiée", async () => {
+    // Appliquer en staging puis répondre 200 perdrait l'achat d'App Review :
+    // RevenueCat ne le renverrait jamais. L'erreur remonte, rien n'est écrit.
+    await expect(
+      handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, failing),
+    ).rejects.toThrow("unavailable");
+
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX Google Play + uid listé → PROD", async () => {
+    await handleRevenueCatEvent(
+      evt({environment: "SANDBOX", store: "PLAY_STORE"}),
+      NOW,
+      listed,
+    );
+
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it.each(["STRIPE", "RC_BILLING", "PROMOTIONAL", undefined])(
+    "SANDBOX store %s + uid listé → staging, liste jamais lue",
+    async (store) => {
+      // Web = Stripe via RevenueCat : un achat carte test sur le staging ne
+      // donne jamais Pro en prod, même à un compte de la liste.
+      const reader = vi.fn(listed);
+
+      await handleRevenueCatEvent(
+        evt({environment: "SANDBOX", store}),
+        NOW,
+        reader,
+      );
+
+      expect(reader).not.toHaveBeenCalled();
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    },
+  );
+
+  it("SANDBOX + uid listé sans doc prod → no_landlord, staging intact", async () => {
+    prodDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = prodDb;
+
+    const outcome = await handleRevenueCatEvent(
+      evt({environment: "SANDBOX"}),
+      NOW,
+      listed,
+    );
+
+    expect(outcome).toBe("no_landlord");
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("PRODUCTION → la liste n'est jamais lue", async () => {
+    const reader = vi.fn(listed);
+
+    await handleRevenueCatEvent(evt({environment: "PRODUCTION"}), NOW, reader);
+
+    expect(reader).not.toHaveBeenCalled();
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+  });
+
+  it("SANDBOX + liste non vide SANS cet uid → staging, prod intacte", async () => {
+    const others = () =>
+      Promise.resolve(new Set(["someone-else"]) as ReadonlySet<string>);
+
+    await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW, others);
+
+    expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+    expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+  });
+
+  it("SANDBOX + uid listé + EXPIRATION → droit RETIRÉ en prod", async () => {
+    prodDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      isAnonymous: false,
+      subscriptionTier: "paid",
+      proEntitlementActive: true,
+      proLastEventAtMs: AGO_1D,
+      deletedAt: null,
+    });
+
+    const outcome = await handleRevenueCatEvent(
+      evt({
+        type: "EXPIRATION",
+        environment: "SANDBOX",
+        expiration_at_ms: AGO_1D,
+      }),
+      NOW,
+      listed,
+    );
+
+    expect(outcome).toBe("applied");
+    const prod = prodDb.peek(`landlords/${UID}`);
+    expect(prod?.subscriptionTier).toBe("free");
+    expect(prod?.proEntitlementActive).toBe(false);
+  });
+
+  // Lecteur RÉEL (aucun lecteur injecté) : prouve que la liste est lue dans
+  // la base PROD, au bon chemin, et comparée au bon uid.
+  describe("lecteur par défaut (_ops/sandboxAllowlist)", () => {
+    it("liste en PROD contenant l'uid → droit appliqué en PROD", async () => {
+      prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+
+      const outcome = await handleRevenueCatEvent(
+        evt({environment: "SANDBOX"}),
+        NOW,
+      );
+
+      expect(outcome).toBe("applied");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
+
+    it("liste présente seulement en STAGING → ignorée (staging)", async () => {
+      // Un compte staging ne doit jamais pouvoir s'ouvrir la prod.
+      stagingDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+
+      await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW);
+
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
+
+    it("liste PROD sans cet uid → staging", async () => {
+      prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: ["someone-else"]});
+
+      await handleRevenueCatEvent(evt({environment: "SANDBOX"}), NOW);
+
+      expect(stagingDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("paid");
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
+
+    it("event SANDBOX sans app_user_id → jamais en prod, liste non lue", async () => {
+      prodDb.seed(SANDBOX_ALLOWLIST_DOC, {uids: [UID]});
+      const reader = vi.fn(listed);
+
+      await handleRevenueCatEvent(
+        evt({environment: "SANDBOX", app_user_id: undefined}),
+        NOW,
+        reader,
+      );
+
+      expect(reader).not.toHaveBeenCalled();
+      expect(prodDb.peek(`landlords/${UID}`)?.subscriptionTier).toBe("free");
+    });
   });
 });

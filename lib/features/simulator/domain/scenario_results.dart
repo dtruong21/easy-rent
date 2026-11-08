@@ -16,7 +16,7 @@ part 'scenario_results.freezed.dart';
 const double _kVacancyRatePercent = 5.0;
 const double _kAnnualAppreciationPercent = 1.5;
 const int _kProjectionMonths = 240;
-const int _kInsuranceBps = 30;
+const int kScenarioLoanInsuranceBps = 30;
 
 /// 8 KPI du simulateur d'investissement (FEAT-018).
 ///
@@ -70,7 +70,7 @@ ScenarioResults computeScenarioResults(InvestmentScenario s) {
     principalCents: s.loanPrincipalCents,
     rateBps: s.loanRateBps,
     durationMonths: s.loanDurationMonths,
-    insuranceBps: _kInsuranceBps,
+    insuranceBps: kScenarioLoanInsuranceBps,
   );
 
   // ── Revenus locatifs ─────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ ScenarioResults computeScenarioResults(InvestmentScenario s) {
   // Assurance = capital × (insuranceBps / 10000) × durée en années.
   final totalInsurance =
       (s.loanPrincipalCents *
-              _kInsuranceBps /
+              kScenarioLoanInsuranceBps /
               10000 *
               (s.loanDurationMonths / 12))
           .round();

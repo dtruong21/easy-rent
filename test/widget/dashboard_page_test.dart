@@ -6,10 +6,12 @@ import 'package:easyrent/features/auth/data/auth_repository.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/dashboard/presentation/dashboard_page.dart';
-import 'package:easyrent/features/dashboard/presentation/widgets/kpi_card.dart';
+import 'package:easyrent/features/dashboard/presentation/widgets/action_items_panel.dart';
 import 'package:easyrent/features/dashboard/presentation/widgets/shortcuts_row.dart';
+import 'package:easyrent/features/leases/application/leases_list_provider.dart';
+import 'package:easyrent/features/leases/domain/lease_list_item.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
 import 'package:easyrent/features/pwa/application/install_prompt_controller.dart';
@@ -63,21 +65,35 @@ class _FakeDashboardRepo implements DashboardRepository {
   Future<RetardsKpi> fetchRetards() async => RetardsKpi(count: retards);
 
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
 
   @override
-  Future<bool> isLandlordOnboarding() async => onboarding;
+  Future<OnboardingProgress> fetchOnboardingProgress() async => onboarding
+      ? const OnboardingProgress(
+          hasProperty: false,
+          hasTenant: false,
+          hasLease: false,
+          hasPayment: false,
+          hasReceipt: false,
+          firstLeaseId: null,
+        )
+      : const OnboardingProgress(
+          hasProperty: true,
+          hasTenant: true,
+          hasLease: true,
+          hasPayment: true,
+          hasReceipt: true,
+          firstLeaseId: null,
+        );
 }
 
 class _FakeAuthRepo implements AuthRepository {
@@ -169,6 +185,15 @@ class _FakeInstallController extends InstallPromptController {
   _FakeInstallController() : super(InstallPromptStorage());
 }
 
+/// Fake pour [leasesListProvider] — [ActionItemsPanel] (câblé à la place de
+/// `MonthlyCashflowChart`, cf. Task 6) le `ref.watch` en interne. Liste vide
+/// par défaut : ces tests ne portent pas sur le panneau d'action lui-même
+/// (déjà couvert par `action_items_panel_test.dart`).
+class _FakeLeasesNotifier extends LeasesListNotifier {
+  @override
+  Future<List<LeaseListItem>> build() async => const <LeaseListItem>[];
+}
+
 // ---------------------------------------------------------------------------
 // Helper de rendu
 // ---------------------------------------------------------------------------
@@ -209,6 +234,7 @@ Widget _wrap({bool onboarding = false, int retards = 0}) {
       ),
       authRepositoryProvider.overrideWithValue(_FakeAuthRepo()),
       installPromptStorageProvider.overrideWith((_) => InstallPromptStorage()),
+      leasesListProvider.overrideWith(() => _FakeLeasesNotifier()),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -248,13 +274,18 @@ void main() {
   });
 
   group('DashboardPage — état data normal', () {
-    testWidgets('affiche les 4 KPI cards', (tester) async {
+    testWidgets('affiche 2 KPI patrimoniaux (occupation, patrimoine)', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap());
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('kpi_loyers')), findsOneWidget);
-      expect(find.byKey(const Key('kpi_retards')), findsOneWidget);
-      expect(find.byKey(const Key('kpi_renouvellements')), findsOneWidget);
-      expect(find.byKey(const Key('kpi_docs')), findsOneWidget);
+      expect(find.byKey(const Key('kpi_occupation')), findsOneWidget);
+      expect(find.byKey(const Key('kpi_patrimoine')), findsOneWidget);
+      expect(find.byKey(const Key('kpi_docs')), findsNothing);
+      // Les compteurs redondants avec le panneau ont été retirés.
+      expect(find.byKey(const Key('kpi_loyers')), findsNothing);
+      expect(find.byKey(const Key('kpi_retards')), findsNothing);
+      expect(find.byKey(const Key('kpi_renouvellements')), findsNothing);
     });
 
     testWidgets('affiche le header "Bonjour"', (tester) async {
@@ -262,6 +293,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Bonjour'), findsOneWidget);
     });
+
+    testWidgets(
+      'affiche le panneau actionnable à la place du graphe cash-flow',
+      (tester) async {
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
+        expect(find.byType(ActionItemsPanel), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'mobile : affiche ShortcutsRow réduite au seul CTA simulateur (FEAT-026)',
@@ -300,6 +340,31 @@ void main() {
         expect(find.byType(ShortcutsRow), findsNothing);
       },
     );
+
+    testWidgets(
+      '3 zones nommées, dans l\'ordre À traiter → patrimoine → analyse',
+      (tester) async {
+        await tester.pumpWidget(_wrap());
+        await tester.pumpAndSettle();
+
+        final todo = find.text('À traiter');
+        final patrimony = find.text('Mon patrimoine');
+        final analysis = find.text('Analyse');
+        expect(todo, findsOneWidget);
+        expect(patrimony, findsOneWidget);
+        expect(analysis, findsOneWidget);
+
+        // Ordre vertical : À traiter au-dessus de Mon patrimoine, au-dessus d'Analyse.
+        expect(
+          tester.getTopLeft(todo).dy,
+          lessThan(tester.getTopLeft(patrimony).dy),
+        );
+        expect(
+          tester.getTopLeft(patrimony).dy,
+          lessThan(tester.getTopLeft(analysis).dy),
+        );
+      },
+    );
   });
 
   group('DashboardPage — AppBar', () {
@@ -319,13 +384,26 @@ void main() {
   });
 
   group('DashboardPage — empty states (CardEmptyState)', () {
-    testWidgets('barchart vide affiche texte CardEmptyState', (tester) async {
-      // Le repo retourne [] pour fetchLastMonthsAmounts → isEmpty = true.
+    testWidgets('cash flow chart vide affiche texte CardEmptyState', (
+      tester,
+    ) async {
+      // Le repo retourne [] pour fetchLastMonthsCollectedRent → isEmpty = true.
+      // Le graphe est désormais replié par défaut (CollapsibleCashflowSection,
+      // Task 5/6) : il faut déplier la carte avant que le chart (et donc son
+      // empty state) ne soit construit.
       await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+      final tile = find.text('Cash-flow mensuel — détail');
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
       await tester.pumpAndSettle();
       expect(find.text("Pas encore d'historique"), findsOneWidget);
       expect(
-        find.text('Les loyers apparaîtront ici dès le 1er paiement.'),
+        find.text(
+          'Le cash-flow apparaîtra ici dès le premier loyer encaissé ou la '
+          'première dépense enregistrée.',
+        ),
         findsOneWidget,
       );
     });
@@ -344,81 +422,6 @@ void main() {
         find.text('Commencez par enregistrer un paiement.'),
         findsOneWidget,
       );
-    });
-  });
-
-  group('DashboardPage — couleurs sémantiques KpiGrid', () {
-    testWidgets('KPI retards utilise AppColors.danger quand count > 0', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap(retards: 2));
-      await tester.pumpAndSettle();
-
-      // Trouve le KpiCard retards et vérifie sa semanticColor.
-      final kpiRetards = tester.widget<KpiCard>(
-        find.byKey(const Key('kpi_retards')),
-      );
-      expect(kpiRetards.semanticColor, equals(AppColors.light.danger.solid));
-    });
-
-    testWidgets('KPI retards utilise AppColors.neutral quand count = 0', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      final kpiRetards = tester.widget<KpiCard>(
-        find.byKey(const Key('kpi_retards')),
-      );
-      expect(kpiRetards.semanticColor, equals(AppColors.light.neutral.solid));
-    });
-  });
-  group('DashboardPage — drill-down KPI cliquables', () {
-    testWidgets('tap « Loyers du mois » → /leases?filter=active', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_loyers')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('baux filter=active'), findsOneWidget);
-    });
-
-    testWidgets('tap « Retards » → /leases?filter=late', (tester) async {
-      await tester.pumpWidget(_wrap(retards: 2));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_retards')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('baux filter=late'), findsOneWidget);
-    });
-
-    testWidgets('tap « Baux à renouveler » → /leases?filter=renewable', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_renouvellements')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('baux filter=renewable'), findsOneWidget);
-    });
-
-    testWidgets('« Documents en attente » n\'est PAS cliquable (pas de '
-        'page globale documents)', (tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('kpi_docs')));
-      await tester.pumpAndSettle();
-
-      // Toujours sur le dashboard : le tap n'a navigué nulle part.
-      expect(find.byKey(const Key('kpi_docs')), findsOneWidget);
-      expect(find.textContaining('baux filter='), findsNothing);
     });
   });
 }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
 import '../data/auth_repository.dart';
 import '../domain/session_state.dart';
 import 'auth_session_provider.dart';
@@ -38,7 +39,7 @@ class FirestoreAnonExpiryWriter implements AnonExpiryWriter {
 }
 
 final anonExpiryWriterProvider = Provider<AnonExpiryWriter>(
-  (ref) => FirestoreAnonExpiryWriter(FirebaseFirestore.instance),
+  (ref) => FirestoreAnonExpiryWriter(ref.watch(firestoreProvider)),
 );
 
 /// Renouvelle `landlords/{uid}.anonExpiresAt` à `now + 14 jours` sur

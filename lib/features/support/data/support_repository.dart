@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
+
 final _log = Logger('SupportRepository');
 
 abstract interface class SupportRepository {
@@ -17,6 +19,18 @@ abstract interface class SupportRepository {
     required String message,
     required String appVersion,
     required String appEnv,
+  });
+
+  /// Écrit un avis (FEAT-060) dans `support_requests/{auto}` :
+  /// `kind: 'feedback'`, [rating] 1-5, [comment] 0-2000 caractères (peut
+  /// être vide), [platform] `web` / `ios` / `android`. Sujet fixe
+  /// « Avis — {note}/5 ». Create-only, jamais relu.
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
   });
 }
 
@@ -52,11 +66,40 @@ class FirestoreSupportRepository implements SupportRepository {
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  @override
+  Future<void> submitFeedback({
+    required int rating,
+    required String comment,
+    required String appVersion,
+    required String appEnv,
+    required String platform,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('SupportRepository.submitFeedback requires a user.');
+    }
+    _log.info('submitFeedback() rating=$rating platform=$platform');
+
+    await _firestore.collection('support_requests').add({
+      'landlordId': user.uid,
+      'email': user.email,
+      'subject': 'Avis — $rating/5',
+      'message': comment,
+      'appVersion': appVersion,
+      'appEnv': appEnv,
+      'status': 'new',
+      'createdAt': FieldValue.serverTimestamp(),
+      'kind': 'feedback',
+      'rating': rating,
+      'platform': platform,
+    });
+  }
 }
 
 final supportRepositoryProvider = Provider<SupportRepository>((ref) {
   return FirestoreSupportRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
   );
 });

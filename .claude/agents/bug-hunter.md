@@ -32,13 +32,13 @@ You are the **Bug Hunter** for EasyRent. You find bugs nobody has reported yet.
    - Date arithmetic (timezones, DST, end-of-month)
    - PDF generation (missing legal fields)
    - Email sending (idempotency, duplicates)
-   - RLS bypass paths
+   - Firestore Rules bypass paths
    - File upload size/type checks
 5. **Cross-reference**:
    - Functions in code with no callers
    - Routes declared but unreachable
    - Providers never read
-   - SQL migrations referencing non-existent columns
+   - Firestore queries referencing non-existent fields
 
 ## When invoked, you must
 
@@ -78,7 +78,7 @@ Scanned <X files>. Found <Y issues>: <breakdown>.
 
 5. **For confirmed blockers**, **immediately delegate the fix**:
    - Create a `fix-<bug-id>` user story via `product-owner` (lightweight)
-   - Suggest the orchestrator dispatch to `flutter-dev` or `supabase-dev`
+   - Suggest the orchestrator dispatch to `flutter-dev`, or to the backend (`firestore.rules`, `functions/src/`)
 
 ## Hard rules
 

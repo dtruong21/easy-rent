@@ -19,7 +19,7 @@ $ARGUMENTS
 - **Si l'argument est un FEAT-ID** : lis `docs/backlog/<id>-*.md`
 - **Sinon** : invoque `product-owner` pour créer la user story
 
-- Crée une branche depuis develop : `git checkout develop && git pull && git checkout -b feature/<slug>`
+- Crée une branche depuis develop : `git checkout develop && git pull && git checkout -b feat/<slug>`
 
 ### 2. Design
 - Invoque `architect` avec le chemin de la story
@@ -28,14 +28,27 @@ $ARGUMENTS
   (en mode workflow automatique : assume les choix par défaut et logue les hypothèses)
 
 ### 3. Implementation (parallel quand possible)
-- Si le plan contient des changements DB → invoque `supabase-dev` en premier
-- Si le plan contient des PDF/email → invoque `pdf-emailer`
+- Si le plan touche le backend (Firestore rules/indexes, Cloud Functions dans
+  `functions/src/`) → traite-le en premier, avant le frontend
+- Si le plan contient des PDF/partage → invoque `pdf-emailer`
 - Invoque `flutter-dev` pour le frontend
 
 ### 4. Qualité (obligatoire)
 - `qa-tester` → tests + acceptance criteria
 - `code-reviewer` → revue qualité
-- `security-auditor` → audit RLS, secrets, RGPD
+- `security-auditor` → audit Firestore Rules, secrets, RGPD
+
+### 4bis. Mise à jour de l'état (obligatoire, avant la PR)
+- `state-keeper` **sur les shards du/des domaine(s) touché(s) uniquement** —
+  jamais une passe complète sur les 28 shards (ça coûte cher pour rien).
+- Pourquoi c'est une étape et pas une option : un shard périmé est **pire**
+  qu'un shard absent. La session suivante lui fait confiance, écrit du code
+  faux, se fait bloquer par un garde-fou, et refait le travail. C'est le
+  premier poste de gaspillage de tokens du projet.
+- Vérifie ensuite avec `bash scripts/check-state-drift.sh` (coût zéro) : les
+  lignes « existe mais absent des shards » doivent avoir disparu.
+- Ne fais confiance ni à une date écrite dans l'en-tête d'un shard, ni à
+  l'auto-évaluation d'un agent : la vérité est `git log -1 -- <fichier>`.
 
 ### 5. PR + lien à l'issue (si applicable)
 - Push la branche

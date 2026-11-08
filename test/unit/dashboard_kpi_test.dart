@@ -53,18 +53,6 @@ void main() {
     });
   });
 
-  group('RenouvellementsKpi', () {
-    test('count = 0 → aucun renouvellement', () {
-      const kpi = RenouvellementsKpi(count: 0);
-      expect(kpi.count, 0);
-    });
-
-    test('count = 1 → 1 renouvellement', () {
-      const kpi = RenouvellementsKpi(count: 1);
-      expect(kpi.count, 1);
-    });
-  });
-
   group('DocsPendingKpi', () {
     test('count = 0 → aucun document en attente', () {
       const kpi = DocsPendingKpi(count: 0);

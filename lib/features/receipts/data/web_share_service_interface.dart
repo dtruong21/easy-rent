@@ -34,9 +34,42 @@ abstract interface class WebShareService {
 
   /// Télécharge les bytes d'une URL (GET) et les retourne.
   ///
-  /// Utilisé pour récupérer le PDF depuis une URL signée Supabase Storage.
+  /// Utilisé pour récupérer le PDF depuis une URL signée Firebase Storage.
   /// Lance [ShareReceiptException] en cas d'échec réseau ou HTTP != 200.
   Future<List<int>> fetchBytes(String url);
+
+  /// Ouvre un PDF en mémoire dans la visionneuse du navigateur / de l'OS.
+  ///
+  /// Retourne `false` si la plateforme n'a pas su l'ouvrir — l'appelant
+  /// affiche alors son message d'erreur habituel.
+  ///
+  /// **Pourquoi cette méthode existe.** Le chemin d'origine passait par une
+  /// URL `data:application/pdf;base64,…` confiée à `launchUrl`. Or les
+  /// navigateurs **bloquent la navigation de premier niveau vers une URL
+  /// `data:`** (protection anti-hameçonnage, Chrome depuis la v60) : l'onglet
+  /// s'ouvrait et restait BLANC. Signalé en recette sur staging le 2026-08-11,
+  /// sur une quittance — donc un document à valeur légale, illisible.
+  ///
+  /// Le Web passe donc par une URL `blob:`, que les navigateurs acceptent en
+  /// navigation et rendent dans leur visionneuse PDF intégrée. Les URLs `data:`
+  /// ont en prime une limite de taille (~2 Mo sur Chrome) qu'une quittance avec
+  /// logo peut approcher.
+  Future<bool> openPdfBytes({
+    required List<int> pdfBytes,
+    required String filename,
+  });
+
+  /// Remet [bytes] à l'utilisateur sous forme de fichier nommé [filename].
+  ///
+  /// Web : déclenche un téléchargement (blob). Mobile (Android/iOS) : ouvre le
+  /// share sheet natif. Autres plateformes VM (desktop, tests) : no-op sûr.
+  /// Générique (tout [mimeType]) — utilisé par l'export RGPD (JSON).
+  Future<void> deliverFile({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+    String? shareTitle,
+  });
 }
 
 /// Exception levée si l'utilisateur annule le dialog natif (AbortError JS).

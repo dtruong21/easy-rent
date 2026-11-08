@@ -18,7 +18,8 @@
  * la feature documents (bail signé, état des lieux).
  */
 
-import * as admin from "firebase-admin";
+import type * as admin from "firebase-admin";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {logger} from "firebase-functions/v2";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
@@ -27,9 +28,11 @@ import {
   dataOrFail,
   optionalString,
   optionalTimestamp,
-  requireAuthUid,
+  requireVerifiedUid,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+
 
 type DocumentType = "quittance" | "recu";
 
@@ -98,7 +101,7 @@ function asPayment(id: string, data: Record<string, unknown>): PaymentShape {
 export const generateReceipt = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const leaseId = requireString(data.leaseId, "leaseId");
@@ -133,7 +136,7 @@ export const generateReceipt = onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
 
     // 1. Load landlord (legal fields fullName + address required)
     const landlordSnap = await db.doc(`landlords/${uid}`).get();
@@ -243,7 +246,7 @@ export const generateReceipt = onCall(
     const receiptRef = db.collection("receipts").doc();
     const receiptId = receiptRef.id;
     const paymentIds = paymentDocs.map((p) => p.id);
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
 
     try {
       await receiptRef.set({
@@ -260,7 +263,7 @@ export const generateReceipt = onCall(
         tenantFullName: `${lease.tenantFirstName} ${lease.tenantLastName}`,
         periodStart: earliestStart,
         periodEnd: latestEnd,
-        lastPaidAt: admin.firestore.Timestamp.fromMillis(lastPaidAtMs),
+        lastPaidAt: Timestamp.fromMillis(lastPaidAtMs),
         rentCents,
         chargesCents,
         totalCents,
@@ -300,12 +303,12 @@ export const generateReceipt = onCall(
 export const voidReceipt = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const receiptId = requireString(data.receiptId, "receiptId");
     const reason = requireString(data.reason, "reason");
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const ref = db.doc(`receipts/${receiptId}`);
 
     await db.runTransaction(async (tx) => {
@@ -319,7 +322,7 @@ export const voidReceipt = onCall(
       }
       tx.update(ref, {
         isVoided: true,
-        voidedAt: admin.firestore.FieldValue.serverTimestamp(),
+        voidedAt: FieldValue.serverTimestamp(),
         voidedReason: reason,
       });
     });
@@ -334,12 +337,12 @@ export const voidReceipt = onCall(
 export const markReceiptAsSent = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
     const receiptId = requireString(data.receiptId, "receiptId");
     const email = optionalString(data.email, "email");
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const ref = db.doc(`receipts/${receiptId}`);
 
     await db.runTransaction(async (tx) => {
@@ -355,7 +358,7 @@ export const markReceiptAsSent = onCall(
         );
       }
       tx.update(ref, {
-        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        sentAt: FieldValue.serverTimestamp(),
         sentToEmail: email,
       });
     });

@@ -17,7 +17,7 @@ class ProfileFormController extends StateNotifier<ProfileFormState> {
 
   final Ref _ref;
 
-  /// Soumet les champs du profil à Supabase.
+  /// Soumet les champs du profil à Firestore.
   ///
   /// Sur succès : invalide [landlordProfileProvider] pour que tous les
   /// consumers obtiennent les données fraîches.

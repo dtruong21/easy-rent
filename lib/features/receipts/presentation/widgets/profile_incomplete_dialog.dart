@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 
-/// Dialog affiché quand l'Edge Function retourne 422 `profile_incomplete`.
+/// Dialog affiché quand la Cloud Function retourne 422 `profile_incomplete`.
 ///
 /// Informe le bailleur que son profil doit être complété avant de pouvoir
 /// générer une quittance (loi du 6 juillet 1989 art. 21 — nom et adresse
@@ -15,7 +15,7 @@ import '../../../../core/i18n/l10n_extensions.dart';
 class ProfileIncompleteDialog extends StatelessWidget {
   const ProfileIncompleteDialog({super.key, this.missing = const []});
 
-  /// Champs manquants retournés par l'Edge Function.
+  /// Champs manquants retournés par la Cloud Function.
   final List<String> missing;
 
   @override

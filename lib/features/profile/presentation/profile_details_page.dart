@@ -4,6 +4,7 @@ import 'package:logging/logging.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
+import '../../auth/data/auth_repository.dart';
 import '../application/landlord_profile_provider.dart';
 import '../application/profile_form_controller.dart';
 import '../domain/landlord_profile.dart';
@@ -179,7 +180,15 @@ class _ProfileDetailsPageState extends ConsumerState<ProfileDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Email en lecture seule — identifiant d'auth non modifiable.
-              _EmailReadOnlyField(email: profile.email),
+              // Repli sur Firebase Auth : c'est LA source de vérité de l'email,
+              // la copie Firestore n'en est qu'un miroir. Un doc sans email ne
+              // doit donc pas laisser le champ vide alors qu'Auth le connaît.
+              _EmailReadOnlyField(
+                email:
+                    profile.email ??
+                    ref.read(authRepositoryProvider).currentUser?.email ??
+                    '',
+              ),
               const SizedBox(height: 24),
 
               ProfileForm(

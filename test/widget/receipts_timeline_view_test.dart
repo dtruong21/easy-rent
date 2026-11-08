@@ -7,10 +7,13 @@ import 'dart:typed_data';
 import 'package:easyrent/core/i18n/locale_resolution.dart';
 import 'package:easyrent/core/ui/theme/app_colors.dart';
 import 'package:easyrent/core/ui/theme/app_radii.dart';
+import 'package:easyrent/core/ui/cards/summary_card.dart';
+import 'package:easyrent/core/ui/theme/property_color.dart';
 import 'package:easyrent/features/receipts/data/receipts_repository.dart';
 import 'package:easyrent/features/receipts/domain/document_type.dart';
 import 'package:easyrent/features/receipts/domain/receipt.dart';
 import 'package:easyrent/features/receipts/domain/receipt_generation_result.dart';
+import 'package:easyrent/features/receipts/presentation/widgets/receipt_card.dart';
 import 'package:easyrent/features/receipts/presentation/widgets/receipts_timeline_view.dart';
 import 'package:easyrent/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -80,13 +83,17 @@ Receipt _makeReceipt({
   createdAt: periodStart.add(const Duration(days: 5)),
 );
 
-Widget _buildView(List<Receipt> receipts) {
+Widget _buildView(List<Receipt> receipts, {PropertyColorKey? colorKey}) {
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
         builder: (context, _) => Scaffold(
-          body: ReceiptsTimelineView(receipts: receipts, leaseId: 'lease-1'),
+          body: ReceiptsTimelineView(
+            receipts: receipts,
+            leaseId: 'lease-1',
+            propertyColorKey: colorKey,
+          ),
         ),
       ),
     ],
@@ -135,6 +142,8 @@ void main() {
       expect(find.textContaining('Mars 2026'), findsOneWidget);
       expect(find.textContaining('Février 2026'), findsOneWidget);
       expect(find.textContaining('Janvier 2026'), findsOneWidget);
+      // Structure : 1 ReceiptCard par quittance, plus de marqueur de timeline.
+      expect(find.byType(ReceiptCard), findsNWidgets(3));
     });
 
     testWidgets('items 2 années différentes — 2 headers années', (
@@ -239,6 +248,26 @@ void main() {
 
       expect(find.text('Annulée'), findsOneWidget);
       expect(find.textContaining('Erreur de montant'), findsOneWidget);
+    });
+
+    testWidgets('propertyColorKey propagé à chaque ReceiptCard (liseré)', (
+      tester,
+    ) async {
+      final receipts = [
+        _makeReceipt(id: 'r1', periodStart: DateTime(2026, 3, 1)),
+        _makeReceipt(id: 'r2', periodStart: DateTime(2026, 2, 1)),
+      ];
+
+      await tester.pumpWidget(
+        _buildView(receipts, colorKey: PropertyColorKey.cobalt),
+      );
+      await tester.pumpAndSettle();
+
+      final cards = tester.widgetList<SummaryCard>(find.byType(SummaryCard));
+      expect(cards, hasLength(2));
+      for (final card in cards) {
+        expect(card.accentColor, isNotNull);
+      }
     });
   });
 }

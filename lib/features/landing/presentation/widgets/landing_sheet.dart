@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/app_info/app_info_provider.dart';
+import '../../../../core/config/env.dart';
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -116,6 +119,7 @@ class LandingSheet extends StatelessWidget {
             _buildFooter(context),
             const SizedBox(height: 8),
             _buildSecondaryLinks(context),
+            const _EnvVersionLine(),
           ],
         ),
       ),
@@ -142,9 +146,17 @@ class LandingSheet extends StatelessWidget {
       children: [
         link('FAQ', '/faq', const Key('landing_link_faq')),
         _linkSeparator(),
-        link('Confidentialité', '/privacy', const Key('landing_link_privacy')),
+        link(
+          context.l10n.landingLinkPrivacy,
+          '/privacy',
+          const Key('landing_link_privacy'),
+        ),
         _linkSeparator(),
-        link('CGU', '/terms', const Key('landing_link_terms')),
+        link(
+          context.l10n.landingLinkTerms,
+          '/terms',
+          const Key('landing_link_terms'),
+        ),
       ],
     );
   }
@@ -449,4 +461,73 @@ String _formatFrenchDate(BuildContext context, DateTime d) {
     return '1er $month ${d.year}';
   }
   return DateFormat.yMMMMd(localeName).format(d);
+}
+
+/// Version de l'app + environnement, en pied de la page de garde.
+///
+/// But : **distinguer d'un coup d'œil la prod du staging** sans ouvrir le
+/// Profil. Réutilise exactement les mêmes sources que « Profil → À propos »
+/// ([appInfoProvider] + [Env.isProd]) — une seule vérité sur la version.
+///
+/// Rendu volontairement asymétrique :
+/// - **hors prod** : pastille d'environnement bien visible (c'est tout
+///   l'intérêt — on doit voir immédiatement qu'on n'est PAS en prod) ;
+/// - **en prod** : version seule, discrète. Afficher « production » à des
+///   utilisateurs réels serait du bruit : l'absence de pastille suffit à
+///   signifier la prod.
+///
+/// Si la version n'est pas encore chargée (ou illisible), on n'affiche rien
+/// plutôt qu'un placeholder — évite un saut de mise en page sur la 1re vue.
+class _EnvVersionLine extends ConsumerWidget {
+  const _EnvVersionLine();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final version = ref
+        .watch(appInfoProvider)
+        .maybeWhen(
+          data: (info) =>
+              l10n.profileAboutVersionValue(info.version, info.buildNumber),
+          orElse: () => null,
+        );
+
+    if (version == null && Env.isProd) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        children: [
+          if (!Env.isProd)
+            Container(
+              key: const Key('landing_env_badge'),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                l10n.profileAboutEnvDevStaging.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onErrorContainer,
+                ),
+              ),
+            ),
+          if (version != null)
+            Text(
+              version,
+              key: const Key('landing_app_version'),
+              style: const TextStyle(fontSize: 11, color: AppTheme.inkMuted),
+            ),
+        ],
+      ),
+    );
+  }
 }

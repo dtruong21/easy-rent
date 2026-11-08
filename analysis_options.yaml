@@ -1,1 +1,7 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # Checkouts Swift Package Manager d'iOS (build/ios/SourcePackages) :
+    # sources Dart tierces, non formatées, à ne jamais analyser.
+    - build/**

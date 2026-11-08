@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 
+import '../../../core/config/firestore_provider.dart';
+
 final _log = Logger('PaidPlanInterestRepository');
 
 abstract interface class PaidPlanInterestRepository {
@@ -51,7 +53,7 @@ class FirestorePaidPlanInterestRepository
 
 final paidPlanInterestRepositoryProvider = Provider<PaidPlanInterestRepository>(
   (ref) => FirestorePaidPlanInterestRepository(
-    FirebaseFirestore.instance,
+    ref.watch(firestoreProvider),
     FirebaseAuth.instance,
   ),
 );

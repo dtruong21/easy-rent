@@ -38,10 +38,35 @@ void main() {
       expect(find.byType(Text), findsNothing);
     });
 
-    testWidgets('3 barres de placeholder rendues', (tester) async {
+    testWidgets('forme d\'une SummaryCard : liseré, titre, chiffre clé, '
+        'statut', (tester) async {
       await tester.pumpWidget(_wrap(const CardSkeleton()));
-      // 3 FractionallySizedBox pour les 3 barres.
-      expect(find.byType(FractionallySizedBox), findsNWidgets(3));
+      expect(find.byKey(const Key('skeleton_accent')), findsOneWidget);
+      expect(find.byKey(const Key('skeleton_title')), findsOneWidget);
+      expect(find.byKey(const Key('skeleton_key_figure')), findsOneWidget);
+      expect(find.byKey(const Key('skeleton_status')), findsOneWidget);
+
+      // Chiffre clé calé à droite du titre, comme sur la carte réelle.
+      final title = tester.getTopLeft(find.byKey(const Key('skeleton_title')));
+      final figure = tester.getTopLeft(
+        find.byKey(const Key('skeleton_key_figure')),
+      );
+      expect(figure.dx, greaterThan(title.dx));
+    });
+
+    testWidgets('tient dans une cellule de grille de 124 px', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox(
+            width: 360,
+            height: 124,
+            // Contraintes lâches : on mesure la hauteur NATURELLE du squelette.
+            child: Align(alignment: Alignment.topCenter, child: CardSkeleton()),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(CardSkeleton)).height, lessThan(124));
     });
   });
 

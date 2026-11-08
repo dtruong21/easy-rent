@@ -1,112 +1,105 @@
-# Checklist — 1er déploiement production EasyRent
+# Checklist — Déploiement production Baillan/EasyRent
 
 > Cocher chaque item avant / pendant / après le déploiement.
-> Durée estimée : 30 min (smoke test) + 1–2h (provisionnement initial).
-> Dernière mise à jour : 2026-06-22 (FEAT-008 pivot — suppression dépendance Resend).
+> Durée estimée : ~30 min (smoke test) + provisionnement initial la 1ère fois.
+> Dernière mise à jour : 2026-10-05 (release v1.1.0). Backend **100 % Firebase** (Firestore, Auth, Storage, Cloud Functions, Hosting).
 
 ---
 
 ## A. Secrets GitHub (environnement `production`)
 
-Aller dans GitHub → Settings → Environments → `production`.
+GitHub → Settings → Environments → `production` :
 
-- [ ] `SUPABASE_URL` provisionné
-- [ ] `SUPABASE_ANON_KEY` provisionné
-- [ ] `FIREBASE_SERVICE_ACCOUNT` provisionné (JSON service account)
+- [ ] `FIREBASE_SERVICE_ACCOUNT` provisionné (JSON complet du compte de service)
 - [ ] `FIREBASE_PROJECT_ID` provisionné (`easy-rent-54cd4`)
-- [ ] `SUPABASE_PROJECT_REF` provisionné (`tbgttutodbqffrvsvkoz`)
-- [ ] `SUPABASE_ACCESS_TOKEN` provisionné (`sbp_xxx...`)
-- [ ] `SUPABASE_DB_PASSWORD` provisionné
-- [ ] Environnement `production` configuré avec "Required reviewers" (optionnel mais recommandé)
+- [ ] Environnement `production` configuré avec « Required reviewers » (recommandé)
 
-> Note : RESEND_API_KEY et RESEND_FROM_EMAIL sont des secrets Supabase, pas GitHub.
+> Aucun secret email : les quittances sont partagées via la Web Share API côté client.
+> La config Firebase Web vit dans `lib/firebase_options.dart` (publique), pas en secret.
 
 ---
 
-## B. Supabase Auth — Configuration URL & Email Templates
+## B. Firebase Auth (Console Firebase → Authentication)
 
-> Aller dans Supabase Dashboard → Authentication → URL Configuration.
-> Sans cela, les confirmations email et liens reset password ne fonctionneront pas en prod.
+- [ ] **Authorized domains** contiennent `baillan.com`, `app.staging.baillan.com`,
+  `easy-rent-54cd4.web.app`, `baillan-stage.web.app`, `localhost`
+- [ ] Providers activés : **Email/Password**, **Google**, **Anonymous** (Apple peut rester activé : la v1 ne l'affiche pas — #214, email seul sur iOS)
+- [ ] (Optionnel) Templates d'email (vérification / reset password) personnalisés dans
+  Authentication → Templates
 
-- [ ] **Site URL** configuré : `https://easy-rent-54cd4.web.app`
-- [ ] **Redirect Allow-List** configurée avec :
-  - [ ] `https://easy-rent-54cd4.web.app/**`
-  - [ ] `https://easy-rent-54cd4--staging-*.web.app/**`
-  - [ ] `https://easyrent-staging.web.app/**` (si staging dédié configuré)
-  - [ ] `http://localhost:*/**` (dev local Flutter Web)
-
-### Email Templates (FEAT-011)
-
-Aller dans Supabase Dashboard → Authentication → Email Templates.
-
-- [ ] **Template "Confirm signup"** : coller le HTML de `supabase/templates/confirmation.html`, sujet `Confirmez votre adresse email — EasyRent`
-- [ ] **Template "Reset Password"** : coller le HTML de `supabase/templates/recovery.html`, sujet `Réinitialisation de votre mot de passe — EasyRent`
-
-### Settings Auth (FEAT-011)
-
-Vérifier que les flags suivants correspondent à `supabase/config.toml` :
-
-- [ ] `Minimum password length` = 8
-- [ ] `Password requirements` = Letters and digits
-- [ ] `Enable email confirmations` = **OFF** (MVP — pas de SMTP custom configuré)
-
-> **MVP** : email confirmation désactivée pour ne pas dépendre du SMTP gratuit Supabase (rate limit 3-4/h, peu fiable). À réactiver quand un SMTP propre sera configuré (Brevo / Resend / SES). Voir [docs/plans/FEAT-011-auth-password.md] pour la décision.
+> Politique mot de passe (8 caractères, lettres + chiffres) appliquée côté client
+> (validators Dart). Reset password via `oobCode` lu dans l'URL — pas de session recovery.
 
 ---
 
-## C. Migrations
+## C. Backend Firebase (si la release le modifie)
 
-- [ ] `migrate-prod.yml` lancé en `dry_run=true` → liste de migrations vérifiée
-- [ ] `migrate-prod.yml` lancé en `dry_run=false, confirmation=yes` → appliqué OK
-- [ ] Vérification dans Supabase Dashboard → Table Editor (tables visibles)
+> `deploy.yml` déploie le Hosting, les rules + indexes Firestore et (depuis `main`) les rules Storage.
+> Seules les **Cloud Functions** sont **manuelles**.
+
+- [ ] Rules testées en émulateur : `cd functions && npm run test:rules` (cross-user OK)
+- [ ] Rules + indexes Firestore : **auto** par `deploy.yml` (`firestore:staging` sur `develop`, `firestore:(default)` sur `main`) — vérifier l'étape dans le run
+- [ ] `functions/.env` déclare les 12 `STRIPE_PRICE_*` et `STRIPE_PRICE_*_TEST` (les `…_TEST` peuvent être vides), sinon `--non-interactive` échoue — cf. [`RUNBOOK_PROD_DEPLOY.md`](RUNBOOK_PROD_DEPLOY.md) §2
+- [ ] `cd functions && npm ci && npm run build && firebase deploy --only functions` (si functions changées)
+- [ ] Rules Storage : **auto** par `deploy.yml` depuis `main` uniquement (cible `storage`, bucket partagé) — vérifier l'étape dans le run, puis **téléverser un document sur prod ET sur staging juste après le déploiement** (compte non anonyme à email vérifié ; un échec = règles Storage ou email non vérifié)
+- [ ] **1er run des cibles `firestore:(default)` et `storage` depuis `main`** (ajoutées après la v1.0.0) : le compte de service CI a `firebaserules.admin`, `datastore.indexAdmin`, `firebasehosting.admin`. En cas de `403` sur une étape, ajouter le rôle nommé dans l'erreur (action Daki, IAM) puis « Re-run failed jobs » — un re-run redéploie à l'identique, sans second tag
+- [ ] Index composites Firestore prod : attendre « Enabled » (console → Firestore → Indexes) avant le smoke test — les écrans qui en dépendent échouent tant qu'ils se construisent
+- [ ] ⚠️ **Comptes prod sans email vérifié (v1.1.0)** : les nouvelles règles Firestore et Storage exigent `hasTrustedEmail()` (email vérifié **ou** connexion Google/Apple) ; un compte email/mot de passe non vérifié perd l'accès au déploiement (les comptes anonymes ne sont pas concernés). **Avant le merge**, lister ces comptes — console Firebase → Authentication (colonne « Vérifié »), ou `firebase auth:export users.json --project easy-rent-54cd4 --format=json` puis filtrer les utilisateurs dont `providerUserInfo` contient `password` et `emailVerified` n'est pas vrai (vérifier la forme du JSON à l'usage). Pour chacun : le faire vérifier (lien de vérification) ou accepter consciemment le blocage. L'export contient des données personnelles et des hash : **ne pas le commiter, le supprimer après usage**.
+- [ ] **Cloud Functions déployées = `develop`** : prod et staging partagent les mêmes Functions (déploiement manuel). Vérifier que le dernier déploiement est postérieur au dernier commit touchant `functions/src` (`git log -1 --format=%cI -- functions/src`) ; sinon redéployer (`firebase deploy --only functions`). `firebase functions:list` doit montrer les fonctions attendues (38 au 2026-10-04, cf. `docs/state/functions/README.md`). Le bouton « Passer à la facturation annuelle/mensuelle » de `/pro` exige l'action `current_plan` de `manageSubscription` (2026-10-09) : sans ce redéploiement il reste simplement masqué.
 
 ---
 
 ## D. Build + Deploy
 
-- [ ] Merge `feature/dashboard-pwa-prod-setup` → `develop` → staging déployé
+- [ ] Merge feature branch → `develop` → staging déployé (`app.staging.baillan.com`)
 - [ ] Tests manuels en staging passent
 - [ ] Merge `develop` → `main` → workflow `deploy.yml` prod déclenché
 - [ ] Build GitHub Actions : pas d'erreur dans les logs
-- [ ] Firebase Hosting : déploiement canal `live` réussi
+- [ ] Firebase Hosting : déploiement du site prod (canal `live`) réussi
+- [ ] Tag `vX.Y.Z` + GitHub Release créés (step « Tag release » du workflow)
 
 ---
 
-## E. Smoke test (15 étapes — ~30 min)
+## E. Smoke test (~30 min)
 
-Ouvrir `https://easy-rent-54cd4.web.app` dans Chrome.
+Ouvrir **https://baillan.com** dans Chrome (fallback : `easy-rent-54cd4.web.app`).
 
 - [ ] La page de login s'affiche correctement (pas de page blanche)
-- [ ] Cliquer "Politique de confidentialité" → page `/privacy` complète s'affiche sans login
-- [ ] **Signup** : créer un compte (email réel + password 8 chars + lettre + chiffre + RGPD coché) → redirect direct vers dashboard, session active
-- [ ] **Login** : logout + re-login avec email + password → connexion OK
-- [ ] **Mauvais password** : tentative avec password incorrect → message "Email ou mot de passe incorrect" + email conservé
-- [ ] **Reset password** : `/forgot-password` → email reset reçu → cliquer lien → page `/reset-password` → définir nouveau password → redirect `/login` + snackbar succès → login avec nouveau password OK
-- [ ] Dashboard affiche l'onboarding "Premiers pas" (3 étapes visibles)
-- [ ] Cliquer étape 1 → page `/properties/new` → créer un bien → retour dashboard OK
-- [ ] Cliquer étape 2 → page `/tenants/new` → créer un locataire → retour dashboard OK
-- [ ] Cliquer étape 3 → page `/leases/new` → créer un bail → retour dashboard OK
-- [ ] Retour dashboard → 4 KPI cards affichées (loyers, retards, renouvellements, docs)
-- [ ] Naviguer vers le bail créé → enregistrer un paiement → dashboard KPI mis à jour
-- [ ] Sur la page quittances → générer une quittance PDF → preview PDF s'ouvre OK
-- [ ] Cliquer "Partager" → la feuille de partage natif du système s'ouvre → sélectionner Mail/Gmail/WhatsApp → vérifier que PDF + sujet + corps sont pré-remplis
-- [ ] Uploader un document PDF de test (catégorie "autre") → visible dans la liste
-- [ ] Retour dashboard → activité récente affiche le paiement + la quittance
-- [ ] Chrome desktop : PWA install prompt visible → cliquer "Installer" → app installée
+- [ ] Cliquer « Politique de confidentialité » → page `/privacy` complète s'affiche sans login
+- [ ] **Signup** : créer un compte (email réel + password 8 chars + lettre + chiffre + RGPD coché) → redirect dashboard, session active
+- [ ] **Login** : logout + re-login email + password → connexion OK
+- [ ] **Google** : connexion Google (web) → OK. Apple n'est pas proposé en v1
+- [ ] **Mauvais password** : password incorrect → message « Email ou mot de passe incorrect » + email conservé
+- [ ] **Reset password** : `/forgot-password` → email reçu → lien → `/reset-password` → nouveau password → redirect `/login` + snackbar → login avec le nouveau password OK
+- [ ] Dashboard affiche l'onboarding progressif (jusqu'à la 1re quittance, FEAT-058)
+- [ ] Étape 1 → `/properties/new` → créer un bien → retour dashboard OK
+- [ ] Étape 2 → `/tenants/new` → créer un locataire → retour dashboard OK
+- [ ] Étape 3 → `/leases/new` → créer un bail → retour dashboard OK
+- [ ] Accueil → cockpit 3 zones affiché (À traiter / Mon patrimoine / Analyse)
+- [ ] Naviguer vers le bail → enregistrer un paiement → KPI mis à jour
+- [ ] Page quittances → générer une quittance PDF → preview s'ouvre OK
+- [ ] Cliquer « Partager » → feuille de partage native s'ouvre → Mail/Gmail/WhatsApp → PDF + sujet + corps pré-remplis
+- [ ] Uploader un document PDF de test → visible dans la liste
+- [ ] **Simulateur** : créer et sauvegarder un scénario → il apparaît dans la liste (la création passe désormais par le callable `createScenario` ; l'écriture directe côté client est refusée par les règles — `investment_scenarios`)
+- [ ] Dashboard → activité récente affiche le paiement + la quittance
+- [ ] `/pro` affiche « Bientôt disponible » (abonnement coupé en prod : `SUBSCRIPTIONS_ENABLED=false`)
+- [ ] Chrome desktop : PWA install prompt → « Installer » → app installée
 
 ---
 
 ## F. Vérifications post-deploy (48h)
 
-- [ ] Supabase Dashboard → Logs : aucune erreur Auth ou Edge Function
-- [ ] Test logout + re-login : magic link fonctionne toujours
-- [ ] Rafraîchissement forcé (Ctrl+Shift+R) : nouvelle version servie (pas de cache stale SW)
+- [ ] **Firebase Console** → Authentication : aucune erreur de connexion anormale
+- [ ] **Cloud Logging** (`firebase functions:log`) : aucune erreur Cloud Functions
+- [ ] **Firestore** → usage / erreurs de règles : rien d'anormal
+- [ ] Reset password de bout en bout : email reçu + lien fonctionne
+- [ ] Rafraîchissement forcé (Ctrl+Shift+R) : nouvelle version servie (pas de cache stale)
 
 ---
 
 ## G. Documentation
 
-- [ ] `docs/state/FEATURES.md` : FEAT-010 marqué ✅ déployé
+- [ ] `docs/state/FEATURES.md` : feature(s) marquée(s) ✅ déployée(s)
 - [ ] `docs/state/INDEX.md` : timestamp mis à jour
 - [ ] Équipe informée du go-live
 
@@ -115,12 +108,14 @@ Ouvrir `https://easy-rent-54cd4.web.app` dans Chrome.
 ## Rollback rapide si nécessaire
 
 ```bash
-# Lister les versions Firebase
+# Lister les versions du site prod
 firebase hosting:versions:list --project easy-rent-54cd4
 
-# Revenir à la version précédente
+# Revenir à la version précédente sur le canal live
 firebase hosting:clone easy-rent-54cd4:live easy-rent-54cd4:live \
   --version-id=<PREVIOUS_VERSION_ID>
 ```
 
-Voir `docs/RUNBOOK_PROD_DEPLOY.md` §4 pour les détails.
+**Si les règles bloquent des utilisateurs** (le rollback Hosting ci-dessus ne les annule pas) : redéployer les règles de la version précédente — `git checkout v1.0.0 -- firestore.rules firestore.indexes.json && firebase deploy --only 'firestore:(default)'`, et pour Storage `git checkout v1.0.0 -- storage.rules && firebase deploy --only storage` (⚠️ jamais `firestore` sans base cible ; détail dans le runbook §5). **Préparer ces commandes avant le merge.** Un rollback des règles v1.1.0 rouvre aussi les protections ajoutées depuis la v1.0.0 (champs Pro non modifiables côté client, scénarios, collections `charge_statements` / `etat_des_lieux`) : à n'utiliser que pour rétablir l'accès, puis corriger.
+
+Détails et rollback backend : [`RUNBOOK_PROD_DEPLOY.md`](RUNBOOK_PROD_DEPLOY.md) §4–5.

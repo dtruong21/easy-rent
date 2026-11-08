@@ -22,7 +22,7 @@ class PropertiesListNotifier extends AsyncNotifier<List<Property>> {
     return ref.read(propertyRepositoryProvider).list();
   }
 
-  /// Recharge la liste depuis Supabase.
+  /// Recharge la liste depuis Firestore.
   ///
   /// À appeler après une création, modification ou archivage réussis.
   Future<void> refresh() async {
@@ -59,7 +59,7 @@ class PropertiesListItemsNotifier
     return ref.read(propertyRepositoryProvider).listWithLeases();
   }
 
-  /// Recharge la liste depuis Supabase.
+  /// Recharge la liste depuis Firestore.
   ///
   /// À appeler après une création, modification ou archivage réussis.
   Future<void> refresh() async {

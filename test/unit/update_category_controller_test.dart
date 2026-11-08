@@ -8,6 +8,7 @@ import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
 import 'package:easyrent/features/documents/domain/documents_quota.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakeRepo implements DocumentsRepository {
   bool shouldFail = false;
+
+  /// Simule le refus serveur d'un document sous rétention légale
+  /// (`FirebaseFunctionsException` avec le code `document_under_legal_hold`).
+  bool legalHoldFail = false;
   DocumentCategory? updatedCategory;
 
   @override
@@ -24,6 +29,12 @@ class _FakeRepo implements DocumentsRepository {
     required String id,
     required DocumentCategory newCategory,
   }) async {
+    if (legalHoldFail) {
+      throw FirebaseFunctionsException(
+        message: 'document_under_legal_hold',
+        code: 'failed-precondition',
+      );
+    }
     if (shouldFail) throw Exception('update failed');
     updatedCategory = newCategory;
     return Document(
@@ -144,6 +155,36 @@ void main() {
         UpdateCategoryErrorReason.unexpected,
       );
     });
+  });
+
+  group('UpdateDocumentCategoryController — legalHold', () {
+    test(
+      'update → UpdateCategoryError(legalHold) si le serveur refuse (rétention)',
+      () async {
+        final repo = _FakeRepo()..legalHoldFail = true;
+        final container = ProviderContainer(
+          overrides: [documentsRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+
+        await container
+            .read(updateDocumentCategoryControllerProvider('doc-1').notifier)
+            .update(
+              docId: 'doc-1',
+              newCategory: DocumentCategory.autre,
+              leaseId: 'lease-1',
+            );
+
+        final state = container.read(
+          updateDocumentCategoryControllerProvider('doc-1'),
+        );
+        expect(state, isA<UpdateCategoryError>());
+        expect(
+          (state as UpdateCategoryError).reason,
+          UpdateCategoryErrorReason.legalHold,
+        );
+      },
+    );
   });
 
   group('UpdateDocumentCategoryController.reset', () {

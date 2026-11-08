@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_radii.dart';
+import '../theme/property_color.dart';
 import 'entity_card_density.dart';
 
 /// Carte d'entité réutilisable.
 ///
-/// Fournit une surface cohérente pour afficher des entités métier (propriétés,
-/// locataires, baux, paiements…). Supporte :
+/// Surface à slots libres (header/body/footer). Les listes biens, baux,
+/// locataires et quittances utilisent désormais `SummaryCard` (FEAT-059) ;
+/// [EntityCard] reste pour les cartes de scénarios du simulateur. Supporte :
 /// - Hover desktop (fond plus sombre) + InkWell ripple touch
 /// - Focus ring clavier (accessibilité)
 /// - Densité compact / standard
@@ -15,10 +17,10 @@ import 'entity_card_density.dart';
 /// Exemple :
 /// ```dart
 /// EntityCard(
-///   onTap: () => context.go('/leases/123'),
-///   semanticLabel: 'Bail 123 — Dupont',
-///   header: EntityCardHeader(title: Text('Dupont')),
-///   body: Text('01/2024 – 12/2024'),
+///   onTap: () => context.go('/simulator'),
+///   semanticLabel: 'Scénario — T2 Lyon',
+///   header: Text('T2 Lyon'),
+///   body: Text('Rendement net 4,2 %'),
 ///   footer: Row(children: [
 ///     FilledButton(onPressed: () {}, child: Text('Détails')),
 ///   ]),
@@ -33,6 +35,7 @@ class EntityCard extends StatefulWidget {
     this.onTap,
     this.density = EntityCardDensity.standard,
     this.semanticLabel,
+    this.accentColorKey,
   });
 
   /// En-tête de la carte (optionnel).
@@ -57,6 +60,15 @@ class EntityCard extends StatefulWidget {
   /// Label sémantique pour les lecteurs d'écran (TalkBack / VoiceOver).
   final String? semanticLabel;
 
+  /// Couleur d'identité du bien lié, si applicable — `null` pour les
+  /// entités sans bien rattaché (ex. locataire sans bail actif). Teinte
+  /// légèrement le fond de la carte (mélange avec le fond idle/hover
+  /// courant, jamais la couleur brute) pour que le fond « corresponde » à
+  /// l'étiquette de couleur du bien. Voir
+  /// [PropertyColorKeyThemeX.resolveCardBackground] pour le calcul et les
+  /// ratios de contraste mesurés.
+  final PropertyColorKey? accentColorKey;
+
   @override
   State<EntityCard> createState() => _EntityCardState();
 }
@@ -74,9 +86,13 @@ class _EntityCardState extends State<EntityCard> {
     final padding = widget.density.padding;
     final gap = widget.density.gap;
 
-    final bgColor = _isHovered
+    final baseBgColor = _isHovered
         ? colorScheme.surfaceContainerHigh
         : colorScheme.surfaceContainerLow;
+    final accentColorKey = widget.accentColorKey;
+    final bgColor = accentColorKey != null
+        ? accentColorKey.resolveCardBackground(context, baseBgColor)
+        : baseBgColor;
 
     final borderColor = _isFocused
         ? colorScheme.primary

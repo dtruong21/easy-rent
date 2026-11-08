@@ -16,9 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 // override directement dans le ProviderScope ; le repo n'a donc qu'à
 // satisfaire le contrat AuthRepository sans logique utile.
 //
-// Note : la migration Firebase a supprimé le concept de "session
-// passwordRecovery" (Supabase). Firebase utilise un oobCode lu dans
-// l'URL — la garde routeur n'a plus à le gérer (voir
+// Note : Firebase n'a pas de concept de "session recovery" : il utilise
+// un oobCode lu dans l'URL — la garde routeur n'a plus à le gérer (voir
 // ResetPasswordPage qui consomme `Uri.base.queryParameters['oobCode']`).
 //
 // BAILLAN-M1 : `/` est désormais LandingPage (publique) — le dashboard a

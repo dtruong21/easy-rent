@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../data/documents_repository.dart';
 import '../domain/document.dart';
@@ -22,6 +23,12 @@ final _log = Logger('UpdateDocumentCategoryController');
 /// `context.l10n.<clé>` via l'extension `UpdateCategoryErrorReasonL10n` (voir
 /// `lib/features/documents/presentation/update_category_error_reason_l10n.dart`).
 enum UpdateCategoryErrorReason {
+  /// Le document est sous rétention légale (`legalHold`) — bail signé, état
+  /// des lieux, justificatif de dépense. Le serveur refuse le reclassement
+  /// (`document_under_legal_hold`) pour ne pas casser la rétention (loi 1989 /
+  /// obligations comptables).
+  legalHold,
+
   /// Erreur réseau/backend (`FirebaseException`) lors de la mise à jour.
   connectionError,
 
@@ -89,6 +96,20 @@ class UpdateDocumentCategoryController
 
       _log.info('category updated id=$docId category=${newCategory.sqlValue}');
       state = UpdateCategorySuccess(document: doc);
+    } on FirebaseFunctionsException catch (e, st) {
+      // Refus métier attendu : document sous rétention légale. Doit être
+      // testé AVANT FirebaseException (dont FirebaseFunctionsException hérite).
+      if (e.message?.contains('document_under_legal_hold') == true) {
+        _log.info('updateCategory refusé (legalHold) id=$docId');
+        state = const UpdateCategoryError(
+          reason: UpdateCategoryErrorReason.legalHold,
+        );
+        return;
+      }
+      _log.warning('FirebaseFunctionsException lors de updateCategory', e, st);
+      state = const UpdateCategoryError(
+        reason: UpdateCategoryErrorReason.connectionError,
+      );
     } on FirebaseException catch (e, st) {
       _log.warning('FirebaseException lors de updateCategory', e, st);
       state = const UpdateCategoryError(

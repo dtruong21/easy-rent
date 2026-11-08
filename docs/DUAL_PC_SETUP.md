@@ -10,7 +10,8 @@ Checklist d'installation :
 
 1. Git + clone du repo (`gh auth login` pour la CLI GitHub)
 2. Flutter épinglé sur la version CI (voir `.github/workflows/ci.yml`), ajouté au PATH
-3. Node 20+ (Cloud Functions) et Firebase CLI (`npm i -g firebase-tools`, `firebase login`)
+3. Node 22 (Cloud Functions) et Firebase CLI (`npm i -g firebase-tools`, `firebase login`)
+   - `functions/.env` (gitignoré, jamais commité) avec les 12 paramètres de prix Stripe : les 6 `STRIPE_PRICE_{PRO,MAX,ULTRA}_{MONTHLY,ANNUAL}` et les 6 `…_TEST` (vides tant qu'aucun prix live n'existe : `STRIPE_PRICE_PRO_MONTHLY_TEST=`, etc.). Sans eux, `firebase deploy --only functions` invite ou échoue en `--non-interactive` — cf. [`RUNBOOK_PROD_DEPLOY.md`](RUNBOOK_PROD_DEPLOY.md) §2
 4. Claude Code : `npm i -g @anthropic-ai/claude-code`, connexion avec le compte Pro
 5. Dans le repo : `flutter pub get` puis `dart run build_runner build` (les `*.g.dart` sont gitignorés)
 6. Android SDK / Xcode uniquement si builds mobiles sur cette machine

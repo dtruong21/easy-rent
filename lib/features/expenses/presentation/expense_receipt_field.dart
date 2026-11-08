@@ -5,6 +5,10 @@ import 'package:logging/logging.dart';
 import 'package:mime/mime.dart';
 
 import '../../../core/i18n/l10n_extensions.dart';
+import '../../auth/data/landlord_tier_repository.dart';
+import '../../auth/domain/plan_matrix.g.dart';
+import '../../documents/application/upload_documents_controller.dart'
+    show kMaxFileSizeBytes;
 import '../application/expense_receipt_upload_controller.dart';
 import '../domain/expense_receipt_upload_error_reason.dart';
 import '../domain/expense_receipt_upload_state.dart';
@@ -60,6 +64,9 @@ class ExpenseReceiptField extends ConsumerWidget {
     final theme = Theme.of(context);
     final state = ref.watch(expenseReceiptUploadControllerProvider);
     final hasExistingDocument = existingDocumentId != null;
+    final maxFileSizeBytes =
+        ref.watch(quotaLimitProvider(PlanQuota.documentMaxBytes)) ??
+        kMaxFileSizeBytes;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +119,7 @@ class ExpenseReceiptField extends ConsumerWidget {
             filename: filename,
             message: ExpenseReceiptUploadErrorReason.fromCode(
               message,
-            ).message(context),
+            ).message(context, maxFileSizeBytes: maxFileSizeBytes),
             onRetry: enabled ? () => _pickAndUpload(context, ref) : null,
           ),
         },

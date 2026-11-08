@@ -1,5 +1,5 @@
-# Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+# iOS 15 minimum : Xcode 27 refuse toute cible < 15.0 (erreur de build).
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -30,15 +30,10 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
-  # Perf build iOS : Firestore/gRPC/BoringSSL/abseil précompilés (xcframeworks)
-  # au lieu d'une compilation C++ depuis les sources — le poste le plus lourd
-  # du build iOS à froid (invertase). ⚠️ Le :tag DOIT être égal à la version
-  # `FirebaseFirestore` résolue dans Podfile.lock (actuellement 11.15.0) :
-  # quand cloud_firestore est bumpé, remonter ce tag EN MÊME TEMPS sinon
-  # `pod install` échoue sur un conflit de version.
-  pod 'FirebaseFirestore',
-      :git => 'https://github.com/invertase/firestore-ios-sdk-frameworks.git',
-      :tag => '11.15.0'
+  # Plus de pod FirebaseFirestore précompilé (invertase) : depuis Flutter
+  # 3.44 les plugins Firebase passent par Swift Package Manager, qui fournit
+  # déjà Firestore en binaire — le garder liait Firestore deux fois (383
+  # symboles dupliqués au link).
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -54,6 +49,11 @@ post_install do |installer|
       # inutile pour les builds CLI `flutter build`/`flutter run` — on l'éteint
       # sur tous les pods pour gagner du temps de compilation.
       config.build_settings['COMPILER_INDEX_STORE_ENABLE'] = 'NO'
+      # Certains pods (leveldb, nanopb, FirebaseCore…) déclarent iOS 11-13 ;
+      # Xcode 27 exige >= 15.0 → on aligne tous les pods sur la cible app.
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
     end
   end
 end

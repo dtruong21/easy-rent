@@ -1,4 +1,5 @@
 import 'package:easyrent/core/i18n/locale_resolution.dart';
+import 'package:easyrent/core/ui/theme/property_color.dart';
 import 'package:easyrent/features/properties/application/property_form_controller.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
@@ -325,6 +326,110 @@ void main() {
     // -----------------------------------------------------------------------
     // État erreur — message affiché inline
     // -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // Couleur d'identité (FEAT-057) — édition uniquement
+    // -----------------------------------------------------------------------
+    testWidgets('mode création — pas de sélecteur de couleur (attribution '
+        'automatique, rien à choisir avant que le bien existe)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildForm());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Couleur d\'identité'), findsNothing);
+      expect(find.byKey(const Key('color_swatch_cobalt')), findsNothing);
+    });
+
+    testWidgets(
+      'mode édition — sélecteur de couleur présent, une pastille par teinte',
+      (tester) async {
+        final property = Property(
+          id: 'id-1',
+          landlordId: 'landlord-1',
+          name: 'Appart Lyon',
+          address: '5 rue Mercière',
+          type: PropertyType.appartement,
+          colorKey: 'cobalt',
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+        );
+
+        await tester.pumpWidget(_buildForm(initial: property));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Couleur d\'identité'), findsOneWidget);
+        for (final key in PropertyColorKey.values) {
+          await tester.ensureVisible(
+            find.byKey(Key('color_swatch_${key.name}')),
+          );
+          expect(find.byKey(Key('color_swatch_${key.name}')), findsOneWidget);
+        }
+      },
+    );
+
+    testWidgets(
+      'mode édition — changer la couleur puis soumettre envoie la nouvelle '
+      'clé au repository',
+      (tester) async {
+        final repo = _FakePropertyRepository();
+        final property = Property(
+          id: 'id-1',
+          landlordId: 'landlord-1',
+          name: 'Appart Lyon',
+          address: '5 rue Mercière',
+          type: PropertyType.appartement,
+          colorKey: 'cobalt',
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+        );
+
+        await tester.pumpWidget(_buildForm(initial: property, repo: repo));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('color_swatch_moutarde')),
+        );
+        await tester.tap(find.byKey(const Key('color_swatch_moutarde')));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
+        await tester.tap(find.byKey(const Key('btn_submit_form')));
+        await tester.pumpAndSettle();
+
+        expect(repo.updatedProperty?.colorKey, 'moutarde');
+      },
+    );
+
+    testWidgets(
+      'mode édition — bien "legacy" sans colorKey stockée → soumettre sans '
+      'toucher la couleur envoie le repli déterministe (jamais null)',
+      (tester) async {
+        final repo = _FakePropertyRepository();
+        final legacy = Property(
+          id: 'legacy-id',
+          landlordId: 'landlord-1',
+          name: 'Bien sans couleur stockée',
+          address: '1 ancienne rue',
+          type: PropertyType.maison,
+          createdAt: DateTime(2023),
+          updatedAt: DateTime(2023),
+        );
+
+        await tester.pumpWidget(_buildForm(initial: legacy, repo: repo));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.byKey(const Key('btn_submit_form')));
+        await tester.tap(find.byKey(const Key('btn_submit_form')));
+        await tester.pumpAndSettle();
+
+        expect(repo.updatedProperty?.colorKey, isNotNull);
+        expect(
+          PropertyColorKey.parse(repo.updatedProperty!.colorKey),
+          isNotNull,
+        );
+      },
+    );
+
     testWidgets('état erreur — message affiché inline', (tester) async {
       // FEAT-043 : PropertyFormState.error.message porte désormais le `name`
       // technique d'un PropertySubmitError (pas un texte FR en dur) — la

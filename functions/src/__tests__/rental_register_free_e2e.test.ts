@@ -26,6 +26,7 @@ import {createLease, createPayment} from "../callable/lease_payment";
 import {createProperty, createTenant} from "../callable/property_tenant";
 
 import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Cf. expenses.test.ts pour la justification du import() dynamique interne.
 vi.mock("firebase-admin", async () => {
@@ -40,7 +41,7 @@ const UID = "free-landlord";
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }

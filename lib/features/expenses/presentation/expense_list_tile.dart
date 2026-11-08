@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/french_date.dart';
+import '../../../core/ui/theme/app_icon_size.dart';
 import '../../../core/utils/money_format.dart';
 import '../domain/expense.dart';
 import '../domain/expense_category.dart';
 import 'expense_category_l10n.dart';
 import 'expense_nature_l10n.dart';
+import 'expense_recurrence_l10n.dart';
 
 /// Tuile d'une dépense dans l'historique d'un bien.
 ///
 /// Affiche : icône de nature, libellé nature, chip catégorie
 /// récupérable/non-récupérable, montant, date, indicateur visuel de
 /// justificatif s'il existe ([Expense.hasDocument]).
+///
+/// Une dépense **récurrente** (FEAT-041d) porte en plus un badge explicite
+/// (« Tous les trimestres », « Tous les mois jusqu'au 31/12/2027 ») : ses
+/// échéances n'existent nulle part en base, donc si la ligne ne disait pas
+/// qu'elle revient, les totaux et le graphique afficheraient des montants
+/// qu'aucune ligne visible ne justifie — indiscernable d'un bug.
 ///
 /// ⚠️ L'ouverture du justificatif (signed URL `getDocumentDownloadUrl`)
 /// reste un follow-up : ce bloc affiche seulement l'icône de présence, le
@@ -26,6 +34,10 @@ class ExpenseListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final recurrenceBadge = expense.recurrence.localizedBadge(
+      context,
+      endDate: expense.recurrenceEndDate,
+    );
     return ListTile(
       key: Key('expense_tile_${expense.id}'),
       onTap: onTap,
@@ -56,6 +68,11 @@ class ExpenseListTile extends StatelessWidget {
               size: 14,
               color: theme.colorScheme.onSurfaceVariant,
             ),
+          if (recurrenceBadge != null)
+            _RecurrenceChip(
+              key: Key('expense_recurrence_chip_${expense.id}'),
+              label: recurrenceBadge,
+            ),
         ],
       ),
       trailing: Text(
@@ -65,6 +82,42 @@ class ExpenseListTile extends StatelessWidget {
         ),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+}
+
+/// Badge « cette dépense revient » — même gabarit que [_CategoryChip], avec
+/// l'icône de récurrence pour être reconnaissable d'un coup d'œil dans une
+/// liste.
+class _RecurrenceChip extends StatelessWidget {
+  const _RecurrenceChip({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.autorenew, size: AppIconSize.xs, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,8 +1,14 @@
 # Thème — snapshot
 
-> Maintenu par `state-keeper`. **Source** : [`lib/core/theme/app_theme.dart`](../../lib/core/theme/app_theme.dart).
+> Maintenu par `state-keeper`. **Source canonique** : [`config/theme_tokens.json`](../../config/theme_tokens.json)
+> (19 couleurs). Un générateur (`dart run tool/gen_theme_tokens.dart`, garde-fou
+> [`scripts/check-theme-tokens.sh`](../../scripts/check-theme-tokens.sh)) en tire deux
+> miroirs **générés, jamais édités à la main** : [`lib/core/theme/app_palette.g.dart`](../../lib/core/theme/app_palette.g.dart)
+> (délégué par `AppTheme`, ses constantes `static const Color paper = AppPalette.paper;` etc.)
+> et [`site/src/styles/tokens.css`](../../site/src/styles/tokens.css) (consommé par la vitrine FEAT-050).
+> Les 4 alias sémantiques (`acquitte`/`echu`/`consigne`/`archive`) restent écrits à la main sur `AppTheme`.
 > **Palette hex → usage métier** : voir [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md) (source de vérité des couleurs, ne pas dupliquer ici).
-> **Dernière sync** : 2026-07-08 (rebrand Baillan FEAT-020 + brand polish 30 juin + nav shell FEAT-026 + `themeMode` utilisateur).
+> **Dernière sync** : 2026-09-06 (FEAT-050 : source canonique unique `config/theme_tokens.json` + génération app/vitrine).
 
 ## Vue d'ensemble
 
@@ -18,24 +24,33 @@ Principes de la palette (détail dans [`DESIGN_TOKENS.md`](DESIGN_TOKENS.md)) :
 
 ## Structure
 
-**Path** : [`lib/core/theme/app_theme.dart`](../../lib/core/theme/app_theme.dart)
+**Source** : [`config/theme_tokens.json`](../../config/theme_tokens.json) (19 couleurs, JSON plat) →
+générateur [`tool/gen_theme_tokens.dart`](../../tool/gen_theme_tokens.dart) → miroirs
+[`lib/core/theme/app_palette.g.dart`](../../lib/core/theme/app_palette.g.dart) (`abstract final class AppPalette`)
+et [`site/src/styles/tokens.css`](../../site/src/styles/tokens.css) (custom properties CSS, kebab-case).
+`AppTheme` délègue à `AppPalette` : **Path** [`lib/core/theme/app_theme.dart`](../../lib/core/theme/app_theme.dart)
 
 ```dart
 class AppTheme {
   const AppTheme._();
 
-  // Palette exposée en constantes statiques (paper, ink, olive, oxblood, …)
-  static const Color paper = Color(0xFFF7F4ED);
-  static const Color ink   = Color(0xFF1B1A17);
-  static const Color olive = Color(0xFF3F4A2A);
-  // … + 8 jetons d'extension + 4 alias sémantiques (acquitte/echu/consigne/archive)
+  // Palette exposée en constantes statiques, déléguées au miroir généré.
+  static const Color paper = AppPalette.paper;
+  static const Color ink   = AppPalette.ink;
+  static const Color olive = AppPalette.olive;
+  // … + 8 jetons d'extension (miroir généré) + 4 alias sémantiques écrits à
+  // la main (acquitte/echu/consigne/archive — pas de couleur métier dans JSON)
 
   static ThemeData get light => _build(Brightness.light);
   static ThemeData get dark  => _build(Brightness.dark);
 }
 ```
 
-Les **jetons de couleur, alias sémantiques et jetons d'extension** vivent directement sur `AppTheme` (constantes) — c'est là qu'on lit/ajoute une couleur, pas dans un `ColorScheme.fromSeed`. Un dev qui code un état métier utilise l'**alias sémantique** (`AppTheme.acquitte`), jamais une couleur en dur.
+Les **jetons de couleur et jetons d'extension** viennent du miroir généré `AppPalette` — c'est
+`config/theme_tokens.json` qu'on édite pour ajouter/changer une couleur, jamais `app_palette.g.dart`
+ni un `ColorScheme.fromSeed`. Les **alias sémantiques** (`acquitte`/`echu`/`consigne`/`archive`)
+restent des constantes à la main sur `AppTheme`. Un dev qui code un état métier utilise l'alias
+sémantique (`AppTheme.acquitte`), jamais une couleur en dur.
 
 **Invocation** : [`lib/main.dart`](../../lib/main.dart) (thème désormais **switchable par l'utilisateur**)
 

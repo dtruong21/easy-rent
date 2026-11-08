@@ -16,10 +16,10 @@ String? _nullableDateToJson(DateTime? v) => v == null
 ///
 /// Mappé directement sur la table `tenants` (public + dev).
 /// Les colonnes `created_at`, `updated_at` et `deleted_at` sont gérées
-/// par les triggers Supabase — ne jamais les inclure dans un payload INSERT/UPDATE.
+/// par les triggers Cloud Functions — ne jamais les inclure dans un payload de création/mise à jour.
 ///
 /// [landlordId] : FK vers `landlords.id`. Ne pas l'envoyer dans un INSERT
-/// depuis le client — la RLS (`tenants_insert_own`) vérifie `= auth.uid()`.
+/// depuis le client — les Firestore Rules vérifient `landlordId == request.auth.uid`.
 @freezed
 class Tenant with _$Tenant {
   const factory Tenant({

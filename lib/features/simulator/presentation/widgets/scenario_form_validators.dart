@@ -111,6 +111,15 @@ class ScenarioFormValidators {
     return null;
   }
 
+  /// Part du terrain (FEAT-061) : entier 0–50 %, vide = invalide.
+  static ValidationError? validateLandShare(String? value) {
+    final parsed = int.tryParse((value ?? '').trim());
+    if (parsed == null || parsed < 0 || parsed > 50) {
+      return ValidationError.scenarioLandShareInvalid;
+    }
+    return null;
+  }
+
   /// Notes (optionnel) : max 2000 caractères.
   static ValidationError? validateNotes(String? value) {
     if (value == null || value.trim().isEmpty) return null;

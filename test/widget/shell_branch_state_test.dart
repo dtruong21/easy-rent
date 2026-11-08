@@ -3,8 +3,9 @@
 ///
 /// Complète `adaptive_navigation_scaffold_test.dart` (mécanisme isolé, router
 /// factice) en prouvant l'intégration bout en bout :
-/// - préservation d'état par branche (filtre Baux posé, détour par Biens,
-///   retour Baux → filtre intact) ;
+/// - retour à la racine au changement d'onglet (bail ouvert refermé après un
+///   détour par Biens, sous-page Profil refermée après un détour par
+///   Accueil — décision produit du 2026-08-11, `docs/UX_NAVIGATION.md` §7) ;
 /// - deep link direct vers une sous-page d'une branche (pile correcte,
 ///   retour vers la racine) ;
 /// - drill-down KPI dashboard → bascule de branche (Accueil → Baux) via
@@ -22,7 +23,7 @@ import 'package:easyrent/features/auth/domain/session_state.dart';
 import 'package:easyrent/features/dashboard/data/dashboard_repository.dart';
 import 'package:easyrent/features/dashboard/domain/activity_item.dart';
 import 'package:easyrent/features/dashboard/domain/dashboard_kpi.dart';
-import 'package:easyrent/features/dashboard/domain/monthly_amount.dart';
+import 'package:easyrent/features/dashboard/domain/onboarding_progress.dart';
 import 'package:easyrent/features/leases/data/lease_repository.dart';
 import 'package:easyrent/features/leases/domain/charge_mode.dart';
 import 'package:easyrent/features/leases/domain/lease.dart';
@@ -32,6 +33,7 @@ import 'package:easyrent/features/leases/domain/lease_type.dart';
 import 'package:easyrent/features/payments/domain/payment_method.dart';
 import 'package:easyrent/features/profile/data/profile_repository.dart';
 import 'package:easyrent/features/profile/domain/landlord_profile.dart';
+import 'package:easyrent/features/profile/presentation/profile_details_page.dart';
 import 'package:easyrent/features/properties/data/property_repository.dart';
 import 'package:easyrent/features/properties/domain/heating_type.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
@@ -153,21 +155,27 @@ class _FakeDashboardRepo implements DashboardRepository {
   Future<RetardsKpi> fetchRetards() async => const RetardsKpi(count: 0);
 
   @override
-  Future<RenouvellementsKpi> fetchRenouvellements() async =>
-      const RenouvellementsKpi(count: 0);
-
-  @override
   Future<DocsPendingKpi> fetchDocsPending() async =>
       const DocsPendingKpi(count: 0);
 
   @override
-  Future<List<MonthlyAmount>> fetchLastMonthsAmounts(int months) async => [];
+  Future<List<MonthlyCollectedRent>> fetchLastMonthsCollectedRent(
+    int months,
+  ) async => [];
 
   @override
   Future<List<ActivityItem>> fetchRecentActivity({int limit = 5}) async => [];
 
   @override
-  Future<bool> isLandlordOnboarding() async => false;
+  Future<OnboardingProgress> fetchOnboardingProgress() async =>
+      const OnboardingProgress(
+        hasProperty: true,
+        hasTenant: true,
+        hasLease: true,
+        hasPayment: true,
+        hasReceipt: true,
+        firstLeaseId: null,
+      );
 }
 
 final _fakeProfile = LandlordProfile(
@@ -322,6 +330,11 @@ class _FakeLeaseRepo implements LeaseRepository {
       tenantDisplayName: 'Jean Dupont',
     ),
   ];
+
+  @override
+  Future<List<Map<String, dynamic>>> listActiveLeasesForProperty(
+    String propertyId,
+  ) async => [];
 
   @override
   Future<Lease> getById(String id) async {
@@ -520,30 +533,124 @@ void main() {
     });
   });
 
-  group('Shell — préservation d\'état inter-branches', () {
-    testWidgets('basculer Baux → Biens → Baux (via l\'onglet) conserve la pile '
-        '(bail encore ouvert)', (tester) async {
-      await _pumpShellApp(
+  group('Shell — retour à la racine au changement d\'onglet '
+      '(décision produit du 2026-08-11)', () {
+    testWidgets(
+      'basculer Baux → Biens → Baux (via l\'onglet) réinitialise la pile '
+      '(bail refermé, retour à la liste)',
+      (tester) async {
+        await _pumpShellApp(
+          tester,
+          sessionState: SessionState.fullyAuthenticated,
+          initialLocation: '/leases/lease-shell-1',
+        );
+
+        // On est bien sur le détail du bail (bouton retour = pile non vide).
+        expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+
+        // Bascule sur Biens via l'onglet (goBranch(initialLocation: true)
+        // — reset Baux à sa racine, cf. adaptive_navigation_scaffold.dart).
+        await tester.tap(find.text('Biens'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('app_bar_back')), findsNothing);
+
+        // Revient sur Baux via l'onglet : la pile a été réinitialisée à la
+        // racine — le détail du bail n'est PLUS ouvert (avant le
+        // 2026-08-11, `indexedStack` préservait cette pile — c'est ce
+        // comportement que le propriétaire a fait inverser, cf.
+        // docs/UX_NAVIGATION.md §7).
+        await tester.tap(find.text('Baux'));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('app_bar_back')), findsNothing);
+      },
+    );
+
+    testWidgets('Profil : sous-page → Accueil → Profil rouvre le HUB, pas la '
+        'sous-page (même règle générale que Baux ci-dessus, appliquée ici '
+        'via une sous-route déclarée plutôt qu\'un push)', (tester) async {
+      // Jusqu'au 2026-08-10, Profil était la SEULE branche à se
+      // comporter ainsi (exception assumée, cf. CHANGELOG). Depuis, ce
+      // n'est plus qu'une instance de la règle générale ci-dessus — le
+      // test reste utile car il exerce un mécanisme différent (sous-route
+      // déclarée `/profile/details`, pas un `push()` imprévu).
+      final router = await _pumpShellApp(
         tester,
         sessionState: SessionState.fullyAuthenticated,
-        initialLocation: '/leases/lease-shell-1',
+        initialLocation: '/profile/details',
       );
 
-      // On est bien sur le détail du bail (bouton retour = pile non vide).
+      // Départ sur une sous-page : la pile n'est pas vide.
       expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
 
-      // Bascule sur Biens via l'onglet (goBranch — ne doit PAS reset Baux).
-      await tester.tap(find.text('Biens'));
+      await tester.tap(find.text('Accueil'));
       await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Profil'));
+      await tester.pumpAndSettle();
+
+      // Pile remise à la racine — plus de bouton retour, et l'URL suit.
       expect(find.byKey(const Key('app_bar_back')), findsNothing);
-
-      // Revient sur Baux via l'onglet : le détail doit être ENCORE ouvert
-      // (indexedStack préserve la pile de la branche).
-      await tester.tap(find.text('Baux'));
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('app_bar_back')), findsOneWidget);
+      expect(_loc(router), '/profile');
     });
+
+    testWidgets(
+      'pas de flash de l\'ancienne sous-page en revenant sur un onglet '
+      '(retour de recette du 2026-08-11 sur le correctif Profil)',
+      (tester) async {
+        // Un tester.pump() UNIQUE (durée nulle) juste après le tap ne
+        // discrimine PAS l'avant/après ici : la toute première frame après
+        // n'importe quel `goBranch` prend structurellement le rendu
+        // d'AVANT (Flutter ne peut pas peindre l'état "après" avant que le
+        // pipeline de build n'ait tourné au moins une fois). Vérifié à la
+        // main : avec l'ancien code (un seul goBranch(initialLocation:
+        // true) direct à l'entrée), la sous-page reste montée ~30 frames
+        // (~480ms, pop transition Material jouée en entier) après le tap —
+        // largement le temps qu'un œil humain la lise. Avec le correctif
+        // (reset de la branche QUITTÉE avant bascule, cf.
+        // adaptive_navigation_scaffold.dart), elle disparaît en 1 à 2
+        // frames (~16-32ms). Ce test emploie donc un seuil BORNÉ mais
+        // généreux (5 frames ~ 80ms) : il échoue avec l'ancien
+        // comportement, passe avec le nouveau — sans prétendre à un
+        // zéro-frame que le pipeline de rendu ne peut pas garantir.
+        await _pumpShellApp(
+          tester,
+          sessionState: SessionState.fullyAuthenticated,
+          initialLocation: '/profile/details',
+        );
+        expect(find.byType(ProfileDetailsPage), findsOneWidget);
+
+        await tester.tap(find.text('Accueil'));
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(
+          find.byType(ProfileDetailsPage),
+          findsNothing,
+          reason:
+              'La sous-page Profil ne doit plus être montée quelques '
+              'frames après avoir quitté cet onglet (flash de recette).',
+        );
+        await tester.pumpAndSettle();
+
+        // Retour sur Profil : lui non plus ne doit pas ré-afficher la
+        // sous-page, même brièvement (c'était le symptôme exact remonté :
+        // « j'ai vu un flash de l'écran Personal Information avant
+        // d'afficher l'écran Profile »).
+        await tester.tap(find.text('Profil'));
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(
+          find.byType(ProfileDetailsPage),
+          findsNothing,
+          reason:
+              'La sous-page Profil ne doit pas réapparaître en revenant '
+              'sur l\'onglet, même brièvement.',
+        );
+        await tester.pumpAndSettle();
+      },
+    );
   });
 
   group('Shell — drill-down KPI (Accueil → Baux)', () {

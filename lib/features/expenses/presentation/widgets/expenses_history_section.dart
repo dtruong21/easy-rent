@@ -78,9 +78,16 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cutoff = DateTime.now().subtract(const Duration(days: 365));
-    final last12Months = expenses.where((e) => e.expenseDate.isAfter(cutoff));
-    final totals = ExpenseTotals.fromExpenses(last12Months);
+    final now = DateTime.now();
+    final cutoff = now.subtract(const Duration(days: 365));
+    // Fenêtre de temps, pas filtre de lignes : une charge trimestrielle
+    // compte ses quatre échéances de l'année (FEAT-041d), une dépense
+    // ponctuelle compte une fois si sa date tombe dans la fenêtre.
+    final totals = ExpenseTotals.overWindow(
+      expenses: expenses,
+      from: cutoff,
+      to: now,
+    );
 
     if (expenses.isEmpty) {
       return Text(

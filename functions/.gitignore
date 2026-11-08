@@ -18,3 +18,6 @@ firebase-debug.*.log
 
 # OS
 .DS_Store
+
+# Secrets factices pour l'émulateur Functions (jamais de vraie clé ici)
+.secret.local

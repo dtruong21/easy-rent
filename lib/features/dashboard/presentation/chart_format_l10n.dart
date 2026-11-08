@@ -6,7 +6,7 @@ import '../domain/chart_format.dart';
 /// Mappe [ChartFormat] vers son libellé localisé (FEAT-043).
 ///
 /// Le domaine ne porte plus de libellé FR en dur — voir la note sur
-/// [ChartFormat]. Utilisé par le toggle de format de `MonthlyBarchart`
+/// [ChartFormat]. Utilisé par le toggle de format de `MonthlyCashflowChart`
 /// (libellé affiché en tooltip du bouton segmenté).
 extension ChartFormatL10n on ChartFormat {
   String label(BuildContext context) {

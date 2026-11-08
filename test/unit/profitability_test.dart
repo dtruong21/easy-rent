@@ -1,5 +1,7 @@
+import 'package:easyrent/core/finance/expense_recurrence.dart';
 import 'package:easyrent/core/finance/profitability.dart';
 import 'package:easyrent/core/finance/profitability_snapshot.dart';
+import 'package:easyrent/core/finance/real_expense_charges.dart';
 import 'package:easyrent/features/properties/domain/property.dart';
 import 'package:easyrent/features/properties/domain/property_type.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -340,6 +342,387 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // Tests — computeMonthlyCashflowBeforeTaxCents — dépenses réelles
+  // (bascule réel/prévisionnel par catégorie de charge, cf. doc de tête de
+  // fichier `profitability.dart`)
+  // ---------------------------------------------------------------------------
+
+  group('computeMonthlyCashflowBeforeTaxCents — dépenses réelles', () {
+    // Fenêtre glissante = 365 jours ; DateTime(2026,1,1) - 365j =
+    // DateTime(2025,1,1) exactement (2025 fait 365 jours, non bissextile).
+    final now = DateTime(2026, 1, 1);
+    final windowStart = DateTime(2025, 1, 1);
+
+    test('bien sans aucune dépense réelle → repli sur le prévisionnel '
+        '(résultat identique au comportement historique)', () {
+      final result = computeMonthlyCashflowBeforeTaxCents(
+        monthlyRentHcCents: 100000,
+        loanMonthlyPaymentCents: null,
+        propertyTaxAnnualCents: 120000,
+        insurancePnoAnnualCents: 30000,
+        condoFeesNonRecoverableCents: 60000,
+        // realCharges omis → PropertyRealCharges.empty par défaut.
+        now: now,
+      );
+
+      // (120000 + 30000 + 60000) / 12 = 17500 ; 100000 - 17500 = 82500.
+      expect(result, 82500);
+      expect(
+        countRealCashflowCharges(
+          propertyTaxAnnualCents: 120000,
+          insurancePnoAnnualCents: 30000,
+          condoFeesNonRecoverableCents: 60000,
+          now: now,
+        ),
+        0,
+      );
+    });
+
+    test(
+      'dépenses couvrant au moins 12 mois → bascule sur la moyenne réelle '
+      'pour CETTE charge uniquement (bascule par catégorie, pas globale)',
+      () {
+        final realCharges = PropertyRealCharges(
+          propertyTax: [
+            // Ancre hors fenêtre (recul ≥ 1 an) → prouve la couverture,
+            // n'entre pas dans la somme lissée (datée avant windowStart).
+            RealChargeEntry(
+              amountCents: 50000,
+              expenseDate: DateTime(2024, 6, 1),
+            ),
+            // Dans la fenêtre glissante → entre dans la somme.
+            RealChargeEntry(
+              amountCents: 180000,
+              expenseDate: DateTime(2025, 6, 1),
+            ),
+          ],
+        );
+
+        final result = computeMonthlyCashflowBeforeTaxCents(
+          monthlyRentHcCents: 100000,
+          loanMonthlyPaymentCents: null,
+          propertyTaxAnnualCents: 120000, // ignoré : le réel prend le relais
+          insurancePnoAnnualCents: null,
+          condoFeesNonRecoverableCents: null,
+          realCharges: realCharges,
+          now: now,
+        );
+
+        // Charge taxe foncière réelle = 180000 (l'ancre de 2024 est hors
+        // fenêtre) ; 180000 / 12 = 15000 ; 100000 - 15000 = 85000.
+        expect(result, 85000);
+        expect(
+          countRealCashflowCharges(
+            propertyTaxAnnualCents: 120000,
+            insurancePnoAnnualCents: null,
+            condoFeesNonRecoverableCents: null,
+            realCharges: realCharges,
+            now: now,
+          ),
+          1, // une seule charge sur 3 basculée
+        );
+      },
+    );
+
+    test('dépense exceptionnelle isolée (toiture 3000€) → lissée sur 12 mois, '
+        'ne fait pas plonger un seul mois de cash flow', () {
+      final realCharges = PropertyRealCharges(
+        condoFeesNonRecoverable: [
+          // Ancre hors fenêtre → prouve la couverture 12 mois.
+          RealChargeEntry(
+            amountCents: 10000,
+            expenseDate: DateTime(2024, 3, 1),
+          ),
+          // Dépense exceptionnelle, dans la fenêtre.
+          RealChargeEntry(
+            amountCents: 300000,
+            expenseDate: DateTime(2025, 10, 1),
+          ),
+        ],
+      );
+
+      final result = computeMonthlyCashflowBeforeTaxCents(
+        monthlyRentHcCents: 100000,
+        loanMonthlyPaymentCents: null,
+        propertyTaxAnnualCents: null,
+        insurancePnoAnnualCents: null,
+        condoFeesNonRecoverableCents: null,
+        realCharges: realCharges,
+        now: now,
+      );
+
+      // 300000 / 12 = 25000 (250€/mois) ; 100000 - 25000 = 75000.
+      // Si la dépense n'était PAS lissée, le mois de la dépense
+      // afficherait 100000 - 300000 = -200000 : un cash flow trivialement
+      // catastrophique qui ne reflète pas la réalité d'une charge
+      // exceptionnelle amortie sur l'année.
+      expect(result, 75000);
+      expect(result, greaterThan(0));
+    });
+
+    test('dépense isolée récente et faible (50€) NE remplace PAS une charge '
+        'annuelle déclarée bien plus élevée (1200€) — cas motivant la règle '
+        'de seuil de couverture temporelle', () {
+      final realCharges = PropertyRealCharges(
+        propertyTax: [
+          // Une seule dépense, récente, aucun recul — pas de couverture.
+          RealChargeEntry(
+            amountCents: 5000,
+            expenseDate: DateTime(2025, 12, 20),
+          ),
+        ],
+      );
+
+      final result = computeMonthlyCashflowBeforeTaxCents(
+        monthlyRentHcCents: 100000,
+        loanMonthlyPaymentCents: null,
+        propertyTaxAnnualCents: 120000, // doit rester la source utilisée
+        insurancePnoAnnualCents: null,
+        condoFeesNonRecoverableCents: null,
+        realCharges: realCharges,
+        now: now,
+      );
+
+      // Repli sur le déclaré : 120000 / 12 = 10000 ; 100000-10000=90000.
+      expect(result, 90000);
+      // Si le bug redouté se produisait (bascule dès une dépense), le
+      // calcul utiliserait 5000/12=416 → cash flow ≈ 99584, faussement
+      // excellent. On verrouille l'absence de ce comportement.
+      expect(result, isNot(closeTo(99584, 1)));
+      expect(
+        countRealCashflowCharges(
+          propertyTaxAnnualCents: 120000,
+          insurancePnoAnnualCents: null,
+          condoFeesNonRecoverableCents: null,
+          realCharges: realCharges,
+          now: now,
+        ),
+        0, // toujours prévisionnel — pas assez de recul
+      );
+    });
+
+    test('dépense datée exactement au début de la fenêtre glissante (365 '
+        'jours) → couverture acquise (borne inclusive)', () {
+      final realCharges = PropertyRealCharges(
+        insurancePno: [
+          RealChargeEntry(amountCents: 30000, expenseDate: windowStart),
+        ],
+      );
+
+      expect(
+        countRealCashflowCharges(
+          propertyTaxAnnualCents: null,
+          insurancePnoAnnualCents: 30000,
+          condoFeesNonRecoverableCents: null,
+          realCharges: realCharges,
+          now: now,
+        ),
+        1,
+      );
+    });
+
+    test('dépense datée un jour après le début de la fenêtre (364 jours de '
+        'recul) → pas encore de couverture, repli sur le prévisionnel', () {
+      final realCharges = PropertyRealCharges(
+        insurancePno: [
+          RealChargeEntry(
+            amountCents: 30000,
+            expenseDate: windowStart.add(const Duration(days: 1)),
+          ),
+        ],
+      );
+
+      expect(
+        countRealCashflowCharges(
+          propertyTaxAnnualCents: null,
+          insurancePnoAnnualCents: 30000,
+          condoFeesNonRecoverableCents: null,
+          realCharges: realCharges,
+          now: now,
+        ),
+        0,
+      );
+    });
+
+    test('aucune donnée réelle NI déclarée, mais prêt renseigné → cash flow '
+        'calculable quand même (charges = 0)', () {
+      final result = computeMonthlyCashflowBeforeTaxCents(
+        monthlyRentHcCents: 100000,
+        loanMonthlyPaymentCents: 50000,
+        propertyTaxAnnualCents: null,
+        insurancePnoAnnualCents: null,
+        condoFeesNonRecoverableCents: null,
+        now: now,
+      );
+
+      expect(result, 50000);
+    });
+
+    // -----------------------------------------------------------------------
+    // Dépenses RÉCURRENTES (FEAT-041d) — bascule immédiate, montant annualisé
+    // -----------------------------------------------------------------------
+
+    test(
+      'charge récurrente saisie du jour → bascule IMMÉDIATE sur le réel, '
+      'sans attendre les 12 mois de recul exigés d\'une dépense ponctuelle',
+      () {
+        // Même dépense, même date, même montant que le cas « 50 € isolée » plus
+        // haut qui, lui, NE bascule PAS : seule la périodicité change. Une
+        // périodicité n'est pas un échantillon, c'est une déclaration.
+        final realCharges = PropertyRealCharges(
+          condoFeesNonRecoverable: [
+            RealChargeEntry(
+              amountCents: 15000, // 150 € par trimestre
+              expenseDate: DateTime(2025, 12, 20), // 12 jours de recul
+              recurrence: ExpenseRecurrence.quarterly,
+            ),
+          ],
+        );
+
+        final result = computeMonthlyCashflowBeforeTaxCents(
+          monthlyRentHcCents: 100000,
+          loanMonthlyPaymentCents: null,
+          propertyTaxAnnualCents: null,
+          insurancePnoAnnualCents: null,
+          condoFeesNonRecoverableCents: 40000, // déclaré, doit être ignoré
+          realCharges: realCharges,
+          now: now,
+        );
+
+        // Annualisé : 15000 × 4 = 60000 ; 60000 / 12 = 5000 ;
+        // 100000 - 5000 = 95000. Si le calcul comptait seulement l'échéance
+        // déjà tombée (15000), on lirait 100000 - 1250 = 98750.
+        expect(result, 95000);
+        expect(result, isNot(98750));
+        expect(
+          countRealCashflowCharges(
+            propertyTaxAnnualCents: null,
+            insurancePnoAnnualCents: null,
+            condoFeesNonRecoverableCents: 40000,
+            realCharges: realCharges,
+            now: now,
+          ),
+          1,
+        );
+      },
+    );
+
+    test('récurrence pas encore commencée (première échéance dans le futur) → '
+        'aucune bascule, le prévisionnel déclaré reste la source', () {
+      final realCharges = PropertyRealCharges(
+        insurancePno: [
+          RealChargeEntry(
+            amountCents: 30000,
+            expenseDate: DateTime(2026, 6, 1), // après `now`
+            recurrence: ExpenseRecurrence.yearly,
+          ),
+        ],
+      );
+
+      expect(
+        countRealCashflowCharges(
+          propertyTaxAnnualCents: null,
+          insurancePnoAnnualCents: 25000,
+          condoFeesNonRecoverableCents: null,
+          realCharges: realCharges,
+          now: now,
+        ),
+        0,
+      );
+    });
+
+    test('récurrence TERMINÉE → redevient de l\'histoire : seules ses '
+        'échéances tombées dans la fenêtre comptent, pas son annualisé', () {
+      final realCharges = PropertyRealCharges(
+        propertyTax: [
+          RealChargeEntry(
+            amountCents: 15000,
+            // Démarre avant la fenêtre (donc couverture 12 mois acquise) et
+            // s'arrête au 30/06/2025 : sur [2025-01-01, 2026-01-01] il ne
+            // reste que les échéances de janvier et avril 2025.
+            expenseDate: DateTime(2024, 4, 15),
+            recurrence: ExpenseRecurrence.quarterly,
+            recurrenceEndDate: DateTime(2025, 6, 30),
+          ),
+        ],
+      );
+
+      final result = computeMonthlyCashflowBeforeTaxCents(
+        monthlyRentHcCents: 100000,
+        loanMonthlyPaymentCents: null,
+        propertyTaxAnnualCents: 120000,
+        insurancePnoAnnualCents: null,
+        condoFeesNonRecoverableCents: null,
+        realCharges: realCharges,
+        now: now,
+      );
+
+      // Échéances : 15/01/2025 et 15/04/2025 → 2 × 15000 = 30000 ;
+      // 30000 / 12 = 2500 ; 100000 - 2500 = 97500. L'annualisé (60000)
+      // ne s'applique plus : la charge ne court plus.
+      expect(result, 97500);
+    });
+
+    test('récurrence bornée dans le futur (fin après `now`) → toujours en '
+        'cours, donc annualisée', () {
+      final realCharges = PropertyRealCharges(
+        insurancePno: [
+          RealChargeEntry(
+            amountCents: 30000,
+            expenseDate: DateTime(2025, 9, 1),
+            recurrence: ExpenseRecurrence.yearly,
+            recurrenceEndDate: DateTime(2028, 9, 1),
+          ),
+        ],
+      );
+
+      final result = computeMonthlyCashflowBeforeTaxCents(
+        monthlyRentHcCents: 100000,
+        loanMonthlyPaymentCents: null,
+        propertyTaxAnnualCents: null,
+        insurancePnoAnnualCents: 20000,
+        condoFeesNonRecoverableCents: null,
+        realCharges: realCharges,
+        now: now,
+      );
+
+      // 30000 × 1 = 30000 ; 30000 / 12 = 2500 ; 100000 - 2500 = 97500.
+      expect(result, 97500);
+    });
+
+    test('une récurrence en cours fait basculer sa charge SANS entraîner les '
+        'autres postes (bascule par catégorie, inchangée)', () {
+      final realCharges = PropertyRealCharges(
+        condoFeesNonRecoverable: [
+          RealChargeEntry(
+            amountCents: 15000,
+            expenseDate: DateTime(2025, 12, 20),
+            recurrence: ExpenseRecurrence.quarterly,
+          ),
+        ],
+        propertyTax: [
+          // Ponctuelle et récente : ce poste doit rester prévisionnel.
+          RealChargeEntry(
+            amountCents: 5000,
+            expenseDate: DateTime(2025, 12, 1),
+          ),
+        ],
+      );
+
+      expect(
+        countRealCashflowCharges(
+          propertyTaxAnnualCents: 120000,
+          insurancePnoAnnualCents: 30000,
+          condoFeesNonRecoverableCents: 40000,
+          realCharges: realCharges,
+          now: now,
+        ),
+        1,
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Tests — computeSnapshotForProperty
   // ---------------------------------------------------------------------------
 
@@ -395,7 +778,62 @@ void main() {
       expect(snapshot.loanMonthlyPaymentCents, isNotNull);
       expect(snapshot.loanMonthlyPaymentCents!, greaterThan(0));
       expect(snapshot.monthlyCashflowBeforeTaxCents, isNotNull);
+      // Aucune dépense réelle transmise → purement prévisionnel.
+      expect(snapshot.cashflowRealChargesCount, 0);
     });
+
+    test(
+      'dépenses réelles transmises → cashflowRealChargesCount reflète la '
+      'bascule ET le rendement net reste calculé sur le seul prévisionnel '
+      '(les rendements ne changent pas de définition, seul le cash flow)',
+      () {
+        final property = _makeProperty(
+          purchasePriceCents: 20000000, // 200k€
+          propertyTaxAnnualCents: 120000, // 1200€/an déclaré
+          insurancePnoAnnualCents: 30000, // 300€/an déclaré
+          condoFeesNonRecoverableCents: 60000, // 600€/an déclaré
+        );
+
+        final now = DateTime(2026, 1, 1);
+        final realCharges = PropertyRealCharges(
+          propertyTax: [
+            // Couverture ≥ 1 an + montant réel différent du déclaré.
+            RealChargeEntry(
+              amountCents: 50000,
+              expenseDate: DateTime(2024, 6, 1),
+            ),
+            RealChargeEntry(
+              amountCents: 200000,
+              expenseDate: DateTime(2025, 6, 1),
+            ),
+          ],
+        );
+
+        final snapshotWithoutReal = computeSnapshotForProperty(
+          property: property,
+          monthlyRentHcCents: 80000,
+          now: now,
+        );
+        final snapshotWithReal = computeSnapshotForProperty(
+          property: property,
+          monthlyRentHcCents: 80000,
+          realCharges: realCharges,
+          now: now,
+        );
+
+        expect(snapshotWithReal.cashflowRealChargesCount, 1);
+        // Le rendement net (charges DÉCLARÉES uniquement) est identique
+        // avec ou sans dépenses réelles — seul le cash flow diverge.
+        expect(
+          snapshotWithReal.yieldNetPercent,
+          snapshotWithoutReal.yieldNetPercent,
+        );
+        expect(
+          snapshotWithReal.monthlyCashflowBeforeTaxCents,
+          isNot(snapshotWithoutReal.monthlyCashflowBeforeTaxCents),
+        );
+      },
+    );
 
     test('override mensualité prêt prioritaire sur calcul', () {
       final property = _makeProperty(

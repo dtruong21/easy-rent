@@ -3,6 +3,8 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:easyrent/features/auth/data/landlord_tier_repository.dart';
+import 'package:easyrent/features/auth/domain/subscription_tier.dart';
 import 'package:easyrent/features/documents/data/documents_repository.dart';
 import 'package:easyrent/features/documents/domain/document.dart';
 import 'package:easyrent/features/documents/domain/document_category.dart';
@@ -91,7 +93,17 @@ class _FakeDocumentsRepository implements DocumentsRepository {
 
 ProviderContainer _makeContainer(_FakeDocumentsRepository repo) {
   return ProviderContainer(
-    overrides: [documentsRepositoryProvider.overrideWithValue(repo)],
+    overrides: [
+      documentsRepositoryProvider.overrideWithValue(repo),
+      // FEAT-056 : le plafond de taille (10 Mo, palier free — inchangé pour
+      // ces tests) est désormais lu via `quotaLimitProvider`, qui dérive de
+      // `landlordTierProvider`.
+      landlordTierProvider.overrideWith(
+        (ref) => Stream.value(
+          const LandlordTierSnapshot(tier: SubscriptionTier.free),
+        ),
+      ),
+    ],
   );
 }
 
@@ -117,6 +129,14 @@ void main() {
         final container = _makeContainer(repo);
         addTearDown(container.dispose);
 
+        // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+        // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+        // scenario_limit_controller_test.dart, même piège).
+
+        await container.read(landlordTierProvider.future);
+
         await container
             .read(expenseReceiptUploadControllerProvider.notifier)
             .upload(
@@ -140,6 +160,14 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+      // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+      // scenario_limit_controller_test.dart, même piège).
+
+      await container.read(landlordTierProvider.future);
+
       await container
           .read(expenseReceiptUploadControllerProvider.notifier)
           .upload(
@@ -158,6 +186,14 @@ void main() {
       final repo = _FakeDocumentsRepository();
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
+
+      // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+      // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+      // scenario_limit_controller_test.dart, même piège).
+
+      await container.read(landlordTierProvider.future);
 
       await container
           .read(expenseReceiptUploadControllerProvider.notifier)
@@ -178,6 +214,14 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+      // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+      // scenario_limit_controller_test.dart, même piège).
+
+      await container.read(landlordTierProvider.future);
+
       await container
           .read(expenseReceiptUploadControllerProvider.notifier)
           .upload(
@@ -196,6 +240,14 @@ void main() {
       final repo = _FakeDocumentsRepository();
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
+
+      // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+      // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+      // scenario_limit_controller_test.dart, même piège).
+
+      await container.read(landlordTierProvider.future);
 
       await container
           .read(expenseReceiptUploadControllerProvider.notifier)
@@ -219,6 +271,14 @@ void main() {
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
 
+      // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+      // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+      // scenario_limit_controller_test.dart, même piège).
+
+      await container.read(landlordTierProvider.future);
+
       await container
           .read(expenseReceiptUploadControllerProvider.notifier)
           .upload(
@@ -238,6 +298,14 @@ void main() {
       final repo = _FakeDocumentsRepository();
       final container = _makeContainer(repo);
       addTearDown(container.dispose);
+
+      // Résout landlordTierProvider avant l'action (le read() synchrone dans
+
+      // upload() tomberait sinon sur le fallback anonyme -> quota 0, cf.
+
+      // scenario_limit_controller_test.dart, même piège).
+
+      await container.read(landlordTierProvider.future);
 
       await container
           .read(expenseReceiptUploadControllerProvider.notifier)

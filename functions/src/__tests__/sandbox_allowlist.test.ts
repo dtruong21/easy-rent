@@ -1,0 +1,109 @@
+import type {Firestore} from "firebase-admin/firestore";
+import {logger} from "firebase-functions/v2";
+import {afterEach, describe, expect, it, vi} from "vitest";
+
+import {
+  SANDBOX_ALLOWLIST_DOC,
+  isMobileStore,
+  parseSandboxAllowlist,
+  readSandboxAllowlist,
+  readSandboxAllowlistOrEmpty,
+} from "../utils/sandbox_allowlist";
+
+import {FakeFirestore} from "./helpers/fake_firestore";
+
+const asDb = (db: unknown) => db as Firestore;
+
+/** Base dont toute lecture échoue (réseau, permissions…). */
+const failingDb = asDb({
+  doc: () => ({get: () => Promise.reject(new Error("unavailable"))}),
+});
+
+describe("SANDBOX_ALLOWLIST_DOC", () => {
+  it("chemin épinglé : édité à la main dans la console, couvert par la règle _ops", () => {
+    // Le renommer couperait la liste en silence (document jamais trouvé →
+    // aucun uid) et sortirait le doc de la règle `match /_ops/{docId}`.
+    expect(SANDBOX_ALLOWLIST_DOC).toBe("_ops/sandboxAllowlist");
+  });
+});
+
+describe("parseSandboxAllowlist", () => {
+  it("doc absent ou vide → aucun uid", () => {
+    expect([...parseSandboxAllowlist(undefined)]).toEqual([]);
+    expect([...parseSandboxAllowlist({})]).toEqual([]);
+  });
+
+  it("uids pas un tableau → aucun uid", () => {
+    expect([...parseSandboxAllowlist({uids: "u1"})]).toEqual([]);
+  });
+
+  it("ne garde que des chaînes non vides, sans espaces autour", () => {
+    const set = parseSandboxAllowlist({uids: ["u1", " u2 ", "", 42, null]});
+    expect([...set].sort()).toEqual(["u1", "u2"]);
+  });
+});
+
+describe("readSandboxAllowlist", () => {
+  it("lit les uids du document prod", async () => {
+    const db = new FakeFirestore();
+    db.seed(SANDBOX_ALLOWLIST_DOC, {uids: ["review-demo"]});
+    const set = await readSandboxAllowlist(asDb(db));
+    expect(set.has("review-demo")).toBe(true);
+  });
+
+  it("document absent → ensemble vide", async () => {
+    const set = await readSandboxAllowlist(asDb(new FakeFirestore()));
+    expect(set.size).toBe(0);
+  });
+
+  it("lecture en échec → lève (l'appelant décide)", async () => {
+    await expect(readSandboxAllowlist(failingDb)).rejects.toThrow("unavailable");
+  });
+});
+
+describe("readSandboxAllowlistOrEmpty", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("lecture en échec → ensemble vide, sans lever (fail-closed) + alerte", async () => {
+    const error = vi.spyOn(logger, "error").mockImplementation(() => undefined);
+
+    const set = await readSandboxAllowlistOrEmpty(failingDb, "monCron");
+
+    expect(set.size).toBe(0);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(String(error.mock.calls[0][0])).toContain("monCron");
+  });
+});
+
+describe("isMobileStore", () => {
+  it("App Store / Google Play, dans les deux casses RevenueCat → true", () => {
+    for (const store of [
+      "APP_STORE",
+      "MAC_APP_STORE",
+      "PLAY_STORE",
+      "app_store",
+      "mac_app_store",
+      "play_store",
+    ]) {
+      expect(isMobileStore(store), store).toBe(true);
+    }
+  });
+
+  it("web (Stripe, RC Billing), promo, absent, inconnu → false", () => {
+    for (const store of [
+      "STRIPE",
+      "stripe",
+      "RC_BILLING",
+      "PROMOTIONAL",
+      "AMAZON",
+      "",
+      null,
+      undefined,
+      42,
+    ]) {
+      expect(isMobileStore(store), String(store)).toBe(false);
+    }
+  });
+});

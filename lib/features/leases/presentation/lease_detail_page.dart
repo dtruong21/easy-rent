@@ -8,17 +8,21 @@ import '../../../core/i18n/l10n_extensions.dart';
 import '../../../core/ui/app_bar/app_app_bar.dart';
 import '../../../core/ui/cards/status_pill.dart';
 import '../../../core/ui/cards/status_pill_tone.dart';
+import '../../../core/ui/theme/property_color.dart';
 import '../../../core/utils/french_date.dart';
 import '../../../core/utils/money_format.dart';
+import '../../../core/utils/property_address.dart';
 import '../../../core/widgets/archive_confirm_dialog.dart';
 import '../../auth/data/landlord_tier_repository.dart';
-import '../../auth/domain/subscription_tier.dart';
+import '../../auth/domain/plan_matrix.g.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_dialog.dart';
 import '../../charge_regularization/presentation/widgets/charge_regularization_section.dart';
+import '../../charge_regularization/presentation/widgets/charge_statement_history_section.dart';
 import '../../documents/presentation/widgets/documents_section.dart';
 import '../../payments/presentation/widgets/payment_list_section.dart';
 import '../../profile/application/landlord_profile_provider.dart';
 import '../../properties/application/property_detail_provider.dart';
+import '../../properties/presentation/widgets/property_color_dot.dart';
 import '../../receipts/presentation/receipts_list_section.dart';
 import '../../tenants/application/tenant_detail_provider.dart';
 import '../application/lease_detail_provider.dart';
@@ -32,6 +36,7 @@ import '../domain/lease_submit_error.dart';
 import 'lease_submit_error_l10n.dart';
 import 'lease_type_l10n.dart';
 import 'widgets/close_lease_dialog.dart';
+import 'widgets/payment_reminder_button.dart';
 
 final _log = Logger('LeaseDetailPage');
 
@@ -131,17 +136,24 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Charger le contexte nécessaire au bouton de partage des quittances.
     final asyncTenant = ref.watch(tenantDetailProvider(lease.tenantId));
     final asyncProperty = ref.watch(propertyDetailProvider(lease.propertyId));
-    final asyncProfile = ref.watch(landlordProfileProvider);
 
     // Extraire les valeurs dès qu'elles sont disponibles — null sinon
     // (le bouton de partage se désactive gracieusement).
     final tenantEmail = asyncTenant.valueOrNull?.email;
-    final tenantFirstName = asyncTenant.valueOrNull?.firstName ?? '';
-    final tenantLastName = asyncTenant.valueOrNull?.lastName ?? '';
-    final tenantFullName = '$tenantFirstName $tenantLastName'.trim();
-    final propertyAddress = asyncProperty.valueOrNull?.address ?? '';
-    final landlordFullName = asyncProfile.valueOrNull?.fullName ?? '';
-    final landlordAddress = asyncProfile.valueOrNull?.address ?? '';
+    final property = asyncProperty.valueOrNull;
+    // FEAT-031 : contexte nécessaire au bouton de relance de paiement
+    // (locataire complet, nom du bailleur, adresse composée du bien).
+    final tenant = asyncTenant.valueOrNull;
+    final landlordProfile = ref.watch(landlordProfileProvider).valueOrNull;
+    // Couleur d'identité (FEAT-057) : le bien est déjà chargé ci-dessus pour
+    // l'adresse — aucune lecture supplémentaire pour la propager aux
+    // sections Paiements/Quittances de cette même page.
+    final propertyColorKey = property != null
+        ? PropertyColorKey.resolve(
+            entityId: property.id,
+            stored: property.colorKey,
+          )
+        : null;
 
     // FEAT-028 : le retard est calculé au niveau de la liste (l'info
     // paiement n'est pas portée par le Lease seul). On réutilise le cache
@@ -167,12 +179,12 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
     // Gate PRO (FEAT-044) en plus du gate légal : ce chemin deep-link
     // (`?openRegularization=1`) contourne la section, il doit donc appliquer la
     // même restriction — sinon un compte free atteindrait le dialog par URL.
-    final isPaidForRegularization =
-        ref.watch(landlordTierProvider).valueOrNull?.tier ==
-        SubscriptionTier.paid;
+    final hasChargeRegularizationForDeepLink = ref.watch(
+      hasFeatureProvider(PlanFeature.chargeRegularization),
+    );
     if (widget.openRegularizationOnLoad &&
         !_regularizationDialogOpened &&
-        isPaidForRegularization &&
+        hasChargeRegularizationForDeepLink &&
         lease.canRegularizeCharges) {
       _regularizationDialogOpened = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -182,11 +194,6 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           builder: (_) => ChargeRegularizationDialog(
             leaseId: lease.id,
             propertyId: lease.propertyId,
-            landlordFullName: landlordFullName,
-            landlordAddress: landlordAddress,
-            tenantFullName: tenantFullName,
-            tenantFirstName: tenantFirstName,
-            propertyAddress: propertyAddress,
             tenantEmail: tenantEmail,
           ),
         );
@@ -212,34 +219,52 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StatusCard(lease: lease, isLate: isLate),
+            if (isLate &&
+                tenant != null &&
+                landlordProfile != null &&
+                property != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: PaymentReminderButton(
+                  lease: lease,
+                  tenant: tenant,
+                  landlordFullName: landlordProfile.fullName ?? '',
+                  propertyAddress: composePropertyAddress(
+                    address: property.address,
+                    postalCode: property.postalCode,
+                    city: property.city,
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             // FEAT-030 : remontée juste après le statut — la régularisation
             // des charges était auparavant enterrée après _InfoCard (3ᵉ
             // carte), peu visible pour qui arrive par navigation normale
             // (pas via le raccourci liste ci-dessus).
-            ChargeRegularizationSection(
-              lease: lease,
-              landlordFullName: landlordFullName,
-              landlordAddress: landlordAddress,
-              tenantFullName: tenantFullName,
-              tenantFirstName: tenantFirstName,
-              propertyAddress: propertyAddress,
-              tenantEmail: tenantEmail,
+            ChargeRegularizationSection(lease: lease, tenantEmail: tenantEmail),
+            const SizedBox(height: 16),
+            // Historique des décomptes figés (FEAT-033 Task 9) — pas gaté par
+            // les mêmes conditions PRO/légal que la section ci-dessus : un
+            // décompte déjà figé reste consultable même si le bail ou
+            // l'abonnement changent ensuite. Ne s'affiche que s'il existe au
+            // moins un décompte.
+            ChargeStatementHistorySection(leaseId: lease.id),
+            const SizedBox(height: 16),
+            _InfoCard(lease: lease, propertyColorKey: propertyColorKey),
+            const SizedBox(height: 16),
+            PaymentListSection(
+              leaseId: lease.id,
+              propertyColorKey: propertyColorKey,
             ),
-            const SizedBox(height: 16),
-            _InfoCard(lease: lease),
-            const SizedBox(height: 16),
-            PaymentListSection(leaseId: lease.id),
             const SizedBox(height: 16),
             ReceiptsListSection(
               leaseId: lease.id,
-              tenantEmail: tenantEmail,
-              tenantFirstName: tenantFirstName,
-              propertyAddress: propertyAddress,
-              landlordFullName: landlordFullName,
+              propertyColorKey: propertyColorKey,
             ),
             const SizedBox(height: 16),
             DocumentsSection(leaseId: lease.id),
+            const SizedBox(height: 16),
+            _EtatDesLieuxTile(leaseId: lease.id),
             const SizedBox(height: 32),
 
             // Bouton Clôturer (uniquement si bail actif)
@@ -331,6 +356,31 @@ class _LeaseDetailContentState extends ConsumerState<_LeaseDetailContent> {
   }
 }
 
+/// Tuile d'accès à la liste des états des lieux du bail (FEAT-037, tâche 7).
+///
+/// Patron `_ReceiptsSummaryEntry` (`receipts_list_section.dart`) simplifié :
+/// pas de résumé chiffré ici, juste l'accès à
+/// `/leases/:id/etat-des-lieux` — la liste complète affiche déjà le compte et
+/// le bouton PDF par ligne.
+class _EtatDesLieuxTile extends StatelessWidget {
+  const _EtatDesLieuxTile({required this.leaseId});
+
+  final String leaseId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        key: const Key('tile_etat_des_lieux'),
+        leading: const Icon(Icons.fact_check_outlined),
+        title: Text(context.l10n.edlListTitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/leases/$leaseId/etat-des-lieux'),
+      ),
+    );
+  }
+}
+
 /// Card statut du bail.
 class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.lease, this.isLate = false});
@@ -383,9 +433,10 @@ class _StatusCard extends StatelessWidget {
 
 /// Card d'informations du bail (lecture seule).
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.lease});
+  const _InfoCard({required this.lease, this.propertyColorKey});
 
   final Lease lease;
+  final PropertyColorKey? propertyColorKey;
 
   @override
   Widget build(BuildContext context) {
@@ -402,6 +453,7 @@ class _InfoCard extends StatelessWidget {
               icon: Icons.home_outlined,
               label: l10n.leasesDetailPropertyLabel,
               onTap: () => context.go('/properties/${lease.propertyId}'),
+              colorKey: propertyColorKey,
             ),
             const Divider(height: 24),
 
@@ -625,11 +677,16 @@ class _LinkRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.colorKey,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+
+  /// Couleur d'identité du bien lié (`null` pour la ligne locataire, qui
+  /// n'a pas de couleur propre).
+  final PropertyColorKey? colorKey;
 
   @override
   Widget build(BuildContext context) {
@@ -638,7 +695,13 @@ class _LinkRow extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          if (colorKey != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: PropertyColorDot(colorKey: colorKey!, size: 12),
+            )
+          else
+            Icon(icon, size: 20, color: theme.colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -707,7 +770,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Page "Bail introuvable" — affichée quand la RLS retourne 0 ligne.
+/// Page "Bail introuvable" — affichée quand les Firestore Rules ne renvoient aucun document.
 class _NotFoundPage extends StatelessWidget {
   const _NotFoundPage();
 

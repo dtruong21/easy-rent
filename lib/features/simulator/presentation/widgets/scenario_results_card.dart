@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/l10n_extensions.dart';
 import '../../../../core/utils/money_format.dart';
+import '../../../../core/ui/theme/app_colors.dart';
 import '../../../../core/ui/theme/app_spacing.dart';
 import '../../domain/scenario_results.dart';
 
@@ -129,15 +130,19 @@ class _KpiGrid extends StatelessWidget {
 
   Color? _yieldColor(BuildContext context, double percent) {
     final cs = Theme.of(context).colorScheme;
+    final appColors =
+        Theme.of(context).extension<AppColors>() ?? AppColors.light;
     if (percent < 5) return cs.error;
-    if (percent < 7) return Colors.orange.shade700;
-    return Colors.green.shade700;
+    if (percent < 7) return appColors.warning.solid;
+    return appColors.success.solid;
   }
 
   Color? _cashflowColor(BuildContext context, int cents) {
+    final appColors =
+        Theme.of(context).extension<AppColors>() ?? AppColors.light;
     if (cents < 0) return Theme.of(context).colorScheme.error;
-    if (cents == 0) return Colors.orange.shade700;
-    return Colors.green.shade700;
+    if (cents == 0) return appColors.warning.solid;
+    return appColors.success.solid;
   }
 }
 

@@ -4,7 +4,12 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createProperty, createTenant} from "../callable/property_tenant";
 import {softDeleteEntity} from "../callable/soft_delete";
 
-import {FakeFirestore, fakeAdminFirestoreHolder} from "./helpers/fake_firestore";
+import {
+  FakeFirestore,
+  fakeAdminFirestoreHolder,
+  fakeStagingFirestoreHolder,
+} from "./helpers/fake_firestore";
+import {VERIFIED_TOKEN} from "./helpers/verified_token";
 
 // Cf. expenses.test.ts pour la justification du import() dynamique interne.
 vi.mock("firebase-admin", async () => {
@@ -13,11 +18,12 @@ vi.mock("firebase-admin", async () => {
 });
 
 let fakeDb: FakeFirestore;
+let fakeStagingDb: FakeFirestore;
 
 function makeRequest(uid: string | null, data: unknown): CallableRequest {
   return {
     data,
-    auth: uid ? {uid, token: {} as never, rawToken: ""} : undefined,
+    auth: uid ? {uid, token: VERIFIED_TOKEN, rawToken: ""} : undefined,
     rawRequest: {} as never,
   } as CallableRequest;
 }
@@ -63,6 +69,10 @@ function seedProperty(id: string) {
 beforeEach(() => {
   fakeDb = new FakeFirestore();
   fakeAdminFirestoreHolder.db = fakeDb;
+  // Base `staging` fraîche à chaque test (vide → un appel mobile dont le
+  // landlord est en prod retombe sur la prod, comme avant le routage par compte).
+  fakeStagingDb = new FakeFirestore();
+  fakeStagingFirestoreHolder.db = fakeStagingDb;
 });
 
 describe("createProperty — gating free-tier (FEAT-044)", () => {
@@ -103,11 +113,24 @@ describe("createProperty — gating free-tier (FEAT-044)", () => {
     expect(fakeDb.peek(`landlords/${UID}`)?.activePropertiesCount).toBe(2);
   });
 
-  it("paid → illimité (crée même au-delà de 2)", async () => {
-    seedLandlord("paid", 50);
+  it("paid (→ pro) : crée au-delà du plafond free, mais reste borné à 5", async () => {
+    // PR-7 : les paliers payants ne sont plus illimités. Un doc `paid` sans
+    // `planLevel` se dérive en `pro` → plafond 5.
+    seedLandlord("paid", 4);
     const res = await createProperty.run(makeRequest(UID, validPayload()));
     expect((res as {propertyId: string}).propertyId).toBeTruthy();
-    expect(fakeDb.peek(`landlords/${UID}`)?.activePropertiesCount).toBe(51);
+    expect(fakeDb.peek(`landlords/${UID}`)?.activePropertiesCount).toBe(5);
+  });
+
+  it("paid (→ pro) AU plafond (5) → refus resource-exhausted", async () => {
+    seedLandlord("paid", 5);
+    await expect(
+      createProperty.run(makeRequest(UID, validPayload())),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "property_limit_reached",
+    });
+    expect(fakeDb.peek(`landlords/${UID}`)?.activePropertiesCount).toBe(5);
   });
 
   it("anonymous → refus même à 0 bien (registre réservé aux comptes)", async () => {
@@ -288,10 +311,21 @@ describe("createTenant — gating free-tier (FEAT-044)", () => {
     });
   });
 
-  it("paid → illimité", async () => {
-    seedLandlordTenants("paid", 99);
+  it("paid (→ pro) : crée au-delà du plafond free, mais reste borné à 8", async () => {
+    seedLandlordTenants("paid", 7);
     const res = await createTenant.run(makeRequest(UID, tenantPayload()));
     expect((res as {tenantId: string}).tenantId).toBeTruthy();
+    expect(fakeDb.peek(`landlords/${UID}`)?.activeTenantsCount).toBe(8);
+  });
+
+  it("paid (→ pro) AU plafond (8) → refus resource-exhausted", async () => {
+    seedLandlordTenants("paid", 8);
+    await expect(
+      createTenant.run(makeRequest(UID, tenantPayload())),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "tenant_limit_reached",
+    });
   });
 
   it("anonymous → refus", async () => {
@@ -389,5 +423,175 @@ describe("softDeleteEntity — décréments landlord (FEAT-044 tenant + bail)", 
       makeRequest(UID, {collection: "leases", id: "l-1"}),
     );
     expect(fakeDb.peek(`landlords/${UID}`)?.activeLeasesCount).toBe(2);
+  });
+});
+
+// ============================================================================
+// FEAT-056 — le plafond se résout sur le PALIER EFFECTIF, pas sur la classe
+// d'accès. Ces cas s'ajoutent aux précédents ; aucun d'eux ne les remplace :
+// le freemium doit se comporter EXACTEMENT comme avant.
+// ============================================================================
+describe("createProperty / createTenant — palier effectif (FEAT-056)", () => {
+  function seedPlan(
+    tier: string,
+    planLevel: string | null,
+    counts: Record<string, number>,
+  ) {
+    const data: Record<string, unknown> = {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: tier,
+      deletedAt: null,
+      ...counts,
+    };
+    if (planLevel !== null) data.planLevel = planLevel;
+    fakeDb.seed(`landlords/${UID}`, data);
+  }
+
+  it("paid SANS planLevel (abonné d'avant FEAT-056) → servi aux plafonds pro", async () => {
+    // I3 : la dérivation vaut `pro`, donc plafond 5 — plus illimité depuis PR-7.
+    seedPlan("paid", null, {activePropertiesCount: 4});
+    const res = await createProperty.run(makeRequest(UID, validPayload()));
+    expect((res as {propertyId: string}).propertyId).toBeTruthy();
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", null, {activePropertiesCount: 5});
+    await expect(
+      createProperty.run(makeRequest(UID, validPayload())),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "property_limit_reached",
+    });
+  });
+
+  it("chaque palier payant est servi par SA propre clé de table", async () => {
+    // Les plafonds DIFFÈRENT entre paliers (5 / 15 / illimité) : un compte à 5
+    // biens est refusé en pro et accepté en max. Un gating indexé sur la classe
+    // d'accès `paid` donnerait le même verdict aux trois — ce test le détecte.
+    const propertyLimits: Array<[string, number | null]> = [
+      ["pro", 5],
+      ["max", 15],
+      ["ultra", null],
+    ];
+    for (const [level, limit] of propertyLimits) {
+      // Juste SOUS le plafond du palier (ou très haut si illimité) → passe.
+      fakeDb = new FakeFirestore();
+      fakeAdminFirestoreHolder.db = fakeDb;
+      seedPlan("paid", level, {activePropertiesCount: limit === null ? 500 : limit - 1});
+      const res = await createProperty.run(makeRequest(UID, validPayload()));
+      expect((res as {propertyId: string}).propertyId).toBeTruthy();
+
+      if (limit === null) continue; // ultra : aucun plafond à franchir
+      // AU plafond du palier → refus.
+      fakeDb = new FakeFirestore();
+      fakeAdminFirestoreHolder.db = fakeDb;
+      seedPlan("paid", level, {activePropertiesCount: limit});
+      await expect(
+        createProperty.run(makeRequest(UID, validPayload())),
+      ).rejects.toMatchObject({
+        code: "resource-exhausted",
+        message: "property_limit_reached",
+      });
+    }
+  });
+
+  it("planLevel inconnu sur un compte payant → servi comme pro, pas verrouillé", async () => {
+    // Fail-UP (I4) : le pire échec serait de traiter en anonyme un abonné qui
+    // paie parce que le serveur ne connaît pas encore son palier. Il obtient le
+    // plafond pro (5) — au-dessus de free (2), en-dessous de max.
+    seedPlan("paid", "quantum", {activePropertiesCount: 4});
+    const res = await createProperty.run(makeRequest(UID, validPayload()));
+    expect((res as {propertyId: string}).propertyId).toBeTruthy();
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", "quantum", {activePropertiesCount: 5});
+    await expect(
+      createProperty.run(makeRequest(UID, validPayload())),
+    ).rejects.toMatchObject({code: "resource-exhausted"});
+  });
+
+  it("planLevel posé sur un compte FREE ne débloque rien", async () => {
+    seedPlan("free", "ultra", {activePropertiesCount: 2});
+    await expect(
+      createProperty.run(makeRequest(UID, validPayload())),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "property_limit_reached",
+    });
+  });
+
+  it("createTenant : même dérivation (paid legacy → plafonds pro)", async () => {
+    seedPlan("paid", null, {activeTenantsCount: 7});
+    const res = await createTenant.run(
+      makeRequest(UID, {
+        firstName: "Jean",
+        lastName: "Dupont",
+        email: "jean@example.com",
+      }),
+    );
+    expect((res as {tenantId: string}).tenantId).toBeTruthy();
+
+    fakeDb = new FakeFirestore();
+    fakeAdminFirestoreHolder.db = fakeDb;
+    seedPlan("paid", null, {activeTenantsCount: 8});
+    await expect(
+      createTenant.run(
+        makeRequest(UID, {
+          firstName: "Jean",
+          lastName: "Dupont",
+          email: "jean@example.com",
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "tenant_limit_reached",
+    });
+  });
+
+  it("createTenant : planLevel sur compte free ne débloque rien", async () => {
+    seedPlan("free", "max", {activeTenantsCount: 3});
+    await expect(
+      createTenant.run(
+        makeRequest(UID, {
+          firstName: "Jean",
+          lastName: "Dupont",
+          email: "jean@example.com",
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: "resource-exhausted",
+      message: "tenant_limit_reached",
+    });
+  });
+});
+
+// ============================================================================
+// Routage par compte des callables mobiles (build de test Test Lab, ADR 0003) :
+// `dbForRequest` sans Origin → base qui porte `landlords/{uid}`. `makeRequest`
+// n'envoie aucun en-tête (`rawRequest: {}`), donc c'est un appel « mobile ».
+// ============================================================================
+describe("createProperty — routage mobile par compte (ADR 0003)", () => {
+  it("mobile sans Origin, landlord uniquement en staging → bien écrit en staging, rien en prod", async () => {
+    // Le compte de test n'existe que dans la base `staging` (pas en prod).
+    fakeStagingDb.seed(`landlords/${UID}`, {
+      id: UID,
+      landlordId: UID,
+      subscriptionTier: "free",
+      deletedAt: null,
+      activePropertiesCount: 0,
+    });
+
+    const res = await createProperty.run(makeRequest(UID, validPayload()));
+
+    const propertyId = (res as {propertyId: string}).propertyId;
+    expect(propertyId).toBeTruthy();
+    // Le bien et le compteur atterrissent dans la base staging...
+    expect(fakeStagingDb.peek(`properties/${propertyId}`)?.landlordId).toBe(UID);
+    expect(fakeStagingDb.peek(`landlords/${UID}`)?.activePropertiesCount).toBe(1);
+    // ...et RIEN n'est écrit côté prod (ni bien, ni doc landlord).
+    expect(fakeDb.peek(`properties/${propertyId}`)).toBeUndefined();
+    expect(fakeDb.peek(`landlords/${UID}`)).toBeUndefined();
   });
 });

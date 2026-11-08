@@ -18,7 +18,7 @@ class LeaseDocumentsNotifier
     return ref.read(documentsRepositoryProvider).listForLease(arg);
   }
 
-  /// Recharge la liste depuis Supabase.
+  /// Recharge la liste depuis Firestore.
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(

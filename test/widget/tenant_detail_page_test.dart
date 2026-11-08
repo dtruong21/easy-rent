@@ -274,6 +274,7 @@ void main() {
           'end_date': null,
           'status': 'active',
           'rent_amount_cents': 75000,
+          'payment_day': 5,
         },
       ];
       await tester.pumpWidget(
@@ -288,7 +289,7 @@ void main() {
     });
 
     // -----------------------------------------------------------------------
-    // Cross-user / "Locataire introuvable" (RLS 0 ligne)
+    // Cross-user / "Locataire introuvable" (Firestore Rules : aucun document)
     // -----------------------------------------------------------------------
     testWidgets('cross-user — affiche "Locataire introuvable"', (tester) async {
       await tester.pumpWidget(

@@ -1,10 +1,15 @@
 /// Tests widget de [ReceiptsListSection].
 ///
-/// Couvre : liste vide, liste avec items (pills), bouton "Voir toutes".
+/// Couvre : titre, état vide, ligne de synthèse (nombre + dernière période),
+/// et la navigation vers l'écran complet des quittances au tap.
 ///
-/// Note : ReceiptsListSection utilise désormais ReceiptsTimelineView
-/// (FEAT-012 Phase 4). Les tests vérifient les pills via StatusPill
-/// plutôt que les anciennes clés de ReceiptListTile.
+/// Note (2026-08-11) : la section n'affiche plus la timeline embarquée des
+/// 3 dernières quittances (zone jugée trop étroite par le propriétaire) —
+/// elle affiche désormais une ligne compacte cliquable qui ouvre
+/// `/leases/:id/receipts`. Les anciens tests sur les pills de statut
+/// (Payée/Annulée/Périmée) sont retirés d'ici : cette information reste
+/// visible, mais uniquement sur la page complète (déjà couverte par les
+/// tests de `LeaseReceiptsPage`) — plus dans cette carte embarquée.
 library;
 
 import 'dart:typed_data';
@@ -72,6 +77,7 @@ ThemeData _appTheme() => ThemeData(
 
 Receipt _makeReceipt({
   required String id,
+  DateTime? periodStart,
   bool isVoided = false,
   bool isStale = false,
   DocumentType documentType = DocumentType.quittance,
@@ -80,8 +86,10 @@ Receipt _makeReceipt({
   landlordId: 'landlord-1',
   leaseId: 'lease-1',
   paymentIds: const ['pay-1'],
-  periodStart: DateTime(2026, 1, 1),
-  periodEnd: DateTime(2026, 1, 31),
+  periodStart: periodStart ?? DateTime(2026, 1, 1),
+  periodEnd: (periodStart ?? DateTime(2026, 1, 1)).add(
+    const Duration(days: 30),
+  ),
   totalCents: 90000,
   rentCents: 85000,
   chargesCents: 5000,
@@ -104,7 +112,7 @@ Widget _buildSection(List<Receipt> receipts) {
           ),
         ),
       ),
-      // Route cible du lien "Voir toutes les quittances".
+      // Route cible de la ligne de synthèse : écran complet des quittances.
       GoRoute(
         path: '/leases/:id/receipts',
         builder: (context, _) =>
@@ -147,69 +155,82 @@ void main() {
       expect(find.text('Aucune quittance générée.'), findsOneWidget);
     });
 
-    testWidgets('liste avec items → pills statut visibles', (tester) async {
-      final receipts = [_makeReceipt(id: 'r-1'), _makeReceipt(id: 'r-2')];
-      await tester.pumpWidget(_buildSection(receipts));
-      await tester.pumpAndSettle();
-      // Avec paymentIds non vide → pills "Payée" visibles.
-      expect(find.text('Payée'), findsWidgets);
-    });
-
-    testWidgets('badge "Annulée" si isVoided = true', (tester) async {
-      await tester.pumpWidget(
-        _buildSection([_makeReceipt(id: 'r-voided', isVoided: true)]),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Annulée'), findsOneWidget);
-    });
-
-    testWidgets('badge "Périmée" si isStale = true et non voided', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildSection([_makeReceipt(id: 'r-stale', isStale: true)]),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Périmée'), findsOneWidget);
-    });
-
-    testWidgets(
-      'pas de badge "Périmée" si isStale ET isVoided (déjà "Annulée")',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildSection([
-            _makeReceipt(id: 'r-both', isVoided: true, isStale: true),
-          ]),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Annulée'), findsOneWidget);
-        expect(find.text('Périmée'), findsNothing);
-      },
-    );
-
-    testWidgets(
-      '"Voir toutes les quittances" visible quand la liste est non vide',
-      (tester) async {
-        await tester.pumpWidget(_buildSection([_makeReceipt(id: 'r-1')]));
-        await tester.pumpAndSettle();
-        expect(find.byKey(const Key('btn_see_all_receipts')), findsOneWidget);
-      },
-    );
-
-    testWidgets('"Voir toutes les quittances" absent quand la liste est vide', (
+    testWidgets('liste vide → pas de ligne de synthèse cliquable', (
       tester,
     ) async {
       await tester.pumpWidget(_buildSection([]));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('btn_see_all_receipts')), findsNothing);
+      expect(find.byKey(const Key('tile_receipts_summary')), findsNothing);
     });
 
     testWidgets(
-      '"Voir toutes les quittances" navigue vers la page quittances',
+      'liste non vide → ligne de synthèse visible avec le nombre de quittances',
+      (tester) async {
+        final receipts = [_makeReceipt(id: 'r-1'), _makeReceipt(id: 'r-2')];
+        await tester.pumpWidget(_buildSection(receipts));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('tile_receipts_summary')), findsOneWidget);
+        expect(find.text('2 quittances'), findsOneWidget);
+      },
+    );
+
+    testWidgets('une seule quittance → singulier "1 quittance"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildSection([_makeReceipt(id: 'r-1')]));
+      await tester.pumpAndSettle();
+      expect(find.text('1 quittance'), findsOneWidget);
+    });
+
+    testWidgets(
+      'ligne de synthèse → affiche la période de la quittance la plus '
+      'récente (period_start DESC, la 1ère de la liste)',
+      (tester) async {
+        final receipts = [
+          _makeReceipt(id: 'r-recent', periodStart: DateTime(2026, 8, 1)),
+          _makeReceipt(id: 'r-old', periodStart: DateTime(2026, 1, 1)),
+        ];
+        await tester.pumpWidget(_buildSection(receipts));
+        await tester.pumpAndSettle();
+        expect(find.text('Dernière : Août 2026'), findsOneWidget);
+        expect(find.textContaining('Janvier'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'plusieurs quittances → une seule ligne de synthèse, jamais une liste '
+      '(la timeline embarquée a été retirée, cf. entête de fichier)',
+      (tester) async {
+        final receipts = List.generate(
+          5,
+          (i) => _makeReceipt(id: 'r-$i', periodStart: DateTime(2026, i + 1)),
+        );
+        await tester.pumpWidget(_buildSection(receipts));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('tile_receipts_summary')), findsOneWidget);
+        expect(find.byType(ListTile), findsOneWidget);
+      },
+    );
+
+    testWidgets('quittance annulée → comptée dans le total (cohérence avec le '
+        'bandeau de la page complète, qui compte aussi les annulées)', (
+      tester,
+    ) async {
+      final receipts = [
+        _makeReceipt(id: 'r-1'),
+        _makeReceipt(id: 'r-voided', isVoided: true),
+      ];
+      await tester.pumpWidget(_buildSection(receipts));
+      await tester.pumpAndSettle();
+      expect(find.text('2 quittances'), findsOneWidget);
+    });
+
+    testWidgets(
+      'tap sur la ligne de synthèse navigue vers /leases/:id/receipts',
       (tester) async {
         await tester.pumpWidget(_buildSection([_makeReceipt(id: 'r-1')]));
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('btn_see_all_receipts')));
+        await tester.tap(find.byKey(const Key('tile_receipts_summary')));
         await tester.pumpAndSettle();
         expect(find.text('Toutes les quittances'), findsOneWidget);
       },

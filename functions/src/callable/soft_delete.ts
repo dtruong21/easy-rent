@@ -25,17 +25,29 @@
  *   - receipts, payments : refuse (immuables ou via flow dédié)
  *
  * Idempotent : si `deletedAt` est déjà non-null, retourne {alreadyDeleted: true}.
+ *
+ * **Nettoyage Storage (documents)** : le soft-delete d'un document SANS
+ * `legalHold` supprime aussi l'objet Storage — ici, côté serveur. Le client
+ * ne peut PAS le faire : `storage.rules` pose `allow update, delete: if false`
+ * sur `documents/{landlordId}/**`. Tant que ce nettoyage vivait dans
+ * `documents_repository.dart`, il échouait donc silencieusement et chaque
+ * document supprimé laissait son fichier dans le bucket — coût facturé, et
+ * surtout trou RGPD sur le droit à l'effacement. L'Admin SDK, lui, outrepasse
+ * les Storage Rules. Cf. `resolveRealSize()` dans documents.ts pour le même
+ * pattern côté création.
  */
 
-import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 
 import {
   asBag,
   dataOrFail,
-  requireAuthUid,
+  requireVerifiedUid,
   requireString,
 } from "../utils/callable_helpers";
+import {dbForRequest} from "../utils/db_router";
+import {deleteStorageObject} from "../utils/storage_cleanup";
 
 const SOFT_DELETABLE: ReadonlySet<string> = new Set([
   "properties",
@@ -49,7 +61,7 @@ const SOFT_DELETABLE: ReadonlySet<string> = new Set([
 export const softDeleteEntity = onCall(
   {region: "europe-west1"},
   async (request) => {
-    const uid = requireAuthUid(request);
+    const uid = await requireVerifiedUid(request);
     const data = asBag(request.data);
 
     const collection = requireString(data.collection, "collection");
@@ -62,10 +74,14 @@ export const softDeleteEntity = onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = await dbForRequest(request);
     const ref = db.doc(`${collection}/${id}`);
 
-    return await db.runTransaction(async (tx) => {
+    // La purge Storage est un effet de BORD : elle ne peut pas vivre dans la
+    // transaction (rejouable, et non transactionnelle de toute façon). La
+    // transaction se contente donc de remonter le chemin à purger ; l'appel
+    // Storage a lieu après le commit.
+    const {alreadyDeleted, purgePath} = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       const doc = dataOrFail(snap, `${collection}/${id} not found`);
 
@@ -76,8 +92,24 @@ export const softDeleteEntity = onCall(
         );
       }
 
+      // Calculé AVANT le court-circuit d'idempotence ci-dessous : un second
+      // appel sur un document déjà soft-deleted doit pouvoir RATTRAPER une
+      // purge qui avait échoué au premier passage. Sans ça, un échec Storage
+      // transitoire stranderait le fichier définitivement.
+      // `legalHold` = rétention légale → le fichier doit SURVIVRE, on ne purge
+      // jamais (le garde ci-dessous refuse déjà le soft-delete, sauf si le doc
+      // était déjà supprimé avant que le legalHold soit posé).
+      const rawPath = doc.storagePath;
+      const purgePath =
+        collection === "documents" &&
+        doc.legalHold !== true &&
+        typeof rawPath === "string" &&
+        rawPath !== "" ?
+          rawPath :
+          null;
+
       if (doc.deletedAt != null) {
-        return {alreadyDeleted: true};
+        return {alreadyDeleted: true, purgePath};
       }
 
       if (collection === "properties" || collection === "tenants") {
@@ -113,8 +145,8 @@ export const softDeleteEntity = onCall(
       }
 
       tx.update(ref, {
-        deletedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        deletedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       // Soft-delete d'un bail ACTIF : décrémenter le activeLeaseCount
@@ -130,10 +162,10 @@ export const softDeleteEntity = onCall(
         const tenantId = doc.tenantId;
         if (typeof propertyId === "string" && typeof tenantId === "string") {
           tx.update(db.doc(`properties/${propertyId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(-1),
+            activeLeaseCount: FieldValue.increment(-1),
           });
           tx.update(db.doc(`tenants/${tenantId}`), {
-            activeLeaseCount: admin.firestore.FieldValue.increment(-1),
+            activeLeaseCount: FieldValue.increment(-1),
           });
         }
       }
@@ -163,7 +195,13 @@ export const softDeleteEntity = onCall(
         }
       }
 
-      return {alreadyDeleted: false};
+      return {alreadyDeleted: false, purgePath};
     });
+
+    // Soft-delete Firestore committé. Le fichier peut maintenant partir.
+    const storageDeleted =
+      purgePath !== null ? await deleteStorageObject(purgePath, uid) : false;
+
+    return {alreadyDeleted, storageDeleted};
   },
 );

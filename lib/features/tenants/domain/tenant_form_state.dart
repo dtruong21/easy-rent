@@ -8,7 +8,7 @@ part 'tenant_form_state.freezed.dart';
 ///
 /// Mêmes conventions que [PropertyFormState] et [LoginFormState] :
 /// - [idle] : formulaire prêt à la saisie.
-/// - [submitting] : appel Supabase en cours, bouton désactivé.
+/// - [submitting] : appel Firestore en cours, bouton désactivé.
 /// - [success] : opération réussie, contient le locataire créé/mis à jour.
 /// - [error] : échec, message en français affiché inline.
 @freezed
@@ -16,7 +16,7 @@ sealed class TenantFormState with _$TenantFormState {
   /// Formulaire au repos — prêt à recevoir une saisie.
   const factory TenantFormState.idle() = _Idle;
 
-  /// Appel Supabase en cours — bouton désactivé, indicateur affiché.
+  /// Appel Firestore en cours — bouton désactivé, indicateur affiché.
   const factory TenantFormState.submitting() = _Submitting;
 
   /// Opération réussie — contient le locataire créé ou mis à jour.

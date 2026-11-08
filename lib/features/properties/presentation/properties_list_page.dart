@@ -18,7 +18,7 @@ import 'widgets/properties_table_view.dart';
 /// Liste des biens immobiliers du landlord courant.
 ///
 /// Critères Gherkin :
-/// - Affiche uniquement les biens avec `deleted_at IS NULL` (géré par RLS).
+/// - Affiche uniquement les biens avec `deleted_at IS NULL` (géré par les Firestore Rules).
 /// - État vide : "Aucun bien enregistré" + bouton "Ajouter un bien".
 /// - Triés par `created_at DESC`.
 /// - Bandeau si la limite de 200 biens est atteinte.
@@ -35,14 +35,20 @@ class PropertiesListPage extends ConsumerWidget {
         ? ViewMode.card
         : ref.watch(viewModeProvider('properties'));
 
+    // Liste vide : l'état vide porte déjà « Ajouter un bien » — pas de FAB
+    // en doublon (recette iOS, #197).
+    final showFab = asyncProperties.valueOrNull?.isEmpty != true;
+
     return Scaffold(
       appBar: AppAppBar(title: l10n.propertiesListTitle, showBackButton: false),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('fab_add_property'),
-        onPressed: () => context.push('/properties/new'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.propertiesAddButton),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton.extended(
+              key: const Key('fab_add_property'),
+              onPressed: () => context.push('/properties/new'),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.propertiesAddButton),
+            )
+          : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

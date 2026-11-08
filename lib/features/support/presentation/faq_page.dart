@@ -129,22 +129,49 @@ const List<_FaqSection> _faqSections = [
         id: 'gratuit',
         question: 'Baillan est-il gratuit ?',
         answer:
-            'Oui, l\'application est gratuite à ce jour. Si une offre '
-            'payante voit le jour, elle sera annoncée dans l\'application — '
-            'vous ne serez jamais facturé sans action explicite de votre '
-            'part.',
+            'Oui, Baillan a un palier gratuit sans limite de durée : '
+            'jusqu\'à 2 biens, 3 locataires, 2 baux actifs, 10 documents '
+            'et 3 scénarios de simulation — de quoi tenir un petit '
+            'portefeuille locatif complet. Les quittances de loyer PDF '
+            'restent gratuites quel que soit le palier — c\'est un '
+            'instrument légal, pas un produit d\'appel. Baillan Pro lève '
+            'les plafonds et débloque quelques fonctions avancées ; vous '
+            'n\'êtes jamais facturé sans action explicite de votre part.',
       ),
+      // Tiles Pro désactivés tant que le checkout n'est pas déployé en prod
+      // (FEAT-044e — le back-end est livré, la route `/pro` existe côté client
+      // depuis 75fcbd3 sur develop). À réactiver au moment de la release.
+      // (
+      //   id: 'pro-inclus',
+      //   question: 'Que débloque Baillan Pro ?',
+      //   answer:
+      //       'Biens, locataires, baux, documents et scénarios de '
+      //       'simulation illimités, la régularisation annuelle des charges '
+      //       '(pour les baux en provisions) et l\'accès au support '
+      //       'prioritaire. Les quittances de loyer, elles, restent '
+      //       'gratuites pour tous les comptes.',
+      // ),
+      // (
+      //   id: 'pro-prix',
+      //   question: 'Combien coûte Baillan Pro et comment l\'essayer ?',
+      //   answer:
+      //       '7,99 € par mois ou 79 € par an (deux mois offerts en '
+      //       'annuel). Un essai gratuit de 7 jours vous laisse tester les '
+      //       'fonctions Pro sans engagement, résiliable à tout moment '
+      //       'depuis votre compte. Le paiement est traité par Stripe : '
+      //       'vos coordonnées bancaires ne transitent pas par Baillan.',
+      // ),
       (
         id: 'essai-sans-compte',
         question: 'Puis-je essayer Baillan sans créer de compte ?',
         answer:
             'Oui. « Continuer sans compte » ouvre le simulateur '
             'd\'investissement sans aucune inscription : rendement, '
-            'cash-flow et coût du crédit, avec des scénarios comparables et '
-            'sauvegardés. Cet essai dure 14 jours glissants ; si vous créez '
-            'un compte pendant l\'essai, vos scénarios y sont '
-            'automatiquement rattachés. Le registre complet (biens, baux, '
-            'quittances) nécessite un compte.',
+            'cash-flow et coût du crédit, avec un scénario sauvegardé. '
+            'Cet essai dure 14 jours glissants ; si vous créez un compte '
+            'pendant l\'essai, votre scénario y est automatiquement '
+            'rattaché. Le registre complet (biens, baux, quittances) '
+            'nécessite un compte.',
       ),
       (
         id: 'appareils',
@@ -242,7 +269,10 @@ const List<_FaqSection> _faqSections = [
             'encaissées sur la période des dépenses récupérables '
             'enregistrées, calcule le solde (trop-perçu à rembourser ou '
             'complément à demander) et génère un avis de régularisation en '
-            'PDF à transmettre au locataire.',
+            'PDF à transmettre au locataire. Cette fonctionnalité est '
+            'réservée au palier Baillan Pro — au forfait, la '
+            'régularisation n\'a de toute façon pas d\'application '
+            'légale.',
       ),
       (
         id: 'depenses',

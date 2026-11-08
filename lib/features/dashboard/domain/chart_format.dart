@@ -1,7 +1,7 @@
-/// Format d'affichage du graphique « Loyers » (période variable, cf.
-/// [ChartPeriod]).
+/// Format d'affichage du graphique « Cash-flow mensuel » (période variable,
+/// cf. [ChartPeriod]).
 ///
-/// Choisi via le toggle de [MonthlyBarchart], persisté par
+/// Choisi via le toggle de [MonthlyCashflowChart], persisté par
 /// `chartFormatProvider` (localStorage sur le web).
 ///
 /// FEAT-043 : cet enum ne porte plus de libellé FR en dur — la présentation
