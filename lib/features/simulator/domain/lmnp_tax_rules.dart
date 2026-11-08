@@ -3,7 +3,8 @@
 /// loi = ajouter une table et basculer [lmnpRules2026] là où elle est lue ;
 /// le calcul (`lmnp_tax_simulation.dart`) ne change pas.
 ///
-/// Sources à confirmer sur Légifrance / BOFiP avant toute mise à jour.
+/// Toute mise à jour se vérifie sur les sites officiels (impots.gouv.fr,
+/// economie.gouv.fr, BOFiP, Légifrance), pas sur des blogs.
 library;
 
 /// Tranches marginales d'imposition proposées à la saisie.
@@ -49,8 +50,15 @@ class LmnpTaxRules {
 /// revenus du patrimoine, dont les BIC de location meublée non professionnelle ;
 /// les revenus fonciers restent à 17,2 %). Plafond micro-BIC 83 600 € :
 /// revalorisation triennale applicable aux recettes 2026 à 2028 (art. 50-0
-/// CGI). Valeurs relevées sur des sources secondaires : à confirmer sur
-/// Légifrance / BOFiP.
+/// CGI).
+///
+/// Vérifié le 2026-11-08 sur les sites officiels :
+/// - 18,6 % en location meublée (17,2 % en location nue) : impots.gouv.fr,
+///   « Je donne un bien en location. Dois-je payer des prélèvements
+///   sociaux ? » (modifié le 17/07/2026) ;
+/// - 83 600 € pour les recettes 2026, abattement 50 % minimum 305 €, seuil
+///   LMP 23 000 € : economie.gouv.fr, « Location meublée longue durée : quels
+///   revenus déclarer ? ».
 const LmnpTaxRules lmnpRules2026 = LmnpTaxRules(
   label: 'Règles 2026',
   microAbatementPercent: 50,
